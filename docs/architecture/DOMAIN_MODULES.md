@@ -5,7 +5,7 @@
 | `identity` | Implemented: User, password, groups, permissions, sessions and internal admin. Future: profile, roles and grants. | Custom user exists in `identity.0001`; email uniqueness is case-insensitive in PostgreSQL. | May serve all modules through policy contract; no academic ownership. Risk: role explosion. |
 | `organizations` | Implemented: organization, membership, historical role assignment and membership event API. | A UUID membership has at most one non-revoked row per user/organization; active owner cannot be last removed; role history is append/revoke. | Depends only on identity; cannot own courses, enrolments or academic rules. |
 | `catalog` | Implemented: area, discipline, subject, materialized-path topic tree, reusable concept, learning objective, ordered concept associations and prerequisite edges. Future: competencies and learning paths. | UUID/slug uniqueness is scoped by organization; topic structural fields remain owned by Treebeard; both prerequisite graphs are acyclic; archived entities cannot receive new associations. | Depends on organizations and identity policy only. Courses may read its public services, but catalog never owns enrolment, delivery, grades or attempts. |
-| `courses` | Logical course, structure, owners, lifecycle | One ordered structure per revision; logical identity differs from publication. | Taxonomy/curriculum/identity; never grades. |
+| `courses` | Implemented: stable Course identity, authoring revisions, append-only transitions, ordered modules/units and curriculum alignments. | At most one open revision; active positions are contiguous from 1; deferred uniqueness supports reorder; every mutation uses `expected_version`; approved structure is not publication. | Reads organization policy and catalog references; never owns taxonomy, semantic content, publication, enrolment, evaluations or grades. |
 | `content` | Semantic documents, blocks, references, resource links | Validated document schema; no arbitrary executable markup. Emits `content_revised`. | Media and authoring; cannot publish itself. |
 | `authoring` | Draft, review, publication, immutable snapshots/history | Published revision immutable; restoration creates a new revision. Emits `published`, `publication_retracted`. | Courses/content/assessments; cannot alter attempts. |
 | `enrollments` | Enrolment, access window, status; future cohorts | Active access is evaluated at delivery time; historical enrolment facts retained. | Identity/courses/publication; no grading policy. |
@@ -35,3 +35,11 @@ may call catalog services but no other module may write catalog tables directly.
 The two prerequisite graphs are independent: subjects express subject sequence,
 and concepts express conceptual dependency. Neither graph implies a course,
 publication or learner progression.
+
+# Courses boundary
+
+`courses` owns every write to course identity, revisions, transitions, modules,
+units and their alignments. Transport code supplies actor and URL-scoped
+organization, then calls application services. Catalog references remain owned
+by `catalog`; courses validates their organization and status but never mutates
+them. Semantic documents and publication snapshots remain outside this module.

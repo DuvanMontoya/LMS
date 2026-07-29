@@ -144,6 +144,94 @@ export interface paths {
   '/api/v1/organizations/{slug}/catalog/topics/{topic_id}/restore/': {
     post: operations['organizations_catalog_topics_restore_create'];
   };
+  '/api/v1/organizations/{slug}/courses/': {
+    get: operations['organizations_courses_list'];
+    post: operations['organizations_courses_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/': {
+    get: operations['organizations_courses_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/archive/': {
+    post: operations['organizations_courses_archive_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/restore/': {
+    post: operations['organizations_courses_restore_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/': {
+    get: operations['organizations_courses_revisions_list'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/': {
+    get: operations['organizations_courses_revisions_retrieve'];
+    patch: operations['organizations_courses_revisions_partial_update'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/approve/': {
+    post: operations['organizations_courses_revisions_approve_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/learning-objectives/': {
+    get: operations['organizations_courses_revisions_learning_objectives_list'];
+    put: operations['organizations_courses_revisions_learning_objectives_update'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/': {
+    get: operations['organizations_courses_revisions_modules_list'];
+    post: operations['organizations_courses_revisions_modules_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/order/': {
+    put: operations['organizations_courses_revisions_modules_order_update'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/': {
+    get: operations['organizations_courses_revisions_modules_retrieve'];
+    patch: operations['organizations_courses_revisions_modules_partial_update'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/archive/': {
+    post: operations['organizations_courses_revisions_modules_archive_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/restore/': {
+    post: operations['organizations_courses_revisions_modules_restore_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/units/': {
+    get: operations['organizations_courses_revisions_modules_units_list'];
+    post: operations['organizations_courses_revisions_modules_units_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/units/order/': {
+    put: operations['organizations_courses_revisions_modules_units_order_update'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/outline/': {
+    get: operations['organizations_courses_revisions_outline_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/readiness/': {
+    get: operations['organizations_courses_revisions_readiness_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/request-changes/': {
+    post: operations['organizations_courses_revisions_request_changes_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/subjects/': {
+    get: operations['organizations_courses_revisions_subjects_list'];
+    put: operations['organizations_courses_revisions_subjects_update'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/submit-review/': {
+    post: operations['organizations_courses_revisions_submit_review_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/transitions/': {
+    get: operations['organizations_courses_revisions_transitions_list'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/': {
+    get: operations['organizations_courses_revisions_units_retrieve'];
+    patch: operations['organizations_courses_revisions_units_partial_update'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/archive/': {
+    post: operations['organizations_courses_revisions_units_archive_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/learning-objectives/': {
+    get: operations['organizations_courses_revisions_units_learning_objectives_list'];
+    put: operations['organizations_courses_revisions_units_learning_objectives_update'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/restore/': {
+    post: operations['organizations_courses_revisions_units_restore_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/topics/': {
+    get: operations['organizations_courses_revisions_units_topics_list'];
+    put: operations['organizations_courses_revisions_units_topics_update'];
+  };
   '/api/v1/organizations/{slug}/memberships/': {
     get: operations['organizations_memberships_list'];
     post: operations['organizations_memberships_create'];
@@ -226,6 +314,68 @@ export interface components {
       /** Format: uuid */
       entity_id: string;
     };
+    Course: {
+      /** Format: date-time */
+      archived_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      slug: string;
+      status: string;
+    };
+    /**
+     * @description * `draft` - Borrador
+     * * `in_review` - En revisión
+     * * `changes_requested` - Cambios solicitados
+     * * `approved` - Aprobada
+     * @enum {string}
+     */
+    CourseAuthoringStatus:
+      'draft' | 'in_review' | 'changes_requested' | 'approved';
+    CourseCreate: {
+      description?: string;
+      estimated_duration_minutes?: number | null;
+      /** @default es */
+      language_code?: string;
+      learning_objective_ids?: string[];
+      /** Format: uuid */
+      primary_subject_id: string;
+      slug: string;
+      subtitle?: string;
+      summary: string;
+      supporting_subject_ids?: string[];
+      title: string;
+    };
+    CourseList: {
+      /** Format: date-time */
+      archived_at: string | null;
+      authoring_status: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      primary_subject: components['schemas']['PrimarySubject'] | null;
+      slug: string;
+      status: string;
+      summary: string;
+      title: string;
+      updated_at: string | null;
+    };
+    CoursePage: {
+      count: number;
+      /** Format: uri */
+      next: string | null;
+      /** Format: uri */
+      previous: string | null;
+      results: components['schemas']['CourseList'][];
+    };
+    /**
+     * @description * `primary` - Principal
+     * * `supporting` - Complementaria
+     * @enum {string}
+     */
+    CourseSubjectAlignmentType: 'primary' | 'supporting';
     CreateArea: {
       description?: string;
       name: string;
@@ -293,6 +443,9 @@ export interface components {
       | 'membership_revoked'
       | 'role_assigned'
       | 'role_revoked';
+    ExpectedVersion: {
+      expected_version: number;
+    };
     /**
      * @description * `required` - required
      * * `recommended` - recommended
@@ -318,18 +471,72 @@ export interface components {
       previous_status: components['schemas']['OrganizationMembershipStatus'];
       role: components['schemas']['OrganizationRole'];
     };
+    Module: {
+      /** Format: date-time */
+      archived_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      description: string;
+      /** Format: uuid */
+      id: string;
+      position: number | null;
+      /** Format: uuid */
+      revision_id: string;
+      status: string;
+      title: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    ModuleCreate: {
+      description?: string;
+      expected_version: number;
+      title: string;
+    };
+    ModuleMutation: {
+      /** Format: date-time */
+      archived_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      description: string;
+      /** Format: uuid */
+      id: string;
+      lock_version: number;
+      position: number | null;
+      /** Format: uuid */
+      revision_id: string;
+      status: string;
+      title: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
     MoveTopic: {
       /** @default sorted-child */
       position?: components['schemas']['PositionEnum'];
       /** Format: uuid */
       target_id: string;
     };
+    MutationResult: {
+      lock_version: number;
+      /** Format: uuid */
+      revision_id: string;
+    };
+    /** @enum {unknown} */
+    NullEnum: '';
     Objective: {
       code: string;
       cognitive_level?:
         | components['schemas']['CognitiveLevelEnum']
         | components['schemas']['BlankEnum'];
       description?: string;
+      /** Format: uuid */
+      id: string;
+      statement: string;
+      status: string;
+      /** Format: uuid */
+      subject_id: string;
+    };
+    ObjectiveSummary: {
+      code: string;
       /** Format: uuid */
       id: string;
       statement: string;
@@ -366,6 +573,51 @@ export interface components {
       | 'reviewer'
       | 'instructor'
       | 'learner';
+    Outline: {
+      course: components['schemas']['Course'];
+      learning_objectives: readonly components['schemas']['RevisionObjective'][];
+      modules: readonly components['schemas']['OutlineModule'][];
+      revision: components['schemas']['Revision'];
+      subjects: readonly components['schemas']['RevisionSubject'][];
+    };
+    OutlineModule: {
+      /** Format: date-time */
+      archived_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      description: string;
+      /** Format: uuid */
+      id: string;
+      position: number | null;
+      /** Format: uuid */
+      revision_id: string;
+      status: string;
+      title: string;
+      units: readonly components['schemas']['OutlineUnit'][];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    OutlineUnit: {
+      /** Format: date-time */
+      archived_at: string | null;
+      /** @default Contenido académico pendiente */
+      content_status?: string;
+      /** Format: date-time */
+      created_at: string;
+      estimated_duration_minutes: number | null;
+      /** Format: uuid */
+      id: string;
+      learning_objectives: readonly components['schemas']['UnitObjective'][];
+      /** Format: uuid */
+      module_id: string;
+      position: number | null;
+      status: string;
+      summary: string;
+      title: string;
+      topics: readonly components['schemas']['UnitTopic'][];
+      /** Format: date-time */
+      updated_at: string;
+    };
     PaginatedMembershipEventList: {
       /** @example 123 */
       count: number;
@@ -396,8 +648,28 @@ export interface components {
       previous?: string | null;
       results: components['schemas']['Membership'][];
     };
+    PatchedModuleUpdate: {
+      description?: string;
+      expected_version?: number;
+      title?: string;
+    };
     PatchedOrganizationUpdate: {
       name?: string;
+    };
+    PatchedRevisionMetadataUpdate: {
+      description?: string;
+      estimated_duration_minutes?: number | null;
+      expected_version?: number;
+      language_code?: string;
+      subtitle?: string;
+      summary?: string;
+      title?: string;
+    };
+    PatchedUnitUpdate: {
+      estimated_duration_minutes?: number | null;
+      expected_version?: number;
+      summary?: string;
+      title?: string;
     };
     PatchedUpdateArea: {
       description?: string;
@@ -440,14 +712,81 @@ export interface components {
       prerequisite_id: string;
       rationale?: string;
     };
+    PrimarySubject: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+    };
+    Readiness: {
+      issues: components['schemas']['ReadinessIssue'][];
+      ready: boolean;
+    };
+    ReadinessIssue: {
+      code: string;
+      message: string;
+      path: string;
+    };
     ReplaceConceptAssociations: {
       concept_ids: string[];
+    };
+    ReplaceObjectives: {
+      expected_version: number;
+      learning_objective_ids: string[];
+    };
+    ReplaceOrder: {
+      expected_version: number;
+      ordered_ids: string[];
     };
     ReplaceRoles: {
       roles: components['schemas']['OrganizationRole'][];
     };
     ReplaceSubjectPrerequisites: {
       prerequisites: components['schemas']['SubjectPrerequisite'][];
+    };
+    ReplaceSubjects: {
+      expected_version: number;
+      /** Format: uuid */
+      primary_subject_id: string;
+      supporting_subject_ids: string[];
+    };
+    ReplaceTopics: {
+      expected_version: number;
+      topic_ids: string[];
+    };
+    Revision: {
+      authoring_status: string;
+      /** Format: uuid */
+      based_on_revision_id: string | null;
+      course_slug: string;
+      /** Format: date-time */
+      created_at: string;
+      description: string;
+      estimated_duration_minutes: number | null;
+      /** Format: uuid */
+      id: string;
+      language_code: string;
+      lock_version: number;
+      number: number;
+      /** Format: date-time */
+      status_changed_at: string;
+      subtitle: string;
+      summary: string;
+      title: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    RevisionObjective: {
+      /** Format: uuid */
+      id: string;
+      learning_objective: components['schemas']['ObjectiveSummary'];
+      position: number;
+    };
+    RevisionSubject: {
+      alignment_type: components['schemas']['CourseSubjectAlignmentType'];
+      /** Format: uuid */
+      id: string;
+      position: number;
+      subject: components['schemas']['SubjectSummary'];
     };
     Subject: {
       description?: string;
@@ -465,6 +804,13 @@ export interface components {
       prerequisite_id: string;
       rationale?: string;
     };
+    SubjectSummary: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      slug: string;
+      status: string;
+    };
     Topic: {
       children: readonly {
         [key: string]: unknown;
@@ -477,12 +823,91 @@ export interface components {
       status: string;
       title: string;
     };
+    TopicSummary: {
+      /** Format: uuid */
+      id: string;
+      slug: string;
+      status: string;
+      /** Format: uuid */
+      subject_id: string;
+      title: string;
+    };
+    Transition: {
+      actor_display: string;
+      /** Format: date-time */
+      created_at: string;
+      from_status:
+        | components['schemas']['CourseAuthoringStatus']
+        | components['schemas']['NullEnum']
+        | null;
+      /** Format: uuid */
+      id: string;
+      note: string;
+      to_status: components['schemas']['CourseAuthoringStatus'];
+    };
+    Unit: {
+      /** Format: date-time */
+      archived_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      estimated_duration_minutes: number | null;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      module_id: string;
+      position: number | null;
+      status: string;
+      summary: string;
+      title: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    UnitCreate: {
+      estimated_duration_minutes?: number | null;
+      expected_version: number;
+      summary?: string;
+      title: string;
+    };
+    UnitMutation: {
+      /** Format: date-time */
+      archived_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      estimated_duration_minutes: number | null;
+      /** Format: uuid */
+      id: string;
+      lock_version: number;
+      /** Format: uuid */
+      module_id: string;
+      position: number | null;
+      status: string;
+      summary: string;
+      title: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    UnitObjective: {
+      /** Format: uuid */
+      id: string;
+      learning_objective: components['schemas']['ObjectiveSummary'];
+      position: number;
+    };
+    UnitTopic: {
+      /** Format: uuid */
+      id: string;
+      position: number;
+      topic: components['schemas']['TopicSummary'];
+    };
     UserSummary: {
       display: string;
       /** Format: email */
       email: string;
       /** Format: uuid */
       id: string;
+    };
+    WorkflowAction: {
+      expected_version: number;
+      note?: string;
     };
   };
   responses: never;
@@ -1430,6 +1855,731 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['Topic'];
+        };
+      };
+    };
+  };
+  organizations_courses_list: {
+    parameters: {
+      query?: {
+        authoring_status?: string;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+        search?: string;
+        status?: string;
+        subject?: string;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CoursePage'];
+        };
+      };
+    };
+  };
+  organizations_courses_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CourseCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['CourseCreate'];
+        'multipart/form-data': components['schemas']['CourseCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Revision'];
+        };
+      };
+    };
+  };
+  organizations_courses_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Course'];
+        };
+      };
+    };
+  };
+  organizations_courses_archive_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Course'];
+        };
+      };
+    };
+  };
+  organizations_courses_restore_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Course'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_list: {
+    parameters: {
+      path: {
+        course_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Revision'][];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Revision'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_partial_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['PatchedRevisionMetadataUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['PatchedRevisionMetadataUpdate'];
+        'multipart/form-data': components['schemas']['PatchedRevisionMetadataUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Revision'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_approve_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['WorkflowAction'];
+        'application/x-www-form-urlencoded': components['schemas']['WorkflowAction'];
+        'multipart/form-data': components['schemas']['WorkflowAction'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Revision'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_learning_objectives_list: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['RevisionObjective'][];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_learning_objectives_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceObjectives'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceObjectives'];
+        'multipart/form-data': components['schemas']['ReplaceObjectives'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MutationResult'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_modules_list: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Module'][];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_modules_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ModuleCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['ModuleCreate'];
+        'multipart/form-data': components['schemas']['ModuleCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['ModuleMutation'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_modules_order_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceOrder'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceOrder'];
+        'multipart/form-data': components['schemas']['ReplaceOrder'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MutationResult'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_modules_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        module_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Module'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_modules_partial_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        module_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['PatchedModuleUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['PatchedModuleUpdate'];
+        'multipart/form-data': components['schemas']['PatchedModuleUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ModuleMutation'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_modules_archive_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        module_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ExpectedVersion'];
+        'application/x-www-form-urlencoded': components['schemas']['ExpectedVersion'];
+        'multipart/form-data': components['schemas']['ExpectedVersion'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ModuleMutation'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_modules_restore_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        module_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ExpectedVersion'];
+        'application/x-www-form-urlencoded': components['schemas']['ExpectedVersion'];
+        'multipart/form-data': components['schemas']['ExpectedVersion'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ModuleMutation'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_modules_units_list: {
+    parameters: {
+      path: {
+        course_slug: string;
+        module_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Unit'][];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_modules_units_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        module_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UnitCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['UnitCreate'];
+        'multipart/form-data': components['schemas']['UnitCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['UnitMutation'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_modules_units_order_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        module_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceOrder'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceOrder'];
+        'multipart/form-data': components['schemas']['ReplaceOrder'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MutationResult'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_outline_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Outline'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_readiness_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Readiness'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_request_changes_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['WorkflowAction'];
+        'application/x-www-form-urlencoded': components['schemas']['WorkflowAction'];
+        'multipart/form-data': components['schemas']['WorkflowAction'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Revision'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_subjects_list: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['RevisionSubject'][];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_subjects_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceSubjects'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceSubjects'];
+        'multipart/form-data': components['schemas']['ReplaceSubjects'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MutationResult'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_submit_review_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['WorkflowAction'];
+        'application/x-www-form-urlencoded': components['schemas']['WorkflowAction'];
+        'multipart/form-data': components['schemas']['WorkflowAction'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Revision'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_transitions_list: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Transition'][];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Unit'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_partial_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['PatchedUnitUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['PatchedUnitUpdate'];
+        'multipart/form-data': components['schemas']['PatchedUnitUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['UnitMutation'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_archive_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ExpectedVersion'];
+        'application/x-www-form-urlencoded': components['schemas']['ExpectedVersion'];
+        'multipart/form-data': components['schemas']['ExpectedVersion'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['UnitMutation'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_learning_objectives_list: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['UnitObjective'][];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_learning_objectives_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceObjectives'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceObjectives'];
+        'multipart/form-data': components['schemas']['ReplaceObjectives'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MutationResult'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_restore_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ExpectedVersion'];
+        'application/x-www-form-urlencoded': components['schemas']['ExpectedVersion'];
+        'multipart/form-data': components['schemas']['ExpectedVersion'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['UnitMutation'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_topics_list: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['UnitTopic'][];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_topics_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceTopics'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceTopics'];
+        'multipart/form-data': components['schemas']['ReplaceTopics'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MutationResult'];
         };
       };
     };

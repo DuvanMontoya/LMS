@@ -12,8 +12,8 @@ Each phase requires its predecessor's acceptance criteria, a scoped pull request
 | 6 | OpenAPI contract and client. Requires 4–5. | Versioned schema, generated client, drift check. | No duplicated DTOs. |
 | 7 | Identity and authentication. **Backend and browser integration completed 2026-07-29 (Prompt 6).** | allauth browser session flows, CSRF, mandatory email-code verification, password reset, Redis rate limits, same-origin OpenAPI client and isolated Chromium/axe evidence. | No localStorage JWT, app client, social login or MFA. |
 | 8 | Authorization. Requires 7. **Completed 2026-07-29 (Prompt 7).** | Organization-scoped RBAC, historical memberships/roles/events, transactional policies, generated platform client and protected institutional routes. | No broad admin bypass, courses, invitations or taxonomy. |
-| 9 | Taxonomy and curriculum. Requires 8. **In progress 2026-07-29 (Prompt 8).** | Areas, subjects, concepts, prerequisites, learning objectives. | No course editor. |
-| 10 | Courses and structure. Requires 9. | Logical courses/modules/units and state machine. | No publication snapshots. |
+| 9 | Taxonomy and curriculum. Requires 8. **Completed 2026-07-29 (Prompt 8).** | Areas, subjects, concepts, prerequisites, learning objectives. | No course editor. |
+| 10 | Courses and structure. Requires 9. **Completed 2026-07-29 (Prompt 9).** | Logical courses, revisions, explicit review workflow, ordered modules/units and curriculum alignments. | No semantic content or publication snapshots. |
 | 11 | Semantic content. Requires 10. | Typed academic document model, media references and rendering contract. | No unrestricted HTML. |
 | 12 | Versioning and publication. Requires 10–11. | Draft/review/publish snapshots, immutable references, API tests. | No retroactive edits. |
 | 13 | Academic editor. Requires 11–12. | Tiptap/MathLive integration, validation, accessibility tests. | No arbitrary plugin ecosystem. |

@@ -38,3 +38,8 @@ server-only reenvía exclusivamente la cookie de sesión con `no-store`.
 Prompt 8 no añade servicios: PostgreSQL conserva árbol, asociaciones, grafos y
 archivado; Redis continúa reservado para cache y límites de autenticación. No
 se almacenan currículo, capacidades ni sesiones en el navegador o Redis.
+
+Prompt 9 tampoco añade servicios, puertos, colas ni almacenamiento. PostgreSQL
+conserva cursos, revisiones, transiciones, orden y alineaciones. Next reutiliza
+el rewrite same-origin y Django continúa como única autoridad de sesión y CSRF.
+No existe despliegue público de cursos ni job de publicación.

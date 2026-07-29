@@ -19,6 +19,12 @@ class Capability(StrEnum):
     CATALOG_VIEW = "catalog.view"
     CATALOG_MANAGE = "catalog.manage"
     CATALOG_MANAGE_PREREQUISITES = "catalog.manage_prerequisites"
+    COURSE_AUTHORING_VIEW = "course.authoring.view"
+    COURSE_AUTHORING_MANAGE = "course.authoring.manage"
+    COURSE_AUTHORING_SUBMIT = "course.authoring.submit"
+    COURSE_AUTHORING_REVIEW = "course.authoring.review"
+    COURSE_AUTHORING_APPROVE = "course.authoring.approve"
+    COURSE_APPROVED_VIEW = "course.approved.view"
 
 
 _ALL_CAPABILITIES = frozenset(Capability)
@@ -34,17 +40,34 @@ _CATALOG_MANAGER_CAPABILITIES = frozenset(
         Capability.CATALOG_MANAGE_PREREQUISITES,
     }
 )
+_COURSE_AUTHOR_CAPABILITIES = frozenset(
+    {
+        Capability.COURSE_AUTHORING_VIEW,
+        Capability.COURSE_AUTHORING_MANAGE,
+        Capability.COURSE_AUTHORING_SUBMIT,
+        Capability.COURSE_APPROVED_VIEW,
+    }
+)
 
 ROLE_CAPABILITIES = MappingProxyType(
     {
         RoleCode.OWNER: _ALL_CAPABILITIES,
         RoleCode.ADMINISTRATOR: _ALL_CAPABILITIES
         - frozenset({Capability.ROLE_ASSIGN_OWNER}),
-        RoleCode.AUTHOR: _MEMBER_READ_CAPABILITIES | _CATALOG_MANAGER_CAPABILITIES,
+        RoleCode.AUTHOR: _MEMBER_READ_CAPABILITIES
+        | _CATALOG_MANAGER_CAPABILITIES
+        | _COURSE_AUTHOR_CAPABILITIES,
         RoleCode.REVIEWER: _MEMBER_READ_CAPABILITIES
-        | frozenset({Capability.CATALOG_VIEW}),
+        | frozenset(
+            {
+                Capability.CATALOG_VIEW,
+                Capability.COURSE_AUTHORING_VIEW,
+                Capability.COURSE_AUTHORING_REVIEW,
+                Capability.COURSE_APPROVED_VIEW,
+            }
+        ),
         RoleCode.INSTRUCTOR: _MEMBER_READ_CAPABILITIES
-        | frozenset({Capability.CATALOG_VIEW}),
+        | frozenset({Capability.CATALOG_VIEW, Capability.COURSE_APPROVED_VIEW}),
         RoleCode.LEARNER: _MEMBER_READ_CAPABILITIES
         | frozenset({Capability.CATALOG_VIEW}),
     }

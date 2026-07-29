@@ -11,6 +11,7 @@ from django.core.management.base import BaseCommand, CommandError
 from domain.catalog.services import (
     create_area,
     create_discipline,
+    create_learning_objective,
     create_root_topic,
     create_subject,
 )
@@ -103,6 +104,15 @@ class Command(BaseCommand):
             title="Funciones",
             slug="funciones",
             description="",
+        )
+        create_learning_objective(
+            actor=owner,
+            organization=organization,
+            subject=subject,
+            code="OBJ-COURSE-001",
+            statement="Interpretar funciones mediante distintas representaciones.",
+            description="",
+            cognitive_level="understand",
         )
         add_existing_member_with_roles(
             actor=owner,

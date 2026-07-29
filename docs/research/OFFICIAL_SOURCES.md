@@ -45,3 +45,16 @@ No blog, tutorial, forum, AI output, or third-party comparison was used as versi
 | django-treebeard 6.0.0 | https://pypi.org/project/django-treebeard/ ; https://django-treebeard.readthedocs.io/ | Django 6/Python 3.13 support and `MP_Node` materialized path for Topic. |
 | Django transactions | https://docs.djangoproject.com/en/6.0/topics/db/transactions/ ; https://docs.djangoproject.com/en/6.0/ref/models/querysets/#select-for-update | `atomic` plus PostgreSQL row locks for tree and graph writes. |
 | PostgreSQL recursive CTE | https://www.postgresql.org/docs/current/sql-select.html | Recursive `WITH` and `CYCLE` semantics; implementation remains parameterized. |
+
+## Prompt 9 consultation — 2026-07-29
+
+| Topic | Official source | Evidence used |
+|---|---|---|
+| Django constraints | https://docs.djangoproject.com/en/6.0/ref/models/constraints/ | Conditional uniqueness, expression uniqueness, deferred unique constraints and validation behavior. |
+| Django transactions and row locking | https://docs.djangoproject.com/en/6.0/topics/db/transactions/ ; https://docs.djangoproject.com/en/6.0/ref/models/querysets/#select-for-update | Short `atomic` service boundaries and row locks around revision/version/order writes. |
+| PostgreSQL constraints | https://www.postgresql.org/docs/18/ddl-constraints.html ; https://www.postgresql.org/docs/18/sql-createtable.html | `DEFERRABLE INITIALLY DEFERRED`, partial unique indexes and null behavior used by ordered active rows. |
+| DRF filtering and pagination | https://www.django-rest-framework.org/api-guide/filtering/ ; https://www.django-rest-framework.org/api-guide/pagination/ | Explicit `django-filter` fields, allowlisted ordering and bounded page size. |
+| drf-spectacular | https://drf-spectacular.readthedocs.io/en/latest/customization.html ; https://drf-spectacular.readthedocs.io/en/latest/client_generation.html | Explicit operation/field schema annotations and fail-on-warning client generation. |
+| Next.js Server Components | https://nextjs.org/docs/app/getting-started/server-and-client-components ; https://nextjs.org/docs/app/api-reference/functions/fetch | Server-side authorization boundary and `cache: no-store`. |
+| TanStack Query invalidation | https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation | Scoped invalidation after course mutations; global retries remain disabled. |
+| Playwright keyboard and accessibility | https://playwright.dev/docs/input ; https://playwright.dev/docs/accessibility-testing | Real Chromium keyboard controls, responsive checks and axe integration. |

@@ -60,3 +60,10 @@ plataforma; `src/app/(protected)/organizaciones` es la superficie institucional.
 Prompt 8 incorpora `domain/catalog` con API, filtros, servicios, grafos,
 políticas, migración y pruebas, además de las rutas curriculares bajo la
 organización y componentes/hooks `catalog` en Next.js. No se creó otra app.
+
+Prompt 9 incorpora `apps/api/domain/courses/` como aplicación Django generada
+por `startapp`, con modelos, servicios, políticas, selectores, readiness, API,
+migración, bootstrap y pruebas. Next agrega
+`app/(protected)/organizaciones/[slug]/cursos/`, `components/courses/`,
+`lib/courses/` y su E2E. `scripts/courses.ps1` orquesta las validaciones sin
+infraestructura paralela.

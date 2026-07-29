@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "domain.identity",
     "domain.organizations",
     "domain.catalog",
+    "domain.courses",
     "domain.content",
     "domain.learning",
     "domain.assessments",
@@ -227,5 +228,8 @@ SPECTACULAR_SETTINGS = {
     "ENUM_NAME_OVERRIDES": {
         "OrganizationRole": "domain.organizations.choices.RoleCode",
         "OrganizationMembershipStatus": "domain.organizations.choices.MembershipStatus",
+        "CourseLifecycleStatus": "domain.courses.choices.CourseStatus",
+        "CourseAuthoringStatus": "domain.courses.choices.AuthoringStatus",
+        "CourseSubjectAlignmentType": "domain.courses.choices.SubjectAlignmentType",
     },
 }

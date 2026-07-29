@@ -52,6 +52,7 @@ la base de desarrollo local:
 ```powershell
 pnpm organizations:demo -- -DemoPassword 'DemoLms!2026Organization'
 pnpm catalog:demo
+pnpm courses:demo
 ```
 
 El comando se niega a ejecutarse fuera de `DEBUG=True`, marca los correos como
@@ -90,6 +91,12 @@ visibles para subir, bajar, reducir su nivel, moverlo como hijo de otro tema y
 archivar/restaurar su subárbol. El servidor aplica la misma validación
 transaccional aunque se intente llamar la API sin usar esos controles.
 
+`pnpm courses:demo` crea de forma idempotente el curso borrador
+`introduccion-calculo-diferencial`, con tres módulos, ocho unidades y
+alineaciones reales al currículo demo. No cambia una revisión existente ni
+publica contenido. El workspace se abre en
+`/organizaciones/organizacion-demo/cursos/introduccion-calculo-diferencial`.
+
 ## Revisión manual en navegador real
 
 Después de completar el arranque anterior, deja estas dos terminales abiertas:
@@ -106,6 +113,7 @@ En una tercera terminal, si aún no cargaste los datos locales, ejecuta una vez:
 
 ```powershell
 pnpm catalog:demo
+pnpm courses:demo
 ```
 
 Abre [el inicio de sesión local](http://127.0.0.1:3000/auth/iniciar-sesion) e
@@ -127,6 +135,17 @@ La sección de prerrequisitos muestra listas de **Requiere** y **Es requisito de
 para asignaturas y conceptos. Permite seleccionar varias aristas, su tipo
 obligatorio/recomendado y una justificación. Las entidades archivadas no se
 ofrecen como candidatos y el mensaje de ciclo no revela detalles internos.
+
+El workspace de Cursos separa identidad estable, revisión de autoría y
+estructura ordenada. Owner y administrator pueden administrar cursos; author
+puede editarlos y enviarlos; reviewer puede solicitar cambios; sólo owner y
+administrator pueden aprobar. Instructor ve únicamente revisiones aprobadas y
+learner no tiene acceso a este workspace. Cada mutación exige
+`expected_version`; una edición concurrente devuelve `409 revision_conflict` sin
+descartar los valores del formulario. La aprobación exige título, resumen,
+resultado de aprendizaje, al menos un módulo activo y al menos una unidad
+activa por módulo. Esta fase no crea documentos semánticos ni publica contenido
+académico.
 
 Para crear una organización real de desarrollo con una cuenta ya verificada:
 
@@ -155,6 +174,12 @@ No crea usuarios ni solicita contraseñas.
 | Carrera PostgreSQL de prerrequisitos | `pnpm catalog:test:concurrency` |
 | Esquema y cliente OpenAPI del currículo | `pnpm catalog:schema` y `pnpm catalog:client:check` |
 | Chromium del currículo (jerarquía, formularios y asociaciones) | `pnpm catalog:e2e` o `pnpm catalog:visual` |
+| Validar Courses, migraciones, schema y drift | `pnpm courses:check` |
+| Pruebas de modelos, orden, workflow, concurrencia y API | `pnpm courses:test` |
+| Esquema y cliente OpenAPI de Courses | `pnpm courses:schema` y `pnpm courses:client:check` |
+| Datos demo idempotentes de Courses | `pnpm courses:demo` |
+| Smoke HTTP autenticado de Courses | `pnpm courses:smoke` |
+| Chromium aislado de Courses | `pnpm courses:e2e` o `pnpm courses:visual` |
 | Generar cliente OpenAPI | `pnpm platform:client:generate` |
 | Comprobar drift OpenAPI | `pnpm platform:client:check` |
 | E2E Chromium aislado | `pnpm organizations:e2e` |
@@ -164,6 +189,12 @@ No crea usuarios ni solicita contraseñas.
 El E2E usa una base PostgreSQL temporal, prefijo Redis temporal y correo
 aislado; crea sus contraseñas aleatoriamente para el proceso y elimina los
 recursos al terminar. No reutiliza las cuentas demo locales.
+
+El E2E de Courses crea sus cursos sólo en esa base aislada. Recorre creación,
+estructura, alineaciones, concurrencia optimista, envío, solicitud de cambios,
+reenvío y aprobación; valida author/reviewer/instructor/learner, aislamiento
+organizacional, 390 px y axe. El runner elimina base, prefijo Redis, correo y
+resultados locales incluso cuando una aserción falla.
 
 La comprobación visual del currículo abre Chromium contra esa infraestructura
 aislada, inicia sesión, verifica el árbol de Precálculo, crea disciplina,
@@ -187,6 +218,10 @@ visual.
 | --- | --- |
 | Inicio de sesión | `http://127.0.0.1:3000/auth/iniciar-sesion` |
 | Organizaciones | `http://127.0.0.1:3000/organizaciones` |
+| Cursos demo | `http://127.0.0.1:3000/organizaciones/organizacion-demo/cursos` |
+| Introducción al cálculo diferencial | `http://127.0.0.1:3000/organizaciones/organizacion-demo/cursos/introduccion-calculo-diferencial` |
+| Estructura del curso demo | `http://127.0.0.1:3000/organizaciones/organizacion-demo/cursos/introduccion-calculo-diferencial/estructura` |
+| Revisión del curso demo | `http://127.0.0.1:3000/organizaciones/organizacion-demo/cursos/introduccion-calculo-diferencial/revision` |
 | Currículo demo | `http://127.0.0.1:3000/organizaciones/organizacion-demo/curriculo` |
 | Precálculo y árbol de temas | `http://127.0.0.1:3000/organizaciones/organizacion-demo/curriculo/asignaturas/<id>` (abre la asignatura desde Currículo) |
 | Conceptos | `http://127.0.0.1:3000/organizaciones/organizacion-demo/curriculo/conceptos` |
@@ -206,6 +241,12 @@ visual.
   `pnpm platform:client:check`. Si éste informa drift de contrato, genera el
   cliente con `pnpm platform:client:generate` y revisa el cambio antes de
   continuar.
+- **Una edición devuelve `409 revision_conflict`:** la revisión cambió en otra
+  sesión. Conserva el formulario abierto, recarga la versión vigente y vuelve a
+  aplicar el cambio deliberadamente; no sobrescribas el `expected_version`.
+- **No se puede aprobar:** abre la tarjeta de preparación en Revisión. La API
+  devuelve los requisitos faltantes como datos estructurados; completa título,
+  resumen, resultado de aprendizaje, módulos y unidades activas.
 - **Quieres reiniciar los datos locales:** `pnpm infra:reset` borra los
   volúmenes de LMS y pide una confirmación explícita. Después debes repetir el
   bloque de arranque, migraciones y datos demo. No afecta a instalaciones de
@@ -214,11 +255,15 @@ visual.
 ## Arquitectura y contratos
 
 - Backend institucional: `apps/api/domain/organizations/`.
+- Backend de Courses: `apps/api/domain/courses/`.
 - OpenAPI de plataforma generado: `apps/web/openapi/platform.openapi.json`.
 - Tipos derivados: `apps/web/src/lib/api/generated/platform.ts`.
-- Rutas protegidas: `/organizaciones`, `/organizaciones/[slug]` y
-  `/organizaciones/[slug]/miembros`.
+- Rutas protegidas: `/organizaciones`, `/organizaciones/[slug]`,
+  `/organizaciones/[slug]/miembros` y
+  `/organizaciones/[slug]/cursos/**`.
 - Decisión RBAC: [ADR 0017](docs/adr/0017-organization-scoped-role-based-access-control.md).
+- Decisión de identidad, revisiones y orden de Courses:
+  [ADR 0019](docs/adr/0019-course-identity-authoring-revisions-and-ordered-structure.md).
 
 Consulta [docs/project/STATUS.md](docs/project/STATUS.md) para el estado real,
 [AGENTS.md](AGENTS.md) para reglas de contribución y `docs/` para arquitectura,

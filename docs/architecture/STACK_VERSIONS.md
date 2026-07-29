@@ -47,3 +47,11 @@ Phase 2 applies root `pnpm.overrides` for `postcss@8.5.18` and `sharp@0.35.3` to
 Prompt 7 no añade dependencias. Reutiliza Django 6.0.7, DRF 3.17.1,
 drf-spectacular 0.30.0, Next 16.2.12, `openapi-fetch` 0.17.0 y
 `openapi-typescript` 6.7.6 ya bloqueados.
+
+Prompt 9 revalidó el 2026-07-29 Django 6.0.7, DRF 3.17.1,
+django-filter 26.1, drf-spectacular 0.30.0, PostgreSQL 18.4, Next 16.2.12,
+TanStack Query 5.101.4, React Hook Form 7.83.0, Zod 4.4.3,
+openapi-fetch 0.17.0 y Playwright 1.62.0 contra documentación o registros
+oficiales. Todas siguen siendo las selecciones estables. openapi-typescript
+7.13.0 continúa rechazado por la política TypeScript 6 ya registrada; no se
+añadió ni actualizó ninguna dependencia.

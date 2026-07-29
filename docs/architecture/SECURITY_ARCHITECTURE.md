@@ -37,3 +37,14 @@ internos Treebeard; servicios aplican transacciones, políticas y transiciones.
 
 No hay JWT, almacenamiento local de sesión, `AllowAny`, `csrf_exempt`, DELETE
 curricular ni relaciones entre organizaciones.
+
+## Frontera de Courses
+
+Los selectores comienzan por organización y curso visibles; después limitan
+revisión, módulo y unidad al padre autorizado. UUID ajenos responden 404 y una
+capacidad insuficiente 403. `is_staff` no evita políticas; sólo el superuser
+activo tiene bypass explícito. Serializers excluyen organización, actores,
+estado, posición y `lock_version`. Cada mutación exige `expected_version`,
+bloquea la revisión y rechaza una versión obsoleta con 409. Ni permisos,
+estructura ni borradores se almacenan en cookies, Redis, `localStorage` o
+`sessionStorage`; la sesión conserva sólo identidad Django.

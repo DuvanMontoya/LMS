@@ -65,6 +65,15 @@ export default async function OrganizationDetailPage({
           Abrir currículo
         </Link>
       ) : null}
+      {hasCapability(access.capabilities, 'course.authoring.view') ||
+      hasCapability(access.capabilities, 'course.approved.view') ? (
+        <Link
+          className="mt-6 ml-3 inline-block rounded-lg border border-slate-300 px-4 py-2 font-medium text-slate-900"
+          href={`/organizaciones/${slug}/cursos`}
+        >
+          Abrir cursos
+        </Link>
+      ) : null}
       {canUpdate ? (
         <OrganizationNameForm name={organization.name} slug={slug} />
       ) : null}

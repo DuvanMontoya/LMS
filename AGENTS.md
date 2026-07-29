@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 8 is active: preserve `identity.0001`; any user-model change requires an ADR, migration plan and real PostgreSQL evidence. Organization roles belong only to `domain.organizations`, must be checked through policies/services, and may not be copied to `User`, `Group`, browser storage or generic admin forms. `domain.catalog` owns organization-scoped taxonomy and curriculum only; do not introduce courses, invitations or new infrastructure until its acceptance criteria are completed.
+Phase 9 is complete locally: preserve `identity.0001`; any user-model change requires an ADR, migration plan and real PostgreSQL evidence. Organization roles belong only to `domain.organizations`, must be checked through policies/services, and may not be copied to `User`, `Group`, browser storage or generic admin forms. `domain.catalog` owns organization-scoped taxonomy and curriculum only. `domain.courses` owns course identity, authoring revisions, transitions, ordered modules/units and their catalog alignments; an approved revision is not a publication. Prompt 10 may attach semantic documents to `CourseUnit`, but must not move course structure into `content` or introduce publication, enrolment, evaluation or delivery behavior.
 
 ## Persistent engineering rules
 

@@ -42,3 +42,14 @@ autorización. No se instaló ninguna dependencia.
 explícitos. `django-treebeard==6.0.0` (Apache-2.0) aporta `MP_Node` sólo para
 temas. Se rechazan MPTT, NetworkX, ltree experimental y una base de grafos:
 no cubren una necesidad adicional y aumentarían la superficie operativa.
+
+## Evaluación Prompt 9
+
+No se añadió ninguna dependencia. Django/PostgreSQL cubren transacciones,
+locking, constraints diferibles y posiciones; DRF/django-filter/drf-spectacular
+cubren el contrato; el cliente existente cubre caché, formularios, same-origin y
+Chromium. Se rechazaron bibliotecas de ordering, admin sortable, historial,
+máquinas de estados, grafos y drag-and-drop porque duplicarían invariantes
+pequeñas y explícitas. Sus licencias no cambian la decisión: no existe un
+problema técnico que justifique añadir propietario, actualización ni alternativa
+de retirada.

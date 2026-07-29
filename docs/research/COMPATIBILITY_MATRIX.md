@@ -37,3 +37,13 @@ openapi-typescript/openapi-fetch ya validada para TypeScript 6.
 | Django 6.0.7 ↔ django-filter 26.1 | Compatible | PyPI y checks Django. |
 | Django 6.0.7 ↔ django-treebeard 6.0.0 | Compatible | Clasificadores Django 6/Python 3.13 y pruebas MP_Node. |
 | PostgreSQL 18.4 ↔ CTE/locks | Compatible | Pruebas de grafos y concurrencia. |
+
+## Compatibilidad Prompt 9
+
+| Combinación | Resultado | Evidencia 2026-07-29 |
+|---|---|---|
+| Django 6.0.7 ↔ PostgreSQL 18.4 constraints diferibles | Compatible | `sqlmigrate courses 0001`, migración limpia y reorder concurrente real. |
+| DRF 3.17.1 ↔ django-filter 26.1 | Compatible | filtros posteriores a visibilidad y paginación probados por API. |
+| drf-spectacular 0.30.0 ↔ OpenAPI 3.0.3 | Compatible | schema sin warnings y cliente sincronizado. |
+| Next 16.2.12 ↔ React 19.2.8 ↔ TanStack Query 5.101.4 | Compatible | lint, tipos, Vitest, build y Chromium. |
+| Playwright 1.58.2 ↔ Chromium ↔ axe 4.12.1 | Compatible | cinco rutas, 390 px, teclado, dos contextos y cero violaciones A/AA. |

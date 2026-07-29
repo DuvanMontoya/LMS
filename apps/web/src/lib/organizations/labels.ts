@@ -24,6 +24,15 @@ const capabilityLabels: Record<string, string> = {
   'role.assign': 'Asignar roles institucionales',
   'role.assign_owner': 'Asignar o gestionar propietarios',
   'membership_event.view': 'Ver historial de membresía',
+  'catalog.view': 'Ver currículo',
+  'catalog.manage': 'Administrar currículo',
+  'catalog.manage_prerequisites': 'Administrar prerrequisitos',
+  'course.authoring.view': 'Ver cursos en autoría',
+  'course.authoring.manage': 'Administrar estructuras de curso',
+  'course.authoring.submit': 'Enviar estructuras a revisión',
+  'course.authoring.review': 'Solicitar cambios de estructura',
+  'course.authoring.approve': 'Aprobar estructuras de curso',
+  'course.approved.view': 'Ver cursos aprobados',
 };
 
 export function roleLabel(role: OrganizationRole): string {

@@ -185,3 +185,20 @@ flowchart LR
 Los módulos futuros `courses` y `progress` sólo podrán leer contratos públicos
 de `catalog`; una relación curricular no concede acceso a contenido ni crea
 progreso estudiantil.
+
+## Courses y autoría estructural (Prompt 9)
+
+`domain.courses` depende de las políticas de `organizations` y de referencias
+activas de `catalog`; ninguno de esos módulos importa `courses`. Las escrituras
+entran por servicios atómicos. `Course` conserva identidad, `CourseRevision`
+metadata/estado/`lock_version`, y `CourseModule`/`CourseUnit` la jerarquía
+ordenada. Una estructura aprobada permanece privada y no es publicación.
+
+```mermaid
+flowchart LR
+  browser["Next.js same-origin"] --> api["/api/v1/organizations/{slug}/courses"]
+  api --> policies["organization capabilities"]
+  api --> services["courses services"]
+  services --> postgres["PostgreSQL 18"]
+  services --> catalog["catalog references"]
+```

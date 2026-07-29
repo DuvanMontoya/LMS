@@ -123,6 +123,133 @@
         "required": ["concept_ids", "entity_id"],
         "type": "object"
       },
+      "Course": {
+        "properties": {
+          "archived_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "slug": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": { "readOnly": true, "type": "string" }
+        },
+        "required": ["archived_at", "created_at", "id", "slug", "status"],
+        "type": "object"
+      },
+      "CourseAuthoringStatus": {
+        "description": "* `draft` - Borrador\n* `in_review` - En revisión\n* `changes_requested` - Cambios solicitados\n* `approved` - Aprobada",
+        "enum": ["draft", "in_review", "changes_requested", "approved"],
+        "type": "string"
+      },
+      "CourseCreate": {
+        "properties": {
+          "description": { "maxLength": 5000, "type": "string" },
+          "estimated_duration_minutes": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "language_code": {
+            "default": "es",
+            "maxLength": 12,
+            "type": "string"
+          },
+          "learning_objective_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 200,
+            "type": "array"
+          },
+          "primary_subject_id": { "format": "uuid", "type": "string" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "subtitle": { "maxLength": 240, "type": "string" },
+          "summary": { "maxLength": 1200, "type": "string" },
+          "supporting_subject_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 50,
+            "type": "array"
+          },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": ["primary_subject_id", "slug", "summary", "title"],
+        "type": "object"
+      },
+      "CourseList": {
+        "properties": {
+          "archived_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "authoring_status": { "readOnly": true, "type": "string" },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "primary_subject": {
+            "allOf": [{ "$ref": "#/components/schemas/PrimarySubject" }],
+            "nullable": true,
+            "readOnly": true
+          },
+          "slug": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": { "readOnly": true, "type": "string" },
+          "summary": { "readOnly": true, "type": "string" },
+          "title": { "readOnly": true, "type": "string" },
+          "updated_at": { "nullable": true, "readOnly": true, "type": "string" }
+        },
+        "required": [
+          "archived_at",
+          "authoring_status",
+          "created_at",
+          "id",
+          "primary_subject",
+          "slug",
+          "status",
+          "summary",
+          "title",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "CoursePage": {
+        "properties": {
+          "count": { "type": "integer" },
+          "next": { "format": "uri", "nullable": true, "type": "string" },
+          "previous": { "format": "uri", "nullable": true, "type": "string" },
+          "results": {
+            "items": { "$ref": "#/components/schemas/CourseList" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "next", "previous", "results"],
+        "type": "object"
+      },
+      "CourseSubjectAlignmentType": {
+        "description": "* `primary` - Principal\n* `supporting` - Complementaria",
+        "enum": ["primary", "supporting"],
+        "type": "string"
+      },
       "CreateArea": {
         "properties": {
           "description": { "maxLength": 2000, "type": "string" },
@@ -235,6 +362,13 @@
         ],
         "type": "string"
       },
+      "ExpectedVersion": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["expected_version"],
+        "type": "object"
+      },
       "KindEnum": {
         "description": "* `required` - required\n* `recommended` - recommended",
         "enum": ["required", "recommended"],
@@ -307,6 +441,101 @@
         ],
         "type": "object"
       },
+      "Module": {
+        "properties": {
+          "archived_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "position": { "nullable": true, "readOnly": true, "type": "integer" },
+          "revision_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": { "readOnly": true, "type": "string" },
+          "title": { "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "archived_at",
+          "created_at",
+          "description",
+          "id",
+          "position",
+          "revision_id",
+          "status",
+          "title",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "ModuleCreate": {
+        "properties": {
+          "description": { "maxLength": 3000, "type": "string" },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": ["expected_version", "title"],
+        "type": "object"
+      },
+      "ModuleMutation": {
+        "properties": {
+          "archived_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "position": { "nullable": true, "readOnly": true, "type": "integer" },
+          "revision_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": { "readOnly": true, "type": "string" },
+          "title": { "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "archived_at",
+          "created_at",
+          "description",
+          "id",
+          "lock_version",
+          "position",
+          "revision_id",
+          "status",
+          "title",
+          "updated_at"
+        ],
+        "type": "object"
+      },
       "MoveTopic": {
         "properties": {
           "position": {
@@ -318,6 +547,15 @@
         "required": ["target_id"],
         "type": "object"
       },
+      "MutationResult": {
+        "properties": {
+          "lock_version": { "minimum": 1, "type": "integer" },
+          "revision_id": { "format": "uuid", "type": "string" }
+        },
+        "required": ["lock_version", "revision_id"],
+        "type": "object"
+      },
+      "NullEnum": { "enum": [null] },
       "Objective": {
         "properties": {
           "code": { "maxLength": 32, "type": "string" },
@@ -330,6 +568,17 @@
           "description": { "maxLength": 2000, "type": "string" },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
           "statement": { "maxLength": 1200, "type": "string" },
+          "status": { "readOnly": true, "type": "string" },
+          "subject_id": { "format": "uuid", "readOnly": true, "type": "string" }
+        },
+        "required": ["code", "id", "statement", "status", "subject_id"],
+        "type": "object"
+      },
+      "ObjectiveSummary": {
+        "properties": {
+          "code": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "statement": { "readOnly": true, "type": "string" },
           "status": { "readOnly": true, "type": "string" },
           "subject_id": { "format": "uuid", "readOnly": true, "type": "string" }
         },
@@ -365,6 +614,149 @@
           "learner"
         ],
         "type": "string"
+      },
+      "Outline": {
+        "properties": {
+          "course": {
+            "allOf": [{ "$ref": "#/components/schemas/Course" }],
+            "readOnly": true
+          },
+          "learning_objectives": {
+            "items": { "$ref": "#/components/schemas/RevisionObjective" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "modules": {
+            "items": { "$ref": "#/components/schemas/OutlineModule" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "revision": {
+            "allOf": [{ "$ref": "#/components/schemas/Revision" }],
+            "readOnly": true
+          },
+          "subjects": {
+            "items": { "$ref": "#/components/schemas/RevisionSubject" },
+            "readOnly": true,
+            "type": "array"
+          }
+        },
+        "required": [
+          "course",
+          "learning_objectives",
+          "modules",
+          "revision",
+          "subjects"
+        ],
+        "type": "object"
+      },
+      "OutlineModule": {
+        "properties": {
+          "archived_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "position": { "nullable": true, "readOnly": true, "type": "integer" },
+          "revision_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": { "readOnly": true, "type": "string" },
+          "title": { "readOnly": true, "type": "string" },
+          "units": {
+            "items": { "$ref": "#/components/schemas/OutlineUnit" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "archived_at",
+          "created_at",
+          "description",
+          "id",
+          "position",
+          "revision_id",
+          "status",
+          "title",
+          "units",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "OutlineUnit": {
+        "properties": {
+          "archived_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "content_status": {
+            "default": "Contenido académico pendiente",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "estimated_duration_minutes": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "learning_objectives": {
+            "items": { "$ref": "#/components/schemas/UnitObjective" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "module_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "position": { "nullable": true, "readOnly": true, "type": "integer" },
+          "status": { "readOnly": true, "type": "string" },
+          "summary": { "readOnly": true, "type": "string" },
+          "title": { "readOnly": true, "type": "string" },
+          "topics": {
+            "items": { "$ref": "#/components/schemas/UnitTopic" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "archived_at",
+          "created_at",
+          "estimated_duration_minutes",
+          "id",
+          "learning_objectives",
+          "module_id",
+          "position",
+          "status",
+          "summary",
+          "title",
+          "topics",
+          "updated_at"
+        ],
+        "type": "object"
       },
       "PaginatedMembershipEventList": {
         "properties": {
@@ -412,8 +804,45 @@
         "required": ["count", "results"],
         "type": "object"
       },
+      "PatchedModuleUpdate": {
+        "properties": {
+          "description": { "maxLength": 3000, "type": "string" },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "type": "object"
+      },
       "PatchedOrganizationUpdate": {
         "properties": { "name": { "maxLength": 160, "type": "string" } },
+        "type": "object"
+      },
+      "PatchedRevisionMetadataUpdate": {
+        "properties": {
+          "description": { "maxLength": 5000, "type": "string" },
+          "estimated_duration_minutes": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "language_code": { "maxLength": 12, "type": "string" },
+          "subtitle": { "maxLength": 240, "type": "string" },
+          "summary": { "maxLength": 1200, "type": "string" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "type": "object"
+      },
+      "PatchedUnitUpdate": {
+        "properties": {
+          "estimated_duration_minutes": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "summary": { "maxLength": 1200, "type": "string" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
         "type": "object"
       },
       "PatchedUpdateArea": {
@@ -472,6 +901,34 @@
         "required": ["entity_id", "kind", "prerequisite_id"],
         "type": "object"
       },
+      "PrimarySubject": {
+        "properties": {
+          "id": { "format": "uuid", "type": "string" },
+          "name": { "type": "string" }
+        },
+        "required": ["id", "name"],
+        "type": "object"
+      },
+      "Readiness": {
+        "properties": {
+          "issues": {
+            "items": { "$ref": "#/components/schemas/ReadinessIssue" },
+            "type": "array"
+          },
+          "ready": { "type": "boolean" }
+        },
+        "required": ["issues", "ready"],
+        "type": "object"
+      },
+      "ReadinessIssue": {
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "path": { "type": "string" }
+        },
+        "required": ["code", "message", "path"],
+        "type": "object"
+      },
       "ReplaceConceptAssociations": {
         "properties": {
           "concept_ids": {
@@ -481,6 +938,30 @@
           }
         },
         "required": ["concept_ids"],
+        "type": "object"
+      },
+      "ReplaceObjectives": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "learning_objective_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 200,
+            "type": "array"
+          }
+        },
+        "required": ["expected_version", "learning_objective_ids"],
+        "type": "object"
+      },
+      "ReplaceOrder": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "ordered_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 200,
+            "type": "array"
+          }
+        },
+        "required": ["expected_version", "ordered_ids"],
         "type": "object"
       },
       "ReplaceRoles": {
@@ -501,6 +982,123 @@
           }
         },
         "required": ["prerequisites"],
+        "type": "object"
+      },
+      "ReplaceSubjects": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "primary_subject_id": { "format": "uuid", "type": "string" },
+          "supporting_subject_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 50,
+            "type": "array"
+          }
+        },
+        "required": [
+          "expected_version",
+          "primary_subject_id",
+          "supporting_subject_ids"
+        ],
+        "type": "object"
+      },
+      "ReplaceTopics": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "topic_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 200,
+            "type": "array"
+          }
+        },
+        "required": ["expected_version", "topic_ids"],
+        "type": "object"
+      },
+      "Revision": {
+        "properties": {
+          "authoring_status": { "readOnly": true, "type": "string" },
+          "based_on_revision_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "course_slug": { "readOnly": true, "type": "string" },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": { "readOnly": true, "type": "string" },
+          "estimated_duration_minutes": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "language_code": { "readOnly": true, "type": "string" },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "number": { "readOnly": true, "type": "integer" },
+          "status_changed_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "subtitle": { "readOnly": true, "type": "string" },
+          "summary": { "readOnly": true, "type": "string" },
+          "title": { "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoring_status",
+          "based_on_revision_id",
+          "course_slug",
+          "created_at",
+          "description",
+          "estimated_duration_minutes",
+          "id",
+          "language_code",
+          "lock_version",
+          "number",
+          "status_changed_at",
+          "subtitle",
+          "summary",
+          "title",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "RevisionObjective": {
+        "properties": {
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "learning_objective": {
+            "allOf": [{ "$ref": "#/components/schemas/ObjectiveSummary" }],
+            "readOnly": true
+          },
+          "position": { "readOnly": true, "type": "integer" }
+        },
+        "required": ["id", "learning_objective", "position"],
+        "type": "object"
+      },
+      "RevisionSubject": {
+        "properties": {
+          "alignment_type": {
+            "allOf": [
+              { "$ref": "#/components/schemas/CourseSubjectAlignmentType" }
+            ],
+            "readOnly": true
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "position": { "readOnly": true, "type": "integer" },
+          "subject": {
+            "allOf": [{ "$ref": "#/components/schemas/SubjectSummary" }],
+            "readOnly": true
+          }
+        },
+        "required": ["alignment_type", "id", "position", "subject"],
         "type": "object"
       },
       "Subject": {
@@ -532,6 +1130,20 @@
         "required": ["kind", "prerequisite_id"],
         "type": "object"
       },
+      "SubjectSummary": {
+        "properties": {
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "name": { "readOnly": true, "type": "string" },
+          "slug": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": { "readOnly": true, "type": "string" }
+        },
+        "required": ["id", "name", "slug", "status"],
+        "type": "object"
+      },
       "Topic": {
         "properties": {
           "children": {
@@ -561,6 +1173,186 @@
         ],
         "type": "object"
       },
+      "TopicSummary": {
+        "properties": {
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "slug": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": { "readOnly": true, "type": "string" },
+          "subject_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "title": { "readOnly": true, "type": "string" }
+        },
+        "required": ["id", "slug", "status", "subject_id", "title"],
+        "type": "object"
+      },
+      "Transition": {
+        "properties": {
+          "actor_display": { "readOnly": true, "type": "string" },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "from_status": {
+            "nullable": true,
+            "oneOf": [
+              { "$ref": "#/components/schemas/CourseAuthoringStatus" },
+              { "$ref": "#/components/schemas/NullEnum" }
+            ],
+            "readOnly": true
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "note": { "readOnly": true, "type": "string" },
+          "to_status": {
+            "allOf": [{ "$ref": "#/components/schemas/CourseAuthoringStatus" }],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "actor_display",
+          "created_at",
+          "from_status",
+          "id",
+          "note",
+          "to_status"
+        ],
+        "type": "object"
+      },
+      "Unit": {
+        "properties": {
+          "archived_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "estimated_duration_minutes": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "module_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "position": { "nullable": true, "readOnly": true, "type": "integer" },
+          "status": { "readOnly": true, "type": "string" },
+          "summary": { "readOnly": true, "type": "string" },
+          "title": { "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "archived_at",
+          "created_at",
+          "estimated_duration_minutes",
+          "id",
+          "module_id",
+          "position",
+          "status",
+          "summary",
+          "title",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "UnitCreate": {
+        "properties": {
+          "estimated_duration_minutes": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "summary": { "maxLength": 1200, "type": "string" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": ["expected_version", "title"],
+        "type": "object"
+      },
+      "UnitMutation": {
+        "properties": {
+          "archived_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "estimated_duration_minutes": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "module_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "position": { "nullable": true, "readOnly": true, "type": "integer" },
+          "status": { "readOnly": true, "type": "string" },
+          "summary": { "readOnly": true, "type": "string" },
+          "title": { "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "archived_at",
+          "created_at",
+          "estimated_duration_minutes",
+          "id",
+          "lock_version",
+          "module_id",
+          "position",
+          "status",
+          "summary",
+          "title",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "UnitObjective": {
+        "properties": {
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "learning_objective": {
+            "allOf": [{ "$ref": "#/components/schemas/ObjectiveSummary" }],
+            "readOnly": true
+          },
+          "position": { "readOnly": true, "type": "integer" }
+        },
+        "required": ["id", "learning_objective", "position"],
+        "type": "object"
+      },
+      "UnitTopic": {
+        "properties": {
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "position": { "readOnly": true, "type": "integer" },
+          "topic": {
+            "allOf": [{ "$ref": "#/components/schemas/TopicSummary" }],
+            "readOnly": true
+          }
+        },
+        "required": ["id", "position", "topic"],
+        "type": "object"
+      },
       "UserSummary": {
         "properties": {
           "display": { "readOnly": true, "type": "string" },
@@ -568,6 +1360,14 @@
           "id": { "format": "uuid", "readOnly": true, "type": "string" }
         },
         "required": ["display", "email", "id"],
+        "type": "object"
+      },
+      "WorkflowAction": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "note": { "maxLength": 2000, "type": "string" }
+        },
+        "required": ["expected_version"],
         "type": "object"
       }
     },
@@ -2446,6 +3246,1672 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Topic" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/": {
+      "get": {
+        "operationId": "organizations_courses_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "authoring_status",
+            "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "ordering", "schema": { "type": "string" } },
+          { "in": "query", "name": "page", "schema": { "type": "integer" } },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": { "type": "integer" }
+          },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "status", "schema": { "type": "string" } },
+          {
+            "in": "query",
+            "name": "subject",
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CoursePage" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_courses_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CourseCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CourseCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CourseCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Revision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/": {
+      "get": {
+        "operationId": "organizations_courses_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Course" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/archive/": {
+      "post": {
+        "operationId": "organizations_courses_archive_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Course" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/restore/": {
+      "post": {
+        "operationId": "organizations_courses_restore_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Course" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Revision" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Revision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "organizations_courses_revisions_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedRevisionMetadataUpdate"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedRevisionMetadataUpdate"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedRevisionMetadataUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Revision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/approve/": {
+      "post": {
+        "operationId": "organizations_courses_revisions_approve_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/WorkflowAction" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/WorkflowAction" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/WorkflowAction" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Revision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/learning-objectives/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_learning_objectives_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/RevisionObjective" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "operationId": "organizations_courses_revisions_learning_objectives_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReplaceObjectives" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ReplaceObjectives" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ReplaceObjectives" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MutationResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_modules_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Module" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_courses_revisions_modules_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ModuleCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ModuleCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ModuleCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ModuleMutation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/order/": {
+      "put": {
+        "operationId": "organizations_courses_revisions_modules_order_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReplaceOrder" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ReplaceOrder" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ReplaceOrder" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MutationResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_modules_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Module" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "organizations_courses_revisions_modules_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PatchedModuleUpdate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/PatchedModuleUpdate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/PatchedModuleUpdate" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ModuleMutation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/archive/": {
+      "post": {
+        "operationId": "organizations_courses_revisions_modules_archive_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ExpectedVersion" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ExpectedVersion" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ExpectedVersion" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ModuleMutation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/restore/": {
+      "post": {
+        "operationId": "organizations_courses_revisions_modules_restore_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ExpectedVersion" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ExpectedVersion" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ExpectedVersion" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ModuleMutation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/units/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_modules_units_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Unit" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_courses_revisions_modules_units_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UnitCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/UnitCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/UnitCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UnitMutation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/units/order/": {
+      "put": {
+        "operationId": "organizations_courses_revisions_modules_units_order_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReplaceOrder" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ReplaceOrder" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ReplaceOrder" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MutationResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/outline/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_outline_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Outline" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/readiness/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_readiness_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Readiness" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/request-changes/": {
+      "post": {
+        "operationId": "organizations_courses_revisions_request_changes_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/WorkflowAction" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/WorkflowAction" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/WorkflowAction" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Revision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/subjects/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_subjects_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/RevisionSubject" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "operationId": "organizations_courses_revisions_subjects_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReplaceSubjects" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ReplaceSubjects" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ReplaceSubjects" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MutationResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/submit-review/": {
+      "post": {
+        "operationId": "organizations_courses_revisions_submit_review_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/WorkflowAction" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/WorkflowAction" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/WorkflowAction" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Revision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/transitions/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_transitions_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Transition" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_units_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Unit" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "organizations_courses_revisions_units_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PatchedUnitUpdate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/PatchedUnitUpdate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/PatchedUnitUpdate" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UnitMutation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/archive/": {
+      "post": {
+        "operationId": "organizations_courses_revisions_units_archive_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ExpectedVersion" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ExpectedVersion" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ExpectedVersion" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UnitMutation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/learning-objectives/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_units_learning_objectives_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/UnitObjective" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "operationId": "organizations_courses_revisions_units_learning_objectives_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReplaceObjectives" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ReplaceObjectives" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ReplaceObjectives" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MutationResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/restore/": {
+      "post": {
+        "operationId": "organizations_courses_revisions_units_restore_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ExpectedVersion" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ExpectedVersion" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ExpectedVersion" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UnitMutation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/topics/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_units_topics_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/UnitTopic" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "operationId": "organizations_courses_revisions_units_topics_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReplaceTopics" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ReplaceTopics" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ReplaceTopics" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MutationResult" }
               }
             },
             "description": ""

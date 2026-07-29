@@ -40,3 +40,13 @@ archivado, movimientos de temas y ciclos visibles. El revisor ejecuta además
 una escritura `fetch` con su propia cookie/CSRF y debe recibir 403; el alumno
 entra tras archivar y no puede ver el contenido. Axe WCAG 2.2 A/AA se ejecuta
 en las rutas curriculares principales.
+
+# Courses Prompt 9
+
+La pirámide separa modelos/constraints, orden, workflow/readiness, políticas,
+API y dos `TransactionTestCase` concurrentes sobre PostgreSQL real. La suite
+global mantiene cobertura mínima de 75 %. Vitest cubre query keys y read-only.
+Playwright usa base UUID, prefijo Redis y correo aislados: tres escenarios
+recorren autoría completa con dos contextos para 409, edición, orden,
+archivado/restauración, revisión inválida con foco e IDOR en curso, revisión,
+módulo y unidad. Axe se ejecuta sin reglas deshabilitadas en las cinco rutas.
