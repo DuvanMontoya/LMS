@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Phase 7 — Autorización y estructura institucional** is in progress on 2026-07-29. The domain implementation, generated contract and protected surface exist, but the required institutional browser scenarios and full acceptance matrix remain pending before the phase can close.
+**Phase 7 — Autorización y estructura institucional** está en verificación final el 2026-07-29. La implementación, el contrato generado y la superficie protegida existen; la matriz institucional Chromium aislada pasó. Queda la revisión final integral antes de cerrar la fase.
 
 ## Delivered scaffold
 
@@ -42,7 +42,7 @@
 ## Delivered Next.js browser authentication integration
 
 - `apps/web` now presents Spanish routes for login, registration, email verification, password recovery/reset and the minimal protected `/estudiar` area. Django remains the owner of every cookie, session, CSRF decision and account flow; Next does not create auth cookies or store tokens.
-- `next.config.ts` validates the server-only `DJANGO_INTERNAL_ORIGIN` and rewrites only `/_allauth`, `/api/v1` and `/health`. `FRONTEND_ORIGIN` is canonical `http://127.0.0.1:3000` for Django CSRF and allauth links; no CORS or `/admin` rewrite exists.
+- `next.config.ts` validates the server-only `DJANGO_INTERNAL_ORIGIN` and rewrites only `/_allauth`, `/api/v1` and `/health`. `FRONTEND_ORIGIN` defaults to canonical `http://127.0.0.1:3000` while `CSRF_TRUSTED_ORIGINS` dynamically accepts loopback alternatives (`http://localhost:3000` and `http://127.0.0.1:3000`) to prevent 403 CSRF rejection during browser dev sessions; no CORS or `/admin` rewrite exists.
 - The generated `openapi/allauth.openapi.json` (12 browser paths) and `src/lib/api/generated/allauth.ts` are produced from the real allauth endpoint by `scripts/generate-allauth-client.mjs`. `auth:web:client:generate` writes them atomically and `auth:web:client:check` verifies drift without modification.
 - `openapi-fetch 0.17.0`, TanStack Query 5.101.4, React Hook Form 7.83.0, resolvers 5.5.7, Zod 4.4.3, `server-only` 0.0.1 and axe Playwright 4.12.1 are exact dependencies. `openapi-typescript 6.7.6` is the latest stable line compatible with the repository TypeScript 6 policy; 7.13.0 was rejected for its TypeScript 5-only peer.
 - Browser CSRF bootstraps through official allauth config, uses only same-origin credentials and appends `X-CSRFToken` for unsafe methods. Query keys and no-retry auth mutations are centralized. `proxy.ts` is optimistic only; the protected server layout checks Django with forwarded Cookie and `no-store`.
@@ -59,6 +59,10 @@ TypeScript 7.0.2 and ESLint 10.8.0 were installed temporarily and rejected after
 
 ## Validation evidence
 
+- El 2026-07-29 se consultaron las guías oficiales de Next.js sobre `rewrites` y preservación de la barra final, y de openapi-fetch sobre serialización JSON. El BFF conserva ahora las rutas API con barra final antes de reenviarlas a Django, y el adaptador CSRF conserva `Content-Type` del `Request` generado antes de añadir `X-CSRFToken`.
+- La matriz aislada `pnpm organizations:e2e` ejecutó 9 escenarios Chromium: autenticación existente, owner (alta, suspensión, reactivación, revocación y reincorporación), administrador sin controles sobre owners, aislamiento entre organizaciones y axe WCAG A/AA institucional. Pasó después de corregir la navegación post-login, el reenvío con barra final, los encabezados JSON y la actualización de la tabla de membresías.
+- El navegador integrado cargó visualmente el login local y el entorno de demostración quedó disponible en `127.0.0.1:3000`/`127.0.0.1:8000`. Las cuentas demo reproducibles se generan sólo con `DEBUG=True` mediante `pnpm organizations:demo`; el README documenta su uso y las credenciales.
+- La validación de cierre local pasó: `pnpm check`, `pnpm test` (50 pruebas Python, cobertura 80.92%; 16 pruebas Vitest), `pnpm organizations:test` (14), políticas (4), concurrencia (1), contrato OpenAPI sin drift y `pnpm web:build`.
 - Django `check`: exit 0; `check --deploy` in development: exit 0 with five expected deployment warnings.
 - Production-like `check --deploy`: exit 0 with a long non-secret placeholder key and `lms.invalid` host.
 - Ruff lint/format, Pyright strict, pytest (36 tests, 91.95% coverage), ESLint, Prettier, `tsc`, Vitest (13 tests), Next build, production same-origin proxy smoke, isolated Playwright Chromium (5 tests) and isolated axe WCAG 2.2 A/AA (1 tagged test) have passed individually.

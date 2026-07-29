@@ -23,7 +23,7 @@ import {
 type Role = components['schemas']['OrganizationRole'];
 type MemberList =
   operations['organizations_memberships_list']['responses'][200]['content']['application/json'];
-type Membership = MemberList['results'][number];
+type Membership = components['schemas']['Membership'];
 
 const roles: Role[] = [
   'owner',
@@ -351,7 +351,7 @@ export function MemberManagement({
                 <td className="p-3">
                   <MemberActions
                     capabilities={capabilities}
-                    membership={membership}
+                    membership={membership as Membership}
                     organizationName={organizationName}
                     slug={slug}
                   />

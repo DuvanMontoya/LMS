@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('Check', 'GenerateClient', 'CheckClient', 'GeneratePlatformClient', 'CheckPlatformClient', 'Unit', 'Components', 'Accessibility', 'E2E', 'Smoke', 'Dev', 'ClearE2E')]
+    [ValidateSet('Build', 'Check', 'GenerateClient', 'CheckClient', 'GeneratePlatformClient', 'CheckPlatformClient', 'Unit', 'Components', 'Accessibility', 'E2E', 'Smoke', 'Dev', 'ClearE2E')]
     [string]$Action
 )
 
@@ -193,6 +193,10 @@ Set-Location $repositoryRoot
 Import-LocalInfrastructureEnvironment
 
 switch ($Action) {
+    'Build' {
+        & pnpm --dir $webDirectory run build
+        Assert-LastExitCode 'Next production build'
+    }
     'GenerateClient' {
         Invoke-WithTemporaryDjango {
             & pnpm --dir $webDirectory exec node scripts/generate-allauth-client.mjs generate

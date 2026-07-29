@@ -141,6 +141,14 @@ HEADLESS_FRONTEND_URLS = {
     "account_reset_password": f"{FRONTEND_ORIGIN}/auth/restablecer-contrasena",
 }
 CSRF_TRUSTED_ORIGINS = [FRONTEND_ORIGIN]
+_frontend_parsed = urlparse(FRONTEND_ORIGIN)
+if _frontend_parsed.hostname in {"127.0.0.1", "localhost"}:
+    _alt_host = "localhost" if _frontend_parsed.hostname == "127.0.0.1" else "127.0.0.1"
+    _alt_netloc = f"{_alt_host}:{_frontend_parsed.port}" if _frontend_parsed.port else _alt_host
+    _alt_origin = _frontend_parsed._replace(netloc=_alt_netloc).geturl().rstrip("/")
+    if _alt_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_alt_origin)
+
 
 ALLAUTH_TRUSTED_PROXY_COUNT = 0
 

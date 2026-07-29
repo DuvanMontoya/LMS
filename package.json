@@ -10,7 +10,7 @@
   "scripts": {
     "web:dev": "pwsh -NoProfile -File scripts/web-auth.ps1 -Action Dev",
     "api:dev": "pwsh -NoProfile -File scripts/django.ps1 -Action Dev",
-    "web:build": "pnpm --dir apps/web run build",
+    "web:build": "pwsh -NoProfile -File scripts/web-auth.ps1 -Action Build",
     "web:lint": "pnpm --dir apps/web run lint",
     "web:format:check": "pnpm --dir apps/web run format:check",
     "web:typecheck": "pnpm --dir apps/web run typecheck",

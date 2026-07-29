@@ -92,6 +92,7 @@ No crea usuarios ni solicita contraseñas.
 | Generar cliente OpenAPI | `pnpm platform:client:generate` |
 | Comprobar drift OpenAPI | `pnpm platform:client:check` |
 | E2E Chromium aislado | `pnpm organizations:e2e` |
+| Compilación de producción de Next con el entorno local | `pnpm web:build` |
 | Suite completa de calidad | `pnpm check` y `pnpm test` |
 
 El E2E usa una base PostgreSQL temporal, prefijo Redis temporal y correo

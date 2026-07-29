@@ -553,3 +553,18 @@ class HeadlessAuthTests(TestCase):
         self.assertEqual(second["Content-Type"], "application/json")
         self.assertNotIn("<html", second.content.decode().lower())
         cache.delete("allauth:rl:signup:ip:127.0.0.1")
+
+    def test_csrf_trusted_origins_accepts_localhost_and_loopback_ip(self) -> None:
+        user = self.create_verified_user("loopback@example.test")
+        client = self.csrf_client()
+        response = client.post(
+            f"{AUTH_BASE}login",
+            data=json.dumps(
+                {"email": user.email, "password": "CorrectHorseBatteryStaple42!"}
+            ),
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value,
+            HTTP_ORIGIN="http://localhost:3000",
+        )
+        self.assertEqual(response.status_code, 200)
+

@@ -42,7 +42,7 @@ function Invoke-Django([string[]]$Arguments) {
 }
 
 function Invoke-OrganizationTests([string[]]$Paths) {
-    & uv run --directory $apiDirectory pytest @Paths
+    & uv run --directory $apiDirectory pytest --no-cov @Paths
     Assert-LastExitCode 'organization pytest suite'
 }
 
