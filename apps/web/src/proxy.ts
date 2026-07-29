@@ -12,4 +12,6 @@ export function proxy(request: NextRequest) {
   return NextResponse.redirect(loginUrl);
 }
 
-export const config = { matcher: ['/estudiar/:path*'] };
+export const config = {
+  matcher: ['/estudiar/:path*', '/organizaciones/:path*'],
+};

@@ -13,7 +13,9 @@ class OrganizationAdmin(admin.ModelAdmin):  # pyright: ignore[reportMissingTypeA
     def has_add_permission(self, request: HttpRequest) -> bool:
         return False
 
-    def has_delete_permission(self, request: HttpRequest, obj: object | None = None) -> bool:
+    def has_delete_permission(
+        self, request: HttpRequest, obj: object | None = None
+    ) -> bool:
         return False
 
 
@@ -33,16 +35,19 @@ class MembershipAdmin(admin.ModelAdmin):  # pyright: ignore[reportMissingTypeArg
         "status_changed_by",
         "suspended_at",
         "revoked_at",
-        "revoked_by",
     )
 
     def has_add_permission(self, request: HttpRequest) -> bool:
         return False
 
-    def has_change_permission(self, request: HttpRequest, obj: object | None = None) -> bool:
+    def has_change_permission(
+        self, request: HttpRequest, obj: object | None = None
+    ) -> bool:
         return request.method in {"GET", "HEAD"}
 
-    def has_delete_permission(self, request: HttpRequest, obj: object | None = None) -> bool:
+    def has_delete_permission(
+        self, request: HttpRequest, obj: object | None = None
+    ) -> bool:
         return False
 
 
@@ -65,10 +70,14 @@ class MembershipRoleAssignmentAdmin(admin.ModelAdmin):  # pyright: ignore[report
     def has_add_permission(self, request: HttpRequest) -> bool:
         return False
 
-    def has_change_permission(self, request: HttpRequest, obj: object | None = None) -> bool:
+    def has_change_permission(
+        self, request: HttpRequest, obj: object | None = None
+    ) -> bool:
         return request.method in {"GET", "HEAD"}
 
-    def has_delete_permission(self, request: HttpRequest, obj: object | None = None) -> bool:
+    def has_delete_permission(
+        self, request: HttpRequest, obj: object | None = None
+    ) -> bool:
         return False
 
 
@@ -93,8 +102,12 @@ class MembershipEventAdmin(admin.ModelAdmin):  # pyright: ignore[reportMissingTy
     def has_add_permission(self, request: HttpRequest) -> bool:
         return False
 
-    def has_change_permission(self, request: HttpRequest, obj: object | None = None) -> bool:
+    def has_change_permission(
+        self, request: HttpRequest, obj: object | None = None
+    ) -> bool:
         return request.method in {"GET", "HEAD"}
 
-    def has_delete_permission(self, request: HttpRequest, obj: object | None = None) -> bool:
+    def has_delete_permission(
+        self, request: HttpRequest, obj: object | None = None
+    ) -> bool:
         return False

@@ -47,6 +47,7 @@ from domain.organizations.services import (
 )
 
 from .serializers import (
+    AccessContextSerializer,
     AccessOrganizationSerializer,
     AddMemberSerializer,
     MembershipEventSerializer,
@@ -135,7 +136,7 @@ def _membership_or_404(
 
 
 class AccessContextView(APIView):
-    @extend_schema(responses={200: AccessOrganizationSerializer(many=True)})
+    @extend_schema(responses={200: AccessContextSerializer})
     def get(self, request: Request) -> Response:
         memberships = (
             Membership.objects.filter(

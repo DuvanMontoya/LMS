@@ -11,6 +11,7 @@ param(
         'Migrate',
         'CreateSuperuser',
         'Health',
+        'Dev',
         'Test',
         'TestMigrations'
     )]
@@ -189,6 +190,11 @@ switch ($Action) {
         Assert-RedisHealthy
         Invoke-TemporaryHealthServer
         Write-Host 'Liveness and readiness endpoints passed against the local PostgreSQL service.'
+    }
+    'Dev' {
+        Assert-PostgreSQLHealthy
+        Assert-RedisHealthy
+        Invoke-Django @('runserver', '127.0.0.1:8000')
     }
     'Test' {
         Assert-PostgreSQLHealthy

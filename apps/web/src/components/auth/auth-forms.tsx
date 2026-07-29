@@ -181,7 +181,6 @@ export function LoginForm() {
     try {
       await login.mutateAsync({ email, password });
       form.reset({ email, password: '' });
-      router.refresh();
       router.replace(sanitizeReturnPath(searchParams.get('next')));
     } catch (error) {
       setMessage(submitError(error, form.setError));

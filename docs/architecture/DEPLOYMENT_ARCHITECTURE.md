@@ -29,3 +29,8 @@ flowchart TB
 ```
 
 No Kubernetes is introduced. Containers are separately deployable but not microservices: API and worker share one versioned backend image/codebase. Health checks, non-root images, migration-before-rollout, rolling deployment, encrypted backups, restoring tests, observability, and a rollback runbook are required before production. The reverse proxy terminates TLS and preserves the scheme/host headers necessary for secure Django cookies.
+# Despliegue
+
+El OpenAPI de plataforma se publica sólo en desarrollo/test; no se añade Swagger
+ni Redoc. El frontend reescribe `/api/v1` al origen Django interno y el cliente
+server-only reenvía exclusivamente la cookie de sesión con `no-store`.

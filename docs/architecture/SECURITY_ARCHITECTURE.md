@@ -21,3 +21,9 @@ Encrypted backups and tested restore procedures cover PostgreSQL and object stor
 ## Threat decisions
 
 The primary risks are account takeover, authorization bypass, CSRF/XSS in authoring, malicious uploads, grading/attempt tampering, data leakage via search/analytics, background-task replay, secret exposure, and destructive migrations. Threat modeling precedes each public or sensitive module. Celery tasks are idempotent, receive stable identifiers not trusted payloads, re-check authorization/business state, and are queued only after transaction commit.
+# Seguridad
+
+La API usa sesión Django y CSRF. Los selectores filtran por membresía activa
+antes de buscar por slug/UUID, por lo que un recurso de otra organización es
+404. Owner y administrator tienen capacidades explícitas; sólo un superuser
+activo tiene bypass y `is_staff` no concede capacidades.

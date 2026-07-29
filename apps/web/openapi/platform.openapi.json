@@ -1,0 +1,657 @@
+{
+  "components": {
+    "schemas": {
+      "AccessContext": {
+        "properties": {
+          "organizations": {
+            "items": { "$ref": "#/components/schemas/AccessOrganization" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "user": {
+            "allOf": [{ "$ref": "#/components/schemas/UserSummary" }],
+            "readOnly": true
+          }
+        },
+        "required": ["organizations", "user"],
+        "type": "object"
+      },
+      "AccessOrganization": {
+        "properties": {
+          "capabilities": {
+            "items": { "type": "string" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "membership_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "membership_status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/OrganizationMembershipStatus" }
+            ],
+            "readOnly": true
+          },
+          "name": { "readOnly": true, "type": "string" },
+          "roles": {
+            "items": { "$ref": "#/components/schemas/OrganizationRole" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "slug": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "capabilities",
+          "id",
+          "membership_id",
+          "membership_status",
+          "name",
+          "roles",
+          "slug"
+        ],
+        "type": "object"
+      },
+      "AddMember": {
+        "properties": {
+          "email": { "format": "email", "type": "string" },
+          "roles": {
+            "items": { "$ref": "#/components/schemas/OrganizationRole" },
+            "type": "array"
+          }
+        },
+        "required": ["email", "roles"],
+        "type": "object"
+      },
+      "EventTypeEnum": {
+        "description": "* `membership_created` - Membresía creada\n* `membership_suspended` - Membresía suspendida\n* `membership_reactivated` - Membresía reactivada\n* `membership_revoked` - Membresía revocada\n* `role_assigned` - Rol asignado\n* `role_revoked` - Rol revocado",
+        "enum": [
+          "membership_created",
+          "membership_suspended",
+          "membership_reactivated",
+          "membership_revoked",
+          "role_assigned",
+          "role_revoked"
+        ],
+        "type": "string"
+      },
+      "Membership": {
+        "properties": {
+          "joined_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "membership_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "roles": {
+            "items": { "$ref": "#/components/schemas/OrganizationRole" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrganizationMembershipStatus"
+          },
+          "user": {
+            "allOf": [{ "$ref": "#/components/schemas/UserSummary" }],
+            "readOnly": true
+          }
+        },
+        "required": ["joined_at", "membership_id", "roles", "user"],
+        "type": "object"
+      },
+      "MembershipEvent": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "event_type": {
+            "allOf": [{ "$ref": "#/components/schemas/EventTypeEnum" }],
+            "readOnly": true
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "new_status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/OrganizationMembershipStatus" }
+            ],
+            "readOnly": true
+          },
+          "previous_status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/OrganizationMembershipStatus" }
+            ],
+            "readOnly": true
+          },
+          "role": {
+            "allOf": [{ "$ref": "#/components/schemas/OrganizationRole" }],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "created_at",
+          "event_type",
+          "id",
+          "new_status",
+          "previous_status",
+          "role"
+        ],
+        "type": "object"
+      },
+      "Organization": {
+        "properties": {
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" },
+          "slug": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "slug"],
+        "type": "object"
+      },
+      "OrganizationMembershipStatus": {
+        "description": "* `active` - Activa\n* `suspended` - Suspendida\n* `revoked` - Revocada",
+        "enum": ["active", "suspended", "revoked"],
+        "type": "string"
+      },
+      "OrganizationRole": {
+        "description": "* `owner` - Propietario\n* `administrator` - Administrador\n* `author` - Autor\n* `reviewer` - Revisor\n* `instructor` - Docente\n* `learner` - Estudiante",
+        "enum": [
+          "owner",
+          "administrator",
+          "author",
+          "reviewer",
+          "instructor",
+          "learner"
+        ],
+        "type": "string"
+      },
+      "PaginatedMembershipEventList": {
+        "properties": {
+          "count": { "example": 123, "type": "integer" },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": { "$ref": "#/components/schemas/MembershipEvent" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "results"],
+        "type": "object"
+      },
+      "PaginatedMembershipList": {
+        "properties": {
+          "count": { "example": 123, "type": "integer" },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": { "$ref": "#/components/schemas/Membership" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "results"],
+        "type": "object"
+      },
+      "PatchedOrganizationUpdate": {
+        "properties": { "name": { "maxLength": 160, "type": "string" } },
+        "type": "object"
+      },
+      "ReplaceRoles": {
+        "properties": {
+          "roles": {
+            "items": { "$ref": "#/components/schemas/OrganizationRole" },
+            "type": "array"
+          }
+        },
+        "required": ["roles"],
+        "type": "object"
+      },
+      "UserSummary": {
+        "properties": {
+          "display": { "readOnly": true, "type": "string" },
+          "email": { "format": "email", "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" }
+        },
+        "required": ["display", "email", "id"],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": { "in": "cookie", "name": "sessionid", "type": "apiKey" }
+    }
+  },
+  "info": { "title": "LMS Platform API", "version": "0.2.0" },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/v1/access/context/": {
+      "get": {
+        "operationId": "access_context_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AccessContext" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["access"]
+      }
+    },
+    "/api/v1/organizations/": {
+      "get": {
+        "operationId": "organizations_list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Organization" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/": {
+      "get": {
+        "operationId": "organizations_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Organization" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "organizations_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedOrganizationUpdate"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedOrganizationUpdate"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedOrganizationUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Organization" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/memberships/": {
+      "get": {
+        "operationId": "organizations_memberships_list",
+        "parameters": [
+          {
+            "description": "Un número de página dentro del conjunto de resultados paginado.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "description": "Número de resultados a devolver por página.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedMembershipList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_memberships_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AddMember" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/AddMember" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/AddMember" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Membership" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/memberships/{membership_id}/": {
+      "get": {
+        "operationId": "organizations_memberships_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Membership" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/memberships/{membership_id}/events/": {
+      "get": {
+        "operationId": "organizations_memberships_events_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "description": "Un número de página dentro del conjunto de resultados paginado.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "description": "Número de resultados a devolver por página.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedMembershipEventList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/memberships/{membership_id}/reactivate/": {
+      "post": {
+        "operationId": "organizations_memberships_reactivate_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Membership" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/memberships/{membership_id}/revoke/": {
+      "post": {
+        "operationId": "organizations_memberships_revoke_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Membership" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/memberships/{membership_id}/roles/": {
+      "put": {
+        "operationId": "organizations_memberships_roles_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReplaceRoles" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ReplaceRoles" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ReplaceRoles" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Membership" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/memberships/{membership_id}/suspend/": {
+      "post": {
+        "operationId": "organizations_memberships_suspend_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Membership" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    }
+  }
+}

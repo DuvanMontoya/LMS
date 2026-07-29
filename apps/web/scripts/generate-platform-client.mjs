@@ -116,7 +116,11 @@ if (!response.ok)
   throw new Error(`No se pudo obtener el schema (HTTP ${response.status}).`);
 const schema = JSON.parse(await response.text());
 validateSchema(schema);
-const snapshot = `${JSON.stringify(sortValue(schema), null, 2)}\n`;
+const prettier = await import('prettier');
+const snapshot = await prettier.format(JSON.stringify(sortValue(schema)), {
+  parser: 'json',
+  filepath: snapshotPath,
+});
 const temporaryDirectoryName = `.platform-client-${randomUUID()}`;
 const temporaryDirectory = join(root, temporaryDirectoryName);
 const temporarySchema = join(temporaryDirectory, 'schema.json');
@@ -125,8 +129,10 @@ try {
   await mkdir(temporaryDirectory, { recursive: true });
   await writeFile(temporarySchema, snapshot, 'utf8');
   const types = await runGenerator(`./${temporaryDirectoryName}/schema.json`);
-  const prettier = await import('prettier');
-  const generated = `// GENERATED — DO NOT EDIT. Source: openapi/platform.openapi.json\n${await prettier.format(types, { parser: 'typescript' })}`;
+  const generated = await prettier.format(
+    `// GENERATED — DO NOT EDIT. Source: openapi/platform.openapi.json\n${types}`,
+    { parser: 'typescript', singleQuote: true, trailingComma: 'all' },
+  );
   if (action === 'check') {
     const [existingSnapshot, existingTypes] = await Promise.all([
       readFile(snapshotPath, 'utf8'),

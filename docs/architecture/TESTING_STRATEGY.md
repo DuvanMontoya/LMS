@@ -23,3 +23,9 @@ Headless authentication tests use PostgreSQL, real Redis with a fresh random tes
 Accessibility acceptance includes keyboard-only flow, visible focus, names/roles/states, reduced motion, contrast, and meaningful math alternatives. Passing automation is necessary but never the whole accessibility claim.
 
 Authentication integration additionally checks deterministic OpenAPI drift, typed client compilation, CSRF cookie parsing, return-path rejection, Spanish error mapping, generated paths and a production proxy smoke. Browser journeys use an isolated UUID-named PostgreSQL database, random `lms-e2e-` Redis key prefix and ignored file-mail directory. The runner migrates and drops the database, deletes only that prefix and its local mail/results paths in `finally`; it never aims Playwright at the development database. Playwright starts direct Django and Next servers on loopback, refuses server reuse, runs Chromium serially, and retains no trace, video, screenshot or email-code artifact after success. The CI workflow installs Chromium explicitly and runs the complete journey suite, including the tagged axe WCAG 2.2 A/AA scan.
+# Estrategia de pruebas
+
+Organizations se prueba sobre PostgreSQL con restricciones, matriz
+rol-capacidad, servicios, API y una carrera `TransactionTestCase` que intenta
+revocar dos owners en paralelo. El schema y el cliente TypeScript se verifican
+contra drift en CI.

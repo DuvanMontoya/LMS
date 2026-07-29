@@ -103,7 +103,7 @@ function Invoke-E2E([string]$Grep) {
     $createDatabase = 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE {0}"' -f $databaseName
     $dropDatabase = 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS {0}"' -f $databaseName
     $savedEnvironment = @{}
-    foreach ($name in @('POSTGRES_DB', 'DJANGO_SETTINGS_MODULE', 'E2E_REDIS_PREFIX', 'E2E_MAIL_PATH')) {
+    foreach ($name in @('POSTGRES_DB', 'DJANGO_SETTINGS_MODULE', 'E2E_REDIS_PREFIX', 'E2E_MAIL_PATH', 'E2E_ORGANIZATIONS_PASSWORD')) {
         $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
     }
 
@@ -116,8 +116,11 @@ function Invoke-E2E([string]$Grep) {
         [Environment]::SetEnvironmentVariable('DJANGO_SETTINGS_MODULE', 'config.settings.e2e', 'Process')
         [Environment]::SetEnvironmentVariable('E2E_REDIS_PREFIX', $redisPrefix, 'Process')
         [Environment]::SetEnvironmentVariable('E2E_MAIL_PATH', $e2eMailDirectory, 'Process')
+        [Environment]::SetEnvironmentVariable('E2E_ORGANIZATIONS_PASSWORD', "E2E!$([Guid]::NewGuid().ToString('N'))aA", 'Process')
         & $pythonExecutable (Join-Path $apiDirectory 'manage.py') migrate --noinput
         Assert-LastExitCode 'E2E migrations'
+        & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_organizations
+        Assert-LastExitCode 'E2E organization fixture creation'
         $playwrightArguments = @('test')
         if (-not [string]::IsNullOrWhiteSpace($Grep)) {
             $playwrightArguments += @('--grep', $Grep)
@@ -226,5 +229,8 @@ switch ($Action) {
     }
     'Smoke' { Invoke-ProductionProxySmoke }
     'E2E' { Invoke-E2E }
-    'Dev' { throw 'Use pnpm dev with explicitly configured local environment variables.' }
+    'Dev' {
+        & pnpm --dir $webDirectory run dev
+        Assert-LastExitCode 'Next development server'
+    }
 }

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# drf-spectacular's decorator has incomplete third-party generic annotations.
+# pyright: reportUnknownVariableType=false
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from domain.organizations.choices import MembershipStatus, RoleCode
@@ -42,6 +45,9 @@ class MembershipSerializer(serializers.ModelSerializer[Membership]):
         model = Membership
         fields = ("membership_id", "user", "status", "roles", "joined_at")
 
+    @extend_schema_field(
+        serializers.ListField(child=serializers.ChoiceField(choices=RoleCode.choices))
+    )
     def get_roles(self, membership: Membership) -> list[str]:
         return sorted(role.value for role in active_roles(membership))
 
@@ -91,8 +97,15 @@ class AccessOrganizationSerializer(serializers.Serializer[object]):
     membership_status = serializers.ChoiceField(
         choices=MembershipStatus.choices, read_only=True
     )
-    roles = serializers.ListField(child=serializers.CharField(), read_only=True)
+    roles = serializers.ListField(
+        child=serializers.ChoiceField(choices=RoleCode.choices), read_only=True
+    )
     capabilities = serializers.ListField(child=serializers.CharField(), read_only=True)
+
+
+class AccessContextSerializer(serializers.Serializer[object]):
+    user = UserSummarySerializer(read_only=True)
+    organizations = AccessOrganizationSerializer(many=True, read_only=True)
 
 
 def access_organization_payload(membership: Membership) -> dict[str, object]:

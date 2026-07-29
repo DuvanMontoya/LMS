@@ -30,3 +30,8 @@
 | lucide-react | Consistent icons; text labels remain essential. | Decorative icon misuse. | Conditional. |
 | animation library | Motion. CSS handles simple motion. | Bundle and reduced-motion risk. | Reject initially. |
 | MinIO, Mailpit | Local S3/SMTP emulation. | Image/support selection pending. | Defer to infrastructure phase. |
+# Evaluación Prompt 7
+
+Se rechazaron django-guardian, paquetes RBAC, Axios, JWT y bibliotecas de
+diálogo: no resuelven una necesidad no cubierta y ampliarían la superficie de
+autorización. No se instaló ninguna dependencia.

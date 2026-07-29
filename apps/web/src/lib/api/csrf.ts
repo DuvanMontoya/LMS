@@ -97,7 +97,10 @@ async function requestWithToken(
   init: RequestInit | undefined,
   token: string,
 ): Promise<Response> {
-  const headers = new Headers(init?.headers);
+  const headers = new Headers(
+    input instanceof Request ? input.headers : undefined,
+  );
+  new Headers(init?.headers).forEach((value, name) => headers.set(name, value));
   headers.set(CSRF_HEADER_NAME, token);
   return fetch(input, { ...init, credentials: 'same-origin', headers });
 }

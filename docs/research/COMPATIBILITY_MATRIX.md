@@ -24,3 +24,8 @@
 | S3-compatible storage ↔ django-storages/boto3 | Compatible, provider deferred | S3 adapter is approved; test against MinIO only after official image pin in Phase 3. |
 
 “Compatible” never replaces the required technical proof: `check`, locked install, migrations, health checks, API tests, and browser session E2E are the acceptance evidence of later phases.
+# Compatibilidad Prompt 7
+
+No hubo dependencia nueva. La integración usa las versiones bloqueadas y
+compatibles de Django/DRF/drf-spectacular y la pareja
+openapi-typescript/openapi-fetch ya validada para TypeScript 6.

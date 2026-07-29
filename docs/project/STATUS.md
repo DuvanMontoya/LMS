@@ -2,7 +2,7 @@
 
 ## Phase
 
-**Phase 6 — Next.js browser authentication integration** completed locally on 2026-07-29. The browser journeys, accessibility scan and production proxy smoke now have repeatable isolated evidence and run in CI.
+**Phase 7 — Autorización y estructura institucional** is in progress on 2026-07-29. The domain implementation, generated contract and protected surface exist, but the required institutional browser scenarios and full acceptance matrix remain pending before the phase can close.
 
 ## Delivered scaffold
 
@@ -77,4 +77,4 @@ TypeScript 7.0.2 and ESLint 10.8.0 were installed temporarily and rejected after
 
 ## Next exact step
 
-**Prompt 7 — Autorización y estructura institucional: roles, membresías, permisos, organizaciones y políticas de acceso.**
+**Prompt 8 — Taxonomía y currículo: áreas, disciplinas, asignaturas, temas, conceptos, objetivos de aprendizaje y prerrequisitos.**

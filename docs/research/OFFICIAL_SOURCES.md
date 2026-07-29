@@ -27,3 +27,12 @@ Consulted 2026-07-28. Only official project documentation, official registries, 
 | Security/accessibility standards | https://www.w3.org/TR/WCAG22/ ; https://www.rfc-editor.org/rfc/rfc9110 | WCAG 2.2 AA target and HTTP semantics. |
 
 No blog, tutorial, forum, AI output, or third-party comparison was used as version authority.
+
+## Prompt 7 consultation — 2026-07-29
+
+| Topic | Official source | Evidence used |
+|---|---|---|
+| Django transactions and locking | https://docs.djangoproject.com/en/6.0/topics/db/transactions/ ; https://docs.djangoproject.com/en/6.0/ref/models/querysets/#select-for-update | `atomic`, PostgreSQL row locks and `TransactionTestCase` for the last-owner invariant. |
+| Django constraints and indexes | https://docs.djangoproject.com/en/6.0/ref/models/constraints/ ; https://docs.djangoproject.com/en/6.0/ref/models/indexes/ | Conditional uniqueness, check constraints and query-led index design. |
+| DRF authorization | https://www.django-rest-framework.org/api-guide/permissions/ | Global session authentication and thin permission boundary; policies remain framework-independent. |
+| drf-spectacular | https://drf-spectacular.readthedocs.io/en/latest/ ; https://drf-spectacular.readthedocs.io/en/latest/faq.html | Explicit request/response metadata, enum overrides and `spectacular --validate --fail-on-warn`. |

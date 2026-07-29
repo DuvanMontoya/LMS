@@ -76,3 +76,16 @@ Never retroactively recalculate a delivered question, submitted response, awarde
 model: it tracks the primary/verified email used by mandatory verification and
 must remain coherent with `identity.User.email`. No profile, role or academic
 relation is introduced by authentication.
+# Modelo de dominio
+
+```mermaid
+erDiagram
+  User ||--o{ Membership : participa
+  Organization ||--o{ Membership : contiene
+  Membership ||--o{ MembershipRoleAssignment : tiene_historial
+  Membership ||--o{ MembershipEvent : registra
+```
+
+`Membership` tiene UUID y una única fila no revocada por usuario/organización.
+Las asignaciones de rol y eventos son históricos; no existen roles globales en
+`User`.

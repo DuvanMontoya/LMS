@@ -7,6 +7,9 @@ const djangoInternalOrigin = requireInternalOrigin(
 );
 
 const nextConfig: NextConfig = {
+  // Django's canonical API contract requires terminal slashes. Preserve them
+  // before external rewrites so unsafe requests never follow a 301 redirect.
+  skipTrailingSlashRedirect: true,
   async rewrites() {
     return [
       {
@@ -14,8 +17,8 @@ const nextConfig: NextConfig = {
         destination: `${djangoInternalOrigin}/_allauth/:path*`,
       },
       {
-        source: '/api/v1/:path*',
-        destination: `${djangoInternalOrigin}/api/v1/:path*`,
+        source: '/api/v1/:path*/',
+        destination: `${djangoInternalOrigin}/api/v1/:path*/`,
       },
       {
         source: '/health/:path*',
@@ -39,6 +42,18 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/estudiar/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+        ],
+      },
+      {
+        source: '/organizaciones/:path*',
         headers: [
           { key: 'Cache-Control', value: 'no-store' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

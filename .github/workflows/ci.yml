@@ -48,6 +48,10 @@ jobs:
           pnpm run api:migrations:plan
           pnpm run api:migrate
           pnpm run api:test:migrations
+          pnpm run organizations:check
+          pnpm run organizations:test:policies
+          pnpm run organizations:test:concurrency
+          pnpm run organizations:test
           pnpm run auth:check
           pnpm run auth:spec
           pnpm run auth:test
@@ -67,6 +71,7 @@ jobs:
           pnpm run web:test
           pnpm run web:build
           pnpm run auth:web:client:check
+          pnpm run platform:client:check
           pnpm run auth:web:test:e2e
       - name: Remove schema-test infrastructure resources
         if: always()

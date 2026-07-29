@@ -155,3 +155,9 @@ flowchart LR
 ## Explicit rejections
 
 Microservices, Kubernetes, GraphQL, full CQRS, event sourcing, an all-purpose `core` app, a generic ORM repository, browser-persisted JWTs, and CORS middleware for the same-origin production model are rejected initially. Reconsider only through evidence and an ADR.
+# Arquitectura
+
+La autorización institucional se resuelve en `organizations`: la identidad es
+global, las membresías UUID delimitan cada organización y las capacidades se
+calculan por roles activos en cada solicitud. Las mutaciones usan servicios
+transaccionales; Next.js usa la URL como contexto y Django mantiene autoridad.

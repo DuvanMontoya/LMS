@@ -51,3 +51,9 @@ Phase 3 adds only the local Compose infrastructure required for PostgreSQL and R
 Route groups are `(public)`, `(auth)`, `(learner)`, `(teaching)`, `(authoring)`, and `(admin)`. Default components are Server Components. A `use client` boundary is the smallest interactive leaf (editor, form controller, browser-only accessibility affordance); client components receive serializable view data and call one feature gateway, never arbitrary URLs. Server requests forward the incoming cookie to same-origin Django; browser mutations use Django's CSRF contract. No token is copied into localStorage. API errors map centrally to a typed, accessible error model.
 
 TanStack Query is reserved for client-owned, invalidatable remote state. React state remains local unless several distant clients require it. Forms pair a feature Zod schema with React Hook Form; backend remains authoritative. Tiptap documents use a validated semantic schema, MathLive is isolated to input widgets, and MathJax rendering is server-safe/lazy where necessary.
+# Estructura del repositorio
+
+`apps/api/domain/organizations` contiene modelos, capacidades, políticas,
+servicios, selectores, API, admin y comando de bootstrap. `apps/web/openapi`
+y `src/lib/api/generated/platform.ts` son artefactos generados del OpenAPI de
+plataforma; `src/app/(protected)/organizaciones` es la superficie institucional.

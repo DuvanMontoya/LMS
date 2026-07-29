@@ -1,25 +1,112 @@
 # LMS
 
-Plataforma académica propia orientada al estudio profundo y a la calidad académica. No adapta ningún LMS existente.
+Plataforma académica propia con Django, Next.js, PostgreSQL y Redis. La
+autenticación usa sesiones Django y CSRF; la autorización institucional se
+resuelve por organización, membresía y capacidades. No hay JWT, roles globales
+en el usuario ni almacenamiento de permisos en el navegador.
 
-## Estado
+## Requisitos locales
 
-El scaffolding reproducible y la infraestructura local mínima están completados: el repositorio Git local está en `main`, existen `apps/api` (Django) y `apps/web` (Next.js), y los lockfiles están versionados. Compose aporta solamente PostgreSQL y Redis para desarrollo local; no hay funcionalidades académicas, migraciones, workers ni despliegue productivo.
+- Windows PowerShell 7+, Docker Desktop, Node 24.18.0, pnpm 10.33.2,
+  Python 3.13.13 y `uv`.
+- Los puertos `5433`, `6379`, `8000` y `3000` deben estar disponibles. PostgreSQL
+  local de LMS está en `5433` para no interferir con instalaciones externas.
 
-La primera migración ya define `identity.User`: UUID, email obligatorio/case-insensitive, Argon2id y administración interna. La autenticación pública usa la API oficial browser de django-allauth a través del mismo origen Next.js: sesiones Django, CSRF, verificación por código y Redis para rate limits; no hay JWT ni cliente móvil. La interfaz de acceso está en `/auth/*` y `/estudiar` se valida en Django desde Server Components. Usa `pnpm auth:web:client:check` para verificar el contrato generado; no se crean superusuarios automáticamente.
+## Arranque desde una copia limpia
 
-La fuente de estado es [docs/project/STATUS.md](docs/project/STATUS.md). La siguiente fase autorizada es Prompt 7: autorización y estructura institucional.
+Abre PowerShell en la raíz del repositorio y ejecuta, en este orden:
 
-## Documentación
+```powershell
+pnpm install --frozen-lockfile
+uv sync --locked --directory apps/api
+pnpm infra:init
+pnpm infra:up
+pnpm infra:smoke
+pnpm api:migrate
+pnpm platform:client:check
+```
 
-- Arquitectura y decisiones: `docs/architecture/` y `docs/adr/`.
-- Investigación oficial y compatibilidad: `docs/research/`.
-- Alcance, roadmap y estado: `docs/project/`.
+`infra:init` crea `infrastructure/local/.env` con secretos locales aleatorios
+e ignorados por Git. No copies ese archivo a otro entorno ni lo publiques.
 
-Toda contribución debe seguir [AGENTS.md](AGENTS.md).
+En una terminal inicia Django:
 
-## Comprobaciones locales
+```powershell
+pnpm api:dev
+```
 
-Desde PowerShell ejecuta `./scripts/preflight.ps1`, `./scripts/bootstrap.ps1` y `./scripts/check.ps1`. `bootstrap` genera `infrastructure/local/.env` con secretos locales si falta, pero no inicia contenedores. Para operar los servicios usa `pnpm infra:init`, `pnpm infra:up`, `pnpm infra:smoke`, `pnpm infra:status`, `pnpm infra:down`; `pnpm infra:reset` elimina explícitamente los dos volúmenes locales. Consulta `infrastructure/README.md` antes de actualizar el lock de imágenes.
+En otra terminal inicia Next.js:
 
-Con PostgreSQL y Redis locales activos, `pnpm auth:web:check` verifica el cliente OpenAPI, lint y tipos; `pnpm auth:web:test`, `pnpm auth:web:test:components` y `pnpm auth:web:test:a11y` ejecutan pruebas unitarias, de interfaz y accesibilidad aislada. `pnpm auth:web:test:e2e` crea y elimina una base PostgreSQL temporal, un prefijo Redis y correo de archivos para recorrer autenticación real en Chromium; no usa la base de desarrollo. `pnpm auth:web:smoke` construye Next y verifica las reescrituras del mismo origen, incluida la conservación de CSRF y la ausencia de proxy para `/admin/`.
+```powershell
+pnpm web:dev
+```
+
+Abre [http://127.0.0.1:3000](http://127.0.0.1:3000). Next reescribe solamente
+`/_allauth`, `/api/v1` y `/health` al Django local; `/admin` no se reescribe.
+
+## Datos de demostración locales
+
+Con los servicios activos, crea las cuentas de demostración exclusivamente en
+la base de desarrollo local:
+
+```powershell
+pnpm organizations:demo -- -DemoPassword 'DemoLms!2026Organization'
+```
+
+El comando se niega a ejecutarse fuera de `DEBUG=True`, marca los correos como
+verificados y nunca debe usarse en producción. Puedes iniciar sesión con:
+
+| Rol | Correo | Contraseña |
+| --- | --- | --- |
+| Propietario | `owner@demo.local` | `DemoLms!2026Organization` |
+| Administrador | `administrator@demo.local` | `DemoLms!2026Organization` |
+| Estudiante | `learner@demo.local` | `DemoLms!2026Organization` |
+| Owner externo | `external@demo.local` | `DemoLms!2026Organization` |
+
+La organización principal es `Organización de demostración` y se abre en
+`/organizaciones/organizacion-demo`. El owner puede administrar miembros; el
+administrador puede añadir personas pero no gestionar owners; el estudiante
+solamente ve su contexto. La organización externa sirve para comprobar que una
+URL ajena devuelve 404.
+
+Para crear una organización real de desarrollo con una cuenta ya verificada:
+
+```powershell
+pnpm organizations:bootstrap -- -Name 'Mi institución' -Slug 'mi-institucion' -OwnerEmail 'owner@example.test'
+```
+
+No crea usuarios ni solicita contraseñas.
+
+## Operación y validación
+
+| Objetivo | Comando |
+| --- | --- |
+| Estado de infraestructura | `pnpm infra:status` |
+| Detener infraestructura | `pnpm infra:down` |
+| Eliminar volúmenes locales, explícitamente | `pnpm infra:reset` |
+| Validar organizaciones, schema y drift | `pnpm organizations:check` |
+| Ver migración y SQL institucional | `pnpm organizations:migrations` |
+| Pruebas institucionales PostgreSQL | `pnpm organizations:test` |
+| Matriz de políticas | `pnpm organizations:test:policies` |
+| Carrera del último owner | `pnpm organizations:test:concurrency` |
+| Generar cliente OpenAPI | `pnpm platform:client:generate` |
+| Comprobar drift OpenAPI | `pnpm platform:client:check` |
+| E2E Chromium aislado | `pnpm organizations:e2e` |
+| Suite completa de calidad | `pnpm check` y `pnpm test` |
+
+El E2E usa una base PostgreSQL temporal, prefijo Redis temporal y correo
+aislado; crea sus contraseñas aleatoriamente para el proceso y elimina los
+recursos al terminar. No reutiliza las cuentas demo locales.
+
+## Arquitectura y contratos
+
+- Backend institucional: `apps/api/domain/organizations/`.
+- OpenAPI de plataforma generado: `apps/web/openapi/platform.openapi.json`.
+- Tipos derivados: `apps/web/src/lib/api/generated/platform.ts`.
+- Rutas protegidas: `/organizaciones`, `/organizaciones/[slug]` y
+  `/organizaciones/[slug]/miembros`.
+- Decisión RBAC: [ADR 0017](docs/adr/0017-organization-scoped-role-based-access-control.md).
+
+Consulta [docs/project/STATUS.md](docs/project/STATUS.md) para el estado real,
+[AGENTS.md](AGENTS.md) para reglas de contribución y `docs/` para arquitectura,
+seguridad, fuentes oficiales y roadmap.

@@ -41,3 +41,8 @@ Consulted 2026-07-28. “Latest” means the latest stable release available at 
 The registry snapshot did not establish an authoritative `django-filter` day for 25.2, so that field is intentionally marked for recheck rather than invented.
 
 Phase 2 applies root `pnpm.overrides` for `postcss@8.5.18` and `sharp@0.35.3` to remediate advisories inherited by Next 16.2.12. Remove those compatibility overrides once Next absorbs the fixes.
+# Versiones y contratos
+
+Prompt 7 no añade dependencias. Reutiliza Django 6.0.7, DRF 3.17.1,
+drf-spectacular 0.30.0, Next 16.2.12, `openapi-fetch` 0.17.0 y
+`openapi-typescript` 6.7.6 ya bloqueados.

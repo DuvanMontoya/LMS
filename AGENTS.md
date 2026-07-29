@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 4 is complete: the repository has the first PostgreSQL schema and irreversible custom user migration. Preserve `identity.0001`; any user-model change now requires an ADR, migration plan and real PostgreSQL evidence. Do not introduce public authentication, profiles, roles, academic models, Redis application integration or new infrastructure until the active roadmap phase explicitly permits it.
+Phase 7 is active: preserve `identity.0001`; any user-model change requires an ADR, migration plan and real PostgreSQL evidence. Organization roles belong only to `domain.organizations`, must be checked through policies/services, and may not be copied to `User`, `Group`, browser storage or generic admin forms. Do not introduce taxonomy, curriculum, courses, invitations or new infrastructure until the phase acceptance criteria are completed.
 
 ## Persistent engineering rules
 

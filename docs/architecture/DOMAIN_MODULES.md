@@ -3,7 +3,7 @@
 | Module / initial Django app grouping | Owns and public contract | Invariants and events | Allowed / prohibited dependencies; risk |
 |---|---|---|---|
 | `identity` | Implemented: User, password, groups, permissions, sessions and internal admin. Future: profile, roles and grants. | Custom user exists in `identity.0001`; email uniqueness is case-insensitive in PostgreSQL. | May serve all modules through policy contract; no academic ownership. Risk: role explosion. |
-| `organizations` | Future institution and membership boundary | V1 defaults to one implicit organization; records may acquire nullable owner later. | Identity only; cannot own course rules now. Risk: premature tenancy. |
+| `organizations` | Implemented: organization, membership, historical role assignment and membership event API. | A UUID membership has at most one non-revoked row per user/organization; active owner cannot be last removed; role history is append/revoke. | Depends only on identity; cannot own courses, enrolments or academic rules. |
 | `taxonomy` | Area, discipline, subject, topic, tag, concept | Stable slugs; concept graph is acyclic where a prerequisite relation demands it. | Curriculum/courses may read; no enrolment/grade dependency. |
 | `curriculum` | Objective, competency, prerequisite, learning path | Prerequisite cycles rejected; published references resolve exact versions. Emits `path_changed`. | Taxonomy; not attempts. |
 | `courses` | Logical course, structure, owners, lifecycle | One ordered structure per revision; logical identity differs from publication. | Taxonomy/curriculum/identity; never grades. |
