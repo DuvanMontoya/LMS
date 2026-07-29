@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    env:
+      DJANGO_INTERNAL_ORIGIN: http://127.0.0.1:8000
+      AUTH_SESSION_COOKIE_NAME: sessionid
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13.13'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.11.19'
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24.18.0'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.33.2'
+      - name: Sync Python dependencies
+        run: uv sync --locked --directory apps/api
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install the locked Chromium browser for Playwright
+        run: pnpm --dir apps/web exec playwright install --with-deps chromium
+      - name: Start PostgreSQL and Redis from the project Compose configuration
+        run: |
+          pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Init
+          pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Up
+      - name: Backend checks
+        run: |
+          pnpm run api:check
+          pnpm run api:database:check
+          pnpm run api:check:production
+          pnpm run api:migrations:check
+          pnpm run api:migrations:plan
+          pnpm run api:migrate
+          pnpm run api:test:migrations
+          pnpm run auth:check
+          pnpm run auth:spec
+          pnpm run auth:test
+          pnpm run auth:test:security
+          pnpm run auth:test:email
+          pnpm run auth:test:rate-limits
+          pnpm run api:format:check
+          pnpm run api:lint
+          pnpm run api:typecheck
+          pnpm run api:test
+          pnpm run api:health
+      - name: Frontend checks
+        run: |
+          pnpm run web:lint
+          pnpm run web:format:check
+          pnpm run web:typecheck
+          pnpm run web:test
+          pnpm run web:build
+          pnpm run auth:web:client:check
+          pnpm run auth:web:test:e2e
+      - name: Remove schema-test infrastructure resources
+        if: always()
+        run: pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Reset -ConfirmReset
+  infrastructure:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13.13'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.11.19'
+      - name: Sync Python dependencies for the Django connection smoke
+        run: uv sync --locked --directory apps/api
+      - name: Initialize and validate local infrastructure
+        run: |
+          pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Init
+          pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Validate
+      - name: Pull locked images and start services
+        run: |
+          pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Pull
+          pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Lock
+          pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Up
+      - name: Smoke persistence and authentication
+        run: |
+          pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Status
+          pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Smoke
+          pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Restart
+          pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Smoke
+      - name: Remove CI infrastructure resources
+        if: always()
+        run: pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Reset -ConfirmReset

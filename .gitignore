@@ -1,0 +1,40 @@
+# Python and Django
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+.pytest_cache/
+.ruff_cache/
+.pyright/
+.coverage
+coverage.xml
+htmlcov/
+db.sqlite3
+apps/api/.local/mail/
+apps/api/.local/e2e-mail/
+apps/web/.local/e2e-results/
+
+# Node, pnpm, Next.js, Playwright
+node_modules/
+.next/
+out/
+playwright-report/
+test-results/
+
+# Environment and credentials
+.env
+.env.*
+!.env.example
+infrastructure/local/.env
+*.pem
+*.key
+
+# Editor, OS and temporary files
+.vscode/
+.idea/
+*.code-workspace
+Thumbs.db
+Desktop.ini
+*.tmp
+*.log
+.DS_Store

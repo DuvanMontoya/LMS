@@ -1,0 +1,446 @@
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useId, useRef, useState } from 'react';
+import {
+  useForm,
+  type FieldValues,
+  type Path,
+  type UseFormRegister,
+} from 'react-hook-form';
+
+import { AuthApiError, mapAllauthErrorToSpanish } from '@/lib/auth/errors';
+import { getBrowserAuthSession } from '@/lib/auth/api';
+import {
+  useLogin,
+  useRequestPasswordReset,
+  useResendVerification,
+  useResetPassword,
+  useSignUp,
+  useVerifyEmail,
+} from '@/lib/auth/hooks';
+import { sanitizeReturnPath } from '@/lib/auth/return-path';
+import {
+  loginSchema,
+  passwordRequestSchema,
+  passwordResetSchema,
+  signUpSchema,
+  verificationSchema,
+  type LoginValues,
+  type PasswordRequestValues,
+  type PasswordResetValues,
+  type SignUpValues,
+  type VerificationValues,
+} from '@/lib/auth/schemas';
+
+type FieldProps<T extends FieldValues> = {
+  name: Path<T>;
+  label: string;
+  register: UseFormRegister<T>;
+  error?: string | undefined;
+  type?: 'email' | 'password' | 'text';
+  autoComplete: string;
+};
+
+function Field<T extends FieldValues>({
+  name,
+  label,
+  register,
+  error,
+  type = 'text',
+  autoComplete,
+}: FieldProps<T>) {
+  const id = useId();
+  const errorId = `${id}-error`;
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-900" htmlFor={id}>
+        {label}
+      </label>
+      <input
+        id={id}
+        type={type}
+        autoComplete={autoComplete}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? errorId : undefined}
+        className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none ring-slate-900 focus:ring-2"
+        {...register(name)}
+      />
+      {error ? (
+        <p id={errorId} className="mt-1 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function PasswordField<T extends FieldValues>(
+  props: Omit<FieldProps<T>, 'type'>,
+) {
+  const [visible, setVisible] = useState(false);
+  const id = useId();
+  const errorId = `${id}-error`;
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-900" htmlFor={id}>
+        {props.label}
+      </label>
+      <div className="mt-1 flex gap-2">
+        <input
+          id={id}
+          type={visible ? 'text' : 'password'}
+          autoComplete={props.autoComplete}
+          aria-invalid={Boolean(props.error)}
+          aria-describedby={props.error ? errorId : undefined}
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none ring-slate-900 focus:ring-2"
+          {...props.register(props.name)}
+        />
+        <button
+          type="button"
+          aria-pressed={visible}
+          onClick={() => setVisible((current) => !current)}
+          className="rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
+        >
+          {visible ? 'Ocultar' : 'Mostrar'}
+        </button>
+      </div>
+      {props.error ? (
+        <p id={errorId} className="mt-1 text-sm text-red-700">
+          {props.error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function ErrorSummary({ message }: Readonly<{ message: string | null }>) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (message) ref.current?.focus();
+  }, [message]);
+  if (!message) return null;
+  return (
+    <div
+      ref={ref}
+      tabIndex={-1}
+      role="alert"
+      aria-live="assertive"
+      className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+    >
+      {message}
+    </div>
+  );
+}
+
+function submitError<T extends FieldValues>(
+  error: unknown,
+  setError: ReturnType<typeof useForm<T>>['setError'],
+): string {
+  if (!(error instanceof AuthApiError))
+    return mapAllauthErrorToSpanish('unknown', null);
+  for (const [field, code] of Object.entries(error.fieldErrors)) {
+    if (field === 'email' || field === 'password' || field === 'key') {
+      const formField = field === 'key' ? 'code' : field;
+      setError(formField as Path<T>, {
+        message: mapAllauthErrorToSpanish('validation', code),
+      });
+    }
+  }
+  return error.message;
+}
+
+function SubmitButton({
+  pending,
+  children,
+}: Readonly<{ pending: boolean; children: string }>) {
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full rounded-lg bg-slate-950 px-4 py-2 font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-500"
+    >
+      {pending ? 'Enviando…' : children}
+    </button>
+  );
+}
+
+export function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const login = useLogin();
+  const [message, setMessage] = useState<string | null>(null);
+  const form = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
+  const onSubmit = async ({ email, password }: LoginValues) => {
+    setMessage(null);
+    try {
+      await login.mutateAsync({ email, password });
+      form.reset({ email, password: '' });
+      router.refresh();
+      router.replace(sanitizeReturnPath(searchParams.get('next')));
+    } catch (error) {
+      setMessage(submitError(error, form.setError));
+    }
+  };
+  return (
+    <form
+      noValidate
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="space-y-5"
+    >
+      <ErrorSummary message={message} />
+      <Field
+        name="email"
+        label="Correo electrónico"
+        type="email"
+        autoComplete="email"
+        register={form.register}
+        error={form.formState.errors.email?.message}
+      />
+      <PasswordField
+        name="password"
+        label="Contraseña"
+        autoComplete="current-password"
+        register={form.register}
+        error={form.formState.errors.password?.message}
+      />
+      <SubmitButton pending={login.isPending}>Iniciar sesión</SubmitButton>
+      <nav className="space-y-2 text-sm">
+        <Link className="block underline" href="/auth/recuperar-contrasena">
+          ¿Olvidaste tu contraseña?
+        </Link>
+        <Link className="block underline" href="/auth/registro">
+          Crear una cuenta
+        </Link>
+      </nav>
+    </form>
+  );
+}
+
+export function SignUpForm() {
+  const router = useRouter();
+  const signUp = useSignUp();
+  const [message, setMessage] = useState<string | null>(null);
+  const form = useForm<SignUpValues>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: { email: '', password: '', confirmation: '' },
+  });
+  const onSubmit = async ({ email, password }: SignUpValues) => {
+    setMessage(null);
+    try {
+      await signUp.mutateAsync({ email, password });
+      form.reset({ email, password: '', confirmation: '' });
+      router.replace('/auth/verificar-correo');
+    } catch (error) {
+      setMessage(submitError(error, form.setError));
+    }
+  };
+  return (
+    <form
+      noValidate
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="space-y-5"
+    >
+      <ErrorSummary message={message} />
+      <Field
+        name="email"
+        label="Correo electrónico"
+        type="email"
+        autoComplete="email"
+        register={form.register}
+        error={form.formState.errors.email?.message}
+      />
+      <PasswordField
+        name="password"
+        label="Contraseña nueva"
+        autoComplete="new-password"
+        register={form.register}
+        error={form.formState.errors.password?.message}
+      />
+      <PasswordField
+        name="confirmation"
+        label="Confirmar contraseña"
+        autoComplete="new-password"
+        register={form.register}
+        error={form.formState.errors.confirmation?.message}
+      />
+      <SubmitButton pending={signUp.isPending}>Crear cuenta</SubmitButton>
+      <p className="text-sm">
+        ¿Ya tienes cuenta?{' '}
+        <Link className="underline" href="/auth/iniciar-sesion">
+          Inicia sesión
+        </Link>
+        .
+      </p>
+    </form>
+  );
+}
+
+export function VerifyEmailForm() {
+  const router = useRouter();
+  const verify = useVerifyEmail();
+  const resend = useResendVerification();
+  const [message, setMessage] = useState<string | null>(null);
+  const form = useForm<VerificationValues>({
+    resolver: zodResolver(verificationSchema),
+    defaultValues: { code: '' },
+  });
+  const onSubmit = async ({ code }: VerificationValues) => {
+    setMessage(null);
+    try {
+      await verify.mutateAsync({ code });
+      form.reset({ code: '' });
+      const session = await getBrowserAuthSession();
+      router.replace(
+        session.kind === 'authenticated' ? '/estudiar' : '/auth/iniciar-sesion',
+      );
+    } catch (error) {
+      setMessage(submitError(error, form.setError));
+    }
+  };
+  const onResend = async () => {
+    setMessage(null);
+    try {
+      await resend.mutateAsync();
+      setMessage('Enviamos un nuevo código si el proceso sigue activo.');
+    } catch (error) {
+      setMessage(submitError(error, form.setError));
+    }
+  };
+  return (
+    <form
+      noValidate
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="space-y-5"
+    >
+      <ErrorSummary message={message} />
+      <Field
+        name="code"
+        label="Código de verificación"
+        autoComplete="one-time-code"
+        register={form.register}
+        error={form.formState.errors.code?.message}
+      />
+      <SubmitButton pending={verify.isPending}>Verificar correo</SubmitButton>
+      <button
+        type="button"
+        disabled={resend.isPending}
+        onClick={onResend}
+        className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium disabled:opacity-60"
+      >
+        {resend.isPending ? 'Reenviando…' : 'Reenviar código'}
+      </button>
+      <p className="text-sm">
+        <Link className="underline" href="/auth/iniciar-sesion">
+          Volver a inicio de sesión
+        </Link>
+      </p>
+    </form>
+  );
+}
+
+export function PasswordRequestForm() {
+  const router = useRouter();
+  const request = useRequestPasswordReset();
+  const [message, setMessage] = useState<string | null>(null);
+  const form = useForm<PasswordRequestValues>({
+    resolver: zodResolver(passwordRequestSchema),
+    defaultValues: { email: '' },
+  });
+  const onSubmit = async ({ email }: PasswordRequestValues) => {
+    setMessage(null);
+    try {
+      await request.mutateAsync({ email });
+      router.push('/auth/restablecer-contrasena');
+    } catch (error) {
+      setMessage(submitError(error, form.setError));
+    }
+  };
+  return (
+    <form
+      noValidate
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="space-y-5"
+    >
+      <ErrorSummary message={message} />
+      <Field
+        name="email"
+        label="Correo electrónico"
+        type="email"
+        autoComplete="email"
+        register={form.register}
+        error={form.formState.errors.email?.message}
+      />
+      <SubmitButton pending={request.isPending}>Solicitar código</SubmitButton>
+      <p className="text-sm">
+        <Link className="underline" href="/auth/iniciar-sesion">
+          Volver a inicio de sesión
+        </Link>
+      </p>
+    </form>
+  );
+}
+
+export function PasswordResetForm() {
+  const router = useRouter();
+  const reset = useResetPassword();
+  const [message, setMessage] = useState<string | null>(null);
+  const form = useForm<PasswordResetValues>({
+    resolver: zodResolver(passwordResetSchema),
+    defaultValues: { code: '', password: '', confirmation: '' },
+  });
+  const onSubmit = async ({ code, password }: PasswordResetValues) => {
+    setMessage(null);
+    try {
+      await reset.mutateAsync({ code, password });
+      form.reset({ code: '', password: '', confirmation: '' });
+      setMessage('La contraseña fue actualizada. Ahora puedes iniciar sesión.');
+      router.refresh();
+    } catch (error) {
+      setMessage(submitError(error, form.setError));
+    }
+  };
+  return (
+    <form
+      noValidate
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="space-y-5"
+    >
+      <ErrorSummary message={message} />
+      <Field
+        name="code"
+        label="Código recibido"
+        autoComplete="one-time-code"
+        register={form.register}
+        error={form.formState.errors.code?.message}
+      />
+      <PasswordField
+        name="password"
+        label="Nueva contraseña"
+        autoComplete="new-password"
+        register={form.register}
+        error={form.formState.errors.password?.message}
+      />
+      <PasswordField
+        name="confirmation"
+        label="Confirmar contraseña"
+        autoComplete="new-password"
+        register={form.register}
+        error={form.formState.errors.confirmation?.message}
+      />
+      <SubmitButton pending={reset.isPending}>
+        Restablecer contraseña
+      </SubmitButton>
+      <p className="text-sm">
+        <Link className="underline" href="/auth/iniciar-sesion">
+          Iniciar sesión
+        </Link>
+      </p>
+    </form>
+  );
+}

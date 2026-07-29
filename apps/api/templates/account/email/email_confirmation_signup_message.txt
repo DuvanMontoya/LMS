@@ -1,0 +1,7 @@
+Hola:
+
+Usa este código para verificar tu correo electrónico en la Plataforma académica:
+
+{{ code }}
+
+El código vence en 15 minutos y solo puede utilizarse una vez. Si no solicitaste este registro, puedes ignorar este mensaje.

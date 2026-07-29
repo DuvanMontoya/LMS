@@ -1,0 +1,60 @@
+name: lms
+
+services:
+  postgres:
+    image: postgres:18.4-trixie
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --encoding=UTF8 --data-checksums"
+      TZ: UTC
+      PGTZ: UTC
+    command: ["postgres", "-c", "password_encryption=scram-sha-256"]
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:?POSTGRES_PORT is required}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - lms_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" -h 127.0.0.1 -p 5432"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  redis:
+    image: redis:8.8.1-trixie
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--appendfsync",
+        "everysec",
+        "--requirepass",
+        "${REDIS_PASSWORD:?REDIS_PASSWORD is required}",
+      ]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:?REDIS_PORT is required}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - lms_internal
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli --no-auth-warning -h 127.0.0.1 -p 6379 ping | grep -qx PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+networks:
+  lms_internal:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

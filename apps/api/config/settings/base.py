@@ -1,0 +1,220 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from urllib.parse import quote, urlparse
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY", "development-only-key-must-not-be-used-in-production"
+)
+DEBUG = False
+ALLOWED_HOSTS: list[str] = []
+
+
+def _required_origin(variable_name: str, default: str | None = None) -> str:
+    """Return one canonical HTTP(S) origin without accepting URL components."""
+
+    value = os.environ.get(variable_name, default)
+    if not value:
+        raise RuntimeError(f"{variable_name} is required.")
+    parsed = urlparse(value)
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.netloc
+        or parsed.username
+        or parsed.password
+        or parsed.path not in {"", "/"}
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise RuntimeError(f"{variable_name} must be an HTTP(S) origin without a path.")
+    return value.rstrip("/")
+
+
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "allauth",
+    "allauth.account",
+    "allauth.headless",
+    "rest_framework",
+    "drf_spectacular",
+    "domain.identity",
+    "domain.organizations",
+    "domain.catalog",
+    "domain.content",
+    "domain.learning",
+    "domain.assessments",
+]
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+ROOT_URLCONF = "config.urls"
+TEMPLATES: list[dict[str, object]] = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("POSTGRES_DB", "lms"),
+        "USER": os.environ.get("POSTGRES_USER", "lms"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
+        "HOST": os.environ.get("POSTGRES_HOST", "127.0.0.1"),
+        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        "CONN_MAX_AGE": 0,
+        "CONN_HEALTH_CHECKS": False,
+        "OPTIONS": {
+            "connect_timeout": int(os.environ.get("POSTGRES_CONNECT_TIMEOUT", "5"))
+        },
+    }
+}
+
+AUTH_USER_MODEL = "identity.User"
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USER_MODEL_EMAIL_FIELD = "email"
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = True
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_MAX_ATTEMPTS = 3
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_TIMEOUT = 900
+ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_RESEND = True
+ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED = True
+ACCOUNT_PASSWORD_RESET_BY_CODE_MAX_ATTEMPTS = 3
+# django-allauth's supported, intentionally shorter default is three minutes.
+ACCOUNT_PASSWORD_RESET_BY_CODE_TIMEOUT = 180
+ACCOUNT_LOGIN_ON_PASSWORD_RESET = False
+ACCOUNT_PREVENT_ENUMERATION = True
+ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = True
+ACCOUNT_SESSION_REMEMBER = False
+ACCOUNT_LOGOUT_ON_GET = False
+ACCOUNT_EMAIL_NOTIFICATIONS = True
+ACCOUNT_PHONE_VERIFICATION_ENABLED = False
+
+HEADLESS_ONLY = True
+HEADLESS_CLIENTS = ("browser",)
+HEADLESS_ADAPTER = "domain.identity.adapters.LMSHeadlessAdapter"
+HEADLESS_SERVE_SPECIFICATION = True
+# allauth sends the same neutral mail for unknown reset addresses.  In
+# HEADLESS_ONLY mode it needs the future browser signup destination to build
+# that mail; this setting does not create or serve a frontend route.
+FRONTEND_ORIGIN = _required_origin("FRONTEND_ORIGIN", "http://127.0.0.1:3000")
+HEADLESS_FRONTEND_URLS = {
+    "account_signup": f"{FRONTEND_ORIGIN}/auth/registro",
+    "account_reset_password": f"{FRONTEND_ORIGIN}/auth/restablecer-contrasena",
+}
+CSRF_TRUSTED_ORIGINS = [FRONTEND_ORIGIN]
+
+ALLAUTH_TRUSTED_PROXY_COUNT = 0
+
+_redis_host = os.environ.get("REDIS_HOST", "127.0.0.1")
+_redis_port = os.environ.get("REDIS_PORT", "6379")
+_redis_cache_db = os.environ.get("REDIS_CACHE_DB", "1")
+_redis_password = os.environ.get("REDIS_PASSWORD", "")
+if not _redis_password:
+    raise RuntimeError(
+        "REDIS_PASSWORD is required; authentication rate limiting cannot fail open."
+    )
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": f"redis://:{quote(_redis_password, safe='')}@{_redis_host}:{_redis_port}/{_redis_cache_db}",
+        "TIMEOUT": 300,
+        "KEY_PREFIX": "lms-auth",
+        "OPTIONS": {
+            "socket_connect_timeout": 1,
+            "socket_timeout": 1,
+            "retry_on_timeout": False,
+        },
+    }
+}
+
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
+    "django.contrib.auth.hashers.ScryptPasswordHasher",
+]
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+LANGUAGE_CODE = "es"
+TIME_ZONE = "UTC"
+USE_I18N = True
+USE_TZ = True
+STATIC_URL = "static/"
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
+DEFAULT_FROM_EMAIL = "Plataforma académica <no-reply@lms.invalid>"
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+EMAIL_SUBJECT_PREFIX = "[Plataforma académica] "
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%S%z",
+}
+SPECTACULAR_SETTINGS = {
+    "TITLE": "LMS Platform API",
+    "VERSION": "0.2.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "OrganizationRole": "domain.organizations.choices.RoleCode",
+        "OrganizationMembershipStatus": "domain.organizations.choices.MembershipStatus",
+    },
+}

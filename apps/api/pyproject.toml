@@ -1,0 +1,41 @@
+[project]
+name = "lms-api"
+version = "0.1.0"
+description = "LMS Django API"
+requires-python = ">=3.13.13"
+dependencies = [
+    "django-allauth[headless-spec]==65.18.0",
+    "django[argon2]==6.0.7",
+    "djangorestframework==3.17.1",
+    "drf-spectacular==0.30.0",
+    "psycopg[binary]==3.3.4",
+    "redis==8.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "django-stubs==6.0.7",
+    "pip-audit==2.10.1",
+    "pytest==9.1.1",
+    "pytest-cov==7.0.0",
+    "pytest-django==4.12.0",
+    "ruff==0.16.0",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py", "*_test.py"]
+testpaths = ["tests", "domain"]
+addopts = "--strict-config --strict-markers --cov=config --cov=domain --cov-report=term-missing --cov-fail-under=75"
+
+[tool.coverage.run]
+branch = true
+source = ["config", "domain"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+exclude = [".venv", "*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B", "DJ"]
