@@ -36,3 +36,12 @@ No blog, tutorial, forum, AI output, or third-party comparison was used as versi
 | Django constraints and indexes | https://docs.djangoproject.com/en/6.0/ref/models/constraints/ ; https://docs.djangoproject.com/en/6.0/ref/models/indexes/ | Conditional uniqueness, check constraints and query-led index design. |
 | DRF authorization | https://www.django-rest-framework.org/api-guide/permissions/ | Global session authentication and thin permission boundary; policies remain framework-independent. |
 | drf-spectacular | https://drf-spectacular.readthedocs.io/en/latest/ ; https://drf-spectacular.readthedocs.io/en/latest/faq.html | Explicit request/response metadata, enum overrides and `spectacular --validate --fail-on-warn`. |
+
+## Prompt 8 consultation — 2026-07-29
+
+| Topic | Official source | Evidence used |
+|---|---|---|
+| django-filter 26.1 | https://pypi.org/project/django-filter/ | Stable CalVer release; declarative, explicit FilterSets only. |
+| django-treebeard 6.0.0 | https://pypi.org/project/django-treebeard/ ; https://django-treebeard.readthedocs.io/ | Django 6/Python 3.13 support and `MP_Node` materialized path for Topic. |
+| Django transactions | https://docs.djangoproject.com/en/6.0/topics/db/transactions/ ; https://docs.djangoproject.com/en/6.0/ref/models/querysets/#select-for-update | `atomic` plus PostgreSQL row locks for tree and graph writes. |
+| PostgreSQL recursive CTE | https://www.postgresql.org/docs/current/sql-select.html | Recursive `WITH` and `CYCLE` semantics; implementation remains parameterized. |

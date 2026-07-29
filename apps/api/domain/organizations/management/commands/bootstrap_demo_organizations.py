@@ -54,6 +54,9 @@ class Command(BaseCommand):
         owner = user("owner@demo.local")
         administrator = user("administrator@demo.local")
         learner = user("learner@demo.local")
+        author = user("author@demo.local")
+        reviewer = user("reviewer@demo.local")
+        instructor = user("instructor@demo.local")
         external_owner = user("external@demo.local")
 
         organization = Organization.objects.filter(slug="organizacion-demo").first()
@@ -74,6 +77,9 @@ class Command(BaseCommand):
         for member, roles in (
             (administrator, {RoleCode.ADMINISTRATOR}),
             (learner, {RoleCode.LEARNER}),
+            (author, {RoleCode.AUTHOR}),
+            (reviewer, {RoleCode.REVIEWER}),
+            (instructor, {RoleCode.INSTRUCTOR}),
         ):
             if not Membership.objects.filter(
                 organization=organization,

@@ -4,8 +4,7 @@
 |---|---|---|---|
 | `identity` | Implemented: User, password, groups, permissions, sessions and internal admin. Future: profile, roles and grants. | Custom user exists in `identity.0001`; email uniqueness is case-insensitive in PostgreSQL. | May serve all modules through policy contract; no academic ownership. Risk: role explosion. |
 | `organizations` | Implemented: organization, membership, historical role assignment and membership event API. | A UUID membership has at most one non-revoked row per user/organization; active owner cannot be last removed; role history is append/revoke. | Depends only on identity; cannot own courses, enrolments or academic rules. |
-| `taxonomy` | Area, discipline, subject, topic, tag, concept | Stable slugs; concept graph is acyclic where a prerequisite relation demands it. | Curriculum/courses may read; no enrolment/grade dependency. |
-| `curriculum` | Objective, competency, prerequisite, learning path | Prerequisite cycles rejected; published references resolve exact versions. Emits `path_changed`. | Taxonomy; not attempts. |
+| `catalog` | Implemented: area, discipline, subject, materialized-path topic tree, reusable concept, learning objective, ordered concept associations and prerequisite edges. Future: competencies and learning paths. | UUID/slug uniqueness is scoped by organization; topic structural fields remain owned by Treebeard; both prerequisite graphs are acyclic; archived entities cannot receive new associations. | Depends on organizations and identity policy only. Courses may read its public services, but catalog never owns enrolment, delivery, grades or attempts. |
 | `courses` | Logical course, structure, owners, lifecycle | One ordered structure per revision; logical identity differs from publication. | Taxonomy/curriculum/identity; never grades. |
 | `content` | Semantic documents, blocks, references, resource links | Validated document schema; no arbitrary executable markup. Emits `content_revised`. | Media and authoring; cannot publish itself. |
 | `authoring` | Draft, review, publication, immutable snapshots/history | Published revision immutable; restoration creates a new revision. Emits `published`, `publication_retracted`. | Courses/content/assessments; cannot alter attempts. |
@@ -26,3 +25,13 @@ Internal APIs are explicit Python services/selectors and namespaced REST endpoin
 # Identity boundary
 
 The `identity` module owns the custom user, manager, internal admin forms and admin registration. Other modules must reference `settings.AUTH_USER_MODEL` in model fields and `get_user_model()` at runtime; they must not import `identity.User` directly.
+
+# Catalog boundary
+
+`catalog` deliberately groups the taxonomy and curriculum scope implemented in
+Prompt 8. It owns the database tables and application services for all its
+writes; `organizations` supplies only membership/capability policy. API views
+may call catalog services but no other module may write catalog tables directly.
+The two prerequisite graphs are independent: subjects express subject sequence,
+and concepts express conceptual dependency. Neither graph implies a course,
+publication or learner progression.

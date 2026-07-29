@@ -7,6 +7,9 @@ const djangoInternalOrigin = requireInternalOrigin(
 );
 
 const nextConfig: NextConfig = {
+  // Next dev blocks client assets when the application is opened through the
+  // loopback host documented for local review instead of its localhost default.
+  allowedDevOrigins: ['127.0.0.1'],
   // Django's canonical API contract requires terminal slashes. Preserve them
   // before external rewrites so unsafe requests never follow a 301 redirect.
   skipTrailingSlashRedirect: true,

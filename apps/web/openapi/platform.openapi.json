@@ -69,6 +69,160 @@
         "required": ["email", "roles"],
         "type": "object"
       },
+      "Area": {
+        "properties": {
+          "description": { "maxLength": 2000, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "status": { "readOnly": true, "type": "string" }
+        },
+        "required": ["id", "name", "slug", "status"],
+        "type": "object"
+      },
+      "BlankEnum": { "enum": [""] },
+      "CognitiveLevelEnum": {
+        "description": "* `remember` - Recordar\n* `understand` - Comprender\n* `apply` - Aplicar\n* `analyze` - Analizar\n* `evaluate` - Evaluar\n* `create` - Crear",
+        "enum": [
+          "remember",
+          "understand",
+          "apply",
+          "analyze",
+          "evaluate",
+          "create"
+        ],
+        "type": "string"
+      },
+      "Concept": {
+        "properties": {
+          "definition": { "maxLength": 3000, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "status": { "readOnly": true, "type": "string" }
+        },
+        "required": ["definition", "id", "name", "slug", "status"],
+        "type": "object"
+      },
+      "ConceptAssociationEntry": {
+        "properties": {
+          "concept_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "type": "array"
+          },
+          "entity_id": { "format": "uuid", "type": "string" }
+        },
+        "required": ["concept_ids", "entity_id"],
+        "type": "object"
+      },
+      "CreateArea": {
+        "properties": {
+          "description": { "maxLength": 2000, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          }
+        },
+        "required": ["name", "slug"],
+        "type": "object"
+      },
+      "CreateConcept": {
+        "properties": {
+          "definition": { "maxLength": 3000, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          }
+        },
+        "required": ["definition", "name", "slug"],
+        "type": "object"
+      },
+      "CreateDiscipline": {
+        "properties": {
+          "area_id": { "format": "uuid", "type": "string" },
+          "description": { "maxLength": 2000, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          }
+        },
+        "required": ["area_id", "name", "slug"],
+        "type": "object"
+      },
+      "CreateObjective": {
+        "properties": {
+          "code": { "maxLength": 32, "type": "string" },
+          "cognitive_level": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/CognitiveLevelEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "description": { "maxLength": 2000, "type": "string" },
+          "statement": { "maxLength": 1200, "type": "string" },
+          "subject_id": { "format": "uuid", "type": "string" }
+        },
+        "required": ["code", "statement", "subject_id"],
+        "type": "object"
+      },
+      "CreateSubject": {
+        "properties": {
+          "description": { "maxLength": 2000, "type": "string" },
+          "discipline_id": { "format": "uuid", "type": "string" },
+          "name": { "maxLength": 160, "type": "string" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          }
+        },
+        "required": ["discipline_id", "name", "slug"],
+        "type": "object"
+      },
+      "CreateTopic": {
+        "properties": {
+          "description": { "maxLength": 2000, "type": "string" },
+          "parent_id": { "format": "uuid", "type": "string" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "title": { "maxLength": 160, "type": "string" }
+        },
+        "required": ["slug", "title"],
+        "type": "object"
+      },
+      "Discipline": {
+        "properties": {
+          "area_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "description": { "maxLength": 2000, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "status": { "readOnly": true, "type": "string" }
+        },
+        "required": ["area_id", "id", "name", "slug", "status"],
+        "type": "object"
+      },
       "EventTypeEnum": {
         "description": "* `membership_created` - Membresía creada\n* `membership_suspended` - Membresía suspendida\n* `membership_reactivated` - Membresía reactivada\n* `membership_revoked` - Membresía revocada\n* `role_assigned` - Rol asignado\n* `role_revoked` - Rol revocado",
         "enum": [
@@ -79,6 +233,11 @@
           "role_assigned",
           "role_revoked"
         ],
+        "type": "string"
+      },
+      "KindEnum": {
+        "description": "* `required` - required\n* `recommended` - recommended",
+        "enum": ["required", "recommended"],
         "type": "string"
       },
       "Membership": {
@@ -146,6 +305,35 @@
           "previous_status",
           "role"
         ],
+        "type": "object"
+      },
+      "MoveTopic": {
+        "properties": {
+          "position": {
+            "allOf": [{ "$ref": "#/components/schemas/PositionEnum" }],
+            "default": "sorted-child"
+          },
+          "target_id": { "format": "uuid", "type": "string" }
+        },
+        "required": ["target_id"],
+        "type": "object"
+      },
+      "Objective": {
+        "properties": {
+          "code": { "maxLength": 32, "type": "string" },
+          "cognitive_level": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/CognitiveLevelEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "description": { "maxLength": 2000, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "statement": { "maxLength": 1200, "type": "string" },
+          "status": { "readOnly": true, "type": "string" },
+          "subject_id": { "format": "uuid", "readOnly": true, "type": "string" }
+        },
+        "required": ["code", "id", "statement", "status", "subject_id"],
         "type": "object"
       },
       "Organization": {
@@ -228,6 +416,73 @@
         "properties": { "name": { "maxLength": 160, "type": "string" } },
         "type": "object"
       },
+      "PatchedUpdateArea": {
+        "properties": {
+          "description": { "maxLength": 2000, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" }
+        },
+        "type": "object"
+      },
+      "PatchedUpdateConcept": {
+        "properties": {
+          "definition": { "maxLength": 3000, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" }
+        },
+        "type": "object"
+      },
+      "PatchedUpdateNamedEntity": {
+        "properties": {
+          "description": { "maxLength": 2000, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" }
+        },
+        "type": "object"
+      },
+      "PatchedUpdateObjective": {
+        "properties": {
+          "cognitive_level": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/CognitiveLevelEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "description": { "maxLength": 2000, "type": "string" },
+          "statement": { "maxLength": 1200, "type": "string" }
+        },
+        "type": "object"
+      },
+      "PatchedUpdateTopic": {
+        "properties": {
+          "description": { "maxLength": 2000, "type": "string" },
+          "title": { "maxLength": 160, "type": "string" }
+        },
+        "type": "object"
+      },
+      "PositionEnum": {
+        "description": "* `left` - left\n* `right` - right\n* `first-child` - first-child\n* `last-child` - last-child\n* `sorted-child` - sorted-child",
+        "enum": ["left", "right", "first-child", "last-child", "sorted-child"],
+        "type": "string"
+      },
+      "PrerequisiteGraphEntry": {
+        "properties": {
+          "entity_id": { "format": "uuid", "type": "string" },
+          "kind": { "$ref": "#/components/schemas/KindEnum" },
+          "prerequisite_id": { "format": "uuid", "type": "string" },
+          "rationale": { "maxLength": 1000, "type": "string" }
+        },
+        "required": ["entity_id", "kind", "prerequisite_id"],
+        "type": "object"
+      },
+      "ReplaceConceptAssociations": {
+        "properties": {
+          "concept_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 100,
+            "type": "array"
+          }
+        },
+        "required": ["concept_ids"],
+        "type": "object"
+      },
       "ReplaceRoles": {
         "properties": {
           "roles": {
@@ -236,6 +491,74 @@
           }
         },
         "required": ["roles"],
+        "type": "object"
+      },
+      "ReplaceSubjectPrerequisites": {
+        "properties": {
+          "prerequisites": {
+            "items": { "$ref": "#/components/schemas/SubjectPrerequisite" },
+            "type": "array"
+          }
+        },
+        "required": ["prerequisites"],
+        "type": "object"
+      },
+      "Subject": {
+        "properties": {
+          "description": { "maxLength": 2000, "type": "string" },
+          "discipline_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "status": { "readOnly": true, "type": "string" }
+        },
+        "required": ["discipline_id", "id", "name", "slug", "status"],
+        "type": "object"
+      },
+      "SubjectPrerequisite": {
+        "properties": {
+          "kind": { "$ref": "#/components/schemas/KindEnum" },
+          "prerequisite_id": { "format": "uuid", "type": "string" },
+          "rationale": { "maxLength": 1000, "type": "string" }
+        },
+        "required": ["kind", "prerequisite_id"],
+        "type": "object"
+      },
+      "Topic": {
+        "properties": {
+          "children": {
+            "items": { "additionalProperties": {}, "type": "object" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "depth": { "readOnly": true, "type": "integer" },
+          "description": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "slug": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": { "readOnly": true, "type": "string" },
+          "title": { "readOnly": true, "type": "string" }
+        },
+        "required": [
+          "children",
+          "depth",
+          "description",
+          "id",
+          "slug",
+          "status",
+          "title"
+        ],
         "type": "object"
       },
       "UserSummary": {
@@ -350,6 +673,1779 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Organization" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/areas/": {
+      "get": {
+        "description": "Applies declared filters only after the organization visibility boundary.",
+        "operationId": "organizations_catalog_areas_list",
+        "parameters": [
+          { "in": "query", "name": "ordering", "schema": { "type": "string" } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "status", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Area" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "description": "Applies declared filters only after the organization visibility boundary.",
+        "operationId": "organizations_catalog_areas_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateArea" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CreateArea" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CreateArea" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Area" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/areas/{area_id}/": {
+      "get": {
+        "operationId": "organizations_catalog_areas_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "area_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Area" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "organizations_catalog_areas_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "area_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PatchedUpdateArea" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/PatchedUpdateArea" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/PatchedUpdateArea" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Area" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/areas/{area_id}/archive/": {
+      "post": {
+        "operationId": "organizations_catalog_areas_archive_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "area_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Area" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/areas/{area_id}/restore/": {
+      "post": {
+        "operationId": "organizations_catalog_areas_restore_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "area_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Area" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/concept-prerequisites/": {
+      "get": {
+        "description": "Return all visible concept edges in one organization-scoped query.",
+        "operationId": "organizations_catalog_concept_prerequisites_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PrerequisiteGraphEntry"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/concepts/": {
+      "get": {
+        "description": "Applies declared filters only after the organization visibility boundary.",
+        "operationId": "organizations_catalog_concepts_list",
+        "parameters": [
+          { "in": "query", "name": "ordering", "schema": { "type": "string" } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "status", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Concept" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "description": "Applies declared filters only after the organization visibility boundary.",
+        "operationId": "organizations_catalog_concepts_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateConcept" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CreateConcept" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CreateConcept" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Concept" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/concepts/{concept_id}/": {
+      "get": {
+        "operationId": "organizations_catalog_concepts_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "concept_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Concept" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "organizations_catalog_concepts_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "concept_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PatchedUpdateConcept" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/PatchedUpdateConcept" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/PatchedUpdateConcept" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Concept" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/concepts/{concept_id}/archive/": {
+      "post": {
+        "operationId": "organizations_catalog_concepts_archive_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "concept_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Concept" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/concepts/{concept_id}/prerequisites/": {
+      "get": {
+        "operationId": "organizations_catalog_concepts_prerequisites_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "concept_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplaceSubjectPrerequisites"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "operationId": "organizations_catalog_concepts_prerequisites_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "concept_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceSubjectPrerequisites"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceSubjectPrerequisites"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceSubjectPrerequisites"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplaceSubjectPrerequisites"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/concepts/{concept_id}/restore/": {
+      "post": {
+        "operationId": "organizations_catalog_concepts_restore_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "concept_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Concept" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/disciplines/": {
+      "get": {
+        "description": "Applies declared filters only after the organization visibility boundary.",
+        "operationId": "organizations_catalog_disciplines_list",
+        "parameters": [
+          { "in": "query", "name": "area", "schema": { "type": "string" } },
+          { "in": "query", "name": "ordering", "schema": { "type": "string" } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "status", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Discipline" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "description": "Applies declared filters only after the organization visibility boundary.",
+        "operationId": "organizations_catalog_disciplines_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateDiscipline" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CreateDiscipline" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CreateDiscipline" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Discipline" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/disciplines/{discipline_id}/": {
+      "get": {
+        "operationId": "organizations_catalog_disciplines_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "discipline_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Discipline" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "organizations_catalog_disciplines_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "discipline_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedUpdateNamedEntity"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedUpdateNamedEntity"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedUpdateNamedEntity"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Discipline" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/disciplines/{discipline_id}/archive/": {
+      "post": {
+        "operationId": "organizations_catalog_disciplines_archive_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "discipline_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Discipline" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/disciplines/{discipline_id}/restore/": {
+      "post": {
+        "operationId": "organizations_catalog_disciplines_restore_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "discipline_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Discipline" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/learning-objectives/": {
+      "get": {
+        "description": "Applies declared filters only after the organization visibility boundary.",
+        "operationId": "organizations_catalog_learning_objectives_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cognitive_level",
+            "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "ordering", "schema": { "type": "string" } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "status", "schema": { "type": "string" } },
+          { "in": "query", "name": "subject", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Objective" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "description": "Applies declared filters only after the organization visibility boundary.",
+        "operationId": "organizations_catalog_learning_objectives_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateObjective" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CreateObjective" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CreateObjective" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Objective" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/learning-objectives/{objective_id}/": {
+      "get": {
+        "operationId": "organizations_catalog_learning_objectives_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "objective_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Objective" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "organizations_catalog_learning_objectives_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "objective_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedUpdateObjective"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedUpdateObjective"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedUpdateObjective"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Objective" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/learning-objectives/{objective_id}/archive/": {
+      "post": {
+        "operationId": "organizations_catalog_learning_objectives_archive_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "objective_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Objective" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/learning-objectives/{objective_id}/concepts/": {
+      "get": {
+        "operationId": "organizations_catalog_learning_objectives_concepts_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "objective_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplaceConceptAssociations"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "operationId": "organizations_catalog_learning_objectives_concepts_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "objective_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceConceptAssociations"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceConceptAssociations"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceConceptAssociations"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplaceConceptAssociations"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/learning-objectives/{objective_id}/restore/": {
+      "post": {
+        "operationId": "organizations_catalog_learning_objectives_restore_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "objective_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Objective" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/objective-concepts/": {
+      "get": {
+        "description": "Return visible objective-to-concept associations in one organization-scoped query.",
+        "operationId": "organizations_catalog_objective_concepts_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConceptAssociationEntry"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/subject-prerequisites/": {
+      "get": {
+        "description": "Return all visible subject edges in one organization-scoped query.",
+        "operationId": "organizations_catalog_subject_prerequisites_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PrerequisiteGraphEntry"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/subjects/": {
+      "get": {
+        "description": "Applies declared filters only after the organization visibility boundary.",
+        "operationId": "organizations_catalog_subjects_list",
+        "parameters": [
+          { "in": "query", "name": "area", "schema": { "type": "string" } },
+          {
+            "in": "query",
+            "name": "discipline",
+            "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "ordering", "schema": { "type": "string" } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "status", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Subject" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "description": "Applies declared filters only after the organization visibility boundary.",
+        "operationId": "organizations_catalog_subjects_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateSubject" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CreateSubject" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CreateSubject" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Subject" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/subjects/{subject_id}/": {
+      "get": {
+        "operationId": "organizations_catalog_subjects_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Subject" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "organizations_catalog_subjects_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedUpdateNamedEntity"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedUpdateNamedEntity"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedUpdateNamedEntity"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Subject" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/subjects/{subject_id}/archive/": {
+      "post": {
+        "operationId": "organizations_catalog_subjects_archive_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Subject" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/subjects/{subject_id}/prerequisites/": {
+      "get": {
+        "operationId": "organizations_catalog_subjects_prerequisites_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplaceSubjectPrerequisites"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "operationId": "organizations_catalog_subjects_prerequisites_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceSubjectPrerequisites"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceSubjectPrerequisites"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceSubjectPrerequisites"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplaceSubjectPrerequisites"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/subjects/{subject_id}/restore/": {
+      "post": {
+        "operationId": "organizations_catalog_subjects_restore_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Subject" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/subjects/{subject_id}/topics/": {
+      "get": {
+        "operationId": "organizations_catalog_subjects_topics_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Topic" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_catalog_subjects_topics_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateTopic" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CreateTopic" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CreateTopic" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Topic" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/topic-concepts/": {
+      "get": {
+        "description": "Return visible topic-to-concept associations in one organization-scoped query.",
+        "operationId": "organizations_catalog_topic_concepts_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConceptAssociationEntry"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/topics/{topic_id}/": {
+      "get": {
+        "operationId": "organizations_catalog_topics_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "topic_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Topic" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "organizations_catalog_topics_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "topic_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PatchedUpdateTopic" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/PatchedUpdateTopic" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/PatchedUpdateTopic" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Topic" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/topics/{topic_id}/archive/": {
+      "post": {
+        "operationId": "organizations_catalog_topics_archive_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "topic_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Topic" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/topics/{topic_id}/concepts/": {
+      "get": {
+        "operationId": "organizations_catalog_topics_concepts_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "topic_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplaceConceptAssociations"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "operationId": "organizations_catalog_topics_concepts_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "topic_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceConceptAssociations"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceConceptAssociations"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceConceptAssociations"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplaceConceptAssociations"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/topics/{topic_id}/move/": {
+      "post": {
+        "operationId": "organizations_catalog_topics_move_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "topic_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MoveTopic" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/MoveTopic" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/MoveTopic" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Topic" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/topics/{topic_id}/restore/": {
+      "post": {
+        "operationId": "organizations_catalog_topics_restore_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "topic_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Topic" }
               }
             },
             "description": ""

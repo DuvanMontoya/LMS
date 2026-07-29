@@ -89,3 +89,27 @@ erDiagram
 `Membership` tiene UUID y una única fila no revocada por usuario/organización.
 Las asignaciones de rol y eventos son históricos; no existen roles globales en
 `User`.
+# Modelo curricular de Prompt 8
+
+```mermaid
+erDiagram
+  Organization ||--o{ AcademicArea : scopes
+  AcademicArea ||--o{ Discipline : contains
+  Discipline ||--o{ Subject : contains
+  Subject ||--o{ Topic : owns
+  Organization ||--o{ Concept : owns
+  Subject ||--o{ LearningObjective : owns
+  Topic ||--o{ TopicConcept : orders
+  Concept ||--o{ TopicConcept : appears_in
+  LearningObjective ||--o{ LearningObjectiveConcept : orders
+  Concept ||--o{ LearningObjectiveConcept : supports
+  Subject ||--o{ SubjectPrerequisite : requires
+  SubjectPrerequisite }o--|| Subject : prerequisite
+  Concept ||--o{ ConceptPrerequisite : requires
+  ConceptPrerequisite }o--|| Concept : prerequisite
+```
+
+`Topic` hereda `MP_Node`: `path`, `depth` y `numchild` son internos y no se
+exponen por REST. Los prerrequisitos son dos DAG separados; una CTE recursiva
+parametrizada rechaza ciclos y la fila de organización se bloquea antes de
+reemplazar aristas. No hay `GenericForeignKey`, eliminación física ni cursos.

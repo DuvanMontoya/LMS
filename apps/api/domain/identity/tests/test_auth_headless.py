@@ -567,4 +567,3 @@ class HeadlessAuthTests(TestCase):
             HTTP_ORIGIN="http://localhost:3000",
         )
         self.assertEqual(response.status_code, 200)
-

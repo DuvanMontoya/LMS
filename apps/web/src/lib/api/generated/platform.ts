@@ -15,6 +15,135 @@ export interface paths {
     get: operations['organizations_retrieve'];
     patch: operations['organizations_partial_update'];
   };
+  '/api/v1/organizations/{slug}/catalog/areas/': {
+    /** @description Applies declared filters only after the organization visibility boundary. */
+    get: operations['organizations_catalog_areas_list'];
+    /** @description Applies declared filters only after the organization visibility boundary. */
+    post: operations['organizations_catalog_areas_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/areas/{area_id}/': {
+    get: operations['organizations_catalog_areas_retrieve'];
+    patch: operations['organizations_catalog_areas_partial_update'];
+  };
+  '/api/v1/organizations/{slug}/catalog/areas/{area_id}/archive/': {
+    post: operations['organizations_catalog_areas_archive_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/areas/{area_id}/restore/': {
+    post: operations['organizations_catalog_areas_restore_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/concept-prerequisites/': {
+    /** @description Return all visible concept edges in one organization-scoped query. */
+    get: operations['organizations_catalog_concept_prerequisites_list'];
+  };
+  '/api/v1/organizations/{slug}/catalog/concepts/': {
+    /** @description Applies declared filters only after the organization visibility boundary. */
+    get: operations['organizations_catalog_concepts_list'];
+    /** @description Applies declared filters only after the organization visibility boundary. */
+    post: operations['organizations_catalog_concepts_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/concepts/{concept_id}/': {
+    get: operations['organizations_catalog_concepts_retrieve'];
+    patch: operations['organizations_catalog_concepts_partial_update'];
+  };
+  '/api/v1/organizations/{slug}/catalog/concepts/{concept_id}/archive/': {
+    post: operations['organizations_catalog_concepts_archive_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/concepts/{concept_id}/prerequisites/': {
+    get: operations['organizations_catalog_concepts_prerequisites_retrieve'];
+    put: operations['organizations_catalog_concepts_prerequisites_update'];
+  };
+  '/api/v1/organizations/{slug}/catalog/concepts/{concept_id}/restore/': {
+    post: operations['organizations_catalog_concepts_restore_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/disciplines/': {
+    /** @description Applies declared filters only after the organization visibility boundary. */
+    get: operations['organizations_catalog_disciplines_list'];
+    /** @description Applies declared filters only after the organization visibility boundary. */
+    post: operations['organizations_catalog_disciplines_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/disciplines/{discipline_id}/': {
+    get: operations['organizations_catalog_disciplines_retrieve'];
+    patch: operations['organizations_catalog_disciplines_partial_update'];
+  };
+  '/api/v1/organizations/{slug}/catalog/disciplines/{discipline_id}/archive/': {
+    post: operations['organizations_catalog_disciplines_archive_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/disciplines/{discipline_id}/restore/': {
+    post: operations['organizations_catalog_disciplines_restore_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/learning-objectives/': {
+    /** @description Applies declared filters only after the organization visibility boundary. */
+    get: operations['organizations_catalog_learning_objectives_list'];
+    /** @description Applies declared filters only after the organization visibility boundary. */
+    post: operations['organizations_catalog_learning_objectives_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/learning-objectives/{objective_id}/': {
+    get: operations['organizations_catalog_learning_objectives_retrieve'];
+    patch: operations['organizations_catalog_learning_objectives_partial_update'];
+  };
+  '/api/v1/organizations/{slug}/catalog/learning-objectives/{objective_id}/archive/': {
+    post: operations['organizations_catalog_learning_objectives_archive_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/learning-objectives/{objective_id}/concepts/': {
+    get: operations['organizations_catalog_learning_objectives_concepts_retrieve'];
+    put: operations['organizations_catalog_learning_objectives_concepts_update'];
+  };
+  '/api/v1/organizations/{slug}/catalog/learning-objectives/{objective_id}/restore/': {
+    post: operations['organizations_catalog_learning_objectives_restore_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/objective-concepts/': {
+    /** @description Return visible objective-to-concept associations in one organization-scoped query. */
+    get: operations['organizations_catalog_objective_concepts_list'];
+  };
+  '/api/v1/organizations/{slug}/catalog/subject-prerequisites/': {
+    /** @description Return all visible subject edges in one organization-scoped query. */
+    get: operations['organizations_catalog_subject_prerequisites_list'];
+  };
+  '/api/v1/organizations/{slug}/catalog/subjects/': {
+    /** @description Applies declared filters only after the organization visibility boundary. */
+    get: operations['organizations_catalog_subjects_list'];
+    /** @description Applies declared filters only after the organization visibility boundary. */
+    post: operations['organizations_catalog_subjects_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/subjects/{subject_id}/': {
+    get: operations['organizations_catalog_subjects_retrieve'];
+    patch: operations['organizations_catalog_subjects_partial_update'];
+  };
+  '/api/v1/organizations/{slug}/catalog/subjects/{subject_id}/archive/': {
+    post: operations['organizations_catalog_subjects_archive_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/subjects/{subject_id}/prerequisites/': {
+    get: operations['organizations_catalog_subjects_prerequisites_retrieve'];
+    put: operations['organizations_catalog_subjects_prerequisites_update'];
+  };
+  '/api/v1/organizations/{slug}/catalog/subjects/{subject_id}/restore/': {
+    post: operations['organizations_catalog_subjects_restore_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/subjects/{subject_id}/topics/': {
+    get: operations['organizations_catalog_subjects_topics_list'];
+    post: operations['organizations_catalog_subjects_topics_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/topic-concepts/': {
+    /** @description Return visible topic-to-concept associations in one organization-scoped query. */
+    get: operations['organizations_catalog_topic_concepts_list'];
+  };
+  '/api/v1/organizations/{slug}/catalog/topics/{topic_id}/': {
+    get: operations['organizations_catalog_topics_retrieve'];
+    patch: operations['organizations_catalog_topics_partial_update'];
+  };
+  '/api/v1/organizations/{slug}/catalog/topics/{topic_id}/archive/': {
+    post: operations['organizations_catalog_topics_archive_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/topics/{topic_id}/concepts/': {
+    get: operations['organizations_catalog_topics_concepts_retrieve'];
+    put: operations['organizations_catalog_topics_concepts_update'];
+  };
+  '/api/v1/organizations/{slug}/catalog/topics/{topic_id}/move/': {
+    post: operations['organizations_catalog_topics_move_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/topics/{topic_id}/restore/': {
+    post: operations['organizations_catalog_topics_restore_create'];
+  };
   '/api/v1/organizations/{slug}/memberships/': {
     get: operations['organizations_memberships_list'];
     post: operations['organizations_memberships_create'];
@@ -63,6 +192,91 @@ export interface components {
       email: string;
       roles: components['schemas']['OrganizationRole'][];
     };
+    Area: {
+      description?: string;
+      /** Format: uuid */
+      id: string;
+      name: string;
+      slug: string;
+      status: string;
+    };
+    /** @enum {unknown} */
+    BlankEnum: '';
+    /**
+     * @description * `remember` - Recordar
+     * * `understand` - Comprender
+     * * `apply` - Aplicar
+     * * `analyze` - Analizar
+     * * `evaluate` - Evaluar
+     * * `create` - Crear
+     * @enum {string}
+     */
+    CognitiveLevelEnum:
+      'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';
+    Concept: {
+      definition: string;
+      /** Format: uuid */
+      id: string;
+      name: string;
+      slug: string;
+      status: string;
+    };
+    ConceptAssociationEntry: {
+      concept_ids: string[];
+      /** Format: uuid */
+      entity_id: string;
+    };
+    CreateArea: {
+      description?: string;
+      name: string;
+      slug: string;
+    };
+    CreateConcept: {
+      definition: string;
+      name: string;
+      slug: string;
+    };
+    CreateDiscipline: {
+      /** Format: uuid */
+      area_id: string;
+      description?: string;
+      name: string;
+      slug: string;
+    };
+    CreateObjective: {
+      code: string;
+      cognitive_level?:
+        | components['schemas']['CognitiveLevelEnum']
+        | components['schemas']['BlankEnum'];
+      description?: string;
+      statement: string;
+      /** Format: uuid */
+      subject_id: string;
+    };
+    CreateSubject: {
+      description?: string;
+      /** Format: uuid */
+      discipline_id: string;
+      name: string;
+      slug: string;
+    };
+    CreateTopic: {
+      description?: string;
+      /** Format: uuid */
+      parent_id?: string;
+      slug: string;
+      title: string;
+    };
+    Discipline: {
+      /** Format: uuid */
+      area_id: string;
+      description?: string;
+      /** Format: uuid */
+      id: string;
+      name: string;
+      slug: string;
+      status: string;
+    };
     /**
      * @description * `membership_created` - Membresía creada
      * * `membership_suspended` - Membresía suspendida
@@ -79,6 +293,12 @@ export interface components {
       | 'membership_revoked'
       | 'role_assigned'
       | 'role_revoked';
+    /**
+     * @description * `required` - required
+     * * `recommended` - recommended
+     * @enum {string}
+     */
+    KindEnum: 'required' | 'recommended';
     Membership: {
       /** Format: date-time */
       joined_at: string;
@@ -97,6 +317,25 @@ export interface components {
       new_status: components['schemas']['OrganizationMembershipStatus'];
       previous_status: components['schemas']['OrganizationMembershipStatus'];
       role: components['schemas']['OrganizationRole'];
+    };
+    MoveTopic: {
+      /** @default sorted-child */
+      position?: components['schemas']['PositionEnum'];
+      /** Format: uuid */
+      target_id: string;
+    };
+    Objective: {
+      code: string;
+      cognitive_level?:
+        | components['schemas']['CognitiveLevelEnum']
+        | components['schemas']['BlankEnum'];
+      description?: string;
+      /** Format: uuid */
+      id: string;
+      statement: string;
+      status: string;
+      /** Format: uuid */
+      subject_id: string;
     };
     Organization: {
       /** Format: uuid */
@@ -160,8 +399,83 @@ export interface components {
     PatchedOrganizationUpdate: {
       name?: string;
     };
+    PatchedUpdateArea: {
+      description?: string;
+      name?: string;
+    };
+    PatchedUpdateConcept: {
+      definition?: string;
+      name?: string;
+    };
+    PatchedUpdateNamedEntity: {
+      description?: string;
+      name?: string;
+    };
+    PatchedUpdateObjective: {
+      cognitive_level?:
+        | components['schemas']['CognitiveLevelEnum']
+        | components['schemas']['BlankEnum'];
+      description?: string;
+      statement?: string;
+    };
+    PatchedUpdateTopic: {
+      description?: string;
+      title?: string;
+    };
+    /**
+     * @description * `left` - left
+     * * `right` - right
+     * * `first-child` - first-child
+     * * `last-child` - last-child
+     * * `sorted-child` - sorted-child
+     * @enum {string}
+     */
+    PositionEnum:
+      'left' | 'right' | 'first-child' | 'last-child' | 'sorted-child';
+    PrerequisiteGraphEntry: {
+      /** Format: uuid */
+      entity_id: string;
+      kind: components['schemas']['KindEnum'];
+      /** Format: uuid */
+      prerequisite_id: string;
+      rationale?: string;
+    };
+    ReplaceConceptAssociations: {
+      concept_ids: string[];
+    };
     ReplaceRoles: {
       roles: components['schemas']['OrganizationRole'][];
+    };
+    ReplaceSubjectPrerequisites: {
+      prerequisites: components['schemas']['SubjectPrerequisite'][];
+    };
+    Subject: {
+      description?: string;
+      /** Format: uuid */
+      discipline_id: string;
+      /** Format: uuid */
+      id: string;
+      name: string;
+      slug: string;
+      status: string;
+    };
+    SubjectPrerequisite: {
+      kind: components['schemas']['KindEnum'];
+      /** Format: uuid */
+      prerequisite_id: string;
+      rationale?: string;
+    };
+    Topic: {
+      children: readonly {
+        [key: string]: unknown;
+      }[];
+      depth: number;
+      description: string;
+      /** Format: uuid */
+      id: string;
+      slug: string;
+      status: string;
+      title: string;
     };
     UserSummary: {
       display: string;
@@ -232,6 +546,890 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['Organization'];
+        };
+      };
+    };
+  };
+  /** @description Applies declared filters only after the organization visibility boundary. */
+  organizations_catalog_areas_list: {
+    parameters: {
+      query?: {
+        ordering?: string;
+        search?: string;
+        status?: string;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Area'][];
+        };
+      };
+    };
+  };
+  /** @description Applies declared filters only after the organization visibility boundary. */
+  organizations_catalog_areas_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateArea'];
+        'application/x-www-form-urlencoded': components['schemas']['CreateArea'];
+        'multipart/form-data': components['schemas']['CreateArea'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Area'];
+        };
+      };
+    };
+  };
+  organizations_catalog_areas_retrieve: {
+    parameters: {
+      path: {
+        area_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Area'];
+        };
+      };
+    };
+  };
+  organizations_catalog_areas_partial_update: {
+    parameters: {
+      path: {
+        area_id: string;
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['PatchedUpdateArea'];
+        'application/x-www-form-urlencoded': components['schemas']['PatchedUpdateArea'];
+        'multipart/form-data': components['schemas']['PatchedUpdateArea'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Area'];
+        };
+      };
+    };
+  };
+  organizations_catalog_areas_archive_create: {
+    parameters: {
+      path: {
+        area_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Area'];
+        };
+      };
+    };
+  };
+  organizations_catalog_areas_restore_create: {
+    parameters: {
+      path: {
+        area_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Area'];
+        };
+      };
+    };
+  };
+  /** @description Return all visible concept edges in one organization-scoped query. */
+  organizations_catalog_concept_prerequisites_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PrerequisiteGraphEntry'][];
+        };
+      };
+    };
+  };
+  /** @description Applies declared filters only after the organization visibility boundary. */
+  organizations_catalog_concepts_list: {
+    parameters: {
+      query?: {
+        ordering?: string;
+        search?: string;
+        status?: string;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Concept'][];
+        };
+      };
+    };
+  };
+  /** @description Applies declared filters only after the organization visibility boundary. */
+  organizations_catalog_concepts_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateConcept'];
+        'application/x-www-form-urlencoded': components['schemas']['CreateConcept'];
+        'multipart/form-data': components['schemas']['CreateConcept'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Concept'];
+        };
+      };
+    };
+  };
+  organizations_catalog_concepts_retrieve: {
+    parameters: {
+      path: {
+        concept_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Concept'];
+        };
+      };
+    };
+  };
+  organizations_catalog_concepts_partial_update: {
+    parameters: {
+      path: {
+        concept_id: string;
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['PatchedUpdateConcept'];
+        'application/x-www-form-urlencoded': components['schemas']['PatchedUpdateConcept'];
+        'multipart/form-data': components['schemas']['PatchedUpdateConcept'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Concept'];
+        };
+      };
+    };
+  };
+  organizations_catalog_concepts_archive_create: {
+    parameters: {
+      path: {
+        concept_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Concept'];
+        };
+      };
+    };
+  };
+  organizations_catalog_concepts_prerequisites_retrieve: {
+    parameters: {
+      path: {
+        concept_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReplaceSubjectPrerequisites'];
+        };
+      };
+    };
+  };
+  organizations_catalog_concepts_prerequisites_update: {
+    parameters: {
+      path: {
+        concept_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceSubjectPrerequisites'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceSubjectPrerequisites'];
+        'multipart/form-data': components['schemas']['ReplaceSubjectPrerequisites'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReplaceSubjectPrerequisites'];
+        };
+      };
+    };
+  };
+  organizations_catalog_concepts_restore_create: {
+    parameters: {
+      path: {
+        concept_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Concept'];
+        };
+      };
+    };
+  };
+  /** @description Applies declared filters only after the organization visibility boundary. */
+  organizations_catalog_disciplines_list: {
+    parameters: {
+      query?: {
+        area?: string;
+        ordering?: string;
+        search?: string;
+        status?: string;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Discipline'][];
+        };
+      };
+    };
+  };
+  /** @description Applies declared filters only after the organization visibility boundary. */
+  organizations_catalog_disciplines_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateDiscipline'];
+        'application/x-www-form-urlencoded': components['schemas']['CreateDiscipline'];
+        'multipart/form-data': components['schemas']['CreateDiscipline'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Discipline'];
+        };
+      };
+    };
+  };
+  organizations_catalog_disciplines_retrieve: {
+    parameters: {
+      path: {
+        discipline_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Discipline'];
+        };
+      };
+    };
+  };
+  organizations_catalog_disciplines_partial_update: {
+    parameters: {
+      path: {
+        discipline_id: string;
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['PatchedUpdateNamedEntity'];
+        'application/x-www-form-urlencoded': components['schemas']['PatchedUpdateNamedEntity'];
+        'multipart/form-data': components['schemas']['PatchedUpdateNamedEntity'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Discipline'];
+        };
+      };
+    };
+  };
+  organizations_catalog_disciplines_archive_create: {
+    parameters: {
+      path: {
+        discipline_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Discipline'];
+        };
+      };
+    };
+  };
+  organizations_catalog_disciplines_restore_create: {
+    parameters: {
+      path: {
+        discipline_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Discipline'];
+        };
+      };
+    };
+  };
+  /** @description Applies declared filters only after the organization visibility boundary. */
+  organizations_catalog_learning_objectives_list: {
+    parameters: {
+      query?: {
+        cognitive_level?: string;
+        ordering?: string;
+        search?: string;
+        status?: string;
+        subject?: string;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Objective'][];
+        };
+      };
+    };
+  };
+  /** @description Applies declared filters only after the organization visibility boundary. */
+  organizations_catalog_learning_objectives_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateObjective'];
+        'application/x-www-form-urlencoded': components['schemas']['CreateObjective'];
+        'multipart/form-data': components['schemas']['CreateObjective'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Objective'];
+        };
+      };
+    };
+  };
+  organizations_catalog_learning_objectives_retrieve: {
+    parameters: {
+      path: {
+        objective_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Objective'];
+        };
+      };
+    };
+  };
+  organizations_catalog_learning_objectives_partial_update: {
+    parameters: {
+      path: {
+        objective_id: string;
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['PatchedUpdateObjective'];
+        'application/x-www-form-urlencoded': components['schemas']['PatchedUpdateObjective'];
+        'multipart/form-data': components['schemas']['PatchedUpdateObjective'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Objective'];
+        };
+      };
+    };
+  };
+  organizations_catalog_learning_objectives_archive_create: {
+    parameters: {
+      path: {
+        objective_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Objective'];
+        };
+      };
+    };
+  };
+  organizations_catalog_learning_objectives_concepts_retrieve: {
+    parameters: {
+      path: {
+        objective_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReplaceConceptAssociations'];
+        };
+      };
+    };
+  };
+  organizations_catalog_learning_objectives_concepts_update: {
+    parameters: {
+      path: {
+        objective_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceConceptAssociations'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceConceptAssociations'];
+        'multipart/form-data': components['schemas']['ReplaceConceptAssociations'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReplaceConceptAssociations'];
+        };
+      };
+    };
+  };
+  organizations_catalog_learning_objectives_restore_create: {
+    parameters: {
+      path: {
+        objective_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Objective'];
+        };
+      };
+    };
+  };
+  /** @description Return visible objective-to-concept associations in one organization-scoped query. */
+  organizations_catalog_objective_concepts_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ConceptAssociationEntry'][];
+        };
+      };
+    };
+  };
+  /** @description Return all visible subject edges in one organization-scoped query. */
+  organizations_catalog_subject_prerequisites_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PrerequisiteGraphEntry'][];
+        };
+      };
+    };
+  };
+  /** @description Applies declared filters only after the organization visibility boundary. */
+  organizations_catalog_subjects_list: {
+    parameters: {
+      query?: {
+        area?: string;
+        discipline?: string;
+        ordering?: string;
+        search?: string;
+        status?: string;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Subject'][];
+        };
+      };
+    };
+  };
+  /** @description Applies declared filters only after the organization visibility boundary. */
+  organizations_catalog_subjects_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateSubject'];
+        'application/x-www-form-urlencoded': components['schemas']['CreateSubject'];
+        'multipart/form-data': components['schemas']['CreateSubject'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Subject'];
+        };
+      };
+    };
+  };
+  organizations_catalog_subjects_retrieve: {
+    parameters: {
+      path: {
+        slug: string;
+        subject_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Subject'];
+        };
+      };
+    };
+  };
+  organizations_catalog_subjects_partial_update: {
+    parameters: {
+      path: {
+        slug: string;
+        subject_id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['PatchedUpdateNamedEntity'];
+        'application/x-www-form-urlencoded': components['schemas']['PatchedUpdateNamedEntity'];
+        'multipart/form-data': components['schemas']['PatchedUpdateNamedEntity'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Subject'];
+        };
+      };
+    };
+  };
+  organizations_catalog_subjects_archive_create: {
+    parameters: {
+      path: {
+        slug: string;
+        subject_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Subject'];
+        };
+      };
+    };
+  };
+  organizations_catalog_subjects_prerequisites_retrieve: {
+    parameters: {
+      path: {
+        slug: string;
+        subject_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReplaceSubjectPrerequisites'];
+        };
+      };
+    };
+  };
+  organizations_catalog_subjects_prerequisites_update: {
+    parameters: {
+      path: {
+        slug: string;
+        subject_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceSubjectPrerequisites'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceSubjectPrerequisites'];
+        'multipart/form-data': components['schemas']['ReplaceSubjectPrerequisites'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReplaceSubjectPrerequisites'];
+        };
+      };
+    };
+  };
+  organizations_catalog_subjects_restore_create: {
+    parameters: {
+      path: {
+        slug: string;
+        subject_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Subject'];
+        };
+      };
+    };
+  };
+  organizations_catalog_subjects_topics_list: {
+    parameters: {
+      path: {
+        slug: string;
+        subject_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Topic'][];
+        };
+      };
+    };
+  };
+  organizations_catalog_subjects_topics_create: {
+    parameters: {
+      path: {
+        slug: string;
+        subject_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateTopic'];
+        'application/x-www-form-urlencoded': components['schemas']['CreateTopic'];
+        'multipart/form-data': components['schemas']['CreateTopic'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Topic'];
+        };
+      };
+    };
+  };
+  /** @description Return visible topic-to-concept associations in one organization-scoped query. */
+  organizations_catalog_topic_concepts_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ConceptAssociationEntry'][];
+        };
+      };
+    };
+  };
+  organizations_catalog_topics_retrieve: {
+    parameters: {
+      path: {
+        slug: string;
+        topic_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Topic'];
+        };
+      };
+    };
+  };
+  organizations_catalog_topics_partial_update: {
+    parameters: {
+      path: {
+        slug: string;
+        topic_id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['PatchedUpdateTopic'];
+        'application/x-www-form-urlencoded': components['schemas']['PatchedUpdateTopic'];
+        'multipart/form-data': components['schemas']['PatchedUpdateTopic'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Topic'];
+        };
+      };
+    };
+  };
+  organizations_catalog_topics_archive_create: {
+    parameters: {
+      path: {
+        slug: string;
+        topic_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Topic'];
+        };
+      };
+    };
+  };
+  organizations_catalog_topics_concepts_retrieve: {
+    parameters: {
+      path: {
+        slug: string;
+        topic_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReplaceConceptAssociations'];
+        };
+      };
+    };
+  };
+  organizations_catalog_topics_concepts_update: {
+    parameters: {
+      path: {
+        slug: string;
+        topic_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceConceptAssociations'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceConceptAssociations'];
+        'multipart/form-data': components['schemas']['ReplaceConceptAssociations'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReplaceConceptAssociations'];
+        };
+      };
+    };
+  };
+  organizations_catalog_topics_move_create: {
+    parameters: {
+      path: {
+        slug: string;
+        topic_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MoveTopic'];
+        'application/x-www-form-urlencoded': components['schemas']['MoveTopic'];
+        'multipart/form-data': components['schemas']['MoveTopic'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Topic'];
+        };
+      };
+    };
+  };
+  organizations_catalog_topics_restore_create: {
+    parameters: {
+      path: {
+        slug: string;
+        topic_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Topic'];
         };
       };
     };

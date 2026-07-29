@@ -34,3 +34,7 @@ No Kubernetes is introduced. Containers are separately deployable but not micros
 El OpenAPI de plataforma se publica sólo en desarrollo/test; no se añade Swagger
 ni Redoc. El frontend reescribe `/api/v1` al origen Django interno y el cliente
 server-only reenvía exclusivamente la cookie de sesión con `no-store`.
+
+Prompt 8 no añade servicios: PostgreSQL conserva árbol, asociaciones, grafos y
+archivado; Redis continúa reservado para cache y límites de autenticación. No
+se almacenan currículo, capacidades ni sesiones en el navegador o Redis.

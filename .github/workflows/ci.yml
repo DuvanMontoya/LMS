@@ -52,6 +52,12 @@ jobs:
           pnpm run organizations:test:policies
           pnpm run organizations:test:concurrency
           pnpm run organizations:test
+          pnpm run catalog:check
+          pnpm run catalog:migrations
+          pnpm run catalog:test
+          pnpm run catalog:test:tree
+          pnpm run catalog:test:graphs
+          pnpm run catalog:test:concurrency
           pnpm run auth:check
           pnpm run auth:spec
           pnpm run auth:test
@@ -72,7 +78,9 @@ jobs:
           pnpm run web:build
           pnpm run auth:web:client:check
           pnpm run platform:client:check
+          pnpm run catalog:client:check
           pnpm run auth:web:test:e2e
+          pnpm run catalog:e2e
       - name: Remove schema-test infrastructure resources
         if: always()
         run: pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Reset -ConfirmReset

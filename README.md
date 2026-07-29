@@ -51,6 +51,7 @@ la base de desarrollo local:
 
 ```powershell
 pnpm organizations:demo -- -DemoPassword 'DemoLms!2026Organization'
+pnpm catalog:demo
 ```
 
 El comando se niega a ejecutarse fuera de `DEBUG=True`, marca los correos como
@@ -61,6 +62,9 @@ verificados y nunca debe usarse en producción. Puedes iniciar sesión con:
 | Propietario | `owner@demo.local` | `DemoLms!2026Organization` |
 | Administrador | `administrator@demo.local` | `DemoLms!2026Organization` |
 | Estudiante | `learner@demo.local` | `DemoLms!2026Organization` |
+| Autor | `author@demo.local` | `DemoLms!2026Organization` |
+| Revisor | `reviewer@demo.local` | `DemoLms!2026Organization` |
+| Instructor | `instructor@demo.local` | `DemoLms!2026Organization` |
 | Owner externo | `external@demo.local` | `DemoLms!2026Organization` |
 
 La organización principal es `Organización de demostración` y se abre en
@@ -68,6 +72,61 @@ La organización principal es `Organización de demostración` y se abre en
 administrador puede añadir personas pero no gestionar owners; el estudiante
 solamente ve su contexto. La organización externa sirve para comprobar que una
 URL ajena devuelve 404.
+
+`pnpm catalog:demo` no recibe ni imprime contraseñas: crea de forma idempotente
+la estructura Matemáticas, sus temas, conceptos, objetivos y prerrequisitos. El
+workspace se abre en `/organizaciones/organizacion-demo/curriculo`; también hay
+rutas de asignatura, conceptos, objetivos y prerrequisitos bajo ese prefijo.
+En las páginas de asignaturas y objetivos, quien tenga gestión curricular puede
+asociar conceptos, quitarlos y cambiar su orden desde controles visibles. Los
+prerrequisitos de asignaturas y de conceptos se validan como grafos acíclicos:
+la API devuelve un error claro si una relación forma un ciclo.
+Cada nivel del catálogo se edita desde su propia tarjeta: área, disciplina,
+asignatura, tema, concepto y objetivo. También se archiva/restaura desde la
+interfaz; los identificadores estructurales (slug, código, asignación y ruta
+interna de Treebeard) permanecen inmutables.
+La asignatura permite crear un tema raíz o un hijo. Cada tema expone controles
+visibles para subir, bajar, reducir su nivel, moverlo como hijo de otro tema y
+archivar/restaurar su subárbol. El servidor aplica la misma validación
+transaccional aunque se intente llamar la API sin usar esos controles.
+
+## Revisión manual en navegador real
+
+Después de completar el arranque anterior, deja estas dos terminales abiertas:
+
+```powershell
+# Terminal 1
+pnpm api:dev
+
+# Terminal 2
+pnpm web:dev
+```
+
+En una tercera terminal, si aún no cargaste los datos locales, ejecuta una vez:
+
+```powershell
+pnpm catalog:demo
+```
+
+Abre [el inicio de sesión local](http://127.0.0.1:3000/auth/iniciar-sesion) e
+ingresa con `owner@demo.local` y `DemoLms!2026Organization`. La redirección
+lleva a la organización demo; desde allí abre **Currículo**. Para comprobar los
+permisos visualmente, cierra sesión y usa `reviewer@demo.local` o
+`learner@demo.local` con la misma contraseña: verán sólo contenido activo y no
+aparecerán controles de escritura. Estas credenciales son únicamente datos demo
+locales, reproducibles con `DEBUG=True`; no existen en producción.
+
+La portada de Currículo muestra los conteos de áreas, disciplinas y asignaturas,
+además de búsqueda por nombre y filtro de estado. El espacio de cada asignatura
+muestra su descripción, conceptos asociados, objetivos y prerrequisitos directos
+o dependientes. Para evitar una petición por fila, las asociaciones tema–concepto
+y objetivo–concepto se consultan en lotes organizacionales mediante
+`/catalog/topic-concepts/` y `/catalog/objective-concepts/`.
+
+La sección de prerrequisitos muestra listas de **Requiere** y **Es requisito de**
+para asignaturas y conceptos. Permite seleccionar varias aristas, su tipo
+obligatorio/recomendado y una justificación. Las entidades archivadas no se
+ofrecen como candidatos y el mensaje de ciclo no revela detalles internos.
 
 Para crear una organización real de desarrollo con una cuenta ya verificada:
 
@@ -89,6 +148,13 @@ No crea usuarios ni solicita contraseñas.
 | Pruebas institucionales PostgreSQL | `pnpm organizations:test` |
 | Matriz de políticas | `pnpm organizations:test:policies` |
 | Carrera del último owner | `pnpm organizations:test:concurrency` |
+| Comprobación de currículo, filtros, migraciones y cliente | `pnpm catalog:check` |
+| Pruebas de dominio y API de currículo | `pnpm catalog:test` |
+| Integridad Treebeard | `pnpm catalog:test:tree` |
+| Grafos de prerrequisitos | `pnpm catalog:test:graphs` |
+| Carrera PostgreSQL de prerrequisitos | `pnpm catalog:test:concurrency` |
+| Esquema y cliente OpenAPI del currículo | `pnpm catalog:schema` y `pnpm catalog:client:check` |
+| Chromium del currículo (jerarquía, formularios y asociaciones) | `pnpm catalog:e2e` o `pnpm catalog:visual` |
 | Generar cliente OpenAPI | `pnpm platform:client:generate` |
 | Comprobar drift OpenAPI | `pnpm platform:client:check` |
 | E2E Chromium aislado | `pnpm organizations:e2e` |
@@ -98,6 +164,52 @@ No crea usuarios ni solicita contraseñas.
 El E2E usa una base PostgreSQL temporal, prefijo Redis temporal y correo
 aislado; crea sus contraseñas aleatoriamente para el proceso y elimina los
 recursos al terminar. No reutiliza las cuentas demo locales.
+
+La comprobación visual del currículo abre Chromium contra esa infraestructura
+aislada, inicia sesión, verifica el árbol de Precálculo, crea disciplina,
+asignatura, tema, objetivo y concepto desde formularios visibles, prueba el
+ciclo de prerrequisitos y asocia conceptos ordenados a un tema y un objetivo.
+También exige retirar asociaciones y aristas antes de archivar un concepto,
+edita los seis niveles, verifica que el estudiante no ve contenido archivado y
+confirma que revisor e instructor no pueden mutar (incluido un `403` directo
+del revisor con su sesión real). Ejecuta axe WCAG 2.2 A/AA. Para revisar
+manualmente en un navegador real, deja `pnpm api:dev` y `pnpm web:dev`
+ejecutándose y usa las cuentas demo descritas arriba.
+
+## Rutas para la revisión manual
+
+Con Django, Next.js y las cuentas demo levantadas, estas son las rutas de uso
+cotidiano. Inicia en la primera y deja que la aplicación complete la sesión;
+no pegues contraseñas en la URL ni uses la API para sustituir la revisión
+visual.
+
+| Pantalla | URL local |
+| --- | --- |
+| Inicio de sesión | `http://127.0.0.1:3000/auth/iniciar-sesion` |
+| Organizaciones | `http://127.0.0.1:3000/organizaciones` |
+| Currículo demo | `http://127.0.0.1:3000/organizaciones/organizacion-demo/curriculo` |
+| Precálculo y árbol de temas | `http://127.0.0.1:3000/organizaciones/organizacion-demo/curriculo/asignaturas/<id>` (abre la asignatura desde Currículo) |
+| Conceptos | `http://127.0.0.1:3000/organizaciones/organizacion-demo/curriculo/conceptos` |
+| Objetivos | `http://127.0.0.1:3000/organizaciones/organizacion-demo/curriculo/objetivos` |
+| Prerrequisitos | `http://127.0.0.1:3000/organizaciones/organizacion-demo/curriculo/prerrequisitos` |
+
+## Problemas locales frecuentes
+
+- **Un puerto está ocupado:** identifica el proceso antes de detenerlo; LMS usa
+  `5433` para PostgreSQL, `6379` para Redis, `8000` para Django y `3000` para
+  Next. Después vuelve a ejecutar `pnpm infra:status`.
+- **La página abre pero no hay cuentas demo:** con infraestructura y migraciones
+  al día, ejecuta de nuevo `pnpm organizations:demo -- -DemoPassword
+  'DemoLms!2026Organization'` y `pnpm catalog:demo`. Ambos comandos son
+  idempotentes y sólo funcionan con `DEBUG=True`.
+- **Se añadió una migración:** ejecuta `pnpm api:migrate`, después
+  `pnpm platform:client:check`. Si éste informa drift de contrato, genera el
+  cliente con `pnpm platform:client:generate` y revisa el cambio antes de
+  continuar.
+- **Quieres reiniciar los datos locales:** `pnpm infra:reset` borra los
+  volúmenes de LMS y pide una confirmación explícita. Después debes repetir el
+  bloque de arranque, migraciones y datos demo. No afecta a instalaciones de
+  PostgreSQL ajenas porque el proyecto usa un puerto y volúmenes propios.
 
 ## Arquitectura y contratos
 

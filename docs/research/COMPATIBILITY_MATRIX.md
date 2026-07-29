@@ -29,3 +29,11 @@
 No hubo dependencia nueva. La integración usa las versiones bloqueadas y
 compatibles de Django/DRF/drf-spectacular y la pareja
 openapi-typescript/openapi-fetch ya validada para TypeScript 6.
+
+## Compatibilidad Prompt 8
+
+| Matrix | Resultado | Evidencia |
+|---|---|---|
+| Django 6.0.7 ↔ django-filter 26.1 | Compatible | PyPI y checks Django. |
+| Django 6.0.7 ↔ django-treebeard 6.0.0 | Compatible | Clasificadores Django 6/Python 3.13 y pruebas MP_Node. |
+| PostgreSQL 18.4 ↔ CTE/locks | Compatible | Pruebas de grafos y concurrencia. |

@@ -11,7 +11,8 @@ Consulted 2026-07-28. “Latest” means the latest stable release available at 
 | Backend | DRF | 3.17.1 / **3.17.1** | Official 3.17 adds Django 6 support; Python >=3.10. | 2026-03-24 | Approve. |
 | Backend | django-allauth[headless-spec] | 65.18.0 / **65.18.0** | The distribution includes the browser-session headless surface; `headless-spec` supplies the official OpenAPI dependency without the JWT-only optional extra. | 2026-07-29 | Approve; reevaluate phone-route suppression when upstream supports it. |
 | Backend | drf-spectacular | 0.30.0 / **0.30.0** | Python >=3.8; verify schema integration after scaffold. | 2026-07-06 | Approve. |
-| Backend | django-filter | 25.2 / **25.2** | Python >=3.10; limited, explicit filtering only. | 2025-01-? | Approve conditionally; re-verify exact metadata in Prompt 2. |
+| Backend | django-filter | 26.1 / **26.1** | Python >=3.10; explicit DRF filters only. | 2026-07-11 | Prompt 8 replaces prior conditional selection. |
+| Backend | django-treebeard | 6.0.0 / **6.0.0** | Django 6 and Python 3.13 support; Apache-2.0. | 2026-07-20 | Prompt 8; `MP_Node` only for Topic. |
 | Backend | psycopg binary extra | 3.3.4 / **3.3.4** | Django 6 notes require >=3.1.12; Python >=3.10. | 2026-05-01 | Approve; production build policy in Phase 29. |
 | Async | Celery[redis] | 5.6.3 / **5.6.3** | Python 3.13 and Redis transport documented; unsupported on Windows, use Linux worker. | 2026-03-26 | Approve with Linux-only worker constraint. |
 | Async | redis-py | 8.0.1 / **8.0.1** | Python >=3.10; Celery 5.6 minimum is 4.5.2. | 2026-06-23 | Approve as transitive/direct only if cache client needed. |

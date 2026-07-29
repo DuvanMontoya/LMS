@@ -57,6 +57,14 @@ export default async function OrganizationDetailPage({
           Gestionar miembros
         </Link>
       ) : null}
+      {hasCapability(access.capabilities, 'catalog.view') ? (
+        <Link
+          className="mt-6 ml-3 inline-block rounded-lg border border-slate-300 px-4 py-2 font-medium text-slate-900"
+          href={`/organizaciones/${slug}/curriculo`}
+        >
+          Abrir currículo
+        </Link>
+      ) : null}
       {canUpdate ? (
         <OrganizationNameForm name={organization.name} slug={slug} />
       ) : null}

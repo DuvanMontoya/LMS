@@ -2,7 +2,10 @@
 
 ## Phase
 
-**Phase 7 — Autorización y estructura institucional** está en verificación final el 2026-07-29. La implementación, el contrato generado y la superficie protegida existen; la matriz institucional Chromium aislada pasó. Queda la revisión final integral antes de cerrar la fase.
+**Phase 8 — Taxonomía y currículo académico** está completada localmente el
+2026-07-29. `domain.catalog` contiene la migración PostgreSQL, Treebeard,
+capacidades, servicios transaccionales, filtros declarativos, contrato OpenAPI,
+cliente TypeScript y superficie curricular verificados en Chromium aislado.
 
 ## Delivered scaffold
 
@@ -62,6 +65,9 @@ TypeScript 7.0.2 and ESLint 10.8.0 were installed temporarily and rejected after
 - El 2026-07-29 se consultaron las guías oficiales de Next.js sobre `rewrites` y preservación de la barra final, y de openapi-fetch sobre serialización JSON. El BFF conserva ahora las rutas API con barra final antes de reenviarlas a Django, y el adaptador CSRF conserva `Content-Type` del `Request` generado antes de añadir `X-CSRFToken`.
 - La matriz aislada `pnpm organizations:e2e` ejecutó 9 escenarios Chromium: autenticación existente, owner (alta, suspensión, reactivación, revocación y reincorporación), administrador sin controles sobre owners, aislamiento entre organizaciones y axe WCAG A/AA institucional. Pasó después de corregir la navegación post-login, el reenvío con barra final, los encabezados JSON y la actualización de la tabla de membresías.
 - El navegador integrado cargó visualmente el login local y el entorno de demostración quedó disponible en `127.0.0.1:3000`/`127.0.0.1:8000`. Las cuentas demo reproducibles se generan sólo con `DEBUG=True` mediante `pnpm organizations:demo`; el README documenta su uso y las credenciales.
+- La validación de la superficie de currículo sigue abierta, pero su corte actual está probado: `pnpm catalog:test` pasó 66 pruebas Python con 79.75% de cobertura, `pnpm web:typecheck` y `pnpm web:lint` pasaron, y `pnpm catalog:visual` ejecutó 14 escenarios Chromium aislados. Entre ellos están la jerarquía curricular, creación visual de disciplina, asignatura, tema, objetivo y concepto, reducción y reubicación visible de un tema, rechazo visible de ciclos de prerrequisitos, asociaciones ordenadas tema/objetivo–concepto y axe WCAG 2.2 A/AA; la base temporal, Redis y correo temporal se eliminaron al finalizar.
+- El 2026-07-29 se completaron las rutas REST de detalle, actualización, archivado/restauración y movimiento para disciplinas, asignaturas, temas y objetivos. `Topic.objects.move()` sustituye el método de instancia deprecado por Treebeard 6. La interfaz permite crear un tema hijo y la prueba Chromium aislada verificó el flujo; queda pendiente completar la edición visible de todas las entidades y las listas completas de prerrequisitos antes de cerrar la fase.
+- El 2026-07-29 la página de prerrequisitos pasó a listas accesibles para asignaturas y conceptos: muestra relaciones entrantes y salientes, permite varias aristas con tipo y justificación, y excluye entidades archivadas. Chromium verificó la creación y el rechazo del ciclo de conceptos; la repetición completa posterior pasó 14/14.
 - La validación de cierre local pasó: `pnpm check`, `pnpm test` (50 pruebas Python, cobertura 80.92%; 16 pruebas Vitest), `pnpm organizations:test` (14), políticas (4), concurrencia (1), contrato OpenAPI sin drift y `pnpm web:build`.
 - Django `check`: exit 0; `check --deploy` in development: exit 0 with five expected deployment warnings.
 - Production-like `check --deploy`: exit 0 with a long non-secret placeholder key and `lms.invalid` host.
@@ -81,4 +87,34 @@ TypeScript 7.0.2 and ESLint 10.8.0 were installed temporarily and rejected after
 
 ## Next exact step
 
-**Prompt 8 — Taxonomía y currículo: áreas, disciplinas, asignaturas, temas, conceptos, objetivos de aprendizaje y prerrequisitos.**
+**Prompt 9 — Cursos y estructura académica: cursos, módulos, unidades, organización curricular y estados de autoría.**
+
+## Prompt 8 latest evidence
+
+El 2026-07-29 `pnpm catalog:e2e` pasó 20/20 en Chromium aislado. Incluyó
+creación y edición visible de área, disciplina, asignatura, tema, concepto y
+objetivo por owner/author; reviewer, instructor y learner de solo lectura;
+`POST` directo del revisor con cookie/CSRF que devolvió 403; URL
+cross-organization, árbol, asociaciones, ciclos, archivado y restauración de
+un concepto sólo después de retirar sus asociaciones y aristas, archivado
+oculto al learner y axe WCAG 2.2 A/AA en las cinco rutas curriculares. La base
+PostgreSQL, prefijo Redis y correo efímeros se limpiaron en `finally`.
+
+El mismo día, `pnpm catalog:test` pasó 69 pruebas Python con 81.23% de cobertura,
+`pnpm check`, `pnpm catalog:schema`, `pnpm catalog:client:check` y
+`pnpm web:build` pasaron sin warnings. Las listas agrupadas `topic-concepts`, `objective-concepts`,
+`subject-prerequisites` y `concept-prerequisites` permiten que las pantallas
+curriculares eviten una carga N+1. La comprobación manual Chromium con las
+cuentas demo verificó login, redirección y el currículo de
+`organizacion-demo` con conteos, filtros y jerarquía visibles.
+
+La revisión final añadió selectores explícitos de visibilidad por organización
+y estado para áreas, disciplinas, asignaturas, temas, conceptos y objetivos.
+Las vistas de lista aplican `DjangoFilterBackend` y ordenamiento permitido sólo
+después de esa frontera; el esquema OpenAPI declara `search`, `status`,
+relaciones y `ordering`, y el cliente generado quedó sincronizado. El reemplazo
+de prerrequisitos conserva las aristas no modificadas, bloquea la organización y
+el grafo antes de validar ciclos y sólo inserta, actualiza o retira el diff.
+Una regresión `TransactionTestCase` adicional ejecuta dos escrituras Treebeard
+simultáneas sobre la misma asignatura y confirma dos nodos válidos y
+`find_problems()` vacío tras la serialización por bloqueo.

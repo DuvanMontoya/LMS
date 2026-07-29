@@ -44,8 +44,8 @@ flowchart TB
 ```mermaid
 flowchart LR
   identity --> organizations
-  taxonomy --> curriculum
-  curriculum --> courses
+  organizations --> catalog
+  catalog --> courses
   courses --> content
   content --> authoring
   authoring --> enrollments
@@ -161,3 +161,27 @@ La autorización institucional se resuelve en `organizations`: la identidad es
 global, las membresías UUID delimitan cada organización y las capacidades se
 calculan por roles activos en cada solicitud. Las mutaciones usan servicios
 transaccionales; Next.js usa la URL como contexto y Django mantiene autoridad.
+
+## Catálogo curricular (Prompt 8)
+
+`catalog` es propietario de Área → Disciplina → Asignatura, el árbol
+materialized-path de temas, conceptos reutilizables, objetivos, asociaciones
+ordenadas y dos DAG de prerrequisitos. Los servicios bloquean la asignatura
+para mutar el árbol y la organización para mutar grafos; PostgreSQL mantiene la
+transacción y Treebeard conserva `path`, `depth` y `numchild` como internos.
+
+```mermaid
+flowchart LR
+  route["/organizaciones/[slug]/curriculo"] --> subject["asignaturas/[id]"]
+  route --> concepts["conceptos"]
+  route --> objectives["objetivos"]
+  route --> prerequisites["prerrequisitos"]
+  subject --> api["same-origin /api/v1/organizations/{slug}/catalog"]
+  concepts --> api
+  objectives --> api
+  prerequisites --> api
+```
+
+Los módulos futuros `courses` y `progress` sólo podrán leer contratos públicos
+de `catalog`; una relación curricular no concede acceso a contenido ni crea
+progreso estudiantil.

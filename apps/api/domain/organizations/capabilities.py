@@ -16,6 +16,9 @@ class Capability(StrEnum):
     ROLE_ASSIGN = "role.assign"
     ROLE_ASSIGN_OWNER = "role.assign_owner"
     MEMBERSHIP_EVENT_VIEW = "membership_event.view"
+    CATALOG_VIEW = "catalog.view"
+    CATALOG_MANAGE = "catalog.manage"
+    CATALOG_MANAGE_PREREQUISITES = "catalog.manage_prerequisites"
 
 
 _ALL_CAPABILITIES = frozenset(Capability)
@@ -24,16 +27,26 @@ _MEMBER_READ_CAPABILITIES = frozenset(
         Capability.ORGANIZATION_VIEW,
     }
 )
+_CATALOG_MANAGER_CAPABILITIES = frozenset(
+    {
+        Capability.CATALOG_VIEW,
+        Capability.CATALOG_MANAGE,
+        Capability.CATALOG_MANAGE_PREREQUISITES,
+    }
+)
 
 ROLE_CAPABILITIES = MappingProxyType(
     {
         RoleCode.OWNER: _ALL_CAPABILITIES,
         RoleCode.ADMINISTRATOR: _ALL_CAPABILITIES
         - frozenset({Capability.ROLE_ASSIGN_OWNER}),
-        RoleCode.AUTHOR: _MEMBER_READ_CAPABILITIES,
-        RoleCode.REVIEWER: _MEMBER_READ_CAPABILITIES,
-        RoleCode.INSTRUCTOR: _MEMBER_READ_CAPABILITIES,
-        RoleCode.LEARNER: _MEMBER_READ_CAPABILITIES,
+        RoleCode.AUTHOR: _MEMBER_READ_CAPABILITIES | _CATALOG_MANAGER_CAPABILITIES,
+        RoleCode.REVIEWER: _MEMBER_READ_CAPABILITIES
+        | frozenset({Capability.CATALOG_VIEW}),
+        RoleCode.INSTRUCTOR: _MEMBER_READ_CAPABILITIES
+        | frozenset({Capability.CATALOG_VIEW}),
+        RoleCode.LEARNER: _MEMBER_READ_CAPABILITIES
+        | frozenset({Capability.CATALOG_VIEW}),
     }
 )
 

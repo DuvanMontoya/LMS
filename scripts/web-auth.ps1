@@ -2,7 +2,8 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidateSet('Build', 'Check', 'GenerateClient', 'CheckClient', 'GeneratePlatformClient', 'CheckPlatformClient', 'Unit', 'Components', 'Accessibility', 'E2E', 'Smoke', 'Dev', 'ClearE2E')]
-    [string]$Action
+    [string]$Action,
+    [string]$Grep
 )
 
 $ErrorActionPreference = 'Stop'
@@ -232,7 +233,7 @@ switch ($Action) {
         & $PSScriptRoot/web-auth.ps1 -Action CheckClient
     }
     'Smoke' { Invoke-ProductionProxySmoke }
-    'E2E' { Invoke-E2E }
+    'E2E' { Invoke-E2E $Grep }
     'Dev' {
         & pnpm --dir $webDirectory run dev
         Assert-LastExitCode 'Next development server'

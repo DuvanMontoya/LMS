@@ -29,3 +29,14 @@ Organizations se prueba sobre PostgreSQL con restricciones, matriz
 rol-capacidad, servicios, API y una carrera `TransactionTestCase` que intenta
 revocar dos owners en paralelo. El schema y el cliente TypeScript se verifican
 contra drift en CI.
+# Currículo Prompt 8
+
+La suite de `catalog` cubre modelos, servicios, API, Treebeard, CTE de ciclos y
+dos escrituras concurrentes de prerrequisitos sobre PostgreSQL. Playwright usa
+una base UUID, prefijo Redis y correo efímeros: prueba creación, edición visible
+de área, disciplina, asignatura, tema, concepto y objetivo por owner/author,
+reviewer/learner de solo lectura, URL cross-organization, asociaciones,
+archivado, movimientos de temas y ciclos visibles. El revisor ejecuta además
+una escritura `fetch` con su propia cookie/CSRF y debe recibir 403; el alumno
+entra tras archivar y no puede ver el contenido. Axe WCAG 2.2 A/AA se ejecuta
+en las rutas curriculares principales.

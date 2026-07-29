@@ -57,3 +57,6 @@ TanStack Query is reserved for client-owned, invalidatable remote state. React s
 servicios, selectores, API, admin y comando de bootstrap. `apps/web/openapi`
 y `src/lib/api/generated/platform.ts` son artefactos generados del OpenAPI de
 plataforma; `src/app/(protected)/organizaciones` es la superficie institucional.
+Prompt 8 incorpora `domain/catalog` con API, filtros, servicios, grafos,
+políticas, migración y pruebas, además de las rutas curriculares bajo la
+organización y componentes/hooks `catalog` en Next.js. No se creó otra app.

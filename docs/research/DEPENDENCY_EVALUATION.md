@@ -35,3 +35,10 @@
 Se rechazaron django-guardian, paquetes RBAC, Axios, JWT y bibliotecas de
 diálogo: no resuelven una necesidad no cubierta y ampliarían la superficie de
 autorización. No se instaló ninguna dependencia.
+
+## Evaluación Prompt 8
+
+`django-filter==26.1` (BSD) aporta FilterSets declarativos limitados a campos
+explícitos. `django-treebeard==6.0.0` (Apache-2.0) aporta `MP_Node` sólo para
+temas. Se rechazan MPTT, NetworkX, ltree experimental y una base de grafos:
+no cubren una necesidad adicional y aumentarían la superficie operativa.

@@ -349,6 +349,18 @@ headless-spec = [
 ]
 
 [[package]]
+name = "django-filter"
+version = "26.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cb/3e/563965173d4cbb5fc308087e7b3d11a115b7b67273d093622480b1e31f78/django_filter-26.1.tar.gz", hash = "sha256:66ea04031b068c77c86e1ac26ced7a3f8f13ce797f5795751707e3deefc58054", size = 144299, upload-time = "2026-07-11T09:27:02.767Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1f/01/afffed1e3c4540fb75bf550a18b6176a9f6371b5f3e52b69a28995b6480c/django_filter-26.1-py3-none-any.whl", hash = "sha256:7d98ef2899218e6242619b532cb1b95af14e09dfcf74844aecb550ad27b59ff2", size = 94069, upload-time = "2026-07-11T09:27:01.012Z" },
+]
+
+[[package]]
 name = "django-stubs"
 version = "6.0.7"
 source = { registry = "https://pypi.org/simple" }
@@ -374,6 +386,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/36/50/917f7224ea470e89cdcdc93d3dfe75b8391adf976cf12f2ecdb5f5d122be/django_stubs_ext-6.0.7.tar.gz", hash = "sha256:c3172c5126614fd2a44d0196b313b44c21f717cb09477ba52b447d41f4ce613e", size = 6665, upload-time = "2026-07-14T10:07:56.933Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/83/65/4d73fce956b5ebf26449259664360e539fbe95f0e86be396c28b636ba72a/django_stubs_ext-6.0.7-py3-none-any.whl", hash = "sha256:53a9c7c5a7c7e718cc6308cfce1e7470f2cac0b9d38dbcd60fbfa82704f1d592", size = 10362, upload-time = "2026-07-14T10:07:55.653Z" },
+]
+
+[[package]]
+name = "django-treebeard"
+version = "6.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5c/c6/cc486aae13c23c7b60fa6ae13308d72945a3b031a602e7dbb0026ccb7860/django_treebeard-6.0.0.tar.gz", hash = "sha256:a155c9f85defd705df0f7bf0b8cfc890d35c3fb150fe615d84743d4c6a172260", size = 324359, upload-time = "2026-07-20T05:59:52.258Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/e7/cb202456871c62c095c559d03bc657d63b7c283168b6ae98dc4be798990d/django_treebeard-6.0.0-py3-none-any.whl", hash = "sha256:01285f7c8cd817ab58927e39bb3892cbfc9619770f9bfc7b71edea957019f07b", size = 82299, upload-time = "2026-07-20T05:59:50.771Z" },
 ]
 
 [[package]]
@@ -487,6 +511,8 @@ source = { virtual = "." }
 dependencies = [
     { name = "django", extra = ["argon2"] },
     { name = "django-allauth", extra = ["headless-spec"] },
+    { name = "django-filter" },
+    { name = "django-treebeard" },
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
     { name = "psycopg", extra = ["binary"] },
@@ -507,6 +533,8 @@ dev = [
 requires-dist = [
     { name = "django", extras = ["argon2"], specifier = "==6.0.7" },
     { name = "django-allauth", extras = ["headless-spec"], specifier = "==65.18.0" },
+    { name = "django-filter", specifier = "==26.1" },
+    { name = "django-treebeard", specifier = "==6.0.0" },
     { name = "djangorestframework", specifier = "==3.17.1" },
     { name = "drf-spectacular", specifier = "==0.30.0" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.4" },

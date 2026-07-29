@@ -28,12 +28,22 @@ export default async function StudyPage() {
           </p>
         ) : null}
         {context.organizations.length === 1 && onlyOrganization ? (
-          <Link
-            className="mt-4 inline-block font-medium text-slate-900 underline"
-            href={`/organizaciones/${onlyOrganization.slug}`}
-          >
-            Abrir {onlyOrganization.name}
-          </Link>
+          <div className="mt-4 flex gap-4">
+            <Link
+              className="font-medium text-slate-900 underline"
+              href={`/organizaciones/${onlyOrganization.slug}`}
+            >
+              Abrir {onlyOrganization.name}
+            </Link>
+            {onlyOrganization.capabilities.includes('catalog.view') ? (
+              <Link
+                className="font-medium text-slate-900 underline"
+                href={`/organizaciones/${onlyOrganization.slug}/curriculo`}
+              >
+                Abrir currículo
+              </Link>
+            ) : null}
+          </div>
         ) : null}
         {context.organizations.length > 1 ? (
           <nav aria-label="Organizaciones disponibles" className="mt-4">

@@ -27,3 +27,13 @@ La API usa sesión Django y CSRF. Los selectores filtran por membresía activa
 antes de buscar por slug/UUID, por lo que un recurso de otra organización es
 404. Owner y administrator tienen capacidades explícitas; sólo un superuser
 activo tiene bypass y `is_staff` no concede capacidades.
+# Currículo acotado por organización
+
+Las rutas de catálogo contienen el slug de organización y resuelven la entidad
+por esa frontera; un UUID ajeno produce 404. `catalog.view` sólo recibe activos,
+mientras `catalog.manage` puede incluir archivados y `catalog.manage_prerequisites`
+controla los dos grafos. Serializers no aceptan organización, actores, estado ni
+internos Treebeard; servicios aplican transacciones, políticas y transiciones.
+
+No hay JWT, almacenamiento local de sesión, `AllowAny`, `csrf_exempt`, DELETE
+curricular ni relaciones entre organizaciones.
