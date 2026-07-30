@@ -89,10 +89,10 @@ export function AcademicDocument({
               return (
                 <figure
                   {...semanticNodeProps(node)}
-                  className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 text-slate-100"
+                  className="overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-sm"
                 >
-                  <div className="flex items-center justify-between gap-3 border-b border-slate-700 px-4 py-2">
-                    <figcaption className="text-sm text-slate-300">
+                  <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/30 px-4 py-2">
+                    <figcaption className="text-sm text-muted-foreground">
                       {caption || String(node.attrs.language)}
                     </figcaption>
                     <CopyCodeButton code={code} />

@@ -29,9 +29,9 @@ export function PageHeader({
   title: React.ReactNode;
 }>) {
   return (
-    <header>
+    <header className="academic-page-header">
       {breadcrumbs?.length ? (
-        <Breadcrumb className="mb-3">
+        <Breadcrumb className="sr-only">
           <BreadcrumbList>
             {breadcrumbs.map((crumb, index) => (
               <Fragment key={`${crumb.label}-${index}`}>
@@ -50,7 +50,7 @@ export function PageHeader({
           </BreadcrumbList>
         </Breadcrumb>
       ) : null}
-      <div className="flex flex-col gap-2.5 border-b pb-3.5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="academic-page-header__body">
         <div className="min-w-0">
           {eyebrow ? <p className="academic-kicker">{eyebrow}</p> : null}
           <h1 className="academic-title mt-1">{title}</h1>
@@ -59,9 +59,7 @@ export function PageHeader({
           ) : null}
         </div>
         {actions ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            {actions}
-          </div>
+          <div className="academic-page-header__actions">{actions}</div>
         ) : null}
       </div>
     </header>

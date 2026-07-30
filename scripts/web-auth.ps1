@@ -151,9 +151,13 @@ function Invoke-E2E([string]$Grep) {
         Assert-LastExitCode 'E2E organization fixture creation'
         & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_publication
         Assert-LastExitCode 'E2E publication source fixture creation'
-        if ($Grep -match 'learning delivery') {
+        if ($Grep -match 'learning delivery|assessment phase 13') {
             & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_learning
             Assert-LastExitCode 'E2E learning fixture creation'
+        }
+        if ($Grep -match 'assessment phase 13') {
+            & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_assessments
+            Assert-LastExitCode 'E2E assessments fixture creation'
         }
         $playwrightArguments = @('test')
         if (-not [string]::IsNullOrWhiteSpace($Grep)) {

@@ -22,15 +22,28 @@ export default async function LibraryPage({
         eyebrow="Colección institucional"
         title="Biblioteca"
       />
+      <section className="library-overview">
+        <div>
+          <p className="academic-kicker">Catálogo vigente</p>
+          <h2>Aprendizaje publicado</h2>
+          <p>
+            Releases institucionales estables, organizados para una lectura
+            continua y trazable.
+          </p>
+        </div>
+        <strong>
+          {data.courses.length}
+          <span>
+            {data.courses.length === 1 ? 'curso activo' : 'cursos activos'}
+          </span>
+        </strong>
+      </section>
       {data.courses.length ? (
-        <ul className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <ul className="library-course-grid">
           {data.courses.map((course) => (
-            <li
-              className="flex min-w-0 flex-col border p-5"
-              key={course.course_id}
-            >
+            <li className="library-course-card" key={course.course_id}>
               <div className="flex items-start gap-3">
-                <span className="grid size-10 shrink-0 place-items-center border bg-muted/30">
+                <span className="library-course-card__icon">
                   <LibraryBig className="size-5 text-primary" />
                 </span>
                 <div className="min-w-0">
@@ -40,7 +53,7 @@ export default async function LibraryPage({
                   </p>
                 </div>
               </div>
-              <dl className="mt-5 grid grid-cols-3 gap-2 border-y py-3 text-xs">
+              <dl className="library-course-card__facts">
                 <CourseFact
                   icon={<Clock3 />}
                   label="Duración"
@@ -68,7 +81,7 @@ export default async function LibraryPage({
           ))}
         </ul>
       ) : (
-        <section className="mt-6 border border-dashed px-6 py-12 text-center">
+        <section className="platform-empty-state">
           <LibraryBig className="mx-auto size-7 text-muted-foreground" />
           <h2 className="mt-3 font-semibold">No hay cursos activos</h2>
           <p className="mt-1 text-sm text-muted-foreground">

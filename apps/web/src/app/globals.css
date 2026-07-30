@@ -643,8 +643,6 @@
   }
 }
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
   --font-heading: var(--font-geist-sans);
   --font-sans: var(--font-geist-sans);
@@ -690,72 +688,38 @@
 }
 
 :root {
-  --background: oklch(0.985 0.001 260);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.978 0.004 255);
+  --foreground: oklch(0.22 0.025 258);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.22 0.025 258);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.455 0.19 262);
+  --popover-foreground: oklch(0.22 0.025 258);
+  --primary: oklch(0.51 0.18 260);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.961 0.018 262);
-  --accent-foreground: oklch(0.32 0.12 262);
+  --secondary: oklch(0.958 0.012 255);
+  --secondary-foreground: oklch(0.3 0.035 258);
+  --muted: oklch(0.955 0.008 255);
+  --muted-foreground: oklch(0.49 0.028 258);
+  --accent: oklch(0.945 0.025 258);
+  --accent-foreground: oklch(0.36 0.13 260);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: oklch(0.89 0.012 255);
+  --input: oklch(0.86 0.016 255);
   --ring: oklch(0.548 0.224 262);
   --chart-1: oklch(0.548 0.224 262);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.5rem;
-  --sidebar: oklch(0.982 0.002 260);
-  --sidebar-foreground: oklch(0.205 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.965 0.009 255);
+  --sidebar-foreground: oklch(0.27 0.035 258);
   --sidebar-primary: oklch(0.548 0.224 262);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.955 0.01 260);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.905 0.003 260);
+  --sidebar-accent: oklch(0.925 0.026 258);
+  --sidebar-accent-foreground: oklch(0.31 0.095 260);
+  --sidebar-border: oklch(0.875 0.015 255);
   --sidebar-ring: oklch(0.62 0.18 262);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
 }
 
 @layer base {
@@ -763,7 +727,14 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    background-image:
+      radial-gradient(
+        circle at 82% -12%,
+        rgb(64 112 210 / 7%),
+        transparent 30rem
+      ),
+      linear-gradient(to bottom, rgb(255 255 255 / 72%), transparent 18rem);
   }
   button:not(:disabled),
   [role='button']:not(:disabled) {
@@ -784,7 +755,7 @@
   }
 
   .academic-page {
-    @apply mx-auto w-full max-w-[100rem] px-4 py-3.5 sm:px-6 sm:py-5 lg:px-8;
+    @apply mx-auto w-full max-w-[100rem] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6;
   }
 
   .academic-kicker {
@@ -792,15 +763,188 @@
   }
 
   .academic-title {
-    @apply text-2xl font-semibold tracking-[-0.025em] text-foreground sm:text-[1.625rem];
+    @apply text-2xl font-semibold tracking-[-0.035em] text-foreground sm:text-[1.7rem];
   }
 
   .academic-description {
-    @apply max-w-3xl text-sm leading-6 text-muted-foreground;
+    @apply max-w-3xl text-sm leading-5 text-muted-foreground;
   }
 
   .academic-panel {
-    @apply rounded-md border border-border bg-card text-card-foreground shadow-[0_1px_2px_rgb(0_0_0_/_0.025)];
+    @apply rounded-xl border border-border bg-card text-card-foreground shadow-[0_10px_32px_rgb(41_56_82_/_0.055)];
+  }
+
+  .academic-page-header {
+    @apply border-b border-border pb-4;
+  }
+
+  .academic-page-header .academic-kicker {
+    @apply sr-only;
+  }
+
+  .academic-page-header .academic-description {
+    @apply sr-only;
+  }
+
+  .academic-page-header__body {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between;
+  }
+
+  .academic-page-header__actions {
+    @apply flex shrink-0 flex-wrap items-center gap-2;
+  }
+
+  .platform-topbar {
+    @apply sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-white/88 px-4 shadow-[0_1px_0_rgb(38_54_78_/_0.02)] backdrop-blur-xl sm:px-6;
+  }
+
+  .platform-topbar__divider {
+    @apply h-7 w-px bg-border;
+  }
+
+  .platform-topbar__context {
+    @apply min-w-0 leading-tight;
+  }
+
+  .platform-topbar__context span {
+    @apply block font-mono text-[0.6rem] font-semibold tracking-wider text-muted-foreground uppercase;
+  }
+
+  .platform-topbar__context p {
+    @apply truncate text-sm font-semibold;
+  }
+
+  .platform-topbar__status {
+    @apply ml-auto hidden rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[0.65rem] font-semibold text-emerald-700 sm:inline-flex;
+  }
+
+  [data-slot='sidebar-inner'] {
+    background-image: linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 72%),
+      transparent 12rem
+    );
+  }
+
+  [data-slot='sidebar-group-label'] {
+    @apply h-9 font-mono text-[0.625rem] font-semibold tracking-wider uppercase;
+  }
+
+  [data-slot='sidebar-menu-button'] {
+    @apply min-h-9 rounded-lg;
+  }
+
+  [data-slot='sidebar-menu-button'][data-active='true'] {
+    @apply border border-primary/10 bg-primary/10 text-primary shadow-xs;
+  }
+
+  .platform-empty-state {
+    @apply mt-6 rounded-xl border border-dashed border-border bg-card/70 px-6 py-12 text-center shadow-[0_8px_28px_rgb(41_56_82_/_0.035)];
+  }
+
+  .platform-empty-state > svg {
+    @apply mx-auto size-8 text-primary/65;
+  }
+
+  .platform-empty-state h2 {
+    @apply mt-3 font-semibold;
+  }
+
+  .platform-empty-state p {
+    @apply mt-1 text-sm text-muted-foreground;
+  }
+
+  .learning-overview,
+  .library-overview {
+    @apply mt-6 grid gap-5 rounded-xl border border-border bg-card p-5 shadow-[0_10px_32px_rgb(41_56_82_/_0.055)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end sm:p-6;
+  }
+
+  .learning-overview h2,
+  .library-overview h2 {
+    @apply mt-1 text-xl font-semibold tracking-[-0.025em];
+  }
+
+  .learning-overview > div > p:last-child,
+  .library-overview > div > p:last-child {
+    @apply mt-1 max-w-2xl text-sm leading-6 text-muted-foreground;
+  }
+
+  .learning-overview dl {
+    @apply grid grid-cols-3 overflow-hidden rounded-lg border border-border;
+  }
+
+  .learning-overview dl > div {
+    @apply min-w-24 border-r border-border px-4 py-3 last:border-r-0;
+  }
+
+  .learning-overview dt {
+    @apply text-[0.625rem] font-semibold tracking-wider text-muted-foreground uppercase;
+  }
+
+  .learning-overview dd {
+    @apply mt-1 text-xl font-semibold;
+  }
+
+  .learning-course-grid {
+    @apply mt-5 grid gap-4 lg:grid-cols-2;
+  }
+
+  .learning-course-card,
+  .library-course-card {
+    @apply flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card p-5 shadow-[0_10px_32px_rgb(41_56_82_/_0.055)] sm:p-6;
+  }
+
+  .learning-course-card__icon,
+  .library-course-card__icon {
+    @apply grid size-11 shrink-0 place-items-center rounded-lg border border-primary/15 bg-primary/8;
+  }
+
+  .learning-assessment-section {
+    @apply mt-6 overflow-hidden rounded-xl border border-border bg-card shadow-[0_10px_32px_rgb(41_56_82_/_0.055)];
+  }
+
+  .learning-assessment-section > header {
+    @apply flex items-center justify-between gap-4 border-b border-border bg-muted/20 px-5 py-4 sm:px-6;
+  }
+
+  .learning-assessment-section > header h2 {
+    @apply mt-0.5 text-lg font-semibold;
+  }
+
+  .learning-assessment-section > header p:last-child {
+    @apply mt-1 text-sm text-muted-foreground;
+  }
+
+  .learning-assessment-section > header > span {
+    @apply flex size-9 items-center justify-center rounded-full border border-primary/15 bg-primary/8 font-mono text-sm font-semibold text-primary;
+  }
+
+  .learning-completed-list {
+    @apply divide-y divide-border px-5 sm:px-6;
+  }
+
+  .learning-assessment-section__empty {
+    @apply flex items-center gap-3 px-5 py-8 text-sm text-muted-foreground sm:px-6;
+  }
+
+  .learning-assessment-section__empty svg {
+    @apply size-5 text-primary/65;
+  }
+
+  .library-overview > strong {
+    @apply flex items-baseline gap-2 text-3xl font-semibold text-primary;
+  }
+
+  .library-overview > strong span {
+    @apply text-xs font-semibold tracking-normal text-muted-foreground;
+  }
+
+  .library-course-grid {
+    @apply mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3;
+  }
+
+  .library-course-card__facts {
+    @apply mt-5 grid grid-cols-3 gap-2 rounded-lg border border-border bg-muted/20 p-3 text-xs;
   }
 
   .academic-link {
@@ -1074,7 +1218,7 @@
     margin-top: 0.35rem;
     border: 1px solid #202a32;
     border-radius: 0;
-    background: #202a32 !important;
+    background: #2f62c8 !important;
     color: #f5f7f8 !important;
     font-weight: 800;
     transition:
@@ -1083,7 +1227,7 @@
   }
 
   .auth-submit:hover {
-    background: #10181e !important;
+    background: #2552aa !important;
     transform: translateY(-1px);
   }
 
@@ -1122,6 +1266,1214 @@
 
   textarea.academic-control {
     @apply resize-y;
+  }
+
+  .assessment-studio-grid {
+    @apply grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_21rem];
+  }
+
+  .assessment-workbench {
+    @apply overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_55px_rgb(15_23_42_/_0.07)];
+  }
+
+  .assessment-builder-section {
+    @apply border-b border-border;
+  }
+
+  .assessment-builder-section__header {
+    @apply grid grid-cols-[2rem_2.5rem_minmax(0,1fr)] items-start gap-3 border-b border-border/70 bg-muted/25 px-5 py-4 sm:px-6;
+  }
+
+  .assessment-builder-section__number {
+    @apply pt-1 font-mono text-[0.65rem] font-bold tracking-[0.12em] text-muted-foreground;
+  }
+
+  .assessment-icon-box {
+    @apply inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-primary/8 text-primary [&>svg]:size-4.5;
+  }
+
+  .assessment-builder-section__header h2 {
+    @apply text-base font-semibold tracking-[-0.015em];
+  }
+
+  .assessment-builder-section__header p {
+    @apply mt-0.5 max-w-3xl text-xs leading-5 text-muted-foreground;
+  }
+
+  .assessment-builder-section__body {
+    @apply space-y-5 px-5 py-5 sm:px-6 sm:py-6;
+  }
+
+  .assessment-workbench-footer {
+    @apply flex flex-col gap-4 bg-muted/30 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6;
+  }
+
+  .assessment-workbench-footer > div:last-child {
+    @apply flex-col items-stretch sm:items-end;
+  }
+
+  .assessment-context-rail,
+  .assessment-preview-rail {
+    @apply overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-[0_12px_38px_rgb(41_56_82_/_0.065)] xl:sticky xl:top-5;
+  }
+
+  .assessment-context-rail {
+    @apply p-5;
+  }
+
+  .assessment-rail-kicker {
+    @apply font-mono text-[0.65rem] font-bold tracking-[0.14em] text-primary uppercase;
+  }
+
+  .assessment-context-rail .assessment-rail-kicker,
+  .assessment-preview-rail .assessment-rail-kicker {
+    @apply text-primary;
+  }
+
+  .assessment-rail-title {
+    @apply mt-2 text-lg font-semibold tracking-[-0.025em];
+  }
+
+  .assessment-step-list {
+    @apply mt-6 space-y-0;
+  }
+
+  .assessment-step-list li {
+    @apply relative grid grid-cols-[2rem_1fr] gap-3 pb-5 last:pb-0;
+  }
+
+  .assessment-step-list li:not(:last-child)::after {
+    content: '';
+    @apply absolute top-7 bottom-1 left-[0.9375rem] w-px bg-border;
+  }
+
+  .assessment-step-list li > span {
+    @apply relative z-10 inline-flex size-8 items-center justify-center rounded-full border border-primary/20 bg-primary/8 font-mono text-xs font-semibold text-primary;
+  }
+
+  .assessment-step-list strong {
+    @apply text-sm font-semibold;
+  }
+
+  .assessment-step-list p {
+    @apply mt-1 text-xs leading-5 text-muted-foreground;
+  }
+
+  .assessment-assurance {
+    @apply mt-6 flex gap-3 rounded-lg border border-primary/15 bg-primary/5 p-3 text-xs leading-5 text-foreground;
+  }
+
+  .assessment-assurance svg {
+    @apply mt-0.5 size-4 shrink-0 text-primary;
+  }
+
+  .assessment-control-suffix {
+    @apply -mt-8 mr-3 text-right text-xs text-muted-foreground;
+  }
+
+  .assessment-inline-creator {
+    @apply mt-6 grid gap-4 rounded-xl border border-border bg-card p-5 shadow-[0_12px_35px_rgb(15_23_42_/_0.055)] md:grid-cols-2 xl:grid-cols-[1.15fr_1fr_1fr_auto] xl:items-end;
+  }
+
+  .assessment-inline-creator__intro {
+    @apply flex gap-3 md:col-span-2 xl:col-span-4;
+  }
+
+  .assessment-inline-creator__intro h2 {
+    @apply font-semibold tracking-[-0.015em];
+  }
+
+  .assessment-inline-creator__intro p {
+    @apply mt-0.5 text-xs leading-5 text-muted-foreground;
+  }
+
+  .assessment-inline-creator__description {
+    @apply md:col-span-2 xl:col-span-1;
+  }
+
+  .assessment-inline-creator__action {
+    @apply xl:self-end;
+  }
+
+  .assessment-inline-creator__action > div {
+    @apply flex-col items-stretch;
+  }
+
+  .assessment-bank-settings {
+    @apply mt-6 overflow-hidden rounded-xl border border-border bg-card;
+  }
+
+  .assessment-bank-settings > summary {
+    @apply cursor-pointer bg-muted/20 px-5 py-3 text-sm font-semibold hover:bg-muted/40;
+  }
+
+  .assessment-bank-settings__body {
+    @apply grid gap-5 border-t border-border p-5 lg:grid-cols-[minmax(0,1fr)_18rem];
+  }
+
+  .assessment-bank-settings__body > div {
+    @apply grid gap-4 sm:grid-cols-2;
+  }
+
+  .assessment-bank-settings__body aside {
+    @apply rounded-lg border border-border bg-muted/20 p-4;
+  }
+
+  .assessment-bank-settings__body code {
+    @apply mt-2 block text-xs text-primary;
+  }
+
+  .assessment-bank-settings__body dl {
+    @apply my-4 space-y-2 text-xs;
+  }
+
+  .assessment-bank-settings__body dl > div {
+    @apply flex justify-between gap-3;
+  }
+
+  .assessment-bank-settings__body dt {
+    @apply text-muted-foreground;
+  }
+
+  .assessment-revision-studio {
+    @apply grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem];
+  }
+
+  .assessment-revision-editor {
+    @apply overflow-hidden rounded-xl border border-border bg-card shadow-[0_12px_35px_rgb(15_23_42_/_0.055)];
+  }
+
+  .assessment-revision-editor > header {
+    @apply grid items-center gap-3 border-b border-border bg-muted/20 px-5 py-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto] sm:px-6;
+  }
+
+  .assessment-revision-editor > header h2 {
+    @apply mt-0.5 text-base font-semibold tracking-[-0.015em];
+  }
+
+  .assessment-revision-editor > header > div > p:last-child {
+    @apply mt-0.5 text-xs text-muted-foreground;
+  }
+
+  .assessment-revision-editor__body {
+    @apply space-y-4 p-5 sm:p-6;
+  }
+
+  .assessment-revision-notice {
+    @apply flex gap-3 rounded-lg border border-primary/15 bg-primary/5 p-3 text-xs leading-5;
+  }
+
+  .assessment-revision-notice svg {
+    @apply mt-0.5 size-4 shrink-0 text-primary;
+  }
+
+  .assessment-code-disclosure {
+    @apply overflow-hidden rounded-lg border border-border;
+  }
+
+  .assessment-code-disclosure summary {
+    @apply cursor-pointer bg-muted/45 px-4 py-3 font-mono text-xs font-semibold text-foreground;
+  }
+
+  .assessment-code-disclosure textarea {
+    @apply rounded-none border-0 bg-card text-foreground shadow-none focus-visible:ring-inset;
+  }
+
+  .assessment-revision-rail {
+    @apply divide-y divide-border overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-[0_12px_38px_rgb(41_56_82_/_0.065)] xl:sticky xl:top-5;
+  }
+
+  .assessment-revision-rail > section {
+    @apply bg-card p-5;
+  }
+
+  .assessment-revision-rail header {
+    @apply flex items-start gap-3;
+  }
+
+  .assessment-revision-rail header > svg {
+    @apply mt-0.5 size-5 text-primary;
+  }
+
+  .assessment-revision-rail header p {
+    @apply font-mono text-[0.625rem] font-semibold tracking-wider text-slate-500 uppercase;
+  }
+
+  .assessment-revision-rail header h2 {
+    @apply mt-0.5 text-base font-semibold;
+  }
+
+  .assessment-revision-preview article {
+    @apply mt-4 rounded-lg bg-white p-4 text-slate-950;
+  }
+
+  .assessment-revision-preview article > span {
+    @apply font-mono text-[0.625rem] font-semibold tracking-wider text-slate-500 uppercase;
+  }
+
+  .assessment-revision-preview article h3 {
+    @apply mt-2 text-sm leading-6 font-semibold;
+  }
+
+  .assessment-revision-preview article ol {
+    @apply mt-4 space-y-2;
+  }
+
+  .assessment-revision-preview article li {
+    @apply flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-xs;
+  }
+
+  .assessment-revision-preview article li span {
+    @apply inline-flex size-5 items-center justify-center rounded-full bg-slate-100 font-mono text-[0.625rem];
+  }
+
+  .assessment-revision-preview article > div {
+    @apply mt-4 rounded-md border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-xs text-slate-500;
+  }
+
+  .assessment-revision-workflow label {
+    @apply mt-4 block text-xs text-muted-foreground;
+  }
+
+  .assessment-revision-workflow textarea {
+    @apply mt-1.5 min-h-28 border-input bg-card text-foreground;
+  }
+
+  .assessment-revision-workflow > div:last-of-type {
+    @apply mt-3;
+  }
+
+  .assessment-results-summary {
+    @apply mt-6 grid gap-5 rounded-xl border border-border bg-card p-5 shadow-[0_12px_35px_rgb(15_23_42_/_0.055)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end sm:p-6;
+  }
+
+  .assessment-results-summary h2 {
+    @apply mt-1 text-xl font-semibold tracking-[-0.025em];
+  }
+
+  .assessment-results-summary > div > p:last-child {
+    @apply mt-1 max-w-2xl text-sm leading-6 text-muted-foreground;
+  }
+
+  .assessment-results-summary dl {
+    @apply grid grid-cols-2 overflow-hidden rounded-lg border border-border sm:grid-cols-4;
+  }
+
+  .assessment-results-summary dl > div {
+    @apply min-w-24 border-r border-border px-4 py-3 last:border-r-0;
+  }
+
+  .assessment-results-summary dt {
+    @apply text-[0.625rem] font-semibold tracking-wider text-muted-foreground uppercase;
+  }
+
+  .assessment-results-summary dd {
+    @apply mt-1 text-lg font-semibold;
+  }
+
+  .assessment-results-ledger,
+  .assessment-result-detail {
+    @apply mt-5 overflow-hidden rounded-xl border border-border bg-card shadow-[0_12px_35px_rgb(15_23_42_/_0.045)];
+  }
+
+  .assessment-results-ledger > header,
+  .assessment-result-detail > header {
+    @apply flex items-center justify-between gap-3 border-b border-border bg-muted/20 px-5 py-4 sm:px-6;
+  }
+
+  .assessment-results-ledger > header h2,
+  .assessment-result-detail > header h2 {
+    @apply mt-0.5 text-base font-semibold;
+  }
+
+  .assessment-results-ledger > header > span,
+  .assessment-result-detail > header > span {
+    @apply rounded-full border border-border bg-background px-3 py-1 font-mono text-[0.625rem] font-semibold text-muted-foreground;
+  }
+
+  .assessment-results-ledger thead {
+    @apply border-b border-border bg-muted/15 text-[0.625rem] font-semibold tracking-wider text-muted-foreground uppercase;
+  }
+
+  .assessment-results-ledger tbody {
+    @apply divide-y divide-border;
+  }
+
+  .assessment-results-ledger tbody tr {
+    @apply transition-colors hover:bg-muted/20;
+  }
+
+  .assessment-attempt-number {
+    @apply inline-flex rounded-md border border-primary/15 bg-primary/8 px-2.5 py-1 font-mono text-xs font-semibold text-primary;
+  }
+
+  .assessment-result-hero {
+    @apply mt-6 grid overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-[0_14px_42px_rgb(41_56_82_/_0.07)] lg:grid-cols-[minmax(0,1fr)_auto];
+    background-image: linear-gradient(
+      120deg,
+      rgb(255 255 255 / 100%),
+      rgb(239 245 255 / 72%)
+    );
+  }
+
+  .assessment-result-hero__heading {
+    @apply p-6 sm:p-8;
+  }
+
+  .assessment-result-hero__heading > p:first-of-type {
+    @apply mt-4 font-mono text-[0.625rem] font-semibold tracking-wider text-primary uppercase;
+  }
+
+  .assessment-result-hero__heading h2 {
+    @apply mt-2 text-2xl font-semibold tracking-[-0.03em];
+  }
+
+  .assessment-result-hero__heading > p:last-child {
+    @apply mt-2 max-w-xl text-sm leading-6 text-muted-foreground;
+  }
+
+  .assessment-result-scorecard {
+    @apply grid border-t border-border bg-muted/35 sm:grid-cols-3 lg:min-w-[30rem] lg:grid-cols-1 lg:border-t-0 lg:border-l;
+  }
+
+  .assessment-result-scorecard > div {
+    @apply border-b border-border px-6 py-4 last:border-b-0 sm:border-r sm:last:border-r-0 lg:border-r-0;
+  }
+
+  .assessment-result-scorecard dt {
+    @apply text-[0.625rem] font-semibold tracking-wider text-slate-500 uppercase;
+  }
+
+  .assessment-result-scorecard dd {
+    @apply mt-1 text-lg font-semibold;
+  }
+
+  .assessment-result-detail > ol {
+    @apply divide-y divide-border;
+  }
+
+  .assessment-result-detail > ol > li {
+    @apply grid grid-cols-[2.25rem_1fr] gap-4 p-5 sm:p-6;
+  }
+
+  .assessment-result-detail > ol > li > span {
+    @apply flex size-9 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-semibold text-primary;
+  }
+
+  .assessment-result-detail li strong {
+    @apply text-sm font-semibold;
+  }
+
+  .assessment-result-detail li p {
+    @apply mt-1 text-sm leading-6 text-muted-foreground;
+  }
+
+  .assessment-result-detail blockquote {
+    @apply mt-3 rounded-lg border border-border bg-muted/20 p-3 text-sm leading-6;
+  }
+
+  .assessment-result-detail__empty {
+    @apply p-8 text-center;
+  }
+
+  .assessment-result-detail__empty p {
+    @apply mt-1 text-sm text-muted-foreground;
+  }
+
+  .assessment-result-detail > footer {
+    @apply border-t border-border bg-muted/15 px-5 py-4 sm:px-6;
+  }
+
+  .assessment-type-note {
+    @apply flex gap-3 rounded-lg border border-primary/15 bg-primary/5 p-3;
+  }
+
+  .assessment-type-note > svg {
+    @apply mt-0.5 size-4 shrink-0 text-primary;
+  }
+
+  .assessment-type-note strong {
+    @apply text-sm font-semibold;
+  }
+
+  .assessment-type-note p {
+    @apply mt-0.5 text-xs leading-5 text-muted-foreground;
+  }
+
+  .assessment-answer-key {
+    @apply grid gap-2 rounded-lg border border-border bg-muted/15 p-2;
+  }
+
+  .assessment-answer-key__option {
+    @apply grid cursor-pointer grid-cols-[1rem_1.75rem_minmax(0,1fr)_auto] items-center gap-3 rounded-md border border-transparent bg-white px-3 py-2.5 text-sm transition-colors hover:border-border hover:bg-muted/20;
+  }
+
+  .assessment-answer-key__option[data-selected='true'] {
+    @apply border-primary/25 bg-primary/5;
+  }
+
+  .assessment-answer-key__option input {
+    @apply size-4 accent-primary;
+  }
+
+  .assessment-answer-key__letter {
+    @apply grid size-7 place-items-center rounded-md bg-muted font-mono text-[0.6875rem] font-bold text-muted-foreground;
+  }
+
+  .assessment-answer-key__option[data-selected='true']
+    .assessment-answer-key__letter {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .assessment-answer-key__option small {
+    @apply text-[0.6875rem] font-medium text-muted-foreground;
+  }
+
+  .assessment-answer-key__option[data-selected='true'] small {
+    @apply text-primary;
+  }
+
+  .assessment-answer-key-empty {
+    @apply rounded-lg border border-dashed border-border bg-muted/15 px-4 py-5 text-center text-xs leading-5 text-muted-foreground;
+  }
+
+  .assessment-order-key {
+    @apply divide-y overflow-hidden rounded-lg border border-border;
+  }
+
+  .assessment-order-key li {
+    @apply grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 bg-white px-3 py-2.5;
+  }
+
+  .assessment-order-key li > span {
+    @apply grid size-7 place-items-center rounded-md bg-muted font-mono text-[0.6875rem] font-bold text-muted-foreground;
+  }
+
+  .assessment-order-key li > strong {
+    @apply text-sm font-medium;
+  }
+
+  .assessment-order-key li > div {
+    @apply flex gap-1;
+  }
+
+  .assessment-matching-key {
+    @apply divide-y overflow-hidden rounded-lg border border-border;
+  }
+
+  .assessment-matching-key > div {
+    @apply grid items-center gap-3 bg-white px-3 py-3 sm:grid-cols-[minmax(0,1fr)_1.25rem_minmax(0,1fr)];
+  }
+
+  .assessment-matching-key strong {
+    @apply text-sm font-medium;
+  }
+
+  .assessment-matching-key svg {
+    @apply hidden size-4 text-muted-foreground sm:block;
+  }
+
+  .assessment-feedback-panel {
+    @apply rounded-lg border border-border bg-muted/20 p-4;
+  }
+
+  .assessment-feedback-panel summary {
+    @apply cursor-pointer text-sm font-semibold;
+  }
+
+  .assessment-preview-rail__header {
+    @apply flex items-center justify-between border-b border-border bg-muted/25 px-5 py-4 text-xs;
+  }
+
+  .assessment-preview-rail__header span {
+    @apply font-mono font-bold tracking-[0.12em] text-muted-foreground uppercase;
+  }
+
+  .assessment-preview-rail__header strong {
+    @apply rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[0.65rem] text-primary;
+  }
+
+  .assessment-question-preview {
+    @apply m-4 rounded-lg border border-border bg-white p-5 text-foreground shadow-[0_8px_24px_rgb(41_56_82_/_0.055)];
+  }
+
+  .assessment-question-preview__meta {
+    @apply font-mono text-[0.625rem] font-semibold tracking-wider text-slate-500 uppercase;
+  }
+
+  .assessment-question-preview h3 {
+    @apply mt-3 text-base leading-6 font-semibold;
+  }
+
+  .assessment-question-preview ol {
+    @apply mt-5 space-y-2;
+  }
+
+  .assessment-question-preview li {
+    @apply flex items-center gap-3 rounded-md border border-slate-200 px-3 py-2.5 text-sm;
+  }
+
+  .assessment-question-preview li span {
+    @apply inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-100 font-mono text-[0.65rem] font-bold;
+  }
+
+  .assessment-preview-answer {
+    @apply mt-5 rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-6 text-center text-xs text-slate-500;
+  }
+
+  .assessment-quality-list {
+    @apply border-t border-border bg-muted/15 p-5;
+  }
+
+  .assessment-quality-list ul {
+    @apply mt-3 space-y-2;
+  }
+
+  .assessment-quality-list li {
+    @apply flex items-center gap-2 text-xs text-muted-foreground;
+  }
+
+  .assessment-quality-list li svg {
+    @apply size-4;
+  }
+
+  .assessment-quality-list li[data-ready='true'] {
+    @apply text-emerald-700;
+  }
+
+  .assessment-error {
+    @apply max-w-md rounded-lg border border-destructive/25 bg-destructive/6 px-3 py-2 text-left text-xs text-destructive;
+  }
+
+  .assessment-error strong {
+    @apply block font-semibold;
+  }
+
+  .assessment-error p {
+    @apply mt-0.5 leading-5;
+  }
+
+  .assessment-collection {
+    @apply mt-6 overflow-hidden rounded-xl border border-border bg-card shadow-[0_10px_30px_rgb(15_23_42_/_0.045)];
+  }
+
+  .assessment-metric-grid {
+    @apply mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .assessment-metric-grid article {
+    @apply flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-[0_8px_25px_rgb(15_23_42_/_0.04)];
+  }
+
+  .assessment-metric-grid article > span {
+    @apply inline-flex size-11 items-center justify-center rounded-lg bg-primary/8 text-primary [&>svg]:size-5;
+  }
+
+  .assessment-metric-grid strong {
+    @apply text-xl font-semibold tracking-[-0.025em];
+  }
+
+  .assessment-metric-grid p {
+    @apply text-xs text-muted-foreground;
+  }
+
+  .assessment-instrument-list {
+    @apply divide-y divide-border;
+  }
+
+  .assessment-instrument-list > li {
+    @apply grid items-center gap-4 px-5 py-5 sm:px-6 lg:grid-cols-[3rem_minmax(0,1fr)_auto_auto];
+  }
+
+  .assessment-instrument-list__index {
+    @apply hidden font-mono text-xl font-medium text-muted-foreground sm:block;
+  }
+
+  .assessment-instrument-list h3 {
+    @apply mt-1 text-base font-semibold tracking-[-0.015em];
+  }
+
+  .assessment-instrument-list__meta {
+    @apply mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground;
+  }
+
+  .assessment-instrument-list__meta span {
+    @apply before:mr-1.5 before:inline-block before:size-1 before:rounded-full before:bg-muted-foreground/40;
+  }
+
+  .assessment-composer-summary {
+    @apply mt-6 grid gap-5 rounded-xl border border-border bg-card p-5 text-foreground shadow-[0_14px_42px_rgb(41_56_82_/_0.07)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end;
+    background-image: linear-gradient(
+      120deg,
+      rgb(255 255 255 / 100%),
+      rgb(239 245 255 / 72%)
+    );
+  }
+
+  .assessment-composer-summary h2 {
+    @apply mt-1 text-xl font-semibold tracking-[-0.025em];
+  }
+
+  .assessment-composer-summary > div > p:last-child {
+    @apply mt-1 max-w-2xl text-sm leading-6 text-muted-foreground;
+  }
+
+  .assessment-composer-summary dl {
+    @apply grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4;
+  }
+
+  .assessment-composer-summary dl > div {
+    @apply min-w-24 bg-white/80 px-4 py-3;
+  }
+
+  .assessment-composer-summary dt {
+    @apply text-[0.625rem] font-semibold tracking-wider text-muted-foreground uppercase;
+  }
+
+  .assessment-composer-summary dd {
+    @apply mt-1 text-sm font-semibold text-foreground;
+  }
+
+  .assessment-composer-card {
+    @apply overflow-hidden rounded-xl border border-border bg-card shadow-[0_10px_30px_rgb(15_23_42_/_0.045)];
+  }
+
+  .assessment-composer-card__header {
+    @apply flex flex-wrap items-start justify-between gap-3 border-b border-border bg-muted/20 px-5 py-4 sm:px-6;
+  }
+
+  .assessment-composer-card__header > div {
+    @apply flex items-start gap-3;
+  }
+
+  .assessment-composer-card__header h2 {
+    @apply text-base font-semibold tracking-[-0.015em];
+  }
+
+  .assessment-composer-card__header p {
+    @apply mt-0.5 text-xs leading-5 text-muted-foreground;
+  }
+
+  .assessment-composer-card__count {
+    @apply rounded-full border border-border bg-background px-3 py-1 font-mono text-[0.625rem] font-semibold text-muted-foreground;
+  }
+
+  .assessment-composer-card__body {
+    @apply space-y-4 p-5 sm:p-6;
+  }
+
+  .assessment-objective-grid {
+    @apply grid gap-2 sm:grid-cols-2;
+  }
+
+  .assessment-objective-grid > label {
+    @apply flex min-w-0 items-start gap-3 rounded-lg border border-border p-3 text-sm transition-colors hover:bg-muted/30;
+  }
+
+  .assessment-objective-grid > label[data-selected='true'] {
+    @apply border-primary/30 bg-primary/5;
+  }
+
+  .assessment-objective-grid strong {
+    @apply block font-mono text-[0.6875rem] text-primary;
+  }
+
+  .assessment-objective-grid span span {
+    @apply mt-0.5 block text-xs leading-5 text-muted-foreground;
+  }
+
+  .assessment-section-list {
+    @apply divide-y divide-border;
+  }
+
+  .assessment-section-list > li {
+    @apply p-5 sm:p-6;
+  }
+
+  .assessment-section-list > li > div:first-child h3 {
+    @apply text-base font-semibold tracking-[-0.015em];
+  }
+
+  .assessment-item-list {
+    @apply mt-4 divide-y divide-border overflow-hidden rounded-lg border border-border bg-muted/15 text-sm;
+  }
+
+  .assessment-add-section {
+    @apply flex flex-col gap-3 border-t border-border bg-muted/20 p-5 sm:flex-row sm:p-6;
+  }
+
+  .assessment-governance-rail {
+    @apply divide-y divide-border overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-[0_12px_38px_rgb(41_56_82_/_0.065)] xl:sticky xl:top-5;
+  }
+
+  .assessment-governance-rail > section {
+    @apply bg-card p-5;
+  }
+
+  .assessment-governance-rail__title {
+    @apply flex items-start gap-3;
+  }
+
+  .assessment-governance-rail__title > svg {
+    @apply mt-0.5 size-5 text-primary;
+  }
+
+  .assessment-governance-rail__title p {
+    @apply font-mono text-[0.625rem] font-semibold tracking-wider text-slate-500 uppercase;
+  }
+
+  .assessment-governance-rail__title h2 {
+    @apply mt-0.5 text-base font-semibold;
+  }
+
+  .assessment-readiness-list {
+    @apply mt-4 space-y-2 text-xs leading-5 text-foreground;
+  }
+
+  .assessment-readiness-list li {
+    @apply rounded-md border border-amber-400/15 bg-amber-400/5 px-3 py-2 before:mr-2 before:text-amber-300 before:content-['•'];
+  }
+
+  .assessment-governance-rail > section > p {
+    @apply mt-3 text-xs leading-5 text-muted-foreground;
+  }
+
+  .assessment-governance-rail__workflow label {
+    @apply mt-4 block text-xs text-muted-foreground;
+  }
+
+  .assessment-governance-rail__workflow textarea {
+    @apply mt-1.5 min-h-24 border-input bg-card text-foreground;
+  }
+
+  .assessment-governance-rail__workflow button {
+    @apply mt-3;
+  }
+
+  .assessment-delivery-summary {
+    @apply mt-6 grid gap-5 rounded-xl border border-border bg-card p-5 shadow-[0_12px_35px_rgb(15_23_42_/_0.055)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end;
+  }
+
+  .assessment-delivery-summary h2 {
+    @apply mt-1 text-xl font-semibold tracking-[-0.025em];
+  }
+
+  .assessment-delivery-summary > div > p:last-child {
+    @apply mt-1 max-w-2xl text-sm leading-6 text-muted-foreground;
+  }
+
+  .assessment-delivery-summary dl {
+    @apply grid grid-cols-3 overflow-hidden rounded-lg border border-border;
+  }
+
+  .assessment-delivery-summary dl > div {
+    @apply min-w-24 border-r border-border px-4 py-3 last:border-r-0;
+  }
+
+  .assessment-delivery-summary dt {
+    @apply text-[0.625rem] font-semibold tracking-wider text-muted-foreground uppercase;
+  }
+
+  .assessment-delivery-summary dd {
+    @apply mt-1 text-lg font-semibold;
+  }
+
+  .assessment-delivery-builder,
+  .assessment-delivery-pipeline {
+    @apply overflow-hidden rounded-xl border border-border bg-card shadow-[0_10px_30px_rgb(15_23_42_/_0.045)];
+  }
+
+  .assessment-delivery-builder > header,
+  .assessment-delivery-pipeline > header {
+    @apply flex items-center justify-between gap-3 border-b border-border bg-muted/20 px-5 py-4;
+  }
+
+  .assessment-delivery-builder > header {
+    @apply justify-start;
+  }
+
+  .assessment-delivery-builder h2,
+  .assessment-delivery-pipeline h2 {
+    @apply mt-0.5 text-base font-semibold tracking-[-0.015em];
+  }
+
+  .assessment-delivery-builder__body {
+    @apply space-y-3 p-5;
+  }
+
+  .assessment-assurance--light {
+    @apply mt-4 border-primary/15 bg-primary/5 text-foreground;
+  }
+
+  .assessment-delivery-pipeline > header > span {
+    @apply rounded-full border border-border bg-background px-3 py-1 font-mono text-[0.625rem] font-semibold text-muted-foreground;
+  }
+
+  .assessment-delivery-pipeline > ul {
+    @apply divide-y divide-border;
+  }
+
+  .assessment-delivery-pipeline > ul > li {
+    @apply p-5 sm:p-6;
+  }
+
+  .assessment-delivery-pipeline h3 {
+    @apply mt-1 text-base tracking-[-0.015em];
+  }
+
+  .assessment-delivery-window {
+    @apply mt-4 grid gap-px overflow-hidden rounded-lg border border-border bg-border text-sm sm:grid-cols-2;
+  }
+
+  .assessment-delivery-window > div {
+    @apply grid grid-cols-[1.25rem_1fr] gap-x-2 bg-muted/20 px-3 py-3;
+  }
+
+  .assessment-delivery-window svg {
+    @apply row-span-2 mt-0.5 size-4 text-primary;
+  }
+
+  .assessment-delivery-window dt {
+    @apply text-[0.625rem] font-semibold tracking-wider text-muted-foreground uppercase;
+  }
+
+  .assessment-delivery-window dd {
+    @apply mt-0.5 font-medium;
+  }
+
+  .assessment-delivery-actions {
+    @apply mt-4 grid gap-3 border-t border-border pt-4;
+  }
+
+  .assessment-assignment-grid {
+    @apply grid min-w-0 gap-3 md:grid-cols-2;
+  }
+
+  .assessment-assignment-grid > div {
+    @apply min-w-0;
+  }
+
+  .assessment-assignment-grid select {
+    @apply h-10 rounded-lg border border-input bg-card px-3 text-sm shadow-xs;
+  }
+
+  .assessment-delivery-actions__secondary {
+    @apply flex flex-wrap items-center gap-2 border-t border-border pt-3;
+  }
+
+  .assessment-delivery-actions__secondary > a:last-child {
+    @apply ml-auto;
+  }
+
+  .assessment-withdraw-control {
+    @apply min-w-48 rounded-lg border border-transparent px-2 py-1.5 open:border-border open:bg-muted/20;
+  }
+
+  .assessment-withdraw-control summary {
+    @apply cursor-pointer text-sm font-medium text-destructive;
+  }
+
+  .assessment-learner-grid {
+    @apply mt-6 grid gap-4 lg:grid-cols-2;
+  }
+
+  .assessment-learner-empty {
+    @apply m-5 rounded-xl border border-dashed border-border bg-muted/10 p-10 text-center;
+  }
+
+  .assessment-learner-empty > svg {
+    @apply mx-auto size-8 text-primary/60;
+  }
+
+  .assessment-learner-empty h2 {
+    @apply mt-3 font-semibold;
+  }
+
+  .assessment-learner-empty p {
+    @apply mt-1 text-sm text-muted-foreground;
+  }
+
+  .assessment-attempt-workspace {
+    @apply mt-6 grid items-start gap-5 lg:grid-cols-[17rem_minmax(0,1fr)];
+  }
+
+  .assessment-attempt-sidebar {
+    @apply h-fit overflow-hidden rounded-xl border border-border bg-card p-5 shadow-[0_10px_32px_rgb(41_56_82_/_0.055)] lg:sticky lg:top-20;
+  }
+
+  .assessment-attempt-timer {
+    @apply rounded-lg border border-primary/15 bg-primary/5 p-4;
+  }
+
+  .assessment-attempt-timer span {
+    @apply font-mono text-[0.625rem] font-semibold tracking-wider text-muted-foreground uppercase;
+  }
+
+  .assessment-attempt-timer strong {
+    @apply mt-1 block text-xl font-semibold tracking-[-0.02em] tabular-nums;
+  }
+
+  .assessment-attempt-navigator {
+    @apply mt-5 border-t border-border pt-4;
+  }
+
+  .assessment-question-panel {
+    @apply overflow-hidden rounded-xl border border-border bg-card shadow-[0_12px_38px_rgb(41_56_82_/_0.06)];
+  }
+
+  .assessment-question-panel__header {
+    @apply flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/20 px-5 py-4 sm:px-7;
+  }
+
+  .assessment-question-panel__prompt {
+    @apply px-5 pt-6 sm:px-7;
+  }
+
+  .assessment-question-panel > fieldset,
+  .assessment-question-panel > div:not(.assessment-question-panel__prompt) {
+    @apply mx-5 sm:mx-7;
+  }
+
+  .assessment-question-panel__footer {
+    @apply mt-7 flex flex-wrap items-center gap-3 border-t border-border bg-muted/15 px-5 py-4 sm:px-7;
+  }
+
+  .assessment-response-option {
+    @apply flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 text-sm transition-all hover:border-primary/25 hover:bg-primary/3;
+  }
+
+  .assessment-response-option[data-selected='true'] {
+    @apply border-primary/35 bg-primary/7 shadow-[0_0_0_1px_rgb(37_99_235_/_0.08)];
+  }
+
+  .assessment-response-option input {
+    @apply mt-0.5 accent-primary;
+  }
+
+  .assessment-learner-card {
+    @apply flex flex-col overflow-hidden rounded-xl border border-border bg-card p-5 shadow-[0_12px_35px_rgb(15_23_42_/_0.055)] sm:p-6;
+  }
+
+  .assessment-learner-card__header {
+    @apply flex items-start justify-between gap-3;
+  }
+
+  .assessment-learner-card__header h2 {
+    @apply mt-2 text-lg font-semibold tracking-[-0.02em];
+  }
+
+  .assessment-learner-card__header > div > p:last-child {
+    @apply mt-1 text-sm text-muted-foreground;
+  }
+
+  .assessment-learner-card__facts {
+    @apply mt-5 grid gap-px overflow-hidden rounded-lg border border-border bg-border text-sm sm:grid-cols-2;
+  }
+
+  .assessment-learner-card__facts > div {
+    @apply grid grid-cols-[1.25rem_1fr] gap-x-2 bg-muted/20 px-3 py-3;
+  }
+
+  .assessment-learner-card__facts svg {
+    @apply row-span-2 mt-0.5 size-4 text-primary;
+  }
+
+  .assessment-learner-card__facts dt {
+    @apply text-[0.625rem] font-semibold tracking-wider text-muted-foreground uppercase;
+  }
+
+  .assessment-learner-card__facts dd {
+    @apply mt-0.5 font-semibold;
+  }
+
+  .assessment-learner-card__progress {
+    @apply mt-5;
+  }
+
+  .assessment-learner-card__progress > div {
+    @apply h-1.5 overflow-hidden rounded-full bg-muted;
+  }
+
+  .assessment-learner-card__progress > div > span {
+    @apply block h-full rounded-full bg-primary text-[0] transition-[width];
+  }
+
+  .assessment-learner-card__progress p {
+    @apply mt-2 flex items-center gap-1.5 text-xs text-muted-foreground;
+  }
+
+  .assessment-learner-card__progress p svg {
+    @apply size-3.5;
+  }
+
+  .assessment-grading-queue {
+    @apply mt-6 grid gap-5;
+  }
+
+  .assessment-grading-card {
+    @apply grid overflow-hidden rounded-xl border border-border bg-card shadow-[0_12px_35px_rgb(15_23_42_/_0.055)] lg:grid-cols-[minmax(0,1fr)_21rem];
+  }
+
+  .assessment-grading-card__response {
+    @apply p-5 sm:p-6;
+  }
+
+  .assessment-grading-card__response h2 {
+    @apply mt-2 flex items-center gap-2 text-base font-semibold [&>svg]:size-4 [&>svg]:text-primary;
+  }
+
+  .assessment-grading-card__response blockquote {
+    @apply mt-4 whitespace-pre-wrap rounded-lg border border-border bg-muted/25 p-4 text-sm leading-6;
+  }
+
+  .assessment-grading-card__trace {
+    @apply mt-3 flex items-center gap-1.5 font-mono text-[0.625rem] text-muted-foreground [&>svg]:size-3.5;
+  }
+
+  .assessment-grade-history {
+    @apply mt-5 border-t border-border pt-4;
+  }
+
+  .assessment-grade-history h3 {
+    @apply flex items-center gap-2 text-sm font-semibold [&>svg]:size-4 [&>svg]:text-primary;
+  }
+
+  .assessment-grade-history ol {
+    @apply mt-3 space-y-2;
+  }
+
+  .assessment-grade-history li {
+    @apply grid grid-cols-[2rem_1fr] gap-3 rounded-md border border-border bg-muted/15 p-3 text-xs;
+  }
+
+  .assessment-grade-history li > span {
+    @apply font-mono font-semibold text-primary;
+  }
+
+  .assessment-grade-history li p {
+    @apply mt-0.5 text-muted-foreground;
+  }
+
+  .assessment-grade-decision {
+    @apply space-y-3 border-t border-border bg-muted/25 p-5 text-foreground lg:border-t-0 lg:border-l sm:p-6;
+  }
+
+  .assessment-grade-decision legend {
+    @apply flex items-center gap-2 font-semibold [&>svg]:size-4 [&>svg]:text-primary;
+  }
+
+  .assessment-grade-decision label {
+    @apply text-xs text-muted-foreground;
+  }
+
+  .assessment-grade-decision input,
+  .assessment-grade-decision textarea {
+    @apply border-input bg-card text-foreground;
+  }
+
+  .assessment-grade-decision > p {
+    @apply text-muted-foreground;
+  }
+
+  .assessment-collection__header {
+    @apply flex items-center justify-between gap-4 border-b border-border bg-muted/20 px-5 py-4 sm:px-6;
+  }
+
+  .assessment-collection__header h2 {
+    @apply mt-1 text-base font-semibold tracking-[-0.015em];
+  }
+
+  .assessment-collection__header > span {
+    @apply rounded-full border border-border bg-background px-3 py-1 font-mono text-[0.65rem] font-semibold text-muted-foreground;
+  }
+
+  .assessment-card-grid {
+    @apply grid gap-4 bg-transparent p-4 md:grid-cols-2 2xl:grid-cols-3;
+  }
+
+  .assessment-resource-card {
+    @apply flex min-h-64 flex-col rounded-xl border border-border bg-card p-5 shadow-[0_8px_26px_rgb(41_56_82_/_0.045)];
+  }
+
+  .assessment-resource-card__top {
+    @apply flex items-start justify-between;
+  }
+
+  .assessment-resource-card__body {
+    @apply flex-1 py-5;
+  }
+
+  .assessment-resource-card__code {
+    @apply font-mono text-[0.65rem] font-semibold tracking-wide text-primary;
+  }
+
+  .assessment-resource-card__body h3 {
+    @apply mt-2 text-lg font-semibold tracking-[-0.02em];
+  }
+
+  .assessment-resource-card__body > p:last-child {
+    @apply mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground;
+  }
+
+  .assessment-status {
+    @apply inline-flex rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[0.65rem] font-semibold text-muted-foreground;
+  }
+
+  .assessment-status[data-status='active'],
+  .assessment-status[data-status='approved'] {
+    @apply border-emerald-600/20 bg-emerald-500/8 text-emerald-700;
+  }
+
+  .assessment-status[data-status='draft'] {
+    @apply border-amber-600/20 bg-amber-500/8 text-amber-700;
+  }
+
+  .assessment-status[data-status='in_review'] {
+    @apply border-sky-600/20 bg-sky-500/8 text-sky-700;
+  }
+
+  .assessment-status[data-status='changes_requested'] {
+    @apply border-orange-600/20 bg-orange-500/8 text-orange-700;
+  }
+
+  .assessment-question-list {
+    @apply divide-y divide-border;
+  }
+
+  .assessment-question-list > li {
+    @apply flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-6;
+  }
+
+  .assessment-question-list__icon {
+    @apply inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground [&>svg]:size-4;
+  }
+
+  .assessment-question-list h3 {
+    @apply font-mono text-sm font-semibold;
+  }
+
+  .assessment-question-list p {
+    @apply mt-1 text-xs text-muted-foreground;
+  }
+
+  .assessment-question-list__locked {
+    @apply text-xs font-medium text-muted-foreground;
+  }
+
+  .assessment-empty {
+    @apply px-6 py-14 text-center;
+  }
+
+  .assessment-empty > svg {
+    @apply mx-auto size-8 text-muted-foreground;
+  }
+
+  .assessment-empty h3 {
+    @apply mt-3 font-semibold;
+  }
+
+  .assessment-empty p {
+    @apply mt-1 text-sm text-muted-foreground;
   }
 
   @media (max-width: 56rem) {

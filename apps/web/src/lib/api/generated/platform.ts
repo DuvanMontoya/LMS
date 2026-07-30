@@ -31,6 +31,173 @@ export interface paths {
     get: operations['organizations_retrieve'];
     patch: operations['organizations_partial_update'];
   };
+  '/api/v1/organizations/{slug}/assessments/': {
+    get: operations['assessments_list'];
+    post: operations['assessments_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/': {
+    get: operations['assessment_attempt_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/responses/{attempt_item_id}/': {
+    put: operations['assessment_responses_save'];
+  };
+  '/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/result/': {
+    get: operations['assessment_attempt_result'];
+  };
+  '/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/submit/': {
+    post: operations['assessment_attempts_submit'];
+  };
+  '/api/v1/organizations/{slug}/assessments/deliveries/': {
+    get: operations['assessment_deliveries_list'];
+    post: operations['assessment_deliveries_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/deliveries/{delivery_id}/': {
+    get: operations['assessment_delivery_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/deliveries/{delivery_id}/activate/': {
+    post: operations['assessment_delivery_activate'];
+  };
+  '/api/v1/organizations/{slug}/assessments/deliveries/{delivery_id}/assign-cohort/': {
+    post: operations['assessment_delivery_assign_cohort'];
+  };
+  '/api/v1/organizations/{slug}/assessments/deliveries/{delivery_id}/assignments/': {
+    get: operations['assessment_delivery_assignments_list'];
+    post: operations['assessment_delivery_assignments_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/deliveries/{delivery_id}/assignments/{assignment_id}/revoke/': {
+    post: operations['assessment_delivery_assignment_revoke'];
+  };
+  '/api/v1/organizations/{slug}/assessments/deliveries/{delivery_id}/withdraw/': {
+    post: operations['assessment_delivery_withdraw'];
+  };
+  '/api/v1/organizations/{slug}/assessments/manual-grading/': {
+    get: operations['assessment_manual_grading_list'];
+  };
+  '/api/v1/organizations/{slug}/assessments/manual-grading/{response_id}/': {
+    post: operations['assessment_manual_grading_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/my-deliveries/': {
+    get: operations['assessment_my_deliveries_list'];
+  };
+  '/api/v1/organizations/{slug}/assessments/my-deliveries/{assignment_id}/': {
+    get: operations['assessment_my_delivery_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/my-deliveries/{assignment_id}/attempts/start/': {
+    post: operations['assessment_attempts_start'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/': {
+    get: operations['assessment_question_banks_list'];
+    post: operations['assessment_question_banks_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/': {
+    get: operations['assessment_question_bank_retrieve'];
+    patch: operations['assessment_question_bank_update'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/archive/': {
+    post: operations['assessment_question_bank_archive'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/': {
+    get: operations['assessment_questions_list'];
+    post: operations['assessment_questions_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/': {
+    get: operations['assessment_question_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/revisions/{revision_id}/': {
+    get: operations['assessment_question_revision_retrieve'];
+    patch: operations['assessment_question_revision_update'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/revisions/{revision_id}/approve/': {
+    post: operations['assessment_question_revision_approve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/revisions/{revision_id}/request-changes/': {
+    post: operations['assessment_question_revision_request_changes'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/revisions/{revision_id}/submit-review/': {
+    post: operations['assessment_question_revision_submit'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/revisions/{revision_id}/submit/': {
+    post: operations['assessment_question_revision_submit_alias'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/versions/': {
+    get: operations['assessment_question_versions_list'];
+    post: operations['assessment_question_revision_create_from_version'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/versions/{version_number}/': {
+    get: operations['assessment_question_version_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/versions/{version_number}/create-draft/': {
+    post: operations['assessment_question_revision_create_from_selected_version'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/versions/': {
+    get: operations['assessment_question_bank_versions_list'];
+    post: operations['assessment_question_bank_versions_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/versions/{version_number}/': {
+    get: operations['assessment_question_bank_version_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/results/': {
+    get: operations['assessment_results_list'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/': {
+    get: operations['assessments_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/': {
+    get: operations['assessment_revision_retrieve'];
+    patch: operations['assessment_revision_update'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/approve/': {
+    post: operations['assessment_revision_approve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/objectives/': {
+    put: operations['assessment_revision_objectives_replace'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/outline/': {
+    get: operations['assessment_revision_outline'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/readiness/': {
+    get: operations['assessment_revision_readiness'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/request-changes/': {
+    post: operations['assessment_revision_request_changes'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/sections/': {
+    get: operations['assessment_sections_list'];
+    post: operations['assessment_sections_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/sections/order/': {
+    put: operations['assessment_sections_reorder'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/sections/{section_id}/': {
+    get: operations['assessment_section_retrieve'];
+    patch: operations['assessment_section_update'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/sections/{section_id}/items/': {
+    post: operations['assessment_items_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/sections/{section_id}/items/order/': {
+    put: operations['assessment_items_reorder'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/sections/{section_id}/items/{item_id}/': {
+    get: operations['assessment_item_retrieve'];
+    patch: operations['assessment_item_update'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/submit-review/': {
+    post: operations['assessment_revision_submit'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/submit/': {
+    post: operations['assessment_revision_submit_alias'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/versions/': {
+    get: operations['assessment_versions_list'];
+    post: operations['assessment_revision_create_from_version'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/versions/{version_number}/': {
+    get: operations['assessment_version_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/versions/{version_number}/create-draft/': {
+    post: operations['assessment_revision_create_from_selected_version'];
+  };
   '/api/v1/organizations/{slug}/catalog/areas/': {
     /** @description Applies declared filters only after the organization visibility boundary. */
     get: operations['organizations_catalog_areas_list'];
@@ -407,6 +574,263 @@ export interface components {
       slug: string;
       status: string;
     };
+    Assessment: {
+      /** Format: date-time */
+      archived_at: string | null;
+      authoring_status: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      latest_revision_id: string | null;
+      latest_revision_number: number | null;
+      latest_version_number: number | null;
+      slug: string;
+      status: components['schemas']['CourseLifecycleStatus'];
+      title: string;
+    };
+    /**
+     * @description * `active` - Activa
+     * * `revoked` - Revocada
+     * @enum {string}
+     */
+    AssessmentAssignmentStatus: 'active' | 'revoked';
+    /**
+     * @description * `in_progress` - En curso
+     * * `pending_manual` - Pendiente de calificación manual
+     * * `graded` - Calificado
+     * @enum {string}
+     */
+    AssessmentAttemptStatus: 'in_progress' | 'pending_manual' | 'graded';
+    /**
+     * @description * `draft` - Borrador
+     * * `in_review` - En revisión
+     * * `changes_requested` - Cambios solicitados
+     * * `approved` - Aprobado
+     * @enum {string}
+     */
+    AssessmentAuthoringStatus:
+      'draft' | 'in_review' | 'changes_requested' | 'approved';
+    AssessmentCreate: {
+      attempt_limit?: number | null;
+      description?: string;
+      /** @default full_after_grading */
+      feedback_mode?: components['schemas']['AssessmentFeedbackMode'];
+      instructions?: string;
+      /** @default 6000 */
+      pass_basis_points?: number;
+      /** @default false */
+      shuffle_items?: boolean;
+      /** @default false */
+      shuffle_sections?: boolean;
+      slug: string;
+      time_limit_minutes?: number | null;
+      title: string;
+    };
+    /**
+     * @description * `draft` - Borrador
+     * * `active` - Activa
+     * * `withdrawn` - Retirada
+     * @enum {string}
+     */
+    AssessmentDeliveryStatus: 'draft' | 'active' | 'withdrawn';
+    AssessmentExpectedVersion: {
+      expected_version: number;
+    };
+    /**
+     * @description * `none` - Sin retroalimentación
+     * * `score_only` - Sólo puntaje después de calificar
+     * * `full_after_grading` - Retroalimentación completa después de calificar
+     * @enum {string}
+     */
+    AssessmentFeedbackMode: 'none' | 'score_only' | 'full_after_grading';
+    AssessmentOutline: {
+      objective_ids: string[];
+      revision: components['schemas']['AssessmentRevision'];
+      sections: unknown[];
+    };
+    AssessmentPage: {
+      count: number;
+      /** Format: uri */
+      next: string | null;
+      /** Format: uri */
+      previous: string | null;
+      results: components['schemas']['Assessment'][];
+    };
+    /**
+     * @description * `single_choice` - Selección única
+     * * `multiple_choice` - Selección múltiple
+     * * `true_false` - Verdadero o falso
+     * * `numeric` - Numérica
+     * * `short_text` - Texto corto
+     * * `long_text` - Texto largo
+     * * `ordering` - Ordenamiento
+     * * `matching` - Emparejamiento
+     * @enum {string}
+     */
+    AssessmentQuestionType:
+      | 'single_choice'
+      | 'multiple_choice'
+      | 'true_false'
+      | 'numeric'
+      | 'short_text'
+      | 'long_text'
+      | 'ordering'
+      | 'matching';
+    AssessmentReadiness: {
+      issues: string[];
+      ready: boolean;
+    };
+    /**
+     * @description * `unanswered` - Sin respuesta
+     * * `saved` - Guardada
+     * * `auto_graded` - Calificada automáticamente
+     * * `pending_manual` - Pendiente de calificación manual
+     * * `manually_graded` - Calificada manualmente
+     * @enum {string}
+     */
+    AssessmentResponseStatus:
+      | 'unanswered'
+      | 'saved'
+      | 'auto_graded'
+      | 'pending_manual'
+      | 'manually_graded';
+    AssessmentRevision: {
+      /** Format: uuid */
+      assessment_id: string;
+      attempt_limit: number | null;
+      /** Format: uuid */
+      based_on_version_id: string | null;
+      /** Format: date-time */
+      created_at: string;
+      description: string;
+      feedback_mode: components['schemas']['AssessmentFeedbackMode'];
+      /** Format: uuid */
+      id: string;
+      instructions: string;
+      lock_version: number;
+      number: number;
+      pass_basis_points: number;
+      shuffle_items: boolean;
+      shuffle_sections: boolean;
+      status: components['schemas']['AssessmentAuthoringStatus'];
+      /** Format: date-time */
+      status_changed_at: string;
+      time_limit_minutes: number | null;
+      title: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    AssessmentRevisionUpdate: {
+      attempt_limit?: number | null;
+      description?: string;
+      expected_version: number;
+      feedback_mode?: components['schemas']['AssessmentFeedbackMode'];
+      instructions?: string;
+      pass_basis_points?: number;
+      shuffle_items?: boolean;
+      shuffle_sections?: boolean;
+      time_limit_minutes?: number | null;
+      title?: string;
+    };
+    AssessmentTransitionInput: {
+      expected_version: number;
+      note?: string;
+    };
+    AssessmentVersion: {
+      /** Format: uuid */
+      assessment_id: string;
+      attempt_limit: number | null;
+      /** Format: date-time */
+      created_at: string;
+      description: string;
+      feedback_mode: string;
+      /** Format: uuid */
+      id: string;
+      item_count: number;
+      /** Format: decimal */
+      maximum_score: string;
+      number: number;
+      pass_basis_points: number;
+      /** Format: uuid */
+      previous_version_id: string | null;
+      public_snapshot: unknown;
+      schema_version: number;
+      section_count: number;
+      snapshot_digest: string;
+      /** Format: uuid */
+      source_revision_id: string;
+      time_limit_minutes: number | null;
+      title: string;
+    };
+    AssignmentCreate: {
+      /** Format: uuid */
+      release_assignment_id?: string;
+      release_assignment_ids?: string[];
+    };
+    Attempt: {
+      /** Format: uuid */
+      assessment_version_id: string;
+      attempt_number: number;
+      /** Format: uuid */
+      delivery_assignment_id: string;
+      /** Format: date-time */
+      expires_at: string | null;
+      /** Format: uuid */
+      id: string;
+      items: readonly components['schemas']['AttemptItem'][];
+      lock_version: number;
+      /** Format: decimal */
+      maximum_score: string;
+      /** Format: date-time */
+      started_at: string;
+      status: components['schemas']['AssessmentAttemptStatus'];
+      /** Format: date-time */
+      submitted_at: string | null;
+    };
+    AttemptItem: {
+      display_position: number;
+      /** Format: uuid */
+      id: string;
+      /** Format: decimal */
+      points: string;
+      public_snapshot: unknown;
+      required: boolean;
+      response: {
+        [key: string]: unknown;
+      } | null;
+    };
+    AttemptResult: {
+      attempt_number: number;
+      /** Format: decimal */
+      auto_score: string;
+      basis_points: number | null;
+      feedback: readonly {
+        [key: string]: unknown;
+      }[];
+      /** Format: date-time */
+      graded_at: string | null;
+      /** Format: uuid */
+      id: string;
+      /** Format: decimal */
+      manual_score: string;
+      /** Format: decimal */
+      maximum_score: string;
+      passed: boolean | null;
+      status: components['schemas']['AssessmentAttemptStatus'];
+      /** Format: date-time */
+      submitted_at: string | null;
+      /** Format: decimal */
+      total_score: string;
+    };
+    AttemptResultPage: {
+      count: number;
+      /** Format: uri */
+      next: string | null;
+      /** Format: uri */
+      previous: string | null;
+      results: components['schemas']['AttemptResult'][];
+    };
     /** @enum {unknown} */
     BlankEnum: '';
     /**
@@ -420,6 +844,10 @@ export interface components {
      */
     CognitiveLevelEnum:
       'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';
+    CohortAssignmentCreate: {
+      /** Format: uuid */
+      cohort_id: string;
+    };
     CohortCreate: {
       /** Format: date-time */
       access_ends_at?: string | null;
@@ -601,6 +1029,12 @@ export interface components {
       supporting_subject_ids?: string[];
       title: string;
     };
+    /**
+     * @description * `active` - Activo
+     * * `archived` - Archivado
+     * @enum {string}
+     */
+    CourseLifecycleStatus: 'active' | 'archived';
     CourseList: {
       /** Format: date-time */
       archived_at: string | null;
@@ -681,6 +1115,69 @@ export interface components {
       slug: string;
       title: string;
     };
+    Delivery: {
+      assessment_title: string;
+      /** Format: uuid */
+      assessment_version_id: string;
+      /** Format: date-time */
+      closes_at: string | null;
+      /** Format: uuid */
+      course_release_id: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      lock_version: number;
+      name: string;
+      /** Format: date-time */
+      opens_at: string | null;
+      status: components['schemas']['AssessmentDeliveryStatus'];
+      /** Format: uuid */
+      unit_id: string | null;
+      /** Format: date-time */
+      updated_at: string;
+      withdrawal_note: string;
+      /** Format: date-time */
+      withdrawn_at: string | null;
+    };
+    DeliveryAssignment: {
+      /** Format: date-time */
+      assigned_at: string;
+      /** Format: uuid */
+      cohort_id: string | null;
+      /** Format: uuid */
+      delivery_id: string;
+      /** Format: uuid */
+      id: string;
+      learner_name: string;
+      /** Format: uuid */
+      release_assignment_id: string;
+      release_number: number;
+      /** Format: date-time */
+      revoked_at: string | null;
+      status: components['schemas']['AssessmentAssignmentStatus'];
+    };
+    DeliveryCreate: {
+      /** Format: uuid */
+      assessment_version_id: string;
+      /** Format: date-time */
+      closes_at?: string | null;
+      /** Format: uuid */
+      course_release_id?: string | null;
+      name: string;
+      /** Format: date-time */
+      opens_at?: string | null;
+      /** Format: uuid */
+      unit_id?: string | null;
+    };
+    DeliveryPage: {
+      count: number;
+      /** Format: uri */
+      next: string | null;
+      /** Format: uri */
+      previous: string | null;
+      results: components['schemas']['Delivery'][];
+    };
     Discipline: {
       /** Format: uuid */
       area_id: string;
@@ -727,6 +1224,10 @@ export interface components {
       course_title: string;
       /** Format: date-time */
       created_at: string;
+      /** Format: uuid */
+      current_release_assignment_id: string | null;
+      /** Format: uuid */
+      current_release_id: string | null;
       enrollment_version: number;
       /** Format: uuid */
       id: string;
@@ -760,12 +1261,64 @@ export interface components {
     ExpectedVersion: {
       expected_version: number;
     };
+    Item: {
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      objective_ids: readonly string[];
+      /** Format: decimal */
+      points: string;
+      position: number;
+      public: unknown;
+      question_code: string;
+      question_type: string;
+      /** Format: uuid */
+      question_version_id: string;
+      required: boolean;
+      /** Format: uuid */
+      section_id: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    ItemCreate: {
+      expected_version: number;
+      objective_ids: string[];
+      /** Format: decimal */
+      points: string;
+      /** Format: uuid */
+      question_version_id: string;
+      /** @default true */
+      required?: boolean;
+    };
+    ItemUpdate: {
+      expected_version: number;
+      objective_ids: string[];
+      /** Format: decimal */
+      points: string;
+      required: boolean;
+    };
     /**
      * @description * `required` - required
      * * `recommended` - recommended
      * @enum {string}
      */
     KindEnum: 'required' | 'recommended';
+    LearnerDelivery: {
+      /** Format: date-time */
+      assigned_at: string;
+      attempt_limit: number;
+      attempts_used: number;
+      delivery: components['schemas']['Delivery'];
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      in_progress_attempt_id: string | null;
+      /** Format: uuid */
+      latest_attempt_id: string | null;
+      latest_attempt_status: string | null;
+      status: components['schemas']['AssessmentAssignmentStatus'];
+    };
     /**
      * @description * `available` - Disponible
      * * `not_started` - Acceso no iniciado
@@ -856,6 +1409,23 @@ export interface components {
       title: string;
       unit_count: number;
       word_count: number;
+    };
+    ManualGrade: {
+      feedback?: string;
+      /** Format: decimal */
+      score: string;
+    };
+    ManualGradeDecision: {
+      /** Format: date-time */
+      created_at: string;
+      feedback: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      response_id: string;
+      /** Format: decimal */
+      score: string;
+      sequence: number;
     };
     Membership: {
       /** Format: date-time */
@@ -964,6 +1534,10 @@ export interface components {
       /** Format: uuid */
       subject_id: string;
     };
+    ObjectiveReplace: {
+      expected_version: number;
+      objective_ids: string[];
+    };
     ObjectiveSummary: {
       code: string;
       /** Format: uuid */
@@ -972,6 +1546,10 @@ export interface components {
       status: string;
       /** Format: uuid */
       subject_id: string;
+    };
+    OrderedIds: {
+      expected_version: number;
+      ids: string[];
     };
     Organization: {
       /** Format: uuid */
@@ -1108,6 +1686,22 @@ export interface components {
       previous?: string | null;
       results: components['schemas']['Membership'][];
     };
+    PendingManual: {
+      answer: string | null;
+      /** Format: uuid */
+      attempt_id: string;
+      /** Format: uuid */
+      attempt_item_id: string;
+      /** Format: decimal */
+      current_score: string;
+      decision_history: components['schemas']['ManualGradeDecision'][];
+      learner: string;
+      /** Format: decimal */
+      points: string;
+      /** Format: uuid */
+      response_id: string;
+      response_status: components['schemas']['AssessmentResponseStatus'];
+    };
     Position: {
       /** Format: uuid */
       node_id: string;
@@ -1197,6 +1791,120 @@ export interface components {
     PublishingError: {
       code: string;
       detail: string;
+    };
+    Question: {
+      /** Format: date-time */
+      archived_at: string | null;
+      /** Format: uuid */
+      bank_id: string;
+      code: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      latest_version_number: number | null;
+      open_revision_id: string | null;
+      open_revision_status: string | null;
+      status: components['schemas']['CourseLifecycleStatus'];
+    };
+    QuestionBank: {
+      /** Format: date-time */
+      archived_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      description: string;
+      /** Format: uuid */
+      id: string;
+      lock_version: number;
+      name: string;
+      slug: string;
+      status: components['schemas']['CourseLifecycleStatus'];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    QuestionBankCreate: {
+      description?: string;
+      name: string;
+      slug: string;
+    };
+    QuestionBankPage: {
+      count: number;
+      /** Format: uri */
+      next: string | null;
+      /** Format: uri */
+      previous: string | null;
+      results: components['schemas']['QuestionBank'][];
+    };
+    QuestionBankUpdate: {
+      description: string;
+      expected_version: number;
+      name: string;
+    };
+    QuestionBankVersion: {
+      /** Format: uuid */
+      bank_id: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      number: number;
+      /** Format: uuid */
+      previous_version_id: string | null;
+      question_count: number;
+      snapshot: unknown;
+      snapshot_digest: string;
+    };
+    QuestionCreate: {
+      code: string;
+      definition: unknown;
+      type: string;
+    };
+    QuestionPage: {
+      count: number;
+      /** Format: uri */
+      next: string | null;
+      /** Format: uri */
+      previous: string | null;
+      results: components['schemas']['Question'][];
+    };
+    QuestionRevision: {
+      /** Format: uuid */
+      based_on_version_id: string | null;
+      /** Format: date-time */
+      created_at: string;
+      definition: unknown;
+      /** Format: uuid */
+      id: string;
+      lock_version: number;
+      number: number;
+      /** Format: uuid */
+      question_id: string;
+      status: components['schemas']['AssessmentAuthoringStatus'];
+      /** Format: date-time */
+      status_changed_at: string;
+      type: components['schemas']['AssessmentQuestionType'];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    QuestionRevisionUpdate: {
+      definition: unknown;
+      expected_version: number;
+    };
+    QuestionVersion: {
+      /** Format: date-time */
+      created_at: string;
+      definition_digest: string;
+      /** Format: uuid */
+      id: string;
+      number: number;
+      public: unknown;
+      public_digest: string;
+      /** Format: uuid */
+      question_id: string;
+      schema_version: number;
+      /** Format: uuid */
+      source_revision_id: string;
+      type: string;
     };
     ReaderNavigation: {
       next: components['schemas']['ReaderNavigationItem'] | null;
@@ -1302,6 +2010,10 @@ export interface components {
       expected_version: number;
       topic_ids: string[];
     };
+    ResponseSave: {
+      expected_version: number;
+      response: unknown;
+    };
     RestoreContent: {
       expected_document_version: number;
     };
@@ -1355,6 +2067,29 @@ export interface components {
       id: string;
       position: number;
       subject: components['schemas']['SubjectSummary'];
+    };
+    Section: {
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      instructions: string;
+      position: number;
+      /** Format: uuid */
+      revision_id: string;
+      title: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    SectionCreate: {
+      expected_version: number;
+      instructions?: string;
+      title: string;
+    };
+    SectionUpdate: {
+      expected_version: number;
+      instructions: string;
+      title: string;
     };
     Subject: {
       description?: string;
@@ -1523,8 +2258,16 @@ export interface components {
       detail: string;
       release_number: number | null;
     };
+    VersionSource: {
+      /** Format: uuid */
+      version_id: string;
+    };
     Withdraw: {
       expected_publication_version: number;
+      note: string;
+    };
+    Withdrawal: {
+      expected_version: number;
       note: string;
     };
     WorkflowAction: {
@@ -1788,6 +2531,1246 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['Organization'];
+        };
+      };
+    };
+  };
+  assessments_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentPage'];
+        };
+      };
+    };
+  };
+  assessments_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentCreate'];
+        'multipart/form-data': components['schemas']['AssessmentCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['AssessmentRevision'];
+        };
+      };
+    };
+  };
+  assessment_attempt_retrieve: {
+    parameters: {
+      path: {
+        attempt_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Attempt'];
+        };
+      };
+    };
+  };
+  assessment_responses_save: {
+    parameters: {
+      path: {
+        attempt_id: string;
+        attempt_item_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ResponseSave'];
+        'application/x-www-form-urlencoded': components['schemas']['ResponseSave'];
+        'multipart/form-data': components['schemas']['ResponseSave'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Attempt'];
+        };
+      };
+    };
+  };
+  assessment_attempt_result: {
+    parameters: {
+      path: {
+        attempt_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AttemptResult'];
+        };
+      };
+    };
+  };
+  assessment_attempts_submit: {
+    parameters: {
+      path: {
+        attempt_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentExpectedVersion'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentExpectedVersion'];
+        'multipart/form-data': components['schemas']['AssessmentExpectedVersion'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AttemptResult'];
+        };
+      };
+    };
+  };
+  assessment_deliveries_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['DeliveryPage'];
+        };
+      };
+    };
+  };
+  assessment_deliveries_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DeliveryCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['DeliveryCreate'];
+        'multipart/form-data': components['schemas']['DeliveryCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Delivery'];
+        };
+      };
+    };
+  };
+  assessment_delivery_retrieve: {
+    parameters: {
+      path: {
+        delivery_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Delivery'];
+        };
+      };
+    };
+  };
+  assessment_delivery_activate: {
+    parameters: {
+      path: {
+        delivery_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentExpectedVersion'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentExpectedVersion'];
+        'multipart/form-data': components['schemas']['AssessmentExpectedVersion'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Delivery'];
+        };
+      };
+    };
+  };
+  assessment_delivery_assign_cohort: {
+    parameters: {
+      path: {
+        delivery_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CohortAssignmentCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['CohortAssignmentCreate'];
+        'multipart/form-data': components['schemas']['CohortAssignmentCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['DeliveryAssignment'][];
+        };
+      };
+    };
+  };
+  assessment_delivery_assignments_list: {
+    parameters: {
+      path: {
+        delivery_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['DeliveryAssignment'][];
+        };
+      };
+    };
+  };
+  assessment_delivery_assignments_create: {
+    parameters: {
+      path: {
+        delivery_id: string;
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['AssignmentCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['AssignmentCreate'];
+        'multipart/form-data': components['schemas']['AssignmentCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['DeliveryAssignment'];
+        };
+      };
+    };
+  };
+  assessment_delivery_assignment_revoke: {
+    parameters: {
+      path: {
+        assignment_id: string;
+        delivery_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['DeliveryAssignment'];
+        };
+      };
+    };
+  };
+  assessment_delivery_withdraw: {
+    parameters: {
+      path: {
+        delivery_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Withdrawal'];
+        'application/x-www-form-urlencoded': components['schemas']['Withdrawal'];
+        'multipart/form-data': components['schemas']['Withdrawal'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Delivery'];
+        };
+      };
+    };
+  };
+  assessment_manual_grading_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PendingManual'][];
+        };
+      };
+    };
+  };
+  assessment_manual_grading_create: {
+    parameters: {
+      path: {
+        response_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ManualGrade'];
+        'application/x-www-form-urlencoded': components['schemas']['ManualGrade'];
+        'multipart/form-data': components['schemas']['ManualGrade'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ManualGradeDecision'];
+        };
+      };
+    };
+  };
+  assessment_my_deliveries_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LearnerDelivery'][];
+        };
+      };
+    };
+  };
+  assessment_my_delivery_retrieve: {
+    parameters: {
+      path: {
+        assignment_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LearnerDelivery'];
+        };
+      };
+    };
+  };
+  assessment_attempts_start: {
+    parameters: {
+      path: {
+        assignment_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Attempt'];
+        };
+      };
+    };
+  };
+  assessment_question_banks_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionBankPage'];
+        };
+      };
+    };
+  };
+  assessment_question_banks_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['QuestionBankCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['QuestionBankCreate'];
+        'multipart/form-data': components['schemas']['QuestionBankCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['QuestionBank'];
+        };
+      };
+    };
+  };
+  assessment_question_bank_retrieve: {
+    parameters: {
+      path: {
+        bank_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionBank'];
+        };
+      };
+    };
+  };
+  assessment_question_bank_update: {
+    parameters: {
+      path: {
+        bank_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['QuestionBankUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['QuestionBankUpdate'];
+        'multipart/form-data': components['schemas']['QuestionBankUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionBank'];
+        };
+      };
+    };
+  };
+  assessment_question_bank_archive: {
+    parameters: {
+      path: {
+        bank_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentExpectedVersion'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentExpectedVersion'];
+        'multipart/form-data': components['schemas']['AssessmentExpectedVersion'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionBank'];
+        };
+      };
+    };
+  };
+  assessment_questions_list: {
+    parameters: {
+      path: {
+        bank_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionPage'];
+        };
+      };
+    };
+  };
+  assessment_questions_create: {
+    parameters: {
+      path: {
+        bank_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['QuestionCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['QuestionCreate'];
+        'multipart/form-data': components['schemas']['QuestionCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['QuestionRevision'];
+        };
+      };
+    };
+  };
+  assessment_question_retrieve: {
+    parameters: {
+      path: {
+        bank_id: string;
+        question_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Question'];
+        };
+      };
+    };
+  };
+  assessment_question_revision_retrieve: {
+    parameters: {
+      path: {
+        bank_id: string;
+        question_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionRevision'];
+        };
+      };
+    };
+  };
+  assessment_question_revision_update: {
+    parameters: {
+      path: {
+        bank_id: string;
+        question_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['QuestionRevisionUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['QuestionRevisionUpdate'];
+        'multipart/form-data': components['schemas']['QuestionRevisionUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionRevision'];
+        };
+      };
+    };
+  };
+  assessment_question_revision_approve: {
+    parameters: {
+      path: {
+        bank_id: string;
+        question_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentTransitionInput'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentTransitionInput'];
+        'multipart/form-data': components['schemas']['AssessmentTransitionInput'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionRevision'];
+        };
+      };
+    };
+  };
+  assessment_question_revision_request_changes: {
+    parameters: {
+      path: {
+        bank_id: string;
+        question_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentTransitionInput'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentTransitionInput'];
+        'multipart/form-data': components['schemas']['AssessmentTransitionInput'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionRevision'];
+        };
+      };
+    };
+  };
+  assessment_question_revision_submit: {
+    parameters: {
+      path: {
+        bank_id: string;
+        question_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentTransitionInput'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentTransitionInput'];
+        'multipart/form-data': components['schemas']['AssessmentTransitionInput'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionRevision'];
+        };
+      };
+    };
+  };
+  assessment_question_revision_submit_alias: {
+    parameters: {
+      path: {
+        bank_id: string;
+        question_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentTransitionInput'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentTransitionInput'];
+        'multipart/form-data': components['schemas']['AssessmentTransitionInput'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionRevision'];
+        };
+      };
+    };
+  };
+  assessment_question_versions_list: {
+    parameters: {
+      path: {
+        bank_id: string;
+        question_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionVersion'][];
+        };
+      };
+    };
+  };
+  assessment_question_revision_create_from_version: {
+    parameters: {
+      path: {
+        bank_id: string;
+        question_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['VersionSource'];
+        'application/x-www-form-urlencoded': components['schemas']['VersionSource'];
+        'multipart/form-data': components['schemas']['VersionSource'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['QuestionRevision'];
+        };
+      };
+    };
+  };
+  assessment_question_version_retrieve: {
+    parameters: {
+      path: {
+        bank_id: string;
+        question_id: string;
+        slug: string;
+        version_number: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionVersion'];
+        };
+      };
+    };
+  };
+  assessment_question_revision_create_from_selected_version: {
+    parameters: {
+      path: {
+        bank_id: string;
+        question_id: string;
+        slug: string;
+        version_number: number;
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['QuestionRevision'];
+        };
+      };
+    };
+  };
+  assessment_question_bank_versions_list: {
+    parameters: {
+      path: {
+        bank_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionBankVersion'][];
+        };
+      };
+    };
+  };
+  assessment_question_bank_versions_create: {
+    parameters: {
+      path: {
+        bank_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['QuestionBankVersion'];
+        };
+      };
+    };
+  };
+  assessment_question_bank_version_retrieve: {
+    parameters: {
+      path: {
+        bank_id: string;
+        slug: string;
+        version_number: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionBankVersion'];
+        };
+      };
+    };
+  };
+  assessment_results_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AttemptResultPage'];
+        };
+      };
+    };
+  };
+  assessments_retrieve: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Assessment'];
+        };
+      };
+    };
+  };
+  assessment_revision_retrieve: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentRevision'];
+        };
+      };
+    };
+  };
+  assessment_revision_update: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentRevisionUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentRevisionUpdate'];
+        'multipart/form-data': components['schemas']['AssessmentRevisionUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentRevision'];
+        };
+      };
+    };
+  };
+  assessment_revision_approve: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentTransitionInput'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentTransitionInput'];
+        'multipart/form-data': components['schemas']['AssessmentTransitionInput'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentRevision'];
+        };
+      };
+    };
+  };
+  assessment_revision_objectives_replace: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ObjectiveReplace'];
+        'application/x-www-form-urlencoded': components['schemas']['ObjectiveReplace'];
+        'multipart/form-data': components['schemas']['ObjectiveReplace'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentRevision'];
+        };
+      };
+    };
+  };
+  assessment_revision_outline: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentOutline'];
+        };
+      };
+    };
+  };
+  assessment_revision_readiness: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentReadiness'];
+        };
+      };
+    };
+  };
+  assessment_revision_request_changes: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentTransitionInput'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentTransitionInput'];
+        'multipart/form-data': components['schemas']['AssessmentTransitionInput'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentRevision'];
+        };
+      };
+    };
+  };
+  assessment_sections_list: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Section'][];
+        };
+      };
+    };
+  };
+  assessment_sections_create: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SectionCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['SectionCreate'];
+        'multipart/form-data': components['schemas']['SectionCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Section'];
+        };
+      };
+    };
+  };
+  assessment_sections_reorder: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['OrderedIds'];
+        'application/x-www-form-urlencoded': components['schemas']['OrderedIds'];
+        'multipart/form-data': components['schemas']['OrderedIds'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentRevision'];
+        };
+      };
+    };
+  };
+  assessment_section_retrieve: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        section_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Section'];
+        };
+      };
+    };
+  };
+  assessment_section_update: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        section_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SectionUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['SectionUpdate'];
+        'multipart/form-data': components['schemas']['SectionUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Section'];
+        };
+      };
+    };
+  };
+  assessment_items_create: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        section_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ItemCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['ItemCreate'];
+        'multipart/form-data': components['schemas']['ItemCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Item'];
+        };
+      };
+    };
+  };
+  assessment_items_reorder: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        section_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['OrderedIds'];
+        'application/x-www-form-urlencoded': components['schemas']['OrderedIds'];
+        'multipart/form-data': components['schemas']['OrderedIds'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentRevision'];
+        };
+      };
+    };
+  };
+  assessment_item_retrieve: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        item_id: string;
+        revision_id: string;
+        section_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Item'];
+        };
+      };
+    };
+  };
+  assessment_item_update: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        item_id: string;
+        revision_id: string;
+        section_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ItemUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['ItemUpdate'];
+        'multipart/form-data': components['schemas']['ItemUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Item'];
+        };
+      };
+    };
+  };
+  assessment_revision_submit: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentTransitionInput'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentTransitionInput'];
+        'multipart/form-data': components['schemas']['AssessmentTransitionInput'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentRevision'];
+        };
+      };
+    };
+  };
+  assessment_revision_submit_alias: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentTransitionInput'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentTransitionInput'];
+        'multipart/form-data': components['schemas']['AssessmentTransitionInput'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentRevision'];
+        };
+      };
+    };
+  };
+  assessment_versions_list: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentVersion'][];
+        };
+      };
+    };
+  };
+  assessment_revision_create_from_version: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['VersionSource'];
+        'application/x-www-form-urlencoded': components['schemas']['VersionSource'];
+        'multipart/form-data': components['schemas']['VersionSource'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['AssessmentRevision'];
+        };
+      };
+    };
+  };
+  assessment_version_retrieve: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        slug: string;
+        version_number: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentVersion'];
+        };
+      };
+    };
+  };
+  assessment_revision_create_from_selected_version: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        slug: string;
+        version_number: number;
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['AssessmentRevision'];
         };
       };
     };

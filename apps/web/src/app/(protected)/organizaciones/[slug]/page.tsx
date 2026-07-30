@@ -6,6 +6,7 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 import { OrganizationNameForm } from '@/components/organizations/organization-name-form';
 import { PageHeader } from '@/components/platform/page-header';
@@ -22,6 +23,9 @@ export default async function OrganizationDetailPage({
 }: Readonly<{ params: Promise<{ slug: string }> }>) {
   const { slug } = await params;
   const { access, context, organization } = await getOrganizationForPage(slug);
+  if (access.roles.length === 1 && access.roles[0] === 'learner') {
+    redirect(`/organizaciones/${slug}/aprendizaje`);
+  }
   const canViewMembers = hasCapability(access.capabilities, 'membership.view');
   const canUpdate = hasCapability(access.capabilities, 'organization.update');
   const destinations = [

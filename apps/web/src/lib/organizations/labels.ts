@@ -33,6 +33,23 @@ const capabilityLabels: Record<string, string> = {
   'course.authoring.review': 'Solicitar cambios de estructura',
   'course.authoring.approve': 'Aprobar estructuras de curso',
   'course.approved.view': 'Ver cursos aprobados',
+  'assessment.bank.view': 'Ver bancos de preguntas',
+  'assessment.bank.manage': 'Administrar bancos de preguntas',
+  'assessment.bank.version': 'Versionar bancos de preguntas',
+  'assessment.question.view': 'Ver preguntas',
+  'assessment.question.manage': 'Administrar preguntas',
+  'assessment.question.submit': 'Enviar preguntas a revisión',
+  'assessment.question.review': 'Revisar preguntas',
+  'assessment.question.approve': 'Aprobar preguntas',
+  'assessment.authoring.view': 'Ver evaluaciones en autoría',
+  'assessment.authoring.manage': 'Administrar evaluaciones',
+  'assessment.authoring.submit': 'Enviar evaluaciones a revisión',
+  'assessment.authoring.review': 'Revisar evaluaciones',
+  'assessment.authoring.approve': 'Aprobar evaluaciones',
+  'assessment.delivery.view': 'Ver entregas de evaluaciones',
+  'assessment.delivery.manage': 'Administrar entregas de evaluaciones',
+  'assessment.grading.manage': 'Calificar evaluaciones',
+  'assessment.results.view': 'Ver resultados de evaluaciones',
 };
 
 export function roleLabel(role: OrganizationRole): string {

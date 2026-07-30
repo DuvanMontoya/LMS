@@ -4,6 +4,7 @@ import {
   BookOpenCheck,
   Building2,
   ChevronDown,
+  ClipboardCheck,
   FileCheck2,
   GitBranch,
   GraduationCap,
@@ -102,15 +103,17 @@ export function PlatformShell({
         pathname={pathname}
       />
       <SidebarInset className="min-w-0 bg-background">
-        <header className="sticky top-0 z-20 flex h-12 items-center gap-3 border-b bg-background/96 px-4 backdrop-blur-xl sm:px-6">
+        <header className="platform-topbar">
           <SidebarTrigger
             aria-label="Mostrar u ocultar navegación"
             className="-ml-1"
           />
-          <div className="h-5 w-px bg-border" aria-hidden="true" />
-          <p className="truncate text-sm font-medium text-muted-foreground">
-            {activeOrganization?.name ?? 'Plataforma académica'}
-          </p>
+          <div className="platform-topbar__divider" aria-hidden="true" />
+          <div className="platform-topbar__context">
+            <span>Espacio institucional</span>
+            <p>{activeOrganization?.name ?? 'Plataforma académica'}</p>
+          </div>
+          <span className="platform-topbar__status">Entorno seguro</span>
         </header>
         <div className="platform-content min-w-0 flex-1">{children}</div>
       </SidebarInset>
@@ -130,6 +133,9 @@ function PlatformSidebar({
   pathname: string;
 }>) {
   const capabilities = new Set(activeOrganization?.capabilities ?? []);
+  const learnerOnly =
+    activeOrganization?.roles.length === 1 &&
+    activeOrganization.roles[0] === 'learner';
   const organizationBase = activeOrganization
     ? `/organizaciones/${activeOrganization.slug}`
     : undefined;
@@ -139,6 +145,7 @@ function PlatformSidebar({
       icon: LayoutDashboard,
       label: 'Inicio',
       exact: true,
+      visible: !learnerOnly,
     },
     ...(organizations.length > 1
       ? [
@@ -158,6 +165,7 @@ function PlatformSidebar({
           icon: GraduationCap,
           label: 'Resumen institucional',
           exact: true,
+          visible: !learnerOnly,
         },
       ]
     : [];
@@ -169,6 +177,7 @@ function PlatformSidebar({
           href: `${organizationBase}/aprendizaje`,
           icon: NotebookTabs,
           label: 'Mi aprendizaje',
+          visible: capabilities.has('assessment.attempt'),
         },
         {
           children: [
@@ -230,6 +239,37 @@ function PlatformSidebar({
           label: 'Biblioteca',
           visible: capabilities.has('course.published.view'),
         },
+        {
+          href: `${organizationBase}/evaluaciones/asignadas`,
+          icon: ClipboardCheck,
+          label: 'Mis evaluaciones',
+          visible: capabilities.has('assessment.attempt'),
+        },
+        {
+          children: [
+            {
+              href: `${organizationBase}/evaluaciones`,
+              label: 'Evaluaciones',
+              exact: true,
+              visible: capabilities.has('assessment.authoring.view'),
+            },
+            {
+              href: `${organizationBase}/evaluaciones/bancos`,
+              label: 'Bancos de preguntas',
+              exact: true,
+              visible:
+                capabilities.has('assessment.bank.view') ||
+                capabilities.has('assessment.question.view'),
+            },
+          ],
+          href: `${organizationBase}/evaluaciones`,
+          icon: ClipboardCheck,
+          label: 'Autoría de evaluaciones',
+          visible:
+            capabilities.has('assessment.authoring.view') ||
+            capabilities.has('assessment.bank.view') ||
+            capabilities.has('assessment.question.view'),
+        },
       ]
     : [];
   const administrationNavigation: NavigationItem[] = organizationBase
@@ -260,6 +300,32 @@ function PlatformSidebar({
           icon: Users,
           label: 'Miembros',
           visible: capabilities.has('membership.view'),
+        },
+        {
+          children: [
+            {
+              href: `${organizationBase}/evaluaciones/entregas`,
+              label: 'Entregas',
+              visible: capabilities.has('assessment.delivery.view'),
+            },
+            {
+              href: `${organizationBase}/evaluaciones/resultados`,
+              label: 'Resultados',
+              visible: capabilities.has('assessment.results.view'),
+            },
+            {
+              href: `${organizationBase}/evaluaciones/calificacion-manual`,
+              label: 'Calificación manual',
+              visible: capabilities.has('assessment.grading.manage'),
+            },
+          ],
+          href: `${organizationBase}/evaluaciones/entregas`,
+          icon: ClipboardCheck,
+          label: 'Gestión de evaluaciones',
+          visible:
+            capabilities.has('assessment.delivery.view') ||
+            capabilities.has('assessment.results.view') ||
+            capabilities.has('assessment.grading.manage'),
         },
       ]
     : [];

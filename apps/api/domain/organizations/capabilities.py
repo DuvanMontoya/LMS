@@ -36,9 +36,28 @@ class Capability(StrEnum):
     LEARNING_ENROLLMENT_MANAGE = "learning.enrollment.manage"
     LEARNING_PROGRESS_VIEW = "learning.progress.view"
     LEARNING_PROGRESS_MANAGE = "learning.progress.manage"
+    ASSESSMENT_BANK_VIEW = "assessment.bank.view"
+    ASSESSMENT_BANK_MANAGE = "assessment.bank.manage"
+    ASSESSMENT_BANK_VERSION = "assessment.bank.version"
+    ASSESSMENT_QUESTION_VIEW = "assessment.question.view"
+    ASSESSMENT_QUESTION_MANAGE = "assessment.question.manage"
+    ASSESSMENT_QUESTION_SUBMIT = "assessment.question.submit"
+    ASSESSMENT_QUESTION_REVIEW = "assessment.question.review"
+    ASSESSMENT_QUESTION_APPROVE = "assessment.question.approve"
+    ASSESSMENT_AUTHORING_VIEW = "assessment.authoring.view"
+    ASSESSMENT_AUTHORING_MANAGE = "assessment.authoring.manage"
+    ASSESSMENT_AUTHORING_SUBMIT = "assessment.authoring.submit"
+    ASSESSMENT_AUTHORING_REVIEW = "assessment.authoring.review"
+    ASSESSMENT_AUTHORING_APPROVE = "assessment.authoring.approve"
+    ASSESSMENT_DELIVERY_VIEW = "assessment.delivery.view"
+    ASSESSMENT_DELIVERY_MANAGE = "assessment.delivery.manage"
+    ASSESSMENT_GRADING_MANAGE = "assessment.grading.manage"
+    ASSESSMENT_RESULTS_VIEW = "assessment.results.view"
+    ASSESSMENT_ATTEMPT = "assessment.attempt"
 
 
 _ALL_CAPABILITIES = frozenset(Capability)
+_ALL_ADMIN_CAPABILITIES = _ALL_CAPABILITIES - frozenset({Capability.ASSESSMENT_ATTEMPT})
 _MEMBER_READ_CAPABILITIES = frozenset(
     {
         Capability.ORGANIZATION_VIEW,
@@ -63,13 +82,24 @@ _COURSE_AUTHOR_CAPABILITIES = frozenset(
         Capability.LEARNING_COHORT_VIEW,
         Capability.LEARNING_ENROLLMENT_VIEW,
         Capability.LEARNING_PROGRESS_VIEW,
+        Capability.ASSESSMENT_BANK_VIEW,
+        Capability.ASSESSMENT_BANK_MANAGE,
+        Capability.ASSESSMENT_BANK_VERSION,
+        Capability.ASSESSMENT_QUESTION_VIEW,
+        Capability.ASSESSMENT_QUESTION_MANAGE,
+        Capability.ASSESSMENT_QUESTION_SUBMIT,
+        Capability.ASSESSMENT_AUTHORING_VIEW,
+        Capability.ASSESSMENT_AUTHORING_MANAGE,
+        Capability.ASSESSMENT_AUTHORING_SUBMIT,
+        Capability.ASSESSMENT_DELIVERY_VIEW,
+        Capability.ASSESSMENT_RESULTS_VIEW,
     }
 )
 
 ROLE_CAPABILITIES = MappingProxyType(
     {
-        RoleCode.OWNER: _ALL_CAPABILITIES,
-        RoleCode.ADMINISTRATOR: _ALL_CAPABILITIES
+        RoleCode.OWNER: _ALL_ADMIN_CAPABILITIES,
+        RoleCode.ADMINISTRATOR: _ALL_ADMIN_CAPABILITIES
         - frozenset({Capability.ROLE_ASSIGN_OWNER}),
         RoleCode.AUTHOR: _MEMBER_READ_CAPABILITIES
         | _CATALOG_MANAGER_CAPABILITIES
@@ -84,6 +114,13 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.COURSE_RELEASE_HISTORY_VIEW,
                 Capability.COURSE_PUBLISHED_VIEW,
                 Capability.LEARNING_PROGRESS_VIEW,
+                Capability.ASSESSMENT_BANK_VIEW,
+                Capability.ASSESSMENT_QUESTION_VIEW,
+                Capability.ASSESSMENT_QUESTION_REVIEW,
+                Capability.ASSESSMENT_AUTHORING_VIEW,
+                Capability.ASSESSMENT_AUTHORING_REVIEW,
+                Capability.ASSESSMENT_DELIVERY_VIEW,
+                Capability.ASSESSMENT_RESULTS_VIEW,
             }
         ),
         RoleCode.INSTRUCTOR: _MEMBER_READ_CAPABILITIES
@@ -95,10 +132,17 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.LEARNING_COHORT_VIEW,
                 Capability.LEARNING_ENROLLMENT_VIEW,
                 Capability.LEARNING_PROGRESS_VIEW,
+                Capability.ASSESSMENT_BANK_VIEW,
+                Capability.ASSESSMENT_QUESTION_VIEW,
+                Capability.ASSESSMENT_AUTHORING_VIEW,
+                Capability.ASSESSMENT_DELIVERY_VIEW,
+                Capability.ASSESSMENT_DELIVERY_MANAGE,
+                Capability.ASSESSMENT_GRADING_MANAGE,
+                Capability.ASSESSMENT_RESULTS_VIEW,
             }
         ),
         RoleCode.LEARNER: _MEMBER_READ_CAPABILITIES
-        | frozenset({Capability.CATALOG_VIEW}),
+        | frozenset({Capability.ASSESSMENT_ATTEMPT}),
     }
 )
 

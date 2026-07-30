@@ -83,3 +83,17 @@ organización/usuario producen 404. Mutaciones aceptan sólo allowlists y
 expected versions; ningún body elige user, actor, organización, status,
 assignment o contadores. Superuser administra explícitamente, pero no simula
 una matrícula. Position usa CSRF, throttle y keepalive same-origin.
+
+## Frontera de assessments
+
+Cada lookup comienza por organización y capacidad; bank, question, assessment,
+delivery, assignment, attempt, response y result ajenos devuelven 404. El
+learner debe ser propietario del assignment de release efectivo. Los serializers
+de intento exponen sólo `public_snapshot`, puntos, estado y valor guardado:
+grading, feedback condicionado, seed y claves no forman parte del contrato.
+
+Los bodies son allowlists, todo guardado usa `expected_version`, un intento
+vencido no acepta respuestas y submit es definitivo. Versiones, AttemptItem,
+ManualGradeDecision y AttemptEvent rechazan UPDATE/DELETE en PostgreSQL. No hay
+DELETE físico, JWT, Web Storage, autosave, ejecución de código, symbolic grading
+ni logging de respuestas/claves.

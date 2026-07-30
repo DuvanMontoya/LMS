@@ -84,6 +84,579 @@
         "required": ["id", "name", "slug", "status"],
         "type": "object"
       },
+      "Assessment": {
+        "properties": {
+          "archived_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "authoring_status": { "readOnly": true, "type": "string" },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "latest_revision_id": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "latest_revision_number": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "latest_version_number": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "slug": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/CourseLifecycleStatus" }],
+            "readOnly": true
+          },
+          "title": { "readOnly": true, "type": "string" }
+        },
+        "required": [
+          "archived_at",
+          "authoring_status",
+          "created_at",
+          "id",
+          "latest_revision_id",
+          "latest_revision_number",
+          "latest_version_number",
+          "slug",
+          "status",
+          "title"
+        ],
+        "type": "object"
+      },
+      "AssessmentAssignmentStatus": {
+        "description": "* `active` - Activa\n* `revoked` - Revocada",
+        "enum": ["active", "revoked"],
+        "type": "string"
+      },
+      "AssessmentAttemptStatus": {
+        "description": "* `in_progress` - En curso\n* `pending_manual` - Pendiente de calificación manual\n* `graded` - Calificado",
+        "enum": ["in_progress", "pending_manual", "graded"],
+        "type": "string"
+      },
+      "AssessmentAuthoringStatus": {
+        "description": "* `draft` - Borrador\n* `in_review` - En revisión\n* `changes_requested` - Cambios solicitados\n* `approved` - Aprobado",
+        "enum": ["draft", "in_review", "changes_requested", "approved"],
+        "type": "string"
+      },
+      "AssessmentCreate": {
+        "properties": {
+          "attempt_limit": {
+            "maximum": 20,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "description": { "maxLength": 5000, "type": "string" },
+          "feedback_mode": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentFeedbackMode" }
+            ],
+            "default": "full_after_grading"
+          },
+          "instructions": { "maxLength": 10000, "type": "string" },
+          "pass_basis_points": {
+            "default": 6000,
+            "maximum": 10000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "shuffle_items": { "default": false, "type": "boolean" },
+          "shuffle_sections": { "default": false, "type": "boolean" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "time_limit_minutes": {
+            "maximum": 10080,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": ["slug", "title"],
+        "type": "object"
+      },
+      "AssessmentDeliveryStatus": {
+        "description": "* `draft` - Borrador\n* `active` - Activa\n* `withdrawn` - Retirada",
+        "enum": ["draft", "active", "withdrawn"],
+        "type": "string"
+      },
+      "AssessmentExpectedVersion": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["expected_version"],
+        "type": "object"
+      },
+      "AssessmentFeedbackMode": {
+        "description": "* `none` - Sin retroalimentación\n* `score_only` - Sólo puntaje después de calificar\n* `full_after_grading` - Retroalimentación completa después de calificar",
+        "enum": ["none", "score_only", "full_after_grading"],
+        "type": "string"
+      },
+      "AssessmentOutline": {
+        "properties": {
+          "objective_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "type": "array"
+          },
+          "revision": { "$ref": "#/components/schemas/AssessmentRevision" },
+          "sections": { "items": {}, "type": "array" }
+        },
+        "required": ["objective_ids", "revision", "sections"],
+        "type": "object"
+      },
+      "AssessmentPage": {
+        "properties": {
+          "count": { "type": "integer" },
+          "next": { "format": "uri", "nullable": true, "type": "string" },
+          "previous": { "format": "uri", "nullable": true, "type": "string" },
+          "results": {
+            "items": { "$ref": "#/components/schemas/Assessment" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "next", "previous", "results"],
+        "type": "object"
+      },
+      "AssessmentQuestionType": {
+        "description": "* `single_choice` - Selección única\n* `multiple_choice` - Selección múltiple\n* `true_false` - Verdadero o falso\n* `numeric` - Numérica\n* `short_text` - Texto corto\n* `long_text` - Texto largo\n* `ordering` - Ordenamiento\n* `matching` - Emparejamiento",
+        "enum": [
+          "single_choice",
+          "multiple_choice",
+          "true_false",
+          "numeric",
+          "short_text",
+          "long_text",
+          "ordering",
+          "matching"
+        ],
+        "type": "string"
+      },
+      "AssessmentReadiness": {
+        "properties": {
+          "issues": { "items": { "type": "string" }, "type": "array" },
+          "ready": { "type": "boolean" }
+        },
+        "required": ["issues", "ready"],
+        "type": "object"
+      },
+      "AssessmentResponseStatus": {
+        "description": "* `unanswered` - Sin respuesta\n* `saved` - Guardada\n* `auto_graded` - Calificada automáticamente\n* `pending_manual` - Pendiente de calificación manual\n* `manually_graded` - Calificada manualmente",
+        "enum": [
+          "unanswered",
+          "saved",
+          "auto_graded",
+          "pending_manual",
+          "manually_graded"
+        ],
+        "type": "string"
+      },
+      "AssessmentRevision": {
+        "properties": {
+          "assessment_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "attempt_limit": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "based_on_version_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": { "readOnly": true, "type": "string" },
+          "feedback_mode": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentFeedbackMode" }
+            ],
+            "readOnly": true
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "instructions": { "readOnly": true, "type": "string" },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "number": { "readOnly": true, "type": "integer" },
+          "pass_basis_points": { "readOnly": true, "type": "integer" },
+          "shuffle_items": { "readOnly": true, "type": "boolean" },
+          "shuffle_sections": { "readOnly": true, "type": "boolean" },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentAuthoringStatus" }
+            ],
+            "readOnly": true
+          },
+          "status_changed_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "time_limit_minutes": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "title": { "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment_id",
+          "attempt_limit",
+          "based_on_version_id",
+          "created_at",
+          "description",
+          "feedback_mode",
+          "id",
+          "instructions",
+          "lock_version",
+          "number",
+          "pass_basis_points",
+          "shuffle_items",
+          "shuffle_sections",
+          "status",
+          "status_changed_at",
+          "time_limit_minutes",
+          "title",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "AssessmentRevisionUpdate": {
+        "properties": {
+          "attempt_limit": {
+            "maximum": 20,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "description": { "maxLength": 5000, "type": "string" },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "feedback_mode": {
+            "$ref": "#/components/schemas/AssessmentFeedbackMode"
+          },
+          "instructions": { "maxLength": 10000, "type": "string" },
+          "pass_basis_points": {
+            "maximum": 10000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "shuffle_items": { "type": "boolean" },
+          "shuffle_sections": { "type": "boolean" },
+          "time_limit_minutes": {
+            "maximum": 10080,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": ["expected_version"],
+        "type": "object"
+      },
+      "AssessmentTransitionInput": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "note": { "maxLength": 2000, "type": "string" }
+        },
+        "required": ["expected_version"],
+        "type": "object"
+      },
+      "AssessmentVersion": {
+        "properties": {
+          "assessment_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "attempt_limit": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": { "readOnly": true, "type": "string" },
+          "feedback_mode": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "item_count": { "readOnly": true, "type": "integer" },
+          "maximum_score": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "number": { "readOnly": true, "type": "integer" },
+          "pass_basis_points": { "readOnly": true, "type": "integer" },
+          "previous_version_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "public_snapshot": { "readOnly": true },
+          "schema_version": { "readOnly": true, "type": "integer" },
+          "section_count": { "readOnly": true, "type": "integer" },
+          "snapshot_digest": { "readOnly": true, "type": "string" },
+          "source_revision_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "time_limit_minutes": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "title": { "readOnly": true, "type": "string" }
+        },
+        "required": [
+          "assessment_id",
+          "attempt_limit",
+          "created_at",
+          "description",
+          "feedback_mode",
+          "id",
+          "item_count",
+          "maximum_score",
+          "number",
+          "pass_basis_points",
+          "previous_version_id",
+          "public_snapshot",
+          "schema_version",
+          "section_count",
+          "snapshot_digest",
+          "source_revision_id",
+          "time_limit_minutes",
+          "title"
+        ],
+        "type": "object"
+      },
+      "AssignmentCreate": {
+        "properties": {
+          "release_assignment_id": { "format": "uuid", "type": "string" },
+          "release_assignment_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "Attempt": {
+        "properties": {
+          "assessment_version_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "attempt_number": { "readOnly": true, "type": "integer" },
+          "delivery_assignment_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "items": {
+            "items": { "$ref": "#/components/schemas/AttemptItem" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "maximum_score": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentAttemptStatus" }
+            ],
+            "readOnly": true
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment_version_id",
+          "attempt_number",
+          "delivery_assignment_id",
+          "expires_at",
+          "id",
+          "items",
+          "lock_version",
+          "maximum_score",
+          "started_at",
+          "status",
+          "submitted_at"
+        ],
+        "type": "object"
+      },
+      "AttemptItem": {
+        "properties": {
+          "display_position": { "readOnly": true, "type": "integer" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "points": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "public_snapshot": { "readOnly": true },
+          "required": { "readOnly": true, "type": "boolean" },
+          "response": {
+            "additionalProperties": {},
+            "nullable": true,
+            "readOnly": true,
+            "type": "object"
+          }
+        },
+        "required": [
+          "display_position",
+          "id",
+          "points",
+          "public_snapshot",
+          "required",
+          "response"
+        ],
+        "type": "object"
+      },
+      "AttemptResult": {
+        "properties": {
+          "attempt_number": { "readOnly": true, "type": "integer" },
+          "auto_score": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "feedback": {
+            "items": { "additionalProperties": {}, "type": "object" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "graded_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "manual_score": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "maximum_score": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "passed": { "nullable": true, "readOnly": true, "type": "boolean" },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentAttemptStatus" }
+            ],
+            "readOnly": true
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "total_score": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempt_number",
+          "auto_score",
+          "basis_points",
+          "feedback",
+          "graded_at",
+          "id",
+          "manual_score",
+          "maximum_score",
+          "passed",
+          "status",
+          "submitted_at",
+          "total_score"
+        ],
+        "type": "object"
+      },
+      "AttemptResultPage": {
+        "properties": {
+          "count": { "type": "integer" },
+          "next": { "format": "uri", "nullable": true, "type": "string" },
+          "previous": { "format": "uri", "nullable": true, "type": "string" },
+          "results": {
+            "items": { "$ref": "#/components/schemas/AttemptResult" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "next", "previous", "results"],
+        "type": "object"
+      },
       "BlankEnum": { "enum": [""] },
       "CognitiveLevelEnum": {
         "description": "* `remember` - Recordar\n* `understand` - Comprender\n* `apply` - Aplicar\n* `analyze` - Analizar\n* `evaluate` - Evaluar\n* `create` - Crear",
@@ -96,6 +669,11 @@
           "create"
         ],
         "type": "string"
+      },
+      "CohortAssignmentCreate": {
+        "properties": { "cohort_id": { "format": "uuid", "type": "string" } },
+        "required": ["cohort_id"],
+        "type": "object"
       },
       "CohortCreate": {
         "properties": {
@@ -494,6 +1072,11 @@
         "required": ["primary_subject_id", "slug", "summary", "title"],
         "type": "object"
       },
+      "CourseLifecycleStatus": {
+        "description": "* `active` - Activo\n* `archived` - Archivado",
+        "enum": ["active", "archived"],
+        "type": "string"
+      },
       "CourseList": {
         "properties": {
           "archived_at": {
@@ -657,6 +1240,172 @@
         "required": ["slug", "title"],
         "type": "object"
       },
+      "Delivery": {
+        "properties": {
+          "assessment_title": { "readOnly": true, "type": "string" },
+          "assessment_version_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "closes_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "course_release_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "name": { "readOnly": true, "type": "string" },
+          "opens_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentDeliveryStatus" }
+            ],
+            "readOnly": true
+          },
+          "unit_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "withdrawal_note": { "readOnly": true, "type": "string" },
+          "withdrawn_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment_title",
+          "assessment_version_id",
+          "closes_at",
+          "course_release_id",
+          "created_at",
+          "id",
+          "lock_version",
+          "name",
+          "opens_at",
+          "status",
+          "unit_id",
+          "updated_at",
+          "withdrawal_note",
+          "withdrawn_at"
+        ],
+        "type": "object"
+      },
+      "DeliveryAssignment": {
+        "properties": {
+          "assigned_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "cohort_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "delivery_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "learner_name": { "readOnly": true, "type": "string" },
+          "release_assignment_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "release_number": { "readOnly": true, "type": "integer" },
+          "revoked_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentAssignmentStatus" }
+            ],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "assigned_at",
+          "cohort_id",
+          "delivery_id",
+          "id",
+          "learner_name",
+          "release_assignment_id",
+          "release_number",
+          "revoked_at",
+          "status"
+        ],
+        "type": "object"
+      },
+      "DeliveryCreate": {
+        "properties": {
+          "assessment_version_id": { "format": "uuid", "type": "string" },
+          "closes_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "course_release_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": { "maxLength": 200, "type": "string" },
+          "opens_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "unit_id": { "format": "uuid", "nullable": true, "type": "string" }
+        },
+        "required": ["assessment_version_id", "name"],
+        "type": "object"
+      },
+      "DeliveryPage": {
+        "properties": {
+          "count": { "type": "integer" },
+          "next": { "format": "uri", "nullable": true, "type": "string" },
+          "previous": { "format": "uri", "nullable": true, "type": "string" },
+          "results": {
+            "items": { "$ref": "#/components/schemas/Delivery" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "next", "previous", "results"],
+        "type": "object"
+      },
       "Discipline": {
         "properties": {
           "area_id": { "format": "uuid", "readOnly": true, "type": "string" },
@@ -737,6 +1486,18 @@
             "readOnly": true,
             "type": "string"
           },
+          "current_release_assignment_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "current_release_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
           "enrollment_version": { "type": "integer" },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
           "progress": {
@@ -757,6 +1518,8 @@
           "course_slug",
           "course_title",
           "created_at",
+          "current_release_assignment_id",
+          "current_release_id",
           "enrollment_version",
           "id",
           "progress",
@@ -793,10 +1556,160 @@
         "required": ["expected_version"],
         "type": "object"
       },
+      "Item": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "objective_ids": {
+            "items": { "type": "string" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "points": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "position": { "readOnly": true, "type": "integer" },
+          "public": { "readOnly": true },
+          "question_code": { "readOnly": true, "type": "string" },
+          "question_type": { "readOnly": true, "type": "string" },
+          "question_version_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "required": { "readOnly": true, "type": "boolean" },
+          "section_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "id",
+          "objective_ids",
+          "points",
+          "position",
+          "public",
+          "question_code",
+          "question_type",
+          "question_version_id",
+          "required",
+          "section_id",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "ItemCreate": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "objective_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 100,
+            "type": "array"
+          },
+          "points": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "type": "string"
+          },
+          "question_version_id": { "format": "uuid", "type": "string" },
+          "required": { "default": true, "type": "boolean" }
+        },
+        "required": [
+          "expected_version",
+          "objective_ids",
+          "points",
+          "question_version_id"
+        ],
+        "type": "object"
+      },
+      "ItemUpdate": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "objective_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array"
+          },
+          "points": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "type": "string"
+          },
+          "required": { "type": "boolean" }
+        },
+        "required": ["expected_version", "objective_ids", "points", "required"],
+        "type": "object"
+      },
       "KindEnum": {
         "description": "* `required` - required\n* `recommended` - recommended",
         "enum": ["required", "recommended"],
         "type": "string"
+      },
+      "LearnerDelivery": {
+        "properties": {
+          "assigned_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "attempt_limit": { "readOnly": true, "type": "integer" },
+          "attempts_used": { "readOnly": true, "type": "integer" },
+          "delivery": {
+            "allOf": [{ "$ref": "#/components/schemas/Delivery" }],
+            "readOnly": true
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "in_progress_attempt_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "latest_attempt_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "latest_attempt_status": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentAssignmentStatus" }
+            ],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "assigned_at",
+          "attempt_limit",
+          "attempts_used",
+          "delivery",
+          "id",
+          "in_progress_attempt_id",
+          "latest_attempt_id",
+          "latest_attempt_status",
+          "status"
+        ],
+        "type": "object"
       },
       "LearningAccessState": {
         "description": "* `available` - Disponible\n* `not_started` - Acceso no iniciado\n* `ended` - Acceso finalizado\n* `suspended` - Suspendida\n* `revoked` - Revocada\n* `publication_withdrawn` - Publicación retirada\n* `membership_inactive` - Membresía inactiva\n* `release_invalid` - Release inválido",
@@ -945,6 +1858,50 @@
           "title",
           "unit_count",
           "word_count"
+        ],
+        "type": "object"
+      },
+      "ManualGrade": {
+        "properties": {
+          "feedback": { "maxLength": 10000, "type": "string" },
+          "score": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "type": "string"
+          }
+        },
+        "required": ["score"],
+        "type": "object"
+      },
+      "ManualGradeDecision": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "feedback": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "response_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "score": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "sequence": { "readOnly": true, "type": "integer" }
+        },
+        "required": [
+          "created_at",
+          "feedback",
+          "id",
+          "response_id",
+          "score",
+          "sequence"
         ],
         "type": "object"
       },
@@ -1201,6 +2158,18 @@
         "required": ["code", "id", "statement", "status", "subject_id"],
         "type": "object"
       },
+      "ObjectiveReplace": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "objective_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 500,
+            "type": "array"
+          }
+        },
+        "required": ["expected_version", "objective_ids"],
+        "type": "object"
+      },
       "ObjectiveSummary": {
         "properties": {
           "code": { "readOnly": true, "type": "string" },
@@ -1210,6 +2179,19 @@
           "subject_id": { "format": "uuid", "readOnly": true, "type": "string" }
         },
         "required": ["code", "id", "statement", "status", "subject_id"],
+        "type": "object"
+      },
+      "OrderedIds": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 500,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": ["expected_version", "ids"],
         "type": "object"
       },
       "Organization": {
@@ -1491,6 +2473,44 @@
         "required": ["count", "results"],
         "type": "object"
       },
+      "PendingManual": {
+        "properties": {
+          "answer": { "nullable": true, "type": "string" },
+          "attempt_id": { "format": "uuid", "type": "string" },
+          "attempt_item_id": { "format": "uuid", "type": "string" },
+          "current_score": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "type": "string"
+          },
+          "decision_history": {
+            "items": { "$ref": "#/components/schemas/ManualGradeDecision" },
+            "type": "array"
+          },
+          "learner": { "type": "string" },
+          "points": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "type": "string"
+          },
+          "response_id": { "format": "uuid", "type": "string" },
+          "response_status": {
+            "$ref": "#/components/schemas/AssessmentResponseStatus"
+          }
+        },
+        "required": [
+          "answer",
+          "attempt_id",
+          "attempt_item_id",
+          "current_score",
+          "decision_history",
+          "learner",
+          "points",
+          "response_id",
+          "response_status"
+        ],
+        "type": "object"
+      },
       "Position": {
         "properties": {
           "node_id": { "format": "uuid", "type": "string" },
@@ -1675,6 +2695,296 @@
           "detail": { "type": "string" }
         },
         "required": ["code", "detail"],
+        "type": "object"
+      },
+      "Question": {
+        "properties": {
+          "archived_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "bank_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "code": { "readOnly": true, "type": "string" },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "latest_version_number": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "open_revision_id": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "open_revision_status": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/CourseLifecycleStatus" }],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "archived_at",
+          "bank_id",
+          "code",
+          "created_at",
+          "id",
+          "latest_version_number",
+          "open_revision_id",
+          "open_revision_status",
+          "status"
+        ],
+        "type": "object"
+      },
+      "QuestionBank": {
+        "properties": {
+          "archived_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "name": { "readOnly": true, "type": "string" },
+          "slug": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/CourseLifecycleStatus" }],
+            "readOnly": true
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "archived_at",
+          "created_at",
+          "description",
+          "id",
+          "lock_version",
+          "name",
+          "slug",
+          "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "QuestionBankCreate": {
+        "properties": {
+          "description": { "maxLength": 5000, "type": "string" },
+          "name": { "maxLength": 200, "type": "string" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          }
+        },
+        "required": ["name", "slug"],
+        "type": "object"
+      },
+      "QuestionBankPage": {
+        "properties": {
+          "count": { "type": "integer" },
+          "next": { "format": "uri", "nullable": true, "type": "string" },
+          "previous": { "format": "uri", "nullable": true, "type": "string" },
+          "results": {
+            "items": { "$ref": "#/components/schemas/QuestionBank" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "next", "previous", "results"],
+        "type": "object"
+      },
+      "QuestionBankUpdate": {
+        "properties": {
+          "description": { "maxLength": 5000, "type": "string" },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "name": { "maxLength": 200, "type": "string" }
+        },
+        "required": ["description", "expected_version", "name"],
+        "type": "object"
+      },
+      "QuestionBankVersion": {
+        "properties": {
+          "bank_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "number": { "readOnly": true, "type": "integer" },
+          "previous_version_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "question_count": { "readOnly": true, "type": "integer" },
+          "snapshot": { "readOnly": true },
+          "snapshot_digest": { "readOnly": true, "type": "string" }
+        },
+        "required": [
+          "bank_id",
+          "created_at",
+          "id",
+          "number",
+          "previous_version_id",
+          "question_count",
+          "snapshot",
+          "snapshot_digest"
+        ],
+        "type": "object"
+      },
+      "QuestionCreate": {
+        "properties": {
+          "code": { "maxLength": 64, "type": "string" },
+          "definition": {},
+          "type": { "maxLength": 24, "type": "string" }
+        },
+        "required": ["code", "definition", "type"],
+        "type": "object"
+      },
+      "QuestionPage": {
+        "properties": {
+          "count": { "type": "integer" },
+          "next": { "format": "uri", "nullable": true, "type": "string" },
+          "previous": { "format": "uri", "nullable": true, "type": "string" },
+          "results": {
+            "items": { "$ref": "#/components/schemas/Question" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "next", "previous", "results"],
+        "type": "object"
+      },
+      "QuestionRevision": {
+        "properties": {
+          "based_on_version_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "definition": { "readOnly": true },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "number": { "readOnly": true, "type": "integer" },
+          "question_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentAuthoringStatus" }
+            ],
+            "readOnly": true
+          },
+          "status_changed_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "type": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentQuestionType" }
+            ],
+            "readOnly": true
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "based_on_version_id",
+          "created_at",
+          "definition",
+          "id",
+          "lock_version",
+          "number",
+          "question_id",
+          "status",
+          "status_changed_at",
+          "type",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "QuestionRevisionUpdate": {
+        "properties": {
+          "definition": {},
+          "expected_version": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["definition", "expected_version"],
+        "type": "object"
+      },
+      "QuestionVersion": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "definition_digest": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "number": { "readOnly": true, "type": "integer" },
+          "public": { "readOnly": true },
+          "public_digest": { "readOnly": true, "type": "string" },
+          "question_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "schema_version": { "readOnly": true, "type": "integer" },
+          "source_revision_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "type": { "readOnly": true, "type": "string" }
+        },
+        "required": [
+          "created_at",
+          "definition_digest",
+          "id",
+          "number",
+          "public",
+          "public_digest",
+          "question_id",
+          "schema_version",
+          "source_revision_id",
+          "type"
+        ],
         "type": "object"
       },
       "ReaderNavigation": {
@@ -1930,6 +3240,14 @@
         "required": ["expected_version", "topic_ids"],
         "type": "object"
       },
+      "ResponseSave": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "response": {}
+        },
+        "required": ["expected_version", "response"],
+        "type": "object"
+      },
       "RestoreContent": {
         "properties": {
           "expected_document_version": { "minimum": 1, "type": "integer" }
@@ -2049,6 +3367,57 @@
           }
         },
         "required": ["alignment_type", "id", "position", "subject"],
+        "type": "object"
+      },
+      "Section": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "instructions": { "readOnly": true, "type": "string" },
+          "position": { "readOnly": true, "type": "integer" },
+          "revision_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "title": { "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "id",
+          "instructions",
+          "position",
+          "revision_id",
+          "title",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "SectionCreate": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "instructions": { "maxLength": 5000, "type": "string" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": ["expected_version", "title"],
+        "type": "object"
+      },
+      "SectionUpdate": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "instructions": { "maxLength": 5000, "type": "string" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": ["expected_version", "instructions", "title"],
         "type": "object"
       },
       "Subject": {
@@ -2415,12 +3784,25 @@
         "required": ["code", "detail", "release_number"],
         "type": "object"
       },
+      "VersionSource": {
+        "properties": { "version_id": { "format": "uuid", "type": "string" } },
+        "required": ["version_id"],
+        "type": "object"
+      },
       "Withdraw": {
         "properties": {
           "expected_publication_version": { "minimum": 0, "type": "integer" },
           "note": { "maxLength": 2000, "minLength": 1, "type": "string" }
         },
         "required": ["expected_publication_version", "note"],
+        "type": "object"
+      },
+      "Withdrawal": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "note": { "maxLength": 2000, "type": "string" }
+        },
+        "required": ["expected_version", "note"],
         "type": "object"
       },
       "WorkflowAction": {
@@ -2958,6 +4340,2800 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Organization" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/": {
+      "get": {
+        "operationId": "assessments_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentPage" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "assessments_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AssessmentCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/AssessmentCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/AssessmentCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/": {
+      "get": {
+        "operationId": "assessment_attempt_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Attempt" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/responses/{attempt_item_id}/": {
+      "put": {
+        "operationId": "assessment_responses_save",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "attempt_item_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ResponseSave" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ResponseSave" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ResponseSave" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Attempt" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/result/": {
+      "get": {
+        "operationId": "assessment_attempt_result",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AttemptResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/submit/": {
+      "post": {
+        "operationId": "assessment_attempts_submit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AttemptResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/deliveries/": {
+      "get": {
+        "operationId": "assessment_deliveries_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeliveryPage" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "assessment_deliveries_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeliveryCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/DeliveryCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/DeliveryCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Delivery" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/deliveries/{delivery_id}/": {
+      "get": {
+        "operationId": "assessment_delivery_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Delivery" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/deliveries/{delivery_id}/activate/": {
+      "post": {
+        "operationId": "assessment_delivery_activate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Delivery" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/deliveries/{delivery_id}/assign-cohort/": {
+      "post": {
+        "operationId": "assessment_delivery_assign_cohort",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CohortAssignmentCreate"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CohortAssignmentCreate"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CohortAssignmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DeliveryAssignment"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/deliveries/{delivery_id}/assignments/": {
+      "get": {
+        "operationId": "assessment_delivery_assignments_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DeliveryAssignment"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "assessment_delivery_assignments_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AssignmentCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/AssignmentCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/AssignmentCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeliveryAssignment" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/deliveries/{delivery_id}/assignments/{assignment_id}/revoke/": {
+      "post": {
+        "operationId": "assessment_delivery_assignment_revoke",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DeliveryAssignment" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/deliveries/{delivery_id}/withdraw/": {
+      "post": {
+        "operationId": "assessment_delivery_withdraw",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Withdrawal" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/Withdrawal" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/Withdrawal" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Delivery" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/manual-grading/": {
+      "get": {
+        "operationId": "assessment_manual_grading_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/PendingManual" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/manual-grading/{response_id}/": {
+      "post": {
+        "operationId": "assessment_manual_grading_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "response_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ManualGrade" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ManualGrade" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ManualGrade" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ManualGradeDecision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/my-deliveries/": {
+      "get": {
+        "operationId": "assessment_my_deliveries_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/LearnerDelivery" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/my-deliveries/{assignment_id}/": {
+      "get": {
+        "operationId": "assessment_my_delivery_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LearnerDelivery" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/my-deliveries/{assignment_id}/attempts/start/": {
+      "post": {
+        "operationId": "assessment_attempts_start",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Attempt" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/": {
+      "get": {
+        "operationId": "assessment_question_banks_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionBankPage" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "assessment_question_banks_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/QuestionBankCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/QuestionBankCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/QuestionBankCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionBank" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/": {
+      "get": {
+        "operationId": "assessment_question_bank_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionBank" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "assessment_question_bank_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/QuestionBankUpdate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/QuestionBankUpdate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/QuestionBankUpdate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionBank" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/archive/": {
+      "post": {
+        "operationId": "assessment_question_bank_archive",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionBank" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/": {
+      "get": {
+        "operationId": "assessment_questions_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionPage" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "assessment_questions_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/QuestionCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/QuestionCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/QuestionCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/": {
+      "get": {
+        "operationId": "assessment_question_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Question" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/revisions/{revision_id}/": {
+      "get": {
+        "operationId": "assessment_question_revision_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "assessment_question_revision_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionRevisionUpdate"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionRevisionUpdate"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionRevisionUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/revisions/{revision_id}/approve/": {
+      "post": {
+        "operationId": "assessment_question_revision_approve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/revisions/{revision_id}/request-changes/": {
+      "post": {
+        "operationId": "assessment_question_revision_request_changes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/revisions/{revision_id}/submit-review/": {
+      "post": {
+        "operationId": "assessment_question_revision_submit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/revisions/{revision_id}/submit/": {
+      "post": {
+        "operationId": "assessment_question_revision_submit_alias",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/versions/": {
+      "get": {
+        "operationId": "assessment_question_versions_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/QuestionVersion" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "assessment_question_revision_create_from_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VersionSource" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/VersionSource" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/VersionSource" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/versions/{version_number}/": {
+      "get": {
+        "operationId": "assessment_question_version_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "version_number",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionVersion" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/versions/{version_number}/create-draft/": {
+      "post": {
+        "operationId": "assessment_question_revision_create_from_selected_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "version_number",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/versions/": {
+      "get": {
+        "operationId": "assessment_question_bank_versions_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionBankVersion"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "assessment_question_bank_versions_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionBankVersion" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/versions/{version_number}/": {
+      "get": {
+        "operationId": "assessment_question_bank_version_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "version_number",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionBankVersion" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/results/": {
+      "get": {
+        "operationId": "assessment_results_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AttemptResultPage" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/": {
+      "get": {
+        "operationId": "assessments_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Assessment" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/": {
+      "get": {
+        "operationId": "assessment_revision_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "assessment_revision_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentRevisionUpdate"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentRevisionUpdate"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentRevisionUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/approve/": {
+      "post": {
+        "operationId": "assessment_revision_approve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/objectives/": {
+      "put": {
+        "operationId": "assessment_revision_objectives_replace",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ObjectiveReplace" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ObjectiveReplace" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ObjectiveReplace" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/outline/": {
+      "get": {
+        "operationId": "assessment_revision_outline",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentOutline" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/readiness/": {
+      "get": {
+        "operationId": "assessment_revision_readiness",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentReadiness" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/request-changes/": {
+      "post": {
+        "operationId": "assessment_revision_request_changes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/sections/": {
+      "get": {
+        "operationId": "assessment_sections_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Section" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "assessment_sections_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SectionCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/SectionCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/SectionCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Section" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/sections/order/": {
+      "put": {
+        "operationId": "assessment_sections_reorder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/OrderedIds" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/OrderedIds" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/OrderedIds" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/sections/{section_id}/": {
+      "get": {
+        "operationId": "assessment_section_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "section_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Section" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "assessment_section_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "section_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SectionUpdate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/SectionUpdate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/SectionUpdate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Section" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/sections/{section_id}/items/": {
+      "post": {
+        "operationId": "assessment_items_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "section_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ItemCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ItemCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ItemCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Item" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/sections/{section_id}/items/order/": {
+      "put": {
+        "operationId": "assessment_items_reorder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "section_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/OrderedIds" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/OrderedIds" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/OrderedIds" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/sections/{section_id}/items/{item_id}/": {
+      "get": {
+        "operationId": "assessment_item_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "section_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Item" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "assessment_item_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "section_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ItemUpdate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ItemUpdate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ItemUpdate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Item" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/submit-review/": {
+      "post": {
+        "operationId": "assessment_revision_submit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/submit/": {
+      "post": {
+        "operationId": "assessment_revision_submit_alias",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentTransitionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/versions/": {
+      "get": {
+        "operationId": "assessment_versions_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/AssessmentVersion" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "assessment_revision_create_from_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VersionSource" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/VersionSource" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/VersionSource" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/versions/{version_number}/": {
+      "get": {
+        "operationId": "assessment_version_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "version_number",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentVersion" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/versions/{version_number}/create-draft/": {
+      "post": {
+        "operationId": "assessment_revision_create_from_selected_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "version_number",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentRevision" }
               }
             },
             "description": ""

@@ -52,6 +52,74 @@ class OrganizationPolicyTests(TestCase):
                 )
             membership.refresh_from_db()
 
+    def test_learner_access_is_limited_to_its_academic_experience(self) -> None:
+        self.assertEqual(
+            ROLE_CAPABILITIES[RoleCode.LEARNER],
+            {
+                Capability.ORGANIZATION_VIEW,
+                Capability.ASSESSMENT_ATTEMPT,
+            },
+        )
+
+    def test_assessment_capability_matrix_matches_each_institutional_role(
+        self,
+    ) -> None:
+        expected = {
+            RoleCode.AUTHOR: {
+                Capability.ASSESSMENT_BANK_VIEW,
+                Capability.ASSESSMENT_BANK_MANAGE,
+                Capability.ASSESSMENT_BANK_VERSION,
+                Capability.ASSESSMENT_QUESTION_VIEW,
+                Capability.ASSESSMENT_QUESTION_MANAGE,
+                Capability.ASSESSMENT_QUESTION_SUBMIT,
+                Capability.ASSESSMENT_AUTHORING_VIEW,
+                Capability.ASSESSMENT_AUTHORING_MANAGE,
+                Capability.ASSESSMENT_AUTHORING_SUBMIT,
+                Capability.ASSESSMENT_DELIVERY_VIEW,
+                Capability.ASSESSMENT_RESULTS_VIEW,
+            },
+            RoleCode.REVIEWER: {
+                Capability.ASSESSMENT_BANK_VIEW,
+                Capability.ASSESSMENT_QUESTION_VIEW,
+                Capability.ASSESSMENT_QUESTION_REVIEW,
+                Capability.ASSESSMENT_AUTHORING_VIEW,
+                Capability.ASSESSMENT_AUTHORING_REVIEW,
+                Capability.ASSESSMENT_DELIVERY_VIEW,
+                Capability.ASSESSMENT_RESULTS_VIEW,
+            },
+            RoleCode.INSTRUCTOR: {
+                Capability.ASSESSMENT_BANK_VIEW,
+                Capability.ASSESSMENT_QUESTION_VIEW,
+                Capability.ASSESSMENT_AUTHORING_VIEW,
+                Capability.ASSESSMENT_DELIVERY_VIEW,
+                Capability.ASSESSMENT_DELIVERY_MANAGE,
+                Capability.ASSESSMENT_GRADING_MANAGE,
+                Capability.ASSESSMENT_RESULTS_VIEW,
+            },
+            RoleCode.LEARNER: {Capability.ASSESSMENT_ATTEMPT},
+        }
+        for role, role_expected in expected.items():
+            actual = {
+                capability
+                for capability in ROLE_CAPABILITIES[role]
+                if capability.value.startswith("assessment.")
+            }
+            self.assertEqual(actual, role_expected, role.value)
+        for role in (RoleCode.OWNER, RoleCode.ADMINISTRATOR):
+            self.assertEqual(
+                {
+                    capability
+                    for capability in ROLE_CAPABILITIES[role]
+                    if capability.value.startswith("assessment.")
+                },
+                {
+                    capability
+                    for capability in Capability
+                    if capability.value.startswith("assessment.")
+                    and capability != Capability.ASSESSMENT_ATTEMPT
+                },
+            )
+
     def test_status_and_organization_scope_remove_capabilities(self) -> None:
         owner = self.verified_user("owner@example.test")
         instructor = self.verified_user("instructor@example.test")

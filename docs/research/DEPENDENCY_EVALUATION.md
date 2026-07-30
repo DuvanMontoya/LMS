@@ -125,3 +125,20 @@ store, analytics SDK, cache persistente, browser storage y librería de scroll:
 añadirían autoridad o superficie sin resolver un requisito no cubierto. Owner:
 equipo de plataforma; alternativa de retiro: eliminar sólo el módulo learning
 antes de producción, no una vez que exista historial contractual.
+
+## Prompt 13
+
+No se instaló ni actualizó dependencia. Django/DRF/django-filter cubren
+transacciones, API y filtros; PostgreSQL cubre locks, constraints diferibles y
+triggers; `jsonschema` 4.26.0, Ajv 8.20.0 y
+`json-schema-to-typescript` 15.0.4 ya cubren Draft 2020-12 y generación; Next,
+React, TanStack Query, React Hook Form, Zod, Playwright y axe cubren las cuatro
+superficies. Se mantienen sus licencias ya registradas y el equipo de plataforma
+como owner.
+
+Se rechazaron LMS/motor de exámenes externo, paquete QTI/XML, SymPy, Celery,
+state machine, partial-credit engine, drag-and-drop, browser storage y JWT. No
+resuelven una carencia del corte inicial y aumentarían autoridad, superficie de
+ataque o irreproducibilidad. La alternativa de retirada es eliminar el módulo
+antes de producción; una vez exista historial, las migraciones append-only
+exigen plan explícito.

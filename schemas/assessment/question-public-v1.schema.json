@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lms:assessment:question-public:1",
+  "title": "Question public payload v1",
+  "type": "object",
+  "required": ["schema_version", "type", "prompt"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "type": {
+      "enum": [
+        "single_choice",
+        "multiple_choice",
+        "true_false",
+        "numeric",
+        "short_text",
+        "long_text",
+        "ordering",
+        "matching"
+      ]
+    },
+    "prompt": { "$ref": "urn:lms:content:unit-document:1" },
+    "options": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/option" }
+    },
+    "left": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/option" }
+    },
+    "right": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/option" }
+    },
+    "true_label": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "false_label": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "response_placeholder": { "type": "string", "maxLength": 240 },
+    "unit": { "type": "string", "maxLength": 80 }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": { "enum": ["single_choice", "multiple_choice", "ordering"] }
+        },
+        "required": ["type"]
+      },
+      "then": { "required": ["options"] },
+      "else": { "not": { "required": ["options"] } }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "matching" } },
+        "required": ["type"]
+      },
+      "then": { "required": ["left", "right"] },
+      "else": {
+        "allOf": [
+          { "not": { "required": ["left"] } },
+          { "not": { "required": ["right"] } }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "true_false" } },
+        "required": ["type"]
+      },
+      "then": {},
+      "else": {
+        "allOf": [
+          { "not": { "required": ["true_label"] } },
+          { "not": { "required": ["false_label"] } }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "numeric" } },
+        "required": ["type"]
+      },
+      "then": {},
+      "else": { "not": { "required": ["unit"] } }
+    }
+  ],
+  "$defs": {
+    "option": {
+      "type": "object",
+      "required": ["id", "label"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "label": { "type": "string", "minLength": 1, "maxLength": 2000 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

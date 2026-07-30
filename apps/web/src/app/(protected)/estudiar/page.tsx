@@ -1,5 +1,6 @@
 import { ArrowRight, BookOpenCheck, Building2, LibraryBig } from 'lucide-react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 import { PageHeader } from '@/components/platform/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,14 @@ export default async function StudyPage() {
     getAccessContext(),
   ]);
   if (!session) return null;
+  const onlyOrganization = context.organizations[0];
+  if (
+    context.organizations.length === 1 &&
+    onlyOrganization?.roles.length === 1 &&
+    onlyOrganization.roles[0] === 'learner'
+  ) {
+    redirect(`/organizaciones/${onlyOrganization.slug}/aprendizaje`);
+  }
 
   return (
     <main className="academic-page">
@@ -37,7 +46,7 @@ export default async function StudyPage() {
               </h2>
             </div>
           </div>
-          <div className="mt-3 overflow-hidden rounded-md border bg-card shadow-[0_1px_2px_rgb(0_0_0_/_0.025)]">
+          <div className="mt-3 overflow-hidden rounded-xl border bg-card shadow-[0_10px_32px_rgb(41_56_82_/_0.055)]">
             <div className="hidden grid-cols-[minmax(16rem,1fr)_minmax(12rem,0.7fr)_minmax(15rem,1fr)_3rem] gap-4 border-b bg-muted/30 px-5 py-2.5 text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase lg:grid">
               <span>Institución</span>
               <span>Responsabilidad</span>
@@ -46,6 +55,12 @@ export default async function StudyPage() {
             </div>
             <ul className="divide-y">
               {context.organizations.map((organization) => {
+                const learnerOnly =
+                  organization.roles.length === 1 &&
+                  organization.roles[0] === 'learner';
+                const workspaceHref = learnerOnly
+                  ? `/organizaciones/${organization.slug}/aprendizaje`
+                  : `/organizaciones/${organization.slug}`;
                 const canViewCatalog =
                   organization.capabilities.includes('catalog.view');
                 const canViewCourses =
@@ -63,7 +78,7 @@ export default async function StudyPage() {
                       <div className="min-w-0">
                         <Link
                           className="truncate text-sm font-semibold underline-offset-4 hover:text-primary hover:underline"
-                          href={`/organizaciones/${organization.slug}`}
+                          href={workspaceHref}
                         >
                           {organization.name}
                         </Link>
@@ -100,7 +115,7 @@ export default async function StudyPage() {
                       size="icon-sm"
                       variant="ghost"
                     >
-                      <Link href={`/organizaciones/${organization.slug}`}>
+                      <Link href={workspaceHref}>
                         <ArrowRight />
                       </Link>
                     </Button>

@@ -524,3 +524,50 @@ son sólo lectura según capacidades y learner sólo ve sus matrículas.
 El criterio de completitud actual es provisional para cursos sin evaluaciones:
 todas las unidades del release deben estar completas. No se implementan
 evaluaciones, certificados, enrollment approval ni publicación automática.
+
+## Banco de preguntas y evaluaciones
+
+`domain.assessments` posee bancos, ocho tipos de pregunta, revisiones y
+versiones inmutables, composición de evaluaciones, deliveries fijadas a
+releases, assignments, intentos, respuestas, scoring determinista y decisiones
+manuales append-only. El learner recibe sólo snapshots públicos; claves,
+tolerancias, rúbricas y seed permanecen en servidor.
+
+Rutas locales principales:
+
+- `/organizaciones/organizacion-demo/evaluaciones`
+- `/organizaciones/organizacion-demo/evaluaciones/bancos`
+- `/organizaciones/organizacion-demo/evaluaciones/entregas`
+- `/organizaciones/organizacion-demo/evaluaciones/asignadas`
+- `/organizaciones/organizacion-demo/evaluaciones/resultados`
+- `/organizaciones/organizacion-demo/evaluaciones/calificacion-manual`
+
+Después de los demos anteriores:
+
+```powershell
+pnpm assessments:demo
+pnpm assessments:check
+pnpm assessments:migrations
+pnpm assessments:test
+pnpm assessments:test:concurrency
+pnpm assessments:test:security
+pnpm assessments:types:check
+pnpm assessments:client:check
+pnpm assessments:e2e
+pnpm assessments:visual
+```
+
+El demo es idempotente y sólo funciona con `DEBUG=True`: conserva el banco
+`fundamentos-calculo`, ocho preguntas, el diagnóstico, la entrega y el
+assignment existentes. Numeric usa `Decimal`, no float; todos los graders son
+all-or-none y long text espera decisión manual. No hay autosave, JWT,
+`localStorage`, symbolic grading, ejecución de código ni import/export QTI.
+QTI 3 permanece como mapa futuro sin declaración de conformidad.
+
+La interfaz y la API aplican una matriz institucional estricta: author crea y
+envía pero no aprueba ni califica; reviewer revisa sin modificar; instructor
+entrega y califica sin editar bancos/evaluaciones; learner sólo ve “Mi
+aprendizaje”, “Mis evaluaciones” y sus propios intentos/resultados permitidos.
+Los editores de claves son visuales y no requieren códigos internos. El E2E
+crea banco, pregunta y evaluación en Chromium, valida axe y 390 px, y limpia
+todos sus datos aislados.

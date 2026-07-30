@@ -242,5 +242,13 @@ SPECTACULAR_SETTINGS = {
         "LearningUnitProgressStatus": "domain.learning.choices.UnitProgressStatus",
         "LearningEventType": "domain.learning.choices.LearningEventType",
         "LearningAccessState": "domain.learning.choices.AccessState",
+        "AssessmentAuthoringStatus": "domain.assessments.choices.AuthoringStatus",
+        "AssessmentQuestionType": "domain.assessments.choices.QuestionType",
+        "AssessmentFeedbackMode": "domain.assessments.choices.FeedbackMode",
+        "AssessmentDeliveryStatus": "domain.assessments.choices.DeliveryStatus",
+        "AssessmentAssignmentStatus": "domain.assessments.choices.AssignmentStatus",
+        "AssessmentAttemptStatus": "domain.assessments.choices.AttemptStatus",
+        "AssessmentResponseStatus": "domain.assessments.choices.ResponseStatus",
+        "AssessmentAttemptEventType": "domain.assessments.choices.AttemptEventType",
     },
 }

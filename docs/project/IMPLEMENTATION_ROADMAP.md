@@ -45,3 +45,14 @@ del estudiante, migraciones/triggers, demo y E2E. ADR 0022 y
 `docs/architecture/LEARNING.md` fijan la frontera. Evaluaciones, certificados,
 enrollment approval, publication y delivery asíncrono permanecen para fases
 posteriores.
+
+## Phase 13 completada — assessments inicial
+
+El 2026-07-30 se cerró el banco de preguntas, ocho tipos, workflows y versiones
+inmutables, composición, deliveries fijadas a assignments de learning,
+intentos/respuestas, scoring Decimal all-or-none, grading manual append-only,
+API, frontend, demo, migraciones/triggers y E2E. ADR 0023 reemplaza para este
+corte la separación futura de las filas 16–19: sigue siendo un monolito modular
+en `domain.assessments`; una extracción exige ADR y migración. Partial credit,
+expresiones matemáticas, pools, regrading, gradebook, indicadores e import/export
+QTI permanecen posteriores.

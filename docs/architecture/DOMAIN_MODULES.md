@@ -11,9 +11,9 @@
 | `authoring` | Draft, review, publication, immutable snapshots/history | Published revision immutable; restoration creates a new revision. Emits `published`, `publication_retracted`. | Courses/content/assessments; cannot alter attempts. |
 | `enrollments` | Enrolment, access window, status; future cohorts | Active access is evaluated at delivery time; historical enrolment facts retained. | Identity/courses/publication; no grading policy. |
 | `learning` | Study session, bookmark, continuation | Learner state tied to delivered version. Emits `learning_event`. | Enrolments/publications; no score ownership. |
-| `assessments` | Question bank, question/evaluation revisions, rubrics, hints | Evaluation and question publications reference immutable revisions. | Content/authoring/courses; cannot own attempt lifecycle. |
-| `attempts` | Attempt, delivered item, answer, timer/integrity state | One attempt transition at a time; submitted answer cannot be overwritten. Emits `attempt_submitted`. | Enrolments/published assessments; no grade calculation implementation. |
-| `grading` | Score, manual review, controlled regrade, gradebook projection | Grade records cite response and grading policy/version; regrade is append/controlled. | Attempts/assessments; cannot mutate answer. |
+| `assessments` | Implemented: banks, question/assessment revisions and immutable versions, deliveries, assignments, attempts, responses, deterministic initial scoring and manual decisions. Future: pools, regrading, gradebook and analytics. | Public/grading snapshots are separate; one open revision and one in-progress attempt; final order is materialized; versions/items/decisions/events are trigger-protected. | Reads organization policy, catalog objectives, publishing releases and learning assignments. Reverse imports are prohibited. ADR 0023 intentionally groups the initial attempt/grading lifecycle here. |
+| `attempts` | Future extraction candidate, not a Django app in Phase 13. | Any extraction must preserve IDs, snapshots, events and transactions. | Must not be created without a new ADR and migration plan. |
+| `grading` | Future advanced grading/gradebook boundary, not a Django app in Phase 13. | Regrading and projections must cite immutable inputs and preserve decisions. | Initial deterministic/manual grading remains in assessments under ADR 0023. |
 | `progress` | Completion, mastery, progression projection | Derived records identify rules/version/input cutoff; historical results are not silently recomputed. | Learning/grading; no source-of-truth attempt data. |
 | `media` | Blob metadata, derivative status, access policy | Metadata persists in DB; object key non-guessable; size/type verified. | Storage adapter only; no course ownership. |
 | `search` | Permission-aware index/query projections | Never return unauthorized content; index rebuild is idempotent. | Reads published projections; no source mutations. |
@@ -74,3 +74,11 @@ importarlo. Un retiro cambia el canal y agrega evento, no el release. Véanse
 importar organizations, courses y publishing para validar referencias y leer
 snapshots; no importa content ni autoría viva. Publishing, courses y content no
 importan learning. Véanse `LEARNING.md` y ADR 0022.
+
+# Assessments boundary
+
+`assessments` posee el corte completo de Phase 13: banco, autoría, versiones,
+entrega, intento, respuesta y grading inicial. Puede validar referencias de
+organizations/catalog/publishing/learning, pero esos módulos no lo importan.
+El navegador recibe sólo snapshots públicos. Véanse `ASSESSMENTS.md` y ADR
+0023.

@@ -87,3 +87,16 @@ releases, ventanas, retiro, IDOR, mass assignment, lote atómico y drift.
 Vitest valida progress/IDs semánticos. Playwright crea una base aislada, forma
 cohorte/matrícula, completa 2/2, suspende/reactiva, ejecuta axe y 390 px y
 confirma cleanup.
+
+# Assessments Prompt 13
+
+Jsonschema y Ajv compilan los cuatro contratos Draft 2020-12 y el drift de tipos
+generados bloquea CI. Pytest cubre ocho tipos, Decimal, normalización, no partial
+credit, workflows, digests, expected version, timers, release pinning, IDOR,
+leakage, mass assignment y triggers. `TransactionTestCase` ejecuta dos starts
+simultáneos y exige un solo intento.
+
+Playwright usa base PostgreSQL UUID, prefijo Redis y correo efímeros, migra desde
+cero, crea el fixture assessments, recorre autoría/entrega, ocho controles,
+guardado explícito, 409, submit, grading manual, feedback, max attempts, IDOR,
+HTML sin claves, axe y 390 px. El `finally` elimina sólo esos recursos.

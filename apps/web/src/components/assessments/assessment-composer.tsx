@@ -1,0 +1,936 @@
+'use client';
+
+import {
+  CircleAlert,
+  FileCheck2,
+  ListChecks,
+  Save,
+  Settings2,
+  ShieldCheck,
+  Target,
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { MutationError } from '@/components/assessments/authoring-forms';
+import {
+  addAssessmentItem,
+  addAssessmentSection,
+  replaceAssessmentObjectives,
+  reorderAssessmentItems,
+  reorderAssessmentSections,
+  transitionAssessmentRevision,
+  updateAssessmentItem,
+  updateAssessmentRevision,
+  useAssessmentMutation,
+} from '@/lib/assessments/hooks';
+import type {
+  AssessmentOutline,
+  AssessmentReadiness,
+  LearningObjective,
+  QuestionVersion,
+} from '@/lib/assessments/server';
+
+type OutlineItem = {
+  id: string;
+  objective_ids: string[];
+  points: string;
+  position: number;
+  question_code: string;
+  question_type: string;
+  question_version_id: string;
+  required: boolean;
+};
+type OutlineSection = {
+  id: string;
+  instructions: string;
+  items: OutlineItem[];
+  position: number;
+  title: string;
+};
+type QuestionOption = Pick<
+  QuestionVersion,
+  'id' | 'number' | 'public' | 'type'
+> & {
+  bankName: string;
+  code: string;
+};
+
+export function AssessmentComposer({
+  assessmentSlug,
+  canApprove,
+  canManage,
+  canReview,
+  canSubmit,
+  objectives,
+  outline,
+  questions,
+  readiness,
+  slug,
+}: Readonly<{
+  assessmentSlug: string;
+  canApprove: boolean;
+  canManage: boolean;
+  canReview: boolean;
+  canSubmit: boolean;
+  objectives: LearningObjective[];
+  outline: AssessmentOutline;
+  questions: QuestionOption[];
+  readiness: AssessmentReadiness;
+  slug: string;
+}>) {
+  const router = useRouter();
+  const revision = outline.revision;
+  const path = {
+    assessmentSlug,
+    revisionId: revision.id,
+    slug,
+  };
+  const editable =
+    canManage &&
+    (revision.status === 'draft' || revision.status === 'changes_requested');
+  const [title, setTitle] = useState(revision.title);
+  const [description, setDescription] = useState(revision.description);
+  const [instructions, setInstructions] = useState(revision.instructions);
+  const [timeLimit, setTimeLimit] = useState(
+    revision.time_limit_minutes?.toString() ?? '',
+  );
+  const [attemptLimit, setAttemptLimit] = useState(
+    revision.attempt_limit?.toString() ?? '',
+  );
+  const [passBasisPoints, setPassBasisPoints] = useState(
+    revision.pass_basis_points.toString(),
+  );
+  const [shuffleSections, setShuffleSections] = useState(
+    revision.shuffle_sections,
+  );
+  const [shuffleItems, setShuffleItems] = useState(revision.shuffle_items);
+  const [feedbackMode, setFeedbackMode] = useState(revision.feedback_mode);
+  const [selectedObjectives, setSelectedObjectives] = useState<string[]>(
+    outline.objective_ids,
+  );
+  const [sectionTitle, setSectionTitle] = useState('');
+  const [note, setNote] = useState('');
+  const metadata = useAssessmentMutation(() =>
+    updateAssessmentRevision(path, {
+      description,
+      expected_version: revision.lock_version,
+      feedback_mode: feedbackMode,
+      instructions,
+      attempt_limit: attemptLimit ? Number(attemptLimit) : null,
+      pass_basis_points: Number(passBasisPoints),
+      shuffle_items: shuffleItems,
+      shuffle_sections: shuffleSections,
+      time_limit_minutes: timeLimit ? Number(timeLimit) : null,
+      title,
+    }),
+  );
+  const objectiveMutation = useAssessmentMutation(() =>
+    replaceAssessmentObjectives(path, {
+      expected_version: revision.lock_version,
+      objective_ids: selectedObjectives,
+    }),
+  );
+  const sectionMutation = useAssessmentMutation(() =>
+    addAssessmentSection(path, {
+      expected_version: revision.lock_version,
+      instructions: '',
+      title: sectionTitle,
+    }),
+  );
+  const sectionOrderMutation = useAssessmentMutation((ids: string[]) =>
+    reorderAssessmentSections(path, {
+      expected_version: revision.lock_version,
+      ids,
+    }),
+  );
+  const transition = useAssessmentMutation(
+    (action: 'approve' | 'request-changes' | 'submit-review') =>
+      transitionAssessmentRevision(path, action, {
+        expected_version: revision.lock_version,
+        note,
+      }),
+  );
+  async function refresh(operation: Promise<unknown>) {
+    try {
+      await operation;
+      router.refresh();
+    } catch {
+      // Cada mutación mantiene su error para presentarlo sin activar el overlay.
+    }
+  }
+  const sections = outline.sections as OutlineSection[];
+  const itemCount = sections.reduce(
+    (count, section) => count + section.items.length,
+    0,
+  );
+  const maximumScore = sections
+    .flatMap((section) => section.items)
+    .reduce((total, item) => total + Number(item.points), 0);
+  return (
+    <>
+      <section className="assessment-composer-summary">
+        <div>
+          <p className="assessment-rail-kicker">Revisión activa</p>
+          <h2>Arquitectura del instrumento</h2>
+          <p>
+            Cada cambio permanece en la revisión {revision.number} hasta que el
+            workflow produzca un snapshot aprobado.
+          </p>
+        </div>
+        <dl>
+          <div>
+            <dt>Secciones</dt>
+            <dd>{sections.length}</dd>
+          </div>
+          <div>
+            <dt>Preguntas</dt>
+            <dd>{itemCount}</dd>
+          </div>
+          <div>
+            <dt>Puntaje</dt>
+            <dd>{maximumScore.toFixed(3)}</dd>
+          </div>
+          <div>
+            <dt>Estado</dt>
+            <dd>{revisionStatusLabel(revision.status)}</dd>
+          </div>
+        </dl>
+      </section>
+      <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="space-y-5">
+          <section className="assessment-composer-card">
+            <div className="assessment-composer-card__header">
+              <div>
+                <span className="assessment-icon-box">
+                  <Settings2 />
+                </span>
+                <div>
+                  <h2>Configuración y políticas</h2>
+                  <p>Identidad, límites y comportamiento del intento.</p>
+                </div>
+              </div>
+              <Badge
+                className="assessment-status"
+                data-status={revision.status}
+                variant="outline"
+              >
+                {revisionStatusLabel(revision.status)}
+              </Badge>
+            </div>
+            <div className="assessment-composer-card__body">
+              <Label htmlFor="assessment-editor-title">Título</Label>
+              <Input
+                disabled={!editable}
+                id="assessment-editor-title"
+                onChange={(event) => setTitle(event.target.value)}
+                value={title}
+              />
+              <Label htmlFor="assessment-editor-description">Descripción</Label>
+              <Textarea
+                disabled={!editable}
+                id="assessment-editor-description"
+                onChange={(event) => setDescription(event.target.value)}
+                value={description}
+              />
+              <Label htmlFor="assessment-editor-instructions">
+                Instrucciones
+              </Label>
+              <Textarea
+                disabled={!editable}
+                id="assessment-editor-instructions"
+                onChange={(event) => setInstructions(event.target.value)}
+                value={instructions}
+              />
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <Label htmlFor="assessment-editor-time">
+                    Tiempo límite (min)
+                  </Label>
+                  <Input
+                    disabled={!editable}
+                    id="assessment-editor-time"
+                    min="1"
+                    onChange={(event) => setTimeLimit(event.target.value)}
+                    type="number"
+                    value={timeLimit}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="assessment-editor-attempts">
+                    Intentos permitidos
+                  </Label>
+                  <Input
+                    disabled={!editable}
+                    id="assessment-editor-attempts"
+                    min="1"
+                    onChange={(event) => setAttemptLimit(event.target.value)}
+                    type="number"
+                    value={attemptLimit}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="assessment-editor-pass">
+                    Umbral (puntos base)
+                  </Label>
+                  <Input
+                    disabled={!editable}
+                    id="assessment-editor-pass"
+                    max="10000"
+                    min="0"
+                    onChange={(event) => setPassBasisPoints(event.target.value)}
+                    type="number"
+                    value={passBasisPoints}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    checked={shuffleSections}
+                    disabled={!editable}
+                    onChange={(event) =>
+                      setShuffleSections(event.target.checked)
+                    }
+                    type="checkbox"
+                  />
+                  Barajar secciones
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    checked={shuffleItems}
+                    disabled={!editable}
+                    onChange={(event) => setShuffleItems(event.target.checked)}
+                    type="checkbox"
+                  />
+                  Barajar preguntas
+                </label>
+              </div>
+              <Label htmlFor="assessment-editor-feedback">
+                Política de feedback
+              </Label>
+              <select
+                className="academic-control"
+                disabled={!editable}
+                id="assessment-editor-feedback"
+                onChange={(event) =>
+                  setFeedbackMode(
+                    event.target.value as typeof revision.feedback_mode,
+                  )
+                }
+                value={feedbackMode}
+              >
+                <option value="none">Sin feedback</option>
+                <option value="score_only">
+                  Sólo puntaje después de calificar
+                </option>
+                <option value="full_after_grading">
+                  Feedback completo después de calificar
+                </option>
+              </select>
+              {editable ? (
+                <Button
+                  disabled={metadata.isPending}
+                  onClick={() => refresh(metadata.mutateAsync(undefined))}
+                  type="button"
+                >
+                  <Save data-icon="inline-start" /> Guardar configuración
+                </Button>
+              ) : null}
+              <MutationError error={metadata.error} />
+            </div>
+          </section>
+
+          <section className="assessment-composer-card">
+            <div className="assessment-composer-card__header">
+              <div>
+                <span className="assessment-icon-box">
+                  <Target />
+                </span>
+                <div>
+                  <h2>Objetivos de aprendizaje</h2>
+                  <p>
+                    Define la evidencia curricular que debe cubrir el
+                    instrumento.
+                  </p>
+                </div>
+              </div>
+              <span className="assessment-composer-card__count">
+                {selectedObjectives.length} seleccionados
+              </span>
+            </div>
+            <div className="assessment-composer-card__body">
+              <fieldset className="assessment-objective-grid">
+                <legend className="sr-only">Objetivos vinculados</legend>
+                {objectives.map((objective) => (
+                  <label
+                    data-selected={selectedObjectives.includes(objective.id)}
+                    key={objective.id}
+                  >
+                    <input
+                      checked={selectedObjectives.includes(objective.id)}
+                      disabled={!editable}
+                      onChange={(event) =>
+                        setSelectedObjectives((current) =>
+                          event.target.checked
+                            ? [...current, objective.id]
+                            : current.filter((id) => id !== objective.id),
+                        )
+                      }
+                      type="checkbox"
+                    />
+                    <span className="min-w-0">
+                      <strong>{objective.code}</strong>
+                      <span>{objective.statement}</span>
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+              {editable ? (
+                <Button
+                  className="mt-4"
+                  disabled={objectiveMutation.isPending}
+                  onClick={() =>
+                    refresh(objectiveMutation.mutateAsync(undefined))
+                  }
+                  type="button"
+                  variant="outline"
+                >
+                  Guardar objetivos
+                </Button>
+              ) : null}
+              <MutationError error={objectiveMutation.error} />
+            </div>
+          </section>
+
+          <section className="assessment-composer-card">
+            <header className="assessment-composer-card__header">
+              <div>
+                <span className="assessment-icon-box">
+                  <ListChecks />
+                </span>
+                <div>
+                  <h2>Mapa de composición</h2>
+                  <p>
+                    {sections.length} secciones · {itemCount} preguntas · orden
+                    explícito
+                  </p>
+                </div>
+              </div>
+            </header>
+            <ol className="assessment-section-list">
+              {sections.map((section, sectionIndex) => (
+                <li key={section.id}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-semibold">
+                      {section.position}. {section.title}
+                    </h3>
+                    {editable ? (
+                      <OrderButtons
+                        disabled={sectionOrderMutation.isPending}
+                        index={sectionIndex}
+                        label="sección"
+                        length={sections.length}
+                        onMove={(direction) =>
+                          refresh(
+                            sectionOrderMutation.mutateAsync(
+                              movedIds(sections, sectionIndex, direction),
+                            ),
+                          )
+                        }
+                      />
+                    ) : null}
+                  </div>
+                  {section.instructions ? (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {section.instructions}
+                    </p>
+                  ) : null}
+                  <ol className="assessment-item-list">
+                    {section.items.map((item, itemIndex) => (
+                      <AssessmentItemRow
+                        editable={editable}
+                        index={itemIndex}
+                        item={item}
+                        items={section.items}
+                        key={item.id}
+                        length={section.items.length}
+                        lockVersion={revision.lock_version}
+                        objectives={objectives}
+                        path={{ ...path, sectionId: section.id }}
+                      />
+                    ))}
+                  </ol>
+                  {editable ? (
+                    <AssessmentItemForm
+                      lockVersion={revision.lock_version}
+                      objectives={objectives}
+                      path={{ ...path, sectionId: section.id }}
+                      questions={questions}
+                    />
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+            {editable ? (
+              <div className="assessment-add-section">
+                <Label className="sr-only" htmlFor="new-section-title">
+                  Título de la nueva sección
+                </Label>
+                <Input
+                  id="new-section-title"
+                  onChange={(event) => setSectionTitle(event.target.value)}
+                  placeholder="Nueva sección"
+                  value={sectionTitle}
+                />
+                <Button
+                  disabled={!sectionTitle.trim() || sectionMutation.isPending}
+                  onClick={async () => {
+                    try {
+                      await sectionMutation.mutateAsync(undefined);
+                      setSectionTitle('');
+                      router.refresh();
+                    } catch {
+                      // React Query conserva el error junto al mapa.
+                    }
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  Añadir sección
+                </Button>
+              </div>
+            ) : null}
+            <div className="px-5 pb-5 sm:px-6">
+              <MutationError
+                error={sectionMutation.error ?? sectionOrderMutation.error}
+              />
+            </div>
+          </section>
+        </div>
+
+        <aside className="assessment-governance-rail">
+          <section>
+            <div className="assessment-governance-rail__title">
+              {readiness.ready ? <FileCheck2 /> : <CircleAlert />}
+              <div>
+                <p>Control de preparación</p>
+                <h2>
+                  {readiness.ready
+                    ? 'Lista para revisión'
+                    : 'Requiere atención'}
+                </h2>
+              </div>
+            </div>
+            {readiness.issues.length ? (
+              <ul className="assessment-readiness-list">
+                {readiness.issues.map((issue) => (
+                  <li key={issue}>{readinessIssueLabel(issue)}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">
+                La revisión satisface las invariantes de composición.
+              </p>
+            )}
+          </section>
+          <section className="assessment-governance-rail__workflow">
+            <div className="assessment-governance-rail__title">
+              <ShieldCheck />
+              <div>
+                <p>Gobierno editorial</p>
+                <h2>Flujo de revisión</h2>
+              </div>
+            </div>
+            <Label htmlFor="assessment-review-note">Nota</Label>
+            <Textarea
+              id="assessment-review-note"
+              onChange={(event) => setNote(event.target.value)}
+              value={note}
+            />
+            {canSubmit && editable ? (
+              <Button
+                className="w-full"
+                disabled={!readiness.ready || transition.isPending}
+                onClick={() => refresh(transition.mutateAsync('submit-review'))}
+                type="button"
+              >
+                Enviar a revisión
+              </Button>
+            ) : null}
+            {canReview && revision.status === 'in_review' ? (
+              <Button
+                className="w-full"
+                onClick={() =>
+                  refresh(transition.mutateAsync('request-changes'))
+                }
+                type="button"
+                variant="outline"
+              >
+                Solicitar cambios
+              </Button>
+            ) : null}
+            {canApprove && revision.status === 'in_review' ? (
+              <Button
+                className="w-full"
+                disabled={!readiness.ready}
+                onClick={() => refresh(transition.mutateAsync('approve'))}
+                type="button"
+              >
+                Aprobar y crear versión
+              </Button>
+            ) : null}
+            <MutationError error={transition.error} />
+          </section>
+        </aside>
+      </div>
+    </>
+  );
+}
+
+function revisionStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    approved: 'Aprobada',
+    changes_requested: 'Cambios solicitados',
+    draft: 'Borrador',
+    in_review: 'En revisión',
+  };
+  return labels[status] ?? status;
+}
+
+function readinessIssueLabel(issue: string) {
+  const [code] = issue.split(':');
+  const labels: Record<string, string> = {
+    assessment_objectives_required:
+      'Vincula al menos un objetivo de aprendizaje.',
+    item_objectives_outside_assessment:
+      'Un ítem usa objetivos que no pertenecen a la evaluación.',
+    item_objectives_required: 'Cada ítem debe evidenciar al menos un objetivo.',
+    question_version_repeated:
+      'Una versión de pregunta está repetida en la composición.',
+    section_empty: 'Cada sección debe incluir al menos una pregunta.',
+    section_required: 'Añade al menos una sección al instrumento.',
+    title_required: 'Completa el título de la evaluación.',
+  };
+  return labels[code ?? ''] ?? 'Revisa la composición antes de continuar.';
+}
+
+function AssessmentItemForm({
+  lockVersion,
+  objectives,
+  path,
+  questions,
+}: Readonly<{
+  lockVersion: number;
+  objectives: LearningObjective[];
+  path: {
+    assessmentSlug: string;
+    revisionId: string;
+    sectionId: string;
+    slug: string;
+  };
+  questions: QuestionOption[];
+}>) {
+  const router = useRouter();
+  const [questionVersionId, setQuestionVersionId] = useState('');
+  const [points, setPoints] = useState('1.000');
+  const [objectiveIds, setObjectiveIds] = useState<string[]>([]);
+  const mutation = useAssessmentMutation(() =>
+    addAssessmentItem(path, {
+      expected_version: lockVersion,
+      objective_ids: objectiveIds,
+      points,
+      question_version_id: questionVersionId,
+      required: true,
+    }),
+  );
+  return (
+    <div className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-[minmax(0,1fr)_7rem_auto]">
+      <Label className="sr-only" htmlFor={`question-${path.sectionId}`}>
+        Pregunta aprobada
+      </Label>
+      <select
+        className="h-9 min-w-0 border bg-background px-3 text-sm"
+        id={`question-${path.sectionId}`}
+        onChange={(event) => setQuestionVersionId(event.target.value)}
+        value={questionVersionId}
+      >
+        <option value="">Selecciona una pregunta aprobada</option>
+        {questions.map((question) => (
+          <option key={question.id} value={question.id}>
+            {question.bankName} · {question.code} · v{question.number}
+          </option>
+        ))}
+      </select>
+      <Label className="sr-only" htmlFor={`points-${path.sectionId}`}>
+        Puntos
+      </Label>
+      <Input
+        id={`points-${path.sectionId}`}
+        min="0.001"
+        onChange={(event) => setPoints(event.target.value)}
+        step="0.001"
+        type="number"
+        value={points}
+      />
+      <fieldset className="sm:col-span-3">
+        <legend className="text-xs font-semibold text-muted-foreground">
+          Objetivos del ítem
+        </legend>
+        <div className="mt-2 flex flex-wrap gap-3">
+          {objectives.map((objective) => (
+            <label
+              className="flex items-center gap-2 text-xs"
+              key={objective.id}
+            >
+              <input
+                checked={objectiveIds.includes(objective.id)}
+                onChange={(event) =>
+                  setObjectiveIds((current) =>
+                    event.target.checked
+                      ? [...current, objective.id]
+                      : current.filter((id) => id !== objective.id),
+                  )
+                }
+                type="checkbox"
+              />
+              {objective.code}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <Button
+        className="sm:col-start-3"
+        disabled={
+          !questionVersionId || !objectiveIds.length || mutation.isPending
+        }
+        onClick={async () => {
+          try {
+            await mutation.mutateAsync(undefined);
+            setQuestionVersionId('');
+            setPoints('1.000');
+            setObjectiveIds([]);
+            router.refresh();
+          } catch {
+            // React Query mantiene el error en el formulario.
+          }
+        }}
+        type="button"
+        variant="outline"
+      >
+        Añadir
+      </Button>
+      <div className="sm:col-span-3">
+        <MutationError error={mutation.error} />
+      </div>
+    </div>
+  );
+}
+
+function AssessmentItemRow({
+  editable,
+  index,
+  item,
+  items,
+  length,
+  lockVersion,
+  objectives,
+  path,
+}: Readonly<{
+  editable: boolean;
+  index: number;
+  item: OutlineItem;
+  items: OutlineItem[];
+  length: number;
+  lockVersion: number;
+  objectives: LearningObjective[];
+  path: {
+    assessmentSlug: string;
+    revisionId: string;
+    sectionId: string;
+    slug: string;
+  };
+}>) {
+  const router = useRouter();
+  const [points, setPoints] = useState(item.points);
+  const [required, setRequired] = useState(item.required);
+  const [objectiveIds, setObjectiveIds] = useState(item.objective_ids);
+  const order = useAssessmentMutation((ids: string[]) =>
+    reorderAssessmentItems(path, {
+      expected_version: lockVersion,
+      ids,
+    }),
+  );
+  const update = useAssessmentMutation(() =>
+    updateAssessmentItem(
+      { ...path, itemId: item.id },
+      {
+        expected_version: lockVersion,
+        objective_ids: objectiveIds,
+        points,
+        required,
+      },
+    ),
+  );
+  return (
+    <li className="py-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-medium">{item.question_code}</span>
+        <Badge variant="outline">{item.question_type}</Badge>
+        <span className="ml-auto">{item.points} puntos</span>
+        {editable ? (
+          <OrderButtons
+            disabled={order.isPending}
+            index={index}
+            label="pregunta"
+            length={length}
+            onMove={async (direction) => {
+              try {
+                await order.mutateAsync(movedIds(items, index, direction));
+                router.refresh();
+              } catch {
+                // React Query mantiene el error en el ítem.
+              }
+            }}
+          />
+        ) : null}
+      </div>
+      {editable ? (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-xs font-medium text-primary">
+            Editar puntos y objetivos
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)_auto]">
+            <Label htmlFor={`item-points-${item.id}`}>Puntos</Label>
+            <Input
+              id={`item-points-${item.id}`}
+              min="0.001"
+              onChange={(event) => setPoints(event.target.value)}
+              step="0.001"
+              type="number"
+              value={points}
+            />
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                checked={required}
+                onChange={(event) => setRequired(event.target.checked)}
+                type="checkbox"
+              />
+              Obligatoria
+            </label>
+            <fieldset className="sm:col-span-3">
+              <legend className="text-xs font-semibold">
+                Objetivos alineados
+              </legend>
+              <div className="mt-2 flex flex-wrap gap-3">
+                {objectives.map((objective) => (
+                  <label
+                    className="flex items-center gap-2 text-xs"
+                    key={objective.id}
+                  >
+                    <input
+                      checked={objectiveIds.includes(objective.id)}
+                      onChange={(event) =>
+                        setObjectiveIds((current) =>
+                          event.target.checked
+                            ? [...current, objective.id]
+                            : current.filter((id) => id !== objective.id),
+                        )
+                      }
+                      type="checkbox"
+                    />
+                    {objective.code}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <Button
+              className="sm:col-start-3"
+              disabled={!objectiveIds.length || update.isPending}
+              onClick={async () => {
+                try {
+                  await update.mutateAsync(undefined);
+                  router.refresh();
+                } catch {
+                  // React Query mantiene el error en el ítem.
+                }
+              }}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Guardar ítem
+            </Button>
+            <div className="sm:col-span-3">
+              <MutationError error={order.error ?? update.error} />
+            </div>
+          </div>
+        </details>
+      ) : null}
+    </li>
+  );
+}
+
+function OrderButtons({
+  disabled,
+  index,
+  label,
+  length,
+  onMove,
+}: Readonly<{
+  disabled: boolean;
+  index: number;
+  label: string;
+  length: number;
+  onMove: (direction: -1 | 1) => void | Promise<void>;
+}>) {
+  return (
+    <span className="flex gap-1">
+      <Button
+        aria-label={`Subir ${label}`}
+        disabled={disabled || index === 0}
+        onClick={() => onMove(-1)}
+        size="sm"
+        type="button"
+        variant="ghost"
+      >
+        Subir
+      </Button>
+      <Button
+        aria-label={`Bajar ${label}`}
+        disabled={disabled || index === length - 1}
+        onClick={() => onMove(1)}
+        size="sm"
+        type="button"
+        variant="ghost"
+      >
+        Bajar
+      </Button>
+    </span>
+  );
+}
+
+function movedIds<T extends { id: string }>(
+  values: T[],
+  index: number,
+  direction: -1 | 1,
+) {
+  const target = index + direction;
+  if (target < 0 || target >= values.length) {
+    return values.map((value) => value.id);
+  }
+  const reordered = [...values];
+  const current = reordered[index];
+  const replacement = reordered[target];
+  if (current === undefined || replacement === undefined) {
+    return values.map((value) => value.id);
+  }
+  reordered[index] = replacement;
+  reordered[target] = current;
+  return reordered.map((value) => value.id);
+}

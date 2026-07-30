@@ -2,12 +2,71 @@
 
 ## Phase
 
-**Phase 12 — Matrículas y entrega del aprendizaje** está completada localmente
-el 2026-07-30. `domain.learning` contiene cohortes, matrículas institucionales,
-asignaciones históricas de releases, progreso determinista, continuidad de
-lectura y eventos append-only. La entrega lee exclusivamente el snapshot
-inmutable asignado y fue verificada con PostgreSQL 18.4, Redis 8.8.1 y Chromium
-aislado, sin implementar evaluaciones ni certificados.
+**Phase 13 — Banco de preguntas y evaluaciones** está completada localmente el
+2026-07-30. `domain.assessments` contiene autoría y snapshots inmutables,
+delivery fijada a learning, intentos/respuestas, scoring Decimal y grading
+manual append-only. La matriz institucional y las experiencias por rol fueron
+verificadas en PostgreSQL y Chromium real, incluida creación, 390 px y axe.
+Partial credit, symbolic grading, pools, regrading, gradebook, analítica y QTI
+import/export permanecen fuera del alcance.
+
+## Phase 13 — Banco de preguntas y evaluaciones
+
+- **Fecha y prompt:** 2026-07-30; Prompt 13 ejecutado de principio a fin.
+- **Git:** `HEAD` inicial y final previsto
+  `f4ee3250fbbf9903f3ea4f77f33fd910a1ecb014`; `origin/main` permanece en el
+  mismo commit, rama `main` y remoto
+  `https://github.com/DuvanMontoya/LMS.git`. Codex no ejecutó commit, push,
+  reset, rebase, merge, clean ni creó ramas.
+- **Arquitectura:** ADR 0023 asigna a `domain.assessments` bancos, preguntas,
+  evaluaciones, deliveries, assignments, attempts, responses y grading inicial.
+  Learning, publishing, courses y content no importan assessments.
+- **Dependencias:** no se añadió ninguna. Se reutilizaron Django/DRF,
+  PostgreSQL, JSON Schema/Ajv, Zod, TanStack Query, React Hook Form, Playwright
+  y axe en sus versiones bloqueadas; no se instaló LMS, SymPy ni Celery.
+- **Capacidades:** owner/administrator administran; author crea/versiona/envía
+  sin aprobar ni calificar; reviewer revisa sin modificar ni aprobar;
+  instructor entrega/califica sin editar autoría; learner sólo opera sus
+  intentos. `is_staff` no omite políticas.
+- **Persistencia:** UUID institucionales, slugs/códigos estables, lock optimista,
+  constraints diferibles y cinco migraciones. PostgreSQL impide update/delete
+  de versiones, transiciones, attempt items, decisiones y eventos.
+- **Schemas:** cuatro schemas Draft 2020-12 sin refs remotos, tipos TypeScript
+  generados con drift check y snapshots público/grading separados.
+- **Preguntas:** ocho tipos funcionales; Decimal y all-or-none, normalización de
+  texto corto, long text manual, ordering/matching accesibles y sin claves
+  técnicas visibles en el editor.
+- **Evaluaciones:** workflow editorial, secciones/ítems ordenados, objetivos,
+  readiness, puntos exactos y `AssessmentVersion` inmutable sin claves públicas.
+- **Entrega e intentos:** release assignment efectivo, ventanas/retiro,
+  asignación atómica, start idempotente y concurrente, seed secreta, orden
+  materializado, guardados con versión, timer y submit definitivo incluso tras
+  vencimiento.
+- **Calificación y feedback:** ausencias a cero, grading automático, long text
+  pendiente, correcciones manuales append-only, basis points/passed y políticas
+  `none`, `score_only` y `full_after_grading`.
+- **API y seguridad:** endpoints v1, 404 anti-IDOR por organización, allowlists
+  contra mass assignment, sesión HttpOnly/CSRF, sin JWT/browser storage y sin
+  claves, rúbricas, tolerancias o seed en learner/SSR/logs.
+- **UI/UX:** sistema claro en escala de grises, sin fondos oscuros de contenido
+  ni gamificación; PageHeader compacto global, jerarquía y densidad académicas,
+  formularios con errores inline y experiencias específicas por rol. Learner
+  ve únicamente “Mi aprendizaje” y “Mis evaluaciones”.
+- **Navegador:** recorrido manual integrado por owner, author, reviewer,
+  instructor y learner; creación real de banco, pregunta, evaluación, entrega,
+  intento y resultado. A 390 px no hay overflow ni superficies oscuras grandes.
+- **E2E:** `pnpm assessments:e2e` pasa 1/1 en Chromium y cubre creación real,
+  autoría, ocho respuestas, submit, 409 concurrente, grading y corrección,
+  máximo de intentos, timer, leakage, anti-IDOR, axe, 390 px y cleanup.
+- **Validación:** 172/172 pruebas backend y 78,06 % de cobertura; 43/43 Vitest;
+  Ruff, Pyright, ESLint, Prettier, TypeScript, Next build, OpenAPI, tipos,
+  cliente, migraciones desde cero, lockfiles y auditorías pasan.
+- **Trazabilidad:** los 180 criterios están clasificados en
+  `docs/project/PHASE_13_ACCEPTANCE.md`; no hay FAIL ni BLOCKED esencial.
+- **Riesgos y deuda:** no se implementan las capacidades avanzadas del Prompt
+  14; la búsqueda remota paginada/virtualizada para catálogos institucionales
+  muy grandes sigue siendo optimización de escala no bloqueante.
+- **Siguiente paso:** **Prompt 14 — Calificación avanzada y analítica de evaluaciones: partial credit, expresiones matemáticas, pools, regrading, gradebook e indicadores de ítems.**
 
 ## Phase 12 — Matrículas y entrega del aprendizaje
 

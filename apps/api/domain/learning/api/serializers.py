@@ -104,6 +104,14 @@ class EnrollmentReadSerializer(serializers.ModelSerializer):
     access_state = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
     enrollment_version = serializers.IntegerField(source="lock_version")
+    current_release_assignment_id = serializers.UUIDField(
+        read_only=True, allow_null=True
+    )
+    current_release_id = serializers.UUIDField(
+        source="current_release_assignment.release_id",
+        read_only=True,
+        allow_null=True,
+    )
 
     class Meta:
         model = CourseEnrollment
@@ -121,6 +129,8 @@ class EnrollmentReadSerializer(serializers.ModelSerializer):
             "access_starts_at",
             "access_ends_at",
             "enrollment_version",
+            "current_release_assignment_id",
+            "current_release_id",
             "progress",
             "created_at",
         )
