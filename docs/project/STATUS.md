@@ -256,3 +256,39 @@ warnings, drift checks, `pip-audit` y `pnpm audit --prod` quedaron verdes.
   pasado 113 pruebas con 82.69% de cobertura, `check` y verificación de
   migraciones. La sesión real quedó abierta y `pnpm dev:status` confirma Django
   en `127.0.0.1:8000` y Next en `127.0.0.1:3000`.
+
+## Corrección de navegación, membresías y editor semántico — 2026-07-30
+
+- En contextos con una sola organización, `/organizaciones` redirige al resumen
+  institucional y el sidebar presenta la organización como identidad estática,
+  no como una acción que vuelve a abrir la misma pantalla. El resumen enlaza
+  `Inicio` con `/estudiar`; el selector y la ruta de cambio se conservan sólo
+  cuando existen varias organizaciones.
+- El alta de miembros mantiene el contrato vigente: sólo incorpora cuentas
+  registradas, activas y verificadas, sin inventar invitaciones ni un segundo
+  sistema de identidad. La interfaz explica ese requisito, permite copiar la
+  ruta real de registro, busca por correo y muestra el detalle seguro devuelto
+  por la API. Se verificó el flujo completo en el navegador con una identidad
+  temporal verificada y rol learner; la membresía, sus eventos, asignaciones,
+  correo y usuario temporales se eliminaron inmediatamente después.
+- El error de guardado del contenido provenía de la extensión de enlace de
+  Tiptap: serializaba atributos HTML (`target`, `rel` y `class`) que el contrato
+  canónico prohíbe. `CanonicalLink` conserva en JSON únicamente `href` y el
+  `title` opcional; los atributos de seguridad se agregan sólo al renderizar.
+  Los errores de schema ahora se deduplican y se presentan en español. El
+  documento real con enlaces se guardó sin cambio semántico y la API confirmó
+  que no creó una versión duplicada.
+- Currículo, estructura de cursos, miembros y contenido recibieron un
+  micro-pulido coherente con el sistema visual existente: menos texto técnico,
+  jerarquía más compacta, estados y alertas consistentes, módulos y unidades
+  escaneables, alineaciones agrupadas y barra de autoría adaptable. No se
+  cambiaron rutas, arquitectura ni reglas de negocio.
+- La revisión en el navegador integrado cubrió resumen, miembros, currículo,
+  estructura y contenido en escritorio y a 390 px; las cinco rutas tuvieron
+  `scrollWidth == clientWidth`. También se verificaron la redirección de
+  `/organizaciones`, el alta y limpieza real de un miembro, el error controlado
+  para un correo inexistente y el guardado del documento que antes fallaba.
+- Pasaron Prettier, ESLint, TypeScript, las 31 pruebas Vitest, el build de
+  Next.js 16.2.12 y las 24 pruebas de `domain.content`. Docker Desktop tuvo que
+  reactivarse porque PostgreSQL no respondía en el primer intento; PostgreSQL y
+  Redis quedaron saludables y la suite integrada pasó completa al repetirla.

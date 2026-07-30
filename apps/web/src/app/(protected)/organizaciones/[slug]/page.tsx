@@ -21,8 +21,7 @@ export default async function OrganizationDetailPage({
   params,
 }: Readonly<{ params: Promise<{ slug: string }> }>) {
   const { slug } = await params;
-  const { access, context, organization } =
-    await getOrganizationForPage(slug);
+  const { access, context, organization } = await getOrganizationForPage(slug);
   const canViewMembers = hasCapability(access.capabilities, 'membership.view');
   const canUpdate = hasCapability(access.capabilities, 'organization.update');
   const destinations = [

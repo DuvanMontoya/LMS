@@ -37,9 +37,7 @@ describe('ContentWorkspace read-only mode', () => {
         versions={[]}
       />,
     );
-    expect(
-      screen.getByText(/contenido en solo lectura/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/contenido en solo lectura/i)).toBeInTheDocument();
     expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Guardar contenido' }),
