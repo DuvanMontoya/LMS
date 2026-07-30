@@ -275,6 +275,70 @@ export interface paths {
     get: operations['organizations_courses_revisions_units_topics_list'];
     put: operations['organizations_courses_revisions_units_topics_update'];
   };
+  '/api/v1/organizations/{slug}/learning/cohorts/': {
+    get: operations['learning_cohorts_list'];
+    post: operations['learning_cohorts_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/': {
+    get: operations['learning_cohorts_retrieve'];
+    patch: operations['learning_cohorts_update'];
+  };
+  '/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/archive/': {
+    post: operations['organizations_learning_cohorts_archive_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/enrollments/': {
+    get: operations['organizations_learning_cohorts_enrollments_retrieve'];
+    post: operations['organizations_learning_cohorts_enrollments_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/progress/': {
+    get: operations['organizations_learning_cohorts_progress_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/learning/enrollments/': {
+    get: operations['learning_enrollments_list'];
+    post: operations['learning_enrollments_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/': {
+    get: operations['learning_enrollments_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/progress/': {
+    get: operations['organizations_learning_enrollments_progress_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/reactivate/': {
+    post: operations['organizations_learning_enrollments_reactivate_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/revoke/': {
+    post: operations['organizations_learning_enrollments_revoke_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/suspend/': {
+    post: operations['organizations_learning_enrollments_suspend_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/upgrade-release/': {
+    post: operations['organizations_learning_enrollments_upgrade_release_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/me/': {
+    get: operations['organizations_learning_me_list'];
+  };
+  '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/': {
+    get: operations['organizations_learning_me_enrollments_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/outline/': {
+    get: operations['organizations_learning_me_enrollments_outline_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/position/': {
+    put: operations['organizations_learning_me_enrollments_position_update'];
+  };
+  '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/units/{unit_id}/': {
+    get: operations['organizations_learning_me_enrollments_units_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/units/{unit_id}/complete/': {
+    post: operations['organizations_learning_me_enrollments_units_complete_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/units/{unit_id}/open/': {
+    post: operations['organizations_learning_me_enrollments_units_open_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/units/{unit_id}/reopen/': {
+    post: operations['organizations_learning_me_enrollments_units_reopen_create'];
+  };
   '/api/v1/organizations/{slug}/library/courses/': {
     get: operations['organizations_library_courses_list'];
   };
@@ -356,6 +420,77 @@ export interface components {
      */
     CognitiveLevelEnum:
       'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';
+    CohortCreate: {
+      /** Format: date-time */
+      access_ends_at?: string | null;
+      /** Format: date-time */
+      access_starts_at?: string | null;
+      course_slug: string;
+      description?: string;
+      name: string;
+      release_number: number;
+      slug?: string;
+    };
+    CohortEnrollmentBatch: {
+      membership_ids: string[];
+    };
+    CohortProgressSummary: {
+      active: number;
+      /** Format: decimal */
+      average_percent: string;
+      completed: number;
+      in_progress: number;
+      not_started: number;
+      revoked: number;
+      suspended: number;
+      total_enrollments: number;
+    };
+    CohortRead: {
+      /** Format: date-time */
+      access_ends_at?: string | null;
+      /** Format: date-time */
+      access_starts_at?: string | null;
+      course_slug: string;
+      course_title: string;
+      /** Format: date-time */
+      created_at: string;
+      description?: string;
+      enrollment_count: number;
+      /** Format: uuid */
+      id: string;
+      name: string;
+      release_number: number;
+      slug: string;
+      status?: components['schemas']['CohortReadStatusEnum'];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    /**
+     * @description * `active` - Activa
+     * * `archived` - Archivada
+     * @enum {string}
+     */
+    CohortReadStatusEnum: 'active' | 'archived';
+    CohortSummary: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+    };
+    CohortUpdate: {
+      /** Format: date-time */
+      access_ends_at: string | null;
+      /** Format: date-time */
+      access_starts_at: string | null;
+      description: string;
+      name: string;
+    };
+    CompleteUnit: {
+      expected_progress_version: number;
+    };
+    CompletionResult: {
+      already_completed: boolean;
+      progress: components['schemas']['Progress'];
+    };
     Concept: {
       definition: string;
       /** Format: uuid */
@@ -495,6 +630,13 @@ export interface components {
      * @enum {string}
      */
     CourseSubjectAlignmentType: 'primary' | 'supporting';
+    CourseSummary: {
+      /** Format: uuid */
+      id: string;
+      slug: string;
+      summary?: string;
+      title: string;
+    };
     CreateArea: {
       description?: string;
       name: string;
@@ -555,6 +697,50 @@ export interface components {
       revision_id: string;
       revision_number: number;
     };
+    EnrollmentCreate: {
+      /** Format: date-time */
+      access_ends_at?: string | null;
+      /** Format: date-time */
+      access_starts_at?: string | null;
+      /** Format: uuid */
+      cohort_id?: string | null;
+      course_slug: string;
+      /** Format: uuid */
+      membership_id: string;
+      release_number?: number;
+    };
+    EnrollmentLifecycle: {
+      expected_enrollment_version: number;
+    };
+    EnrollmentRead: {
+      /** Format: date-time */
+      access_ends_at?: string | null;
+      /** Format: date-time */
+      access_starts_at?: string | null;
+      access_state: string;
+      /** Format: uuid */
+      cohort_id: string | null;
+      cohort_name: string | null;
+      /** Format: uuid */
+      course_id: string;
+      course_slug: string;
+      course_title: string;
+      /** Format: date-time */
+      created_at: string;
+      enrollment_version: number;
+      /** Format: uuid */
+      id: string;
+      progress: components['schemas']['Progress'];
+      release_number: number;
+      status?: components['schemas']['OrganizationMembershipStatus'];
+      /** Format: email */
+      student_email: string;
+    };
+    Error: {
+      code: string;
+      current_version?: number;
+      detail: string;
+    };
     /**
      * @description * `membership_created` - Membresía creada
      * * `membership_suspended` - Membresía suspendida
@@ -580,6 +766,66 @@ export interface components {
      * @enum {string}
      */
     KindEnum: 'required' | 'recommended';
+    /**
+     * @description * `available` - Disponible
+     * * `not_started` - Acceso no iniciado
+     * * `ended` - Acceso finalizado
+     * * `suspended` - Suspendida
+     * * `revoked` - Revocada
+     * * `publication_withdrawn` - Publicación retirada
+     * * `membership_inactive` - Membresía inactiva
+     * * `release_invalid` - Release inválido
+     * @enum {string}
+     */
+    LearningAccessState:
+      | 'available'
+      | 'not_started'
+      | 'ended'
+      | 'suspended'
+      | 'revoked'
+      | 'publication_withdrawn'
+      | 'membership_inactive'
+      | 'release_invalid';
+    LearningOutline: {
+      cohort: components['schemas']['CohortSummary'] | null;
+      course: components['schemas']['CourseSummary'];
+      modules: components['schemas']['ModuleOutline'][];
+      progress: components['schemas']['Progress'];
+      release_number: number;
+      resume: components['schemas']['Resume'];
+    };
+    /**
+     * @description * `not_started` - No iniciado
+     * * `in_progress` - En progreso
+     * * `completed` - Completado
+     * @enum {string}
+     */
+    LearningProgressStatus: 'not_started' | 'in_progress' | 'completed';
+    LearningUnit: {
+      content: {
+        [key: string]: unknown;
+      };
+      course: {
+        [key: string]: unknown;
+      };
+      learning_objectives: {
+        [key: string]: unknown;
+      }[];
+      module: {
+        [key: string]: unknown;
+      };
+      navigation: {
+        [key: string]: unknown;
+      };
+      progress: components['schemas']['Progress'];
+      release_number: number;
+      topics: {
+        [key: string]: unknown;
+      }[];
+      unit: {
+        [key: string]: unknown;
+      };
+    };
     LibraryCourse: {
       /** Format: uuid */
       course_id: string;
@@ -668,6 +914,14 @@ export interface components {
       /** Format: date-time */
       updated_at: string;
     };
+    ModuleOutline: {
+      description: string;
+      /** Format: uuid */
+      id: string;
+      position: number;
+      title: string;
+      units: components['schemas']['UnitOutline'][];
+    };
     ModuleUpdate: {
       description?: string;
       expected_version: number;
@@ -683,6 +937,17 @@ export interface components {
       lock_version: number;
       /** Format: uuid */
       revision_id: string;
+    };
+    MyLearning: {
+      access_state: components['schemas']['LearningAccessState'];
+      cohort: components['schemas']['CohortSummary'] | null;
+      course: components['schemas']['CourseSummary'];
+      /** Format: uuid */
+      enrollment_id: string;
+      progress: components['schemas']['Progress'];
+      release_number: number;
+      resume: components['schemas']['Resume'];
+      status: components['schemas']['OrganizationMembershipStatus'];
     };
     /** @enum {unknown} */
     NullEnum: '';
@@ -788,6 +1053,31 @@ export interface components {
       /** Format: date-time */
       updated_at: string;
     };
+    PaginatedCohort: {
+      count: number;
+      /** Format: uri */
+      next: string | null;
+      /** Format: uri */
+      previous: string | null;
+      results: components['schemas']['CohortRead'][];
+    };
+    PaginatedCohortProgress: {
+      count: number;
+      /** Format: uri */
+      next: string | null;
+      /** Format: uri */
+      previous: string | null;
+      results: components['schemas']['EnrollmentRead'][];
+      summary: components['schemas']['CohortProgressSummary'];
+    };
+    PaginatedEnrollment: {
+      count: number;
+      /** Format: uri */
+      next: string | null;
+      /** Format: uri */
+      previous: string | null;
+      results: components['schemas']['EnrollmentRead'][];
+    };
     PaginatedMembershipEventList: {
       /** @example 123 */
       count: number;
@@ -818,6 +1108,12 @@ export interface components {
       previous?: string | null;
       results: components['schemas']['Membership'][];
     };
+    Position: {
+      /** Format: uuid */
+      node_id: string;
+      /** Format: uuid */
+      unit_id: string;
+    };
     /**
      * @description * `left` - left
      * * `right` - right
@@ -840,6 +1136,21 @@ export interface components {
       /** Format: uuid */
       id: string;
       name: string;
+    };
+    Progress: {
+      /** Format: date-time */
+      completed_at: string | null;
+      completed_units: number;
+      /** Format: date-time */
+      last_activity_at: string | null;
+      /** Format: decimal */
+      percent: string;
+      percent_basis_points: number;
+      progress_version: number;
+      /** Format: date-time */
+      started_at: string | null;
+      status: components['schemas']['LearningProgressStatus'];
+      total_units: number;
     };
     PublicationState: {
       /** Format: uuid */
@@ -960,6 +1271,10 @@ export interface components {
       release_number: number;
       unit: unknown;
     };
+    ReleaseUpgrade: {
+      expected_enrollment_version: number;
+      target_release_number: number;
+    };
     ReplaceConceptAssociations: {
       concept_ids: string[];
     };
@@ -989,6 +1304,13 @@ export interface components {
     };
     RestoreContent: {
       expected_document_version: number;
+    };
+    Resume: {
+      href: string | null;
+      /** Format: uuid */
+      node_id: string | null;
+      /** Format: uuid */
+      unit_id: string | null;
     };
     Revision: {
       authoring_status: string;
@@ -1137,6 +1459,17 @@ export interface components {
       id: string;
       learning_objective: components['schemas']['ObjectiveSummary'];
       position: number;
+    };
+    UnitOutline: {
+      estimated_duration_minutes: number | null;
+      href: string;
+      /** Format: uuid */
+      id: string;
+      is_current: boolean;
+      position: number;
+      status: string;
+      summary: string;
+      title: string;
     };
     UnitTopic: {
       /** Format: uuid */
@@ -3272,6 +3605,565 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['MutationResult'];
+        };
+      };
+    };
+  };
+  learning_cohorts_list: {
+    parameters: {
+      query?: {
+        course?: string;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+        release_number?: number;
+        search?: string;
+        status?: string;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PaginatedCohort'];
+        };
+      };
+    };
+  };
+  learning_cohorts_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CohortCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['CohortCreate'];
+        'multipart/form-data': components['schemas']['CohortCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['CohortRead'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  learning_cohorts_retrieve: {
+    parameters: {
+      path: {
+        cohort_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CohortRead'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  learning_cohorts_update: {
+    parameters: {
+      path: {
+        cohort_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CohortUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['CohortUpdate'];
+        'multipart/form-data': components['schemas']['CohortUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CohortRead'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_cohorts_archive_create: {
+    parameters: {
+      path: {
+        cohort_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CohortRead'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_cohorts_enrollments_retrieve: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+      path: {
+        cohort_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PaginatedEnrollment'];
+        };
+      };
+    };
+  };
+  organizations_learning_cohorts_enrollments_create: {
+    parameters: {
+      path: {
+        cohort_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CohortEnrollmentBatch'];
+        'application/x-www-form-urlencoded': components['schemas']['CohortEnrollmentBatch'];
+        'multipart/form-data': components['schemas']['CohortEnrollmentBatch'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['EnrollmentRead'][];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_cohorts_progress_retrieve: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+      path: {
+        cohort_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PaginatedCohortProgress'];
+        };
+      };
+    };
+  };
+  learning_enrollments_list: {
+    parameters: {
+      query?: {
+        cohort?: string;
+        course?: string;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+        progress_status?: string;
+        release_number?: number;
+        search?: string;
+        status?: string;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PaginatedEnrollment'];
+        };
+      };
+    };
+  };
+  learning_enrollments_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EnrollmentCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['EnrollmentCreate'];
+        'multipart/form-data': components['schemas']['EnrollmentCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['EnrollmentRead'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  learning_enrollments_retrieve: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['EnrollmentRead'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_enrollments_progress_retrieve: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Progress'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_enrollments_reactivate_create: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EnrollmentLifecycle'];
+        'application/x-www-form-urlencoded': components['schemas']['EnrollmentLifecycle'];
+        'multipart/form-data': components['schemas']['EnrollmentLifecycle'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['EnrollmentRead'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_enrollments_revoke_create: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EnrollmentLifecycle'];
+        'application/x-www-form-urlencoded': components['schemas']['EnrollmentLifecycle'];
+        'multipart/form-data': components['schemas']['EnrollmentLifecycle'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['EnrollmentRead'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_enrollments_suspend_create: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EnrollmentLifecycle'];
+        'application/x-www-form-urlencoded': components['schemas']['EnrollmentLifecycle'];
+        'multipart/form-data': components['schemas']['EnrollmentLifecycle'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['EnrollmentRead'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_enrollments_upgrade_release_create: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReleaseUpgrade'];
+        'application/x-www-form-urlencoded': components['schemas']['ReleaseUpgrade'];
+        'multipart/form-data': components['schemas']['ReleaseUpgrade'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['EnrollmentRead'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_me_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MyLearning'][];
+        };
+      };
+    };
+  };
+  organizations_learning_me_enrollments_retrieve: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MyLearning'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_me_enrollments_outline_retrieve: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LearningOutline'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_me_enrollments_position_update: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Position'];
+        'application/x-www-form-urlencoded': components['schemas']['Position'];
+        'multipart/form-data': components['schemas']['Position'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Progress'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_me_enrollments_units_retrieve: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LearningUnit'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_me_enrollments_units_complete_create: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CompleteUnit'];
+        'application/x-www-form-urlencoded': components['schemas']['CompleteUnit'];
+        'multipart/form-data': components['schemas']['CompleteUnit'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CompletionResult'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_me_enrollments_units_open_create: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Progress'];
+        };
+      };
+    };
+  };
+  organizations_learning_me_enrollments_units_reopen_create: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CompleteUnit'];
+        'application/x-www-form-urlencoded': components['schemas']['CompleteUnit'];
+        'multipart/form-data': components['schemas']['CompleteUnit'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Progress'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['Error'];
         };
       };
     };

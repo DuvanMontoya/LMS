@@ -73,3 +73,12 @@ schema drift, lint, tipos, pruebas, build y Playwright al cambiar cualquier pin.
 | DRF 3.17.1 ↔ drf-spectacular 0.30.0 | Compatible | OpenAPI válido sin warnings y cliente generado. |
 | Next 16.2.12 ↔ React 19.2.8 ↔ TanStack Query 5.101.4 | Compatible | Tipos, Vitest, build y lectura no-store. |
 | Playwright 1.58.2 ↔ Chromium ↔ axe 4.12.1 | Compatible | Publish/reader/withdraw, teclado, axe y 390 px. |
+
+## Learning — verificación 2026-07-30
+
+| Integración exacta | Estado | Evidencia |
+| --- | --- | --- |
+| Django 6.0.7 ↔ PostgreSQL 18.4 locks/partial constraints/triggers | Compatible | Migración limpia, SQL directo y tres carreras. |
+| DRF 3.17.1 ↔ drf-spectacular 0.30.0 ↔ django-filter 26.1 | Compatible | OpenAPI sin warnings, filtros/paginación y cliente sin drift. |
+| Next 16.2.12 ↔ React 19.2.8 ↔ Query 5.101.4 ↔ RHF 7.83.0 ↔ Zod 4.4.3 | Compatible | TypeScript, ESLint, Vitest, Server/Client boundaries y build. |
+| Playwright 1.62.0 ↔ Chromium ↔ axe 4.12.1 | Compatible | Learning E2E, 390 px y WCAG A/AA sin violaciones. |

@@ -88,3 +88,9 @@ Prompt 11 agrega `apps/api/domain/publishing/`,
 biblioteca, tipos en `src/lib/publishing/generated/`, E2E
 `publication.spec.ts` y `scripts/publishing.ps1`. No crea otra aplicación,
 base, autenticación o cliente.
+
+Prompt 12 completa `apps/api/domain/learning/`, agrega tres migraciones, API y
+management commands; en web agrega rutas `aprendizaje`/`aprender`,
+`components/learning`, `lib/learning` y `learning.spec.ts`. Los contratos
+generados permanecen en el único cliente `platform.ts`; no existe un segundo
+backend, base, store o sistema de permisos.

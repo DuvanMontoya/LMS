@@ -36,3 +36,12 @@ Each phase requires its predecessor's acceptance criteria, a scoped pull request
 | 30 | Final documentation. Requires all. | Operations, API, ADR, data-retention and handoff review. | No undocumented release. |
 
 Every implementation phase must specify its own commands, tests, acceptance criteria, risks, and deferred work in its delivery notes. Phase 2 is deliberately limited to scaffolding.
+
+## Phase 12 completada — learning delivery
+
+Se cerró la entrega transaccional con cohortes, matrículas fijadas a releases,
+historial de asignaciones, progreso, continuidad, API/frontends institucional y
+del estudiante, migraciones/triggers, demo y E2E. ADR 0022 y
+`docs/architecture/LEARNING.md` fijan la frontera. Evaluaciones, certificados,
+enrollment approval, publication y delivery asíncrono permanecen para fases
+posteriores.

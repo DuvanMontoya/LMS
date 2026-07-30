@@ -233,3 +233,10 @@ servicio nuevo. ADR 0020 contiene las doce secuencias/diagramas detallados.
 completo, ordenado, validado y encadenado. PostgreSQL conserva release y eventos
 append-only; Next y DRF sirven la biblioteca sólo desde ese JSON. ADR 0021 y
 `PUBLISHING.md` contienen la decisión y diagramas.
+
+# Entrega del aprendizaje (Prompt 12)
+
+`domain.learning` enlaza membresía y curso mediante una matrícula estable cuya
+asignación activa fija un `CourseRelease`. Progreso y continuidad se escriben
+con locks/versiones y toda lectura usa el snapshot asignado. ADR 0022 y
+`LEARNING.md` contienen las reglas y catorce diagramas normativos.

@@ -60,3 +60,9 @@ Prompt 11 cumple esa frontera sin servicio adicional. El despliegue aplica
 `publishing.0001` y `0002` antes del tráfico, comprueba triggers y ejecuta
 `verify_course_releases` read-only. Un fallo de integridad bloquea promoción;
 no se repara reescribiendo releases históricos.
+
+Prompt 12 no añade servicio ni puerto. El despliegue aplica
+`learning.0001`–`0003` antes del tráfico y verifica los triggers de eventos y
+release de cohorte. Learning usa PostgreSQL como única autoridad y Redis sólo
+para throttle/cache existente; no persiste sesiones ni progreso allí. Un
+rollback no debe borrar historial de matrículas o eventos.

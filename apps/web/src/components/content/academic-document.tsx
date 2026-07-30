@@ -23,6 +23,12 @@ const pedagogicalLabels: Record<string, string> = {
   warning: 'Advertencia',
 };
 
+function semanticNodeProps(node: { attrs: Record<string, unknown> }) {
+  const nodeId =
+    typeof node.attrs.nodeId === 'string' ? node.attrs.nodeId : undefined;
+  return nodeId ? { 'data-node-id': nodeId, id: `node-${nodeId}` } : undefined;
+}
+
 export function AcademicDocument({
   document,
 }: Readonly<{ document: LMSUnitAcademicDocumentVersion1 }>) {
@@ -58,13 +64,21 @@ export function AcademicDocument({
             },
           },
           nodeMapping: {
-            blockquote: ({ children }) => (
-              <blockquote className="border-l-4 border-slate-300 pl-4 text-slate-700">
+            blockquote: ({ children, node }) => (
+              <blockquote
+                {...semanticNodeProps(node)}
+                className="border-l-4 border-slate-300 pl-4 text-slate-700"
+              >
                 {children}
               </blockquote>
             ),
-            bulletList: ({ children }) => (
-              <ul className="list-disc space-y-1 pl-6">{children}</ul>
+            bulletList: ({ children, node }) => (
+              <ul
+                {...semanticNodeProps(node)}
+                className="list-disc space-y-1 pl-6"
+              >
+                {children}
+              </ul>
             ),
             codeBlock: ({ node }) => {
               const code = String(node.attrs.code ?? '');
@@ -73,7 +87,10 @@ export function AcademicDocument({
                   ? node.attrs.caption
                   : undefined;
               return (
-                <figure className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 text-slate-100">
+                <figure
+                  {...semanticNodeProps(node)}
+                  className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 text-slate-100"
+                >
                   <div className="flex items-center justify-between gap-3 border-b border-slate-700 px-4 py-2">
                     <figcaption className="text-sm text-slate-300">
                       {caption || String(node.attrs.language)}
@@ -87,7 +104,10 @@ export function AcademicDocument({
               );
             },
             displayMath: ({ node }) => (
-              <figure className="rounded-lg border border-slate-200 bg-white px-4 py-2">
+              <figure
+                {...semanticNodeProps(node)}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2"
+              >
                 <MathJaxFormula
                   display
                   latex={String(node.attrs.latex ?? '')}
@@ -103,10 +123,34 @@ export function AcademicDocument({
             heading: ({ children, node }) => {
               const level = Number(node.attrs.level);
               if (level === 2)
-                return <h2 className="text-2xl font-semibold">{children}</h2>;
+                return (
+                  <h2
+                    {...semanticNodeProps(node)}
+                    className="text-2xl font-semibold"
+                    tabIndex={-1}
+                  >
+                    {children}
+                  </h2>
+                );
               if (level === 3)
-                return <h3 className="text-xl font-semibold">{children}</h3>;
-              return <h4 className="text-lg font-semibold">{children}</h4>;
+                return (
+                  <h3
+                    {...semanticNodeProps(node)}
+                    className="text-xl font-semibold"
+                    tabIndex={-1}
+                  >
+                    {children}
+                  </h3>
+                );
+              return (
+                <h4
+                  {...semanticNodeProps(node)}
+                  className="text-lg font-semibold"
+                  tabIndex={-1}
+                >
+                  {children}
+                </h4>
+              );
             },
             horizontalRule: () => <hr className="border-slate-300" />,
             inlineMath: ({ node }) => (
@@ -115,14 +159,21 @@ export function AcademicDocument({
             listItem: ({ children }) => <li>{children}</li>,
             orderedList: ({ children, node }) => (
               <ol
+                {...semanticNodeProps(node)}
                 className="list-decimal space-y-1 pl-6"
                 start={Number(node.attrs.start ?? 1)}
               >
                 {children}
               </ol>
             ),
-            paragraph: ({ children }) => (
-              <p className="leading-7 text-slate-800">{children}</p>
+            paragraph: ({ children, node }) => (
+              <p
+                {...semanticNodeProps(node)}
+                className="leading-7 text-slate-800"
+                tabIndex={-1}
+              >
+                {children}
+              </p>
             ),
             pedagogicalBlock: ({ children, node }) => {
               const kind = String(node.attrs.kind);
@@ -132,6 +183,7 @@ export function AcademicDocument({
                   : undefined;
               return (
                 <aside
+                  {...semanticNodeProps(node)}
                   className="rounded-xl border-l-4 border-sky-600 bg-sky-50 p-4"
                   data-pedagogical-kind={kind}
                 >
@@ -143,7 +195,7 @@ export function AcademicDocument({
               );
             },
             table: ({ children, node }) => (
-              <figure className="overflow-x-auto">
+              <figure {...semanticNodeProps(node)} className="overflow-x-auto">
                 <table className="w-full border-collapse text-left">
                   {children}
                 </table>

@@ -67,3 +67,10 @@ hasta que `publishing` produzca un snapshot completo.
 biblioteca. Los contratos de clonación crean UUID nuevos y documentos v1 sin
 importarlo. Un retiro cambia el canal y agrega evento, no el release. Véanse
 `PUBLISHING.md` y ADR 0021.
+
+`learning` posee `LearningCohort`, `CourseEnrollment`,
+`EnrollmentReleaseAssignment`, `CourseProgress`, `UnitProgress`,
+`LearningEvent`, políticas, servicios, selectores y API de delivery. Puede
+importar organizations, courses y publishing para validar referencias y leer
+snapshots; no importa content ni autoría viva. Publishing, courses y content no
+importan learning. Véanse `LEARNING.md` y ADR 0022.

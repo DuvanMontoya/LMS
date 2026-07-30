@@ -2,12 +2,147 @@
 
 ## Phase
 
-**Phase 9 — Cursos y estructura académica** está completada localmente el
-2026-07-29. `domain.courses` contiene identidad de curso, revisiones de autoría,
-transiciones append-only, módulos y unidades ordenados, alineaciones con
-`domain.catalog`, políticas, servicios transaccionales, contrato OpenAPI,
-cliente TypeScript y las cinco superficies de autoría verificadas en PostgreSQL
-real y Chromium aislado.
+**Phase 12 — Matrículas y entrega del aprendizaje** está completada localmente
+el 2026-07-30. `domain.learning` contiene cohortes, matrículas institucionales,
+asignaciones históricas de releases, progreso determinista, continuidad de
+lectura y eventos append-only. La entrega lee exclusivamente el snapshot
+inmutable asignado y fue verificada con PostgreSQL 18.4, Redis 8.8.1 y Chromium
+aislado, sin implementar evaluaciones ni certificados.
+
+## Phase 12 — Matrículas y entrega del aprendizaje
+
+- **Fecha y prompt:** 2026-07-30; Prompt 12 ejecutado de principio a fin. El
+  Prompt 13 no fue ejecutado.
+- **Git:** `HEAD` inicial y final
+  `9d6a33d704ad94917ec80af1d5cf77b2bea6f287`; `origin/main` inicial y final en
+  el mismo commit; rama `main`; remoto
+  `https://github.com/DuvanMontoya/LMS.git`. No hubo cambios externos, commits,
+  pushes, ramas ni reescrituras de historial por Codex.
+- **Versiones:** Python 3.13.13, uv 0.11.19, Django 6.0.7, DRF 3.17.1,
+  django-filter 26.1, drf-spectacular 0.30.0, psycopg 3.3.4, PostgreSQL 18.4,
+  Redis 8.8.1, Node 24.18.0, pnpm 10.33.2, Next.js 16.2.12, React 19.2.8,
+  TypeScript 6.0.2 y Playwright 1.62.0.
+- **Dependencias:** no fue necesaria una dependencia nueva para el dominio. Se
+  reutilizaron Django/DRF, django-filter, PostgreSQL, TanStack Query,
+  React Hook Form, Zod, el cliente OpenAPI y axe. Las licencias y alternativas
+  permanecen documentadas en `docs/research/DEPENDENCY_EVALUATION.md`.
+- **ADR:** ADR 0022 fija la propiedad de `domain.learning`, el pinning explícito
+  de releases, el progreso transaccional, la continuidad last-write-wins y los
+  eventos append-only protegidos por PostgreSQL.
+- **Capacidades:** se añadieron seis capacidades `learning.*`; owner/admin
+  administran cohortes y matrículas, instructor consulta progreso, author y
+  reviewer tienen sólo las lecturas institucionales previstas, y learner accede
+  únicamente a su propia matrícula. Ser staff no omite políticas; el superuser
+  conserva únicamente el bypass administrativo explícito.
+- **Modelos:** `LearningCohort`, `CourseEnrollment`,
+  `EnrollmentReleaseAssignment`, `CourseProgress`, `UnitProgress` y
+  `LearningEvent`, todos con UUID, organización y relaciones explícitas.
+- **Constraints e índices:** unicidad case-insensitive del slug de cohorte,
+  máximo de una matrícula no revocada por membership/curso, un assignment
+  vigente por matrícula, intervalos contiguos, un progreso por assignment y una
+  fila por unidad; índices cubren organización, curso, estado, ventanas,
+  membership y consultas cronológicas.
+- **Triggers:** `learning.0002` rechaza `UPDATE` y `DELETE` de eventos;
+  `learning.0003` impide cambiar el release de una cohorte con matrículas.
+  Ambos migran desde una base PostgreSQL vacía.
+- **Cohortes y matrículas:** creación, archivado lógico, ventanas opcionales,
+  matrícula manual y por lote atómica, suspensión, reactivación, revocación
+  terminal y reincorporación mediante una matrícula nueva.
+- **Assignments, pinning y upgrades:** cada matrícula conserva un historial
+  contiguo de assignments. Una publicación nueva nunca migra matrículas. El
+  upgrade individual es explícito, cierra el assignment anterior, crea uno
+  nuevo y no copia progreso; las matrículas de cohorte no admiten upgrade
+  individual.
+- **Progreso y completitud:** contadores fijados desde el snapshot, porcentaje
+  en basis points, `expected_version`, locks de fila, apertura, completado
+  idempotente, reapertura y transición exacta del curso completo/incompleto.
+- **Continuidad:** unidad y nodo semántico se validan contra el snapshot; el
+  navegador guarda con debounce de cinco segundos y `pagehide`, restaura hash,
+  foco y movimiento reducido, y usa fallback seguro sin `localStorage`.
+- **Eventos:** alta, suspensión, reactivación, revocación, assignment, upgrade,
+  apertura, completado, reapertura y finalización quedan como hechos
+  append-only; los movimientos frecuentes de posición no generan eventos.
+- **Políticas y acceso:** membership activa, matrícula propia activa, ventana
+  vigente, publicación no retirada, assignment vigente e integridad del release
+  son requisitos acumulativos. `course.published.view` no sustituye matrícula.
+- **API:** rutas versionadas bajo
+  `/api/v1/organizations/{slug}/learning/`, con administración de cohortes,
+  matrículas y progreso, y superficie propia `me`; filtros, orden, paginación,
+  errores estables, 404 anti-IDOR, CSRF y throttle de posición.
+- **OpenAPI:** schema sin warnings ni colisiones, cliente TypeScript regenerado
+  y checks de drift de learning y plataforma aprobados.
+- **Frontend y accesibilidad:** dashboard “Mi aprendizaje”, outline con
+  progreso, lector snapshot-only, continuar, anterior/siguiente y pantallas
+  institucionales de cohortes, matrículas y progreso. Se verificaron progreso
+  nativo, captions, foco, teclado, contraste, axe WCAG 2.2 A/AA y 390 px sin
+  overflow.
+- **Demo y README:** `pnpm learning:demo` es idempotente, sólo funciona con
+  `DEBUG=True`, no crea contraseñas y preserva la matrícula, el release y el
+  progreso ya existentes. README documenta comando, cuentas, rutas y pinning.
+- **Pruebas:** 18 pruebas learning y 144 pruebas backend pasan; cobertura total
+  backend 81.92%. Pasan Ruff, Pyright, ESLint, Prettier, TypeScript, 40 pruebas
+  Vitest, Next build, checks de producción, migraciones desde cero, OpenAPI,
+  drift, auditorías y los E2E de learning y publishing.
+- **Navegador:** Chromium integrado inspeccionó dashboard del estudiante,
+  outline/lector, restauración, administración de cohortes y progreso en
+  escritorio y 390 px. El E2E aislado repitió el recorrido con axe, teclado,
+  dos contextos concurrentes y limpieza final.
+- **CI:** instala dependencias bloqueadas, arranca PostgreSQL/Redis, verifica
+  migraciones, schema/cliente, límites modulares, pruebas, concurrencia,
+  seguridad, build y Chromium, con cleanup incondicional.
+- **Auditorías:** `pip-audit` y `pnpm audit --prod` no reportan
+  vulnerabilidades conocidas. `uv lock --check`, `uv sync --locked` y
+  `pnpm install --frozen-lockfile` pasan.
+- **Riesgos y deuda:** Redis conserva su decisión de licencia/operación para
+  producción; el throttle de DRF no es un control antiabuso absoluto; el punto
+  de lectura usa deliberadamente last-write-wins; los overrides heredados de
+  `postcss`/`sharp` se revisarán con Next.js. No hay bloqueo esencial ni cambio
+  irreversible adicional al pinning registrado en ADR 0022.
+- **Trabajo no realizado:** evaluaciones, bancos de preguntas, intentos,
+  calificación, certificados, Celery, ejecución de código y LMS externo quedan
+  fuera del alcance.
+- **Siguiente paso:** **Prompt 13 — Banco de preguntas y evaluaciones: tipos de pregunta, bancos versionados, composición de evaluaciones, intentos, respuestas y calificación inicial.**
+
+## Auditoría UI/UX posterior a Phase 12 — 2026-07-30
+
+- Se recorrieron en Chromium integrado las rutas protegidas con instancias
+  reales disponibles para owner y learner, tanto a 1280 px como a 390 px. El
+  build enumeró y compiló además todo el árbol App Router. Las pantallas
+  revisadas mantienen un único `main`, no presentan overflow horizontal y
+  conservan navegación, permisos y datos reales.
+- El shell dejó de anidar landmarks `main`. “Mi aprendizaje” ya no queda activo
+  en las rutas administrativas y “Entrega del aprendizaje” permanece activo
+  tanto en cohortes como en matrículas, incluidos sus detalles. El drawer móvil
+  conserva todas las opciones autorizadas, scroll interno, cierre por
+  navegación y separación correcta entre owner y learner.
+- Cohortes y matrículas adoptaron el espaciado y superficies del sistema
+  académico. Se añadieron búsqueda, filtros, paginación, estados vacíos,
+  etiquetas de estado y fechas en español, progreso compacto, métricas y
+  tarjetas adaptables. Los formularios ya no exigen UUID, slug de curso ni
+  número de release manuales: usan membresías, cursos, releases y cohortes
+  autorizados obtenidos de la API.
+- Archivar, suspender, reactivar, revocar y actualizar release requieren
+  diálogos descriptivos; el botón final nombra la acción concreta. Una
+  matrícula revocada vuelve a estar disponible para reincorporación mediante
+  una matrícula nueva, sin alterar su historial.
+- La auditoría detectó un defecto funcional en `_ordered`: solicitar
+  `ordering=-created_at` producía `--created_at` y rompía el listado de
+  matrículas. La normalización quedó corregida y una regresión API cubre orden
+  ascendente y descendente en cohortes y matrículas.
+- El lector solicitaba el worker local de accesibilidad de MathJax, pero la
+  copia reproducible no lo incluía y respondía 404. `speech-worker.js` forma
+  ahora parte de los assets verificados por `prebuild`; el servidor local
+  responde 200 con el archivo completo.
+- Evidencia final: `pnpm check`, `pnpm web:test` (40/40), `pnpm web:build`,
+  `pnpm learning:check`, `pnpm learning:test` (18/18), `pnpm api:test`
+  (144/144; 81.92 %) y `pnpm learning:e2e` (1/1 con axe, 390 px, concurrencia y
+  cleanup) pasan. El recorrido manual comprobó el lector anclado al nodo de
+  continuidad, sin recursos externos ni overflow.
+- Deuda residual no bloqueante: los selectores administrativos cargan hasta 100
+  cursos, cohortes y membresías por formulario. Antes de operar organizaciones
+  mayores se debe sustituir ese límite por búsqueda remota paginada y
+  virtualización accesible; no se introdujo una dependencia sólo para anticipar
+  esa escala.
 
 ## Delivered scaffold
 

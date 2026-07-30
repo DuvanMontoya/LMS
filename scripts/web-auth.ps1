@@ -121,6 +121,8 @@ function Invoke-E2E([string]$Grep) {
     while ($webPort -eq $apiPort) { $webPort = Get-FreeLocalPort }
     $nextDistDirectoryName = ".local/e2e-next-$([Guid]::NewGuid().ToString('N'))"
     $nextDistDirectory = Join-Path $webDirectory $nextDistDirectoryName
+    $tsconfigPath = Join-Path $webDirectory 'tsconfig.json'
+    $tsconfigBefore = [IO.File]::ReadAllText($tsconfigPath)
     $createDatabase = 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE {0}"' -f $databaseName
     $dropDatabase = 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS {0}"' -f $databaseName
     $savedEnvironment = @{}
@@ -149,6 +151,10 @@ function Invoke-E2E([string]$Grep) {
         Assert-LastExitCode 'E2E organization fixture creation'
         & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_publication
         Assert-LastExitCode 'E2E publication source fixture creation'
+        if ($Grep -match 'learning delivery') {
+            & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_learning
+            Assert-LastExitCode 'E2E learning fixture creation'
+        }
         $playwrightArguments = @('test')
         if (-not [string]::IsNullOrWhiteSpace($Grep)) {
             $playwrightArguments += @('--grep', $Grep)
@@ -175,6 +181,23 @@ function Invoke-E2E([string]$Grep) {
         }
         if (Test-Path -LiteralPath $resolvedNextDist) {
             Remove-Item -LiteralPath $resolvedNextDist -Recurse -Force
+        }
+        $tsconfigAfter = [IO.File]::ReadAllText($tsconfigPath)
+        if ($tsconfigAfter -ne $tsconfigBefore) {
+            $beforeObject = $tsconfigBefore | ConvertFrom-Json
+            $afterObject = $tsconfigAfter | ConvertFrom-Json
+            $afterObject.include = @(
+                $afterObject.include | Where-Object {
+                    $_ -notmatch '^\.local/e2e-next-[0-9a-f]+/(dev/)?types/\*\*/\*\.ts$'
+                }
+            )
+            $beforeNormalized = $beforeObject | ConvertTo-Json -Depth 100 -Compress
+            $afterNormalized = $afterObject | ConvertTo-Json -Depth 100 -Compress
+            if ($beforeNormalized -eq $afterNormalized) {
+                [IO.File]::WriteAllText($tsconfigPath, $tsconfigBefore, [Text.UTF8Encoding]::new($false))
+            } else {
+                Write-Warning 'tsconfig.json changed beyond the temporary Next E2E includes; preserving it for review.'
+            }
         }
         if ($IsWindows -and $apiPort -and $webPort) {
             $leftovers = Get-NetTCPConnection -State Listen -LocalPort $apiPort,$webPort -ErrorAction SilentlyContinue

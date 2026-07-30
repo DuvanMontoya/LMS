@@ -76,3 +76,10 @@ versiones; serializers no los aceptan por mass assignment. Lookups ajenos son
 404. Releases/eventos tienen guardas de modelo y triggers. Biblioteca exige
 sesión/capacidad, usa snapshot, envía `private, no-store` y no usa JWT ni
 browser storage.
+
+Learning exige identidad propia, membresía activa, matrícula efectiva, ventana
+vigente, publicación activa y release íntegro. UUID conocidos de otra
+organización/usuario producen 404. Mutaciones aceptan sólo allowlists y
+expected versions; ningún body elige user, actor, organización, status,
+assignment o contadores. Superuser administra explícitamente, pero no simula
+una matrícula. Position usa CSRF, throttle y keepalive same-origin.

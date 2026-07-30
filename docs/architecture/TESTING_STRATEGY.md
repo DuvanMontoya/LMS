@@ -79,3 +79,11 @@ clonación, permisos, IDOR, API, inmutabilidad ORM/SQL y carreras reales. Vitest
 cubre claves, etiquetas y schema inválido. Playwright crea PostgreSQL efímero,
 publica, lee con dos contextos, valida axe, teclado y 390 px, retira, comprueba
 404 y elimina base, Redis, correo y procesos.
+
+Learning usa `TestCase` para constraints/servicios/API y
+`TransactionTestCase` para complete, enrollment y upgrade concurrentes en
+PostgreSQL real. Prueba triggers mediante SQL directo, independencia de
+releases, ventanas, retiro, IDOR, mass assignment, lote atómico y drift.
+Vitest valida progress/IDs semánticos. Playwright crea una base aislada, forma
+cohorte/matrícula, completa 2/2, suspende/reactiva, ejecuta axe y 390 px y
+confirma cleanup.

@@ -97,6 +97,170 @@
         ],
         "type": "string"
       },
+      "CohortCreate": {
+        "properties": {
+          "access_ends_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "access_starts_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "course_slug": { "pattern": "^[-a-zA-Z0-9_]+$", "type": "string" },
+          "description": { "maxLength": 2000, "type": "string" },
+          "name": { "maxLength": 200, "type": "string" },
+          "release_number": { "minimum": 1, "type": "integer" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          }
+        },
+        "required": ["course_slug", "name", "release_number"],
+        "type": "object"
+      },
+      "CohortEnrollmentBatch": {
+        "properties": {
+          "membership_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": ["membership_ids"],
+        "type": "object"
+      },
+      "CohortProgressSummary": {
+        "properties": {
+          "active": { "type": "integer" },
+          "average_percent": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "completed": { "type": "integer" },
+          "in_progress": { "type": "integer" },
+          "not_started": { "type": "integer" },
+          "revoked": { "type": "integer" },
+          "suspended": { "type": "integer" },
+          "total_enrollments": { "type": "integer" }
+        },
+        "required": [
+          "active",
+          "average_percent",
+          "completed",
+          "in_progress",
+          "not_started",
+          "revoked",
+          "suspended",
+          "total_enrollments"
+        ],
+        "type": "object"
+      },
+      "CohortRead": {
+        "properties": {
+          "access_ends_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "access_starts_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "course_slug": { "type": "string" },
+          "course_title": { "type": "string" },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": { "maxLength": 2000, "type": "string" },
+          "enrollment_count": { "readOnly": true, "type": "integer" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "name": { "maxLength": 200, "type": "string" },
+          "release_number": { "type": "integer" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "status": { "$ref": "#/components/schemas/CohortReadStatusEnum" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "course_slug",
+          "course_title",
+          "created_at",
+          "enrollment_count",
+          "id",
+          "name",
+          "release_number",
+          "slug",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "CohortReadStatusEnum": {
+        "description": "* `active` - Activa\n* `archived` - Archivada",
+        "enum": ["active", "archived"],
+        "type": "string"
+      },
+      "CohortSummary": {
+        "properties": {
+          "id": { "format": "uuid", "type": "string" },
+          "name": { "type": "string" }
+        },
+        "required": ["id", "name"],
+        "type": "object"
+      },
+      "CohortUpdate": {
+        "properties": {
+          "access_ends_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "access_starts_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "description": { "maxLength": 2000, "type": "string" },
+          "name": { "maxLength": 200, "type": "string" }
+        },
+        "required": [
+          "access_ends_at",
+          "access_starts_at",
+          "description",
+          "name"
+        ],
+        "type": "object"
+      },
+      "CompleteUnit": {
+        "properties": {
+          "expected_progress_version": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["expected_progress_version"],
+        "type": "object"
+      },
+      "CompletionResult": {
+        "properties": {
+          "already_completed": { "type": "boolean" },
+          "progress": { "$ref": "#/components/schemas/Progress" }
+        },
+        "required": ["already_completed", "progress"],
+        "type": "object"
+      },
       "Concept": {
         "properties": {
           "definition": { "maxLength": 3000, "type": "string" },
@@ -392,6 +556,16 @@
         "enum": ["primary", "supporting"],
         "type": "string"
       },
+      "CourseSummary": {
+        "properties": {
+          "id": { "format": "uuid", "type": "string" },
+          "slug": { "pattern": "^[-a-zA-Z0-9_]+$", "type": "string" },
+          "summary": { "type": "string" },
+          "title": { "type": "string" }
+        },
+        "required": ["id", "slug", "title"],
+        "type": "object"
+      },
       "CreateArea": {
         "properties": {
           "description": { "maxLength": 2000, "type": "string" },
@@ -508,6 +682,98 @@
         "required": ["lock_version", "revision_id", "revision_number"],
         "type": "object"
       },
+      "EnrollmentCreate": {
+        "properties": {
+          "access_ends_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "access_starts_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "cohort_id": { "format": "uuid", "nullable": true, "type": "string" },
+          "course_slug": { "pattern": "^[-a-zA-Z0-9_]+$", "type": "string" },
+          "membership_id": { "format": "uuid", "type": "string" },
+          "release_number": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["course_slug", "membership_id"],
+        "type": "object"
+      },
+      "EnrollmentLifecycle": {
+        "properties": {
+          "expected_enrollment_version": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["expected_enrollment_version"],
+        "type": "object"
+      },
+      "EnrollmentRead": {
+        "properties": {
+          "access_ends_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "access_starts_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "access_state": { "readOnly": true, "type": "string" },
+          "cohort_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "cohort_name": { "nullable": true, "type": "string" },
+          "course_id": { "format": "uuid", "type": "string" },
+          "course_slug": { "type": "string" },
+          "course_title": { "type": "string" },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "enrollment_version": { "type": "integer" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "progress": {
+            "allOf": [{ "$ref": "#/components/schemas/Progress" }],
+            "readOnly": true
+          },
+          "release_number": { "type": "integer" },
+          "status": {
+            "$ref": "#/components/schemas/OrganizationMembershipStatus"
+          },
+          "student_email": { "format": "email", "type": "string" }
+        },
+        "required": [
+          "access_state",
+          "cohort_id",
+          "cohort_name",
+          "course_id",
+          "course_slug",
+          "course_title",
+          "created_at",
+          "enrollment_version",
+          "id",
+          "progress",
+          "release_number",
+          "student_email"
+        ],
+        "type": "object"
+      },
+      "Error": {
+        "properties": {
+          "code": { "type": "string" },
+          "current_version": { "type": "integer" },
+          "detail": { "type": "string" }
+        },
+        "required": ["code", "detail"],
+        "type": "object"
+      },
       "EventTypeEnum": {
         "description": "* `membership_created` - Membresía creada\n* `membership_suspended` - Membresía suspendida\n* `membership_reactivated` - Membresía reactivada\n* `membership_revoked` - Membresía revocada\n* `role_assigned` - Rol asignado\n* `role_revoked` - Rol revocado",
         "enum": [
@@ -531,6 +797,81 @@
         "description": "* `required` - required\n* `recommended` - recommended",
         "enum": ["required", "recommended"],
         "type": "string"
+      },
+      "LearningAccessState": {
+        "description": "* `available` - Disponible\n* `not_started` - Acceso no iniciado\n* `ended` - Acceso finalizado\n* `suspended` - Suspendida\n* `revoked` - Revocada\n* `publication_withdrawn` - Publicación retirada\n* `membership_inactive` - Membresía inactiva\n* `release_invalid` - Release inválido",
+        "enum": [
+          "available",
+          "not_started",
+          "ended",
+          "suspended",
+          "revoked",
+          "publication_withdrawn",
+          "membership_inactive",
+          "release_invalid"
+        ],
+        "type": "string"
+      },
+      "LearningOutline": {
+        "properties": {
+          "cohort": {
+            "allOf": [{ "$ref": "#/components/schemas/CohortSummary" }],
+            "nullable": true
+          },
+          "course": { "$ref": "#/components/schemas/CourseSummary" },
+          "modules": {
+            "items": { "$ref": "#/components/schemas/ModuleOutline" },
+            "type": "array"
+          },
+          "progress": { "$ref": "#/components/schemas/Progress" },
+          "release_number": { "type": "integer" },
+          "resume": { "$ref": "#/components/schemas/Resume" }
+        },
+        "required": [
+          "cohort",
+          "course",
+          "modules",
+          "progress",
+          "release_number",
+          "resume"
+        ],
+        "type": "object"
+      },
+      "LearningProgressStatus": {
+        "description": "* `not_started` - No iniciado\n* `in_progress` - En progreso\n* `completed` - Completado",
+        "enum": ["not_started", "in_progress", "completed"],
+        "type": "string"
+      },
+      "LearningUnit": {
+        "properties": {
+          "content": { "additionalProperties": {}, "type": "object" },
+          "course": { "additionalProperties": {}, "type": "object" },
+          "learning_objectives": {
+            "items": { "additionalProperties": {}, "type": "object" },
+            "type": "array"
+          },
+          "module": { "additionalProperties": {}, "type": "object" },
+          "navigation": { "additionalProperties": {}, "type": "object" },
+          "progress": { "$ref": "#/components/schemas/Progress" },
+          "release_number": { "type": "integer" },
+          "topics": {
+            "items": { "additionalProperties": {}, "type": "object" },
+            "type": "array"
+          },
+          "unit": { "additionalProperties": {}, "type": "object" }
+        },
+        "required": [
+          "content",
+          "course",
+          "learning_objectives",
+          "module",
+          "navigation",
+          "progress",
+          "release_number",
+          "topics",
+          "unit"
+        ],
+        "type": "object"
       },
       "LibraryCourse": {
         "properties": {
@@ -769,6 +1110,20 @@
         ],
         "type": "object"
       },
+      "ModuleOutline": {
+        "properties": {
+          "description": { "type": "string" },
+          "id": { "format": "uuid", "type": "string" },
+          "position": { "type": "integer" },
+          "title": { "type": "string" },
+          "units": {
+            "items": { "$ref": "#/components/schemas/UnitOutline" },
+            "type": "array"
+          }
+        },
+        "required": ["description", "id", "position", "title", "units"],
+        "type": "object"
+      },
       "ModuleUpdate": {
         "properties": {
           "description": { "maxLength": 3000, "type": "string" },
@@ -795,6 +1150,36 @@
           "revision_id": { "format": "uuid", "type": "string" }
         },
         "required": ["lock_version", "revision_id"],
+        "type": "object"
+      },
+      "MyLearning": {
+        "properties": {
+          "access_state": {
+            "$ref": "#/components/schemas/LearningAccessState"
+          },
+          "cohort": {
+            "allOf": [{ "$ref": "#/components/schemas/CohortSummary" }],
+            "nullable": true
+          },
+          "course": { "$ref": "#/components/schemas/CourseSummary" },
+          "enrollment_id": { "format": "uuid", "type": "string" },
+          "progress": { "$ref": "#/components/schemas/Progress" },
+          "release_number": { "type": "integer" },
+          "resume": { "$ref": "#/components/schemas/Resume" },
+          "status": {
+            "$ref": "#/components/schemas/OrganizationMembershipStatus"
+          }
+        },
+        "required": [
+          "access_state",
+          "cohort",
+          "course",
+          "enrollment_id",
+          "progress",
+          "release_number",
+          "resume",
+          "status"
+        ],
         "type": "object"
       },
       "NullEnum": { "enum": [null] },
@@ -1020,6 +1405,46 @@
         ],
         "type": "object"
       },
+      "PaginatedCohort": {
+        "properties": {
+          "count": { "type": "integer" },
+          "next": { "format": "uri", "nullable": true, "type": "string" },
+          "previous": { "format": "uri", "nullable": true, "type": "string" },
+          "results": {
+            "items": { "$ref": "#/components/schemas/CohortRead" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "next", "previous", "results"],
+        "type": "object"
+      },
+      "PaginatedCohortProgress": {
+        "properties": {
+          "count": { "type": "integer" },
+          "next": { "format": "uri", "nullable": true, "type": "string" },
+          "previous": { "format": "uri", "nullable": true, "type": "string" },
+          "results": {
+            "items": { "$ref": "#/components/schemas/EnrollmentRead" },
+            "type": "array"
+          },
+          "summary": { "$ref": "#/components/schemas/CohortProgressSummary" }
+        },
+        "required": ["count", "next", "previous", "results", "summary"],
+        "type": "object"
+      },
+      "PaginatedEnrollment": {
+        "properties": {
+          "count": { "type": "integer" },
+          "next": { "format": "uri", "nullable": true, "type": "string" },
+          "previous": { "format": "uri", "nullable": true, "type": "string" },
+          "results": {
+            "items": { "$ref": "#/components/schemas/EnrollmentRead" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "next", "previous", "results"],
+        "type": "object"
+      },
       "PaginatedMembershipEventList": {
         "properties": {
           "count": { "example": 123, "type": "integer" },
@@ -1066,6 +1491,14 @@
         "required": ["count", "results"],
         "type": "object"
       },
+      "Position": {
+        "properties": {
+          "node_id": { "format": "uuid", "type": "string" },
+          "unit_id": { "format": "uuid", "type": "string" }
+        },
+        "required": ["node_id", "unit_id"],
+        "type": "object"
+      },
       "PositionEnum": {
         "description": "* `left` - left\n* `right` - right\n* `first-child` - first-child\n* `last-child` - last-child\n* `sorted-child` - sorted-child",
         "enum": ["left", "right", "first-child", "last-child", "sorted-child"],
@@ -1087,6 +1520,47 @@
           "name": { "type": "string" }
         },
         "required": ["id", "name"],
+        "type": "object"
+      },
+      "Progress": {
+        "properties": {
+          "completed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "completed_units": { "type": "integer" },
+          "last_activity_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "percent": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "percent_basis_points": { "type": "integer" },
+          "progress_version": { "type": "integer" },
+          "started_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "status": { "$ref": "#/components/schemas/LearningProgressStatus" },
+          "total_units": { "type": "integer" }
+        },
+        "required": [
+          "completed_at",
+          "completed_units",
+          "last_activity_at",
+          "percent",
+          "percent_basis_points",
+          "progress_version",
+          "started_at",
+          "status",
+          "total_units"
+        ],
         "type": "object"
       },
       "PublicationState": {
@@ -1364,6 +1838,14 @@
         "required": ["course", "navigation", "release_number", "unit"],
         "type": "object"
       },
+      "ReleaseUpgrade": {
+        "properties": {
+          "expected_enrollment_version": { "minimum": 1, "type": "integer" },
+          "target_release_number": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["expected_enrollment_version", "target_release_number"],
+        "type": "object"
+      },
       "ReplaceConceptAssociations": {
         "properties": {
           "concept_ids": {
@@ -1453,6 +1935,15 @@
           "expected_document_version": { "minimum": 1, "type": "integer" }
         },
         "required": ["expected_document_version"],
+        "type": "object"
+      },
+      "Resume": {
+        "properties": {
+          "href": { "nullable": true, "type": "string" },
+          "node_id": { "format": "uuid", "nullable": true, "type": "string" },
+          "unit_id": { "format": "uuid", "nullable": true, "type": "string" }
+        },
+        "required": ["href", "node_id", "unit_id"],
         "type": "object"
       },
       "Revision": {
@@ -1798,6 +2289,29 @@
           "position": { "readOnly": true, "type": "integer" }
         },
         "required": ["id", "learning_objective", "position"],
+        "type": "object"
+      },
+      "UnitOutline": {
+        "properties": {
+          "estimated_duration_minutes": { "nullable": true, "type": "integer" },
+          "href": { "type": "string" },
+          "id": { "format": "uuid", "type": "string" },
+          "is_current": { "type": "boolean" },
+          "position": { "type": "integer" },
+          "status": { "type": "string" },
+          "summary": { "type": "string" },
+          "title": { "type": "string" }
+        },
+        "required": [
+          "estimated_duration_minutes",
+          "href",
+          "id",
+          "is_current",
+          "position",
+          "status",
+          "summary",
+          "title"
+        ],
         "type": "object"
       },
       "UnitTopic": {
@@ -6306,6 +6820,1110 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/MutationResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/cohorts/": {
+      "get": {
+        "operationId": "learning_cohorts_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "course",
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          { "in": "query", "name": "ordering", "schema": { "type": "string" } },
+          { "in": "query", "name": "page", "schema": { "type": "integer" } },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "query",
+            "name": "release_number",
+            "schema": { "type": "integer" }
+          },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "status", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedCohort" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "learning_cohorts_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CohortCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CohortCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CohortCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CohortRead" }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/": {
+      "get": {
+        "operationId": "learning_cohorts_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cohort_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CohortRead" }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "learning_cohorts_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cohort_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CohortUpdate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CohortUpdate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CohortUpdate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CohortRead" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/archive/": {
+      "post": {
+        "operationId": "organizations_learning_cohorts_archive_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cohort_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CohortRead" }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/enrollments/": {
+      "get": {
+        "operationId": "organizations_learning_cohorts_enrollments_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cohort_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          { "in": "query", "name": "page", "schema": { "type": "integer" } },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedEnrollment" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_learning_cohorts_enrollments_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cohort_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CohortEnrollmentBatch" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CohortEnrollmentBatch" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CohortEnrollmentBatch" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/EnrollmentRead" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/progress/": {
+      "get": {
+        "operationId": "organizations_learning_cohorts_progress_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cohort_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          { "in": "query", "name": "page", "schema": { "type": "integer" } },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedCohortProgress"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/enrollments/": {
+      "get": {
+        "operationId": "learning_enrollments_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cohort",
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "query",
+            "name": "course",
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          { "in": "query", "name": "ordering", "schema": { "type": "string" } },
+          { "in": "query", "name": "page", "schema": { "type": "integer" } },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "query",
+            "name": "progress_status",
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "query",
+            "name": "release_number",
+            "schema": { "type": "integer" }
+          },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "status", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedEnrollment" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "learning_enrollments_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EnrollmentCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/EnrollmentCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/EnrollmentCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EnrollmentRead" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/": {
+      "get": {
+        "operationId": "learning_enrollments_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EnrollmentRead" }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/progress/": {
+      "get": {
+        "operationId": "organizations_learning_enrollments_progress_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Progress" }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/reactivate/": {
+      "post": {
+        "operationId": "organizations_learning_enrollments_reactivate_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EnrollmentLifecycle" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/EnrollmentLifecycle" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/EnrollmentLifecycle" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EnrollmentRead" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/revoke/": {
+      "post": {
+        "operationId": "organizations_learning_enrollments_revoke_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EnrollmentLifecycle" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/EnrollmentLifecycle" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/EnrollmentLifecycle" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EnrollmentRead" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/suspend/": {
+      "post": {
+        "operationId": "organizations_learning_enrollments_suspend_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EnrollmentLifecycle" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/EnrollmentLifecycle" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/EnrollmentLifecycle" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EnrollmentRead" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/upgrade-release/": {
+      "post": {
+        "operationId": "organizations_learning_enrollments_upgrade_release_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReleaseUpgrade" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ReleaseUpgrade" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ReleaseUpgrade" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EnrollmentRead" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/me/": {
+      "get": {
+        "operationId": "organizations_learning_me_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/MyLearning" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/": {
+      "get": {
+        "operationId": "organizations_learning_me_enrollments_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MyLearning" }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/outline/": {
+      "get": {
+        "operationId": "organizations_learning_me_enrollments_outline_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LearningOutline" }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/position/": {
+      "put": {
+        "operationId": "organizations_learning_me_enrollments_position_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Position" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/Position" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/Position" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Progress" }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/units/{unit_id}/": {
+      "get": {
+        "operationId": "organizations_learning_me_enrollments_units_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LearningUnit" }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/units/{unit_id}/complete/": {
+      "post": {
+        "operationId": "organizations_learning_me_enrollments_units_complete_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CompleteUnit" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CompleteUnit" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CompleteUnit" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CompletionResult" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/units/{unit_id}/open/": {
+      "post": {
+        "operationId": "organizations_learning_me_enrollments_units_open_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Progress" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/units/{unit_id}/reopen/": {
+      "post": {
+        "operationId": "organizations_learning_me_enrollments_units_reopen_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CompleteUnit" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CompleteUnit" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CompleteUnit" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Progress" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
               }
             },
             "description": ""

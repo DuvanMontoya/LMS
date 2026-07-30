@@ -114,3 +114,14 @@ tenían problema, owner, licencia y alternativa documentados. Se rechazaron
 event sourcing externo, blockchain, cache de publicación, sanitizer adicional
 y storage porque aumentarían superficie sin resolver un requisito. Después del
 primer release, hechos y triggers son retención irreversible por diseño.
+
+## Prompt 12
+
+No se instaló dependencia. Django/DRF/django-filter cubren transacciones,
+políticas, filtros y API; PostgreSQL cubre locks, constraints e inmutabilidad;
+Next/React/Query/RHF/Zod cubren las superficies existentes; Playwright/axe
+cubren aceptación. Se rechazaron LMS externo, Celery, state machine, event
+store, analytics SDK, cache persistente, browser storage y librería de scroll:
+añadirían autoridad o superficie sin resolver un requisito no cubierto. Owner:
+equipo de plataforma; alternativa de retiro: eliminar sólo el módulo learning
+antes de producción, no una vez que exista historial contractual.

@@ -266,3 +266,9 @@ release actual y registra `active` o `withdrawn`. Sus `CourseRelease` son
 inmutables, numerados, ligados una vez a revisión fuente y release previo.
 Snapshot, schema, digest, tamaño y métricas forman el hecho publicado.
 `CoursePublicationEvent` conserva publish/withdraw sin edición.
+
+Una `LearningCohort` fija organización, curso, release y ventana. Una
+`CourseEnrollment` fija membership/curso y apunta a una sola asignación activa;
+el historial de `EnrollmentReleaseAssignment` forma una cadena contigua. Cada
+asignación tiene un `CourseProgress`, compuesto por `UnitProgress` identificados
+con UUID del snapshot. `LearningEvent` registra hechos inmutables.

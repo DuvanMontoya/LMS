@@ -74,82 +74,76 @@ test('immutable publication, authenticated library, withdrawal and axe work end 
   await expect(page.getByText('Registro histórico inmutable')).toBeVisible();
   await expectAccessible(page);
 
-  const learnerContext = await browser.newContext({
+  const readerContext = await browser.newContext({
     baseURL: `http://127.0.0.1:${process.env.E2E_WEB_PORT ?? '3000'}`,
   });
-  const learnerPage = await learnerContext.newPage();
-  await login(learnerPage, 'learner@organizations.e2e.test', libraryPath);
+  const readerPage = await readerContext.newPage();
+  await login(readerPage, 'instructor@organizations.e2e.test', libraryPath);
   await expect(
-    learnerPage.getByRole('heading', { name: 'Biblioteca' }),
+    readerPage.getByRole('heading', { name: 'Biblioteca' }),
   ).toBeVisible();
-  const learnerSidebar = learnerPage.locator('[data-sidebar="sidebar"]');
+  const readerSidebar = readerPage.locator('[data-sidebar="sidebar"]');
   await expect(
-    learnerSidebar.getByRole('link', { name: 'Biblioteca', exact: true }),
+    readerSidebar.getByRole('link', { name: 'Biblioteca', exact: true }),
   ).toBeVisible();
   await expect(
-    learnerSidebar.getByRole('link', { name: 'Cursos', exact: true }),
+    readerSidebar.getByRole('link', { name: 'Miembros', exact: true }),
   ).toHaveCount(0);
-  await expect(
-    learnerSidebar.getByRole('link', { name: 'Miembros', exact: true }),
-  ).toHaveCount(0);
-  await learnerPage
+  await readerPage
     .getByRole('link', {
       name: /Abrir curso/,
     })
     .click();
   await expect(
-    learnerPage.getByRole('heading', {
+    readerPage.getByRole('heading', {
       name: 'Funciones para lectura institucional',
     }),
   ).toBeVisible();
-  await expect(learnerPage.getByText('esta fase no guarda avance')).toBeVisible(
-    { timeout: 20_000 },
-  );
-  await expectAccessible(learnerPage);
-  await learnerPage
+  await expect(readerPage.getByText('esta fase no guarda avance')).toBeVisible({
+    timeout: 20_000,
+  });
+  await expectAccessible(readerPage);
+  await readerPage
     .getByRole('link', { name: 'Comenzar lectura' })
     .press('Enter');
   await expect(
-    learnerPage.getByRole('heading', {
+    readerPage.getByRole('heading', {
       name: 'Concepto de función',
       level: 1,
     }),
   ).toBeVisible({ timeout: 20_000 });
-  await expect(learnerPage.getByText('Una función asigna')).toBeVisible({
+  await expect(readerPage.getByText('Una función asigna')).toBeVisible({
     timeout: 20_000,
   });
-  const next = learnerPage.getByRole('link', {
+  const next = readerPage.getByRole('link', {
     name: /Siguiente.*Dominio y rango/,
   });
   await next.focus();
   await expect(next).toBeFocused();
   await next.press('Enter');
   await expect(
-    learnerPage.getByRole('heading', { name: 'Dominio y rango', level: 1 }),
+    readerPage.getByRole('heading', { name: 'Dominio y rango', level: 1 }),
   ).toBeVisible({ timeout: 20_000 });
 
-  await learnerPage.setViewportSize({ width: 390, height: 844 });
-  await learnerPage
+  await readerPage.setViewportSize({ width: 390, height: 844 });
+  await readerPage
     .getByRole('button', { name: 'Mostrar u ocultar navegación' })
     .click();
-  const mobileNavigation = learnerPage.getByRole('dialog', {
+  const mobileNavigation = readerPage.getByRole('dialog', {
     name: 'Navegación principal',
   });
   await expect(
     mobileNavigation.getByRole('link', { name: 'Biblioteca', exact: true }),
   ).toBeVisible();
-  await expect(
-    mobileNavigation.getByRole('link', { name: 'Cursos', exact: true }),
-  ).toHaveCount(0);
-  await learnerPage.keyboard.press('Escape');
+  await readerPage.keyboard.press('Escape');
   await expect(mobileNavigation).toBeHidden();
   expect(
-    await learnerPage.evaluate(
+    await readerPage.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
-  await expectAccessible(learnerPage);
-  const historical = await learnerPage.goto(
+  await expectAccessible(readerPage);
+  const historical = await readerPage.goto(
     `/organizaciones/${slug}/cursos/${courseSlug}/publicaciones/1`,
   );
   expect(historical?.status()).toBe(404);
@@ -181,11 +175,11 @@ test('immutable publication, authenticated library, withdrawal and axe work end 
   await expect(
     page.getByText('Release 2', { exact: true }).first(),
   ).toBeVisible({ timeout: 20_000 });
-  await learnerPage.goto(`${libraryPath}/${courseSlug}`);
+  await readerPage.goto(`${libraryPath}/${courseSlug}`);
   await expect(
-    learnerPage.getByText('Orden estable del release 2.'),
+    readerPage.getByText('Orden estable del release 2.'),
   ).toBeVisible({ timeout: 20_000 });
-  await expect(learnerPage.getByText('Concepto de función')).toBeVisible();
+  await expect(readerPage.getByText('Concepto de función')).toBeVisible();
 
   await page.goto(publicationPath);
   await page.getByRole('button', { name: 'Retirar de la biblioteca' }).click();
@@ -196,9 +190,9 @@ test('immutable publication, authenticated library, withdrawal and axe work end 
   await expect(page.getByText('Retirada', { exact: true })).toBeVisible();
   await expect(page.getByText('Corrección académica verificada')).toBeVisible();
 
-  await learnerPage.goto(libraryPath);
-  await expect(learnerPage.getByText('No hay cursos activos')).toBeVisible();
-  const hiddenCourse = await learnerPage.goto(`${libraryPath}/${courseSlug}`);
+  await readerPage.goto(libraryPath);
+  await expect(readerPage.getByText('No hay cursos activos')).toBeVisible();
+  const hiddenCourse = await readerPage.goto(`${libraryPath}/${courseSlug}`);
   expect(hiddenCourse?.status()).toBe(404);
-  await learnerContext.close();
+  await readerContext.close();
 });

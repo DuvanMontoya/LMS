@@ -2,7 +2,6 @@
 
 import {
   BookOpenCheck,
-  BookOpenText,
   Building2,
   ChevronDown,
   FileCheck2,
@@ -11,6 +10,7 @@ import {
   LayoutDashboard,
   LibraryBig,
   ListTree,
+  NotebookTabs,
   Plus,
   Send,
   Tags,
@@ -164,6 +164,13 @@ function PlatformSidebar({
   const academicNavigation: NavigationItem[] = organizationBase
     ? [
         {
+          activePrefixes: [`${organizationBase}/aprender/`],
+          exact: true,
+          href: `${organizationBase}/aprendizaje`,
+          icon: NotebookTabs,
+          label: 'Mi aprendizaje',
+        },
+        {
           children: [
             {
               activePrefixes: [`${organizationBase}/curriculo/asignaturas/`],
@@ -219,7 +226,7 @@ function PlatformSidebar({
         },
         {
           href: `${organizationBase}/biblioteca`,
-          icon: BookOpenText,
+          icon: LibraryBig,
           label: 'Biblioteca',
           visible: capabilities.has('course.published.view'),
         },
@@ -227,6 +234,27 @@ function PlatformSidebar({
     : [];
   const administrationNavigation: NavigationItem[] = organizationBase
     ? [
+        {
+          activePrefixes: [`${organizationBase}/aprendizaje/matriculas`],
+          children: [
+            {
+              href: `${organizationBase}/aprendizaje/cohortes`,
+              label: 'Cohortes',
+              visible: capabilities.has('learning.cohort.view'),
+            },
+            {
+              href: `${organizationBase}/aprendizaje/matriculas`,
+              label: 'Matrículas',
+              visible: capabilities.has('learning.enrollment.view'),
+            },
+          ],
+          href: `${organizationBase}/aprendizaje/cohortes`,
+          icon: GraduationCap,
+          label: 'Entrega del aprendizaje',
+          visible:
+            capabilities.has('learning.cohort.view') ||
+            capabilities.has('learning.enrollment.view'),
+        },
         {
           href: `${organizationBase}/miembros`,
           icon: Users,
@@ -554,7 +582,7 @@ function PlatformNavigationSubLink({
   );
 }
 
-function isNavigationItemActive(
+export function isNavigationItemActive(
   item: Pick<NavigationItem, 'activePrefixes' | 'exact' | 'href'>,
   pathname: string,
 ) {

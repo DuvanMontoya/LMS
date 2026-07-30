@@ -1,4 +1,4 @@
-import { courseWorkspaceBase } from './platform-shell';
+import { courseWorkspaceBase, isNavigationItemActive } from './platform-shell';
 
 describe('courseWorkspaceBase', () => {
   const organizationBase = '/organizaciones/academia';
@@ -37,5 +37,48 @@ describe('courseWorkspaceBase', () => {
         organizationBase,
       ),
     ).toBeUndefined();
+  });
+});
+
+describe('isNavigationItemActive', () => {
+  it('keeps the student learning entry separate from administration routes', () => {
+    const item = {
+      activePrefixes: ['/organizaciones/academia/aprender/'],
+      exact: true,
+      href: '/organizaciones/academia/aprendizaje',
+    };
+
+    expect(
+      isNavigationItemActive(item, '/organizaciones/academia/aprendizaje'),
+    ).toBe(true);
+    expect(
+      isNavigationItemActive(item, '/organizaciones/academia/aprender/calculo'),
+    ).toBe(true);
+    expect(
+      isNavigationItemActive(
+        item,
+        '/organizaciones/academia/aprendizaje/cohortes',
+      ),
+    ).toBe(false);
+  });
+
+  it('keeps learning delivery active across cohort and enrollment routes', () => {
+    const item = {
+      activePrefixes: ['/organizaciones/academia/aprendizaje/matriculas'],
+      href: '/organizaciones/academia/aprendizaje/cohortes',
+    };
+
+    expect(
+      isNavigationItemActive(
+        item,
+        '/organizaciones/academia/aprendizaje/cohortes/cohort-1',
+      ),
+    ).toBe(true);
+    expect(
+      isNavigationItemActive(
+        item,
+        '/organizaciones/academia/aprendizaje/matriculas/enrollment-1',
+      ),
+    ).toBe(true);
   });
 });

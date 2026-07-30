@@ -237,5 +237,10 @@ SPECTACULAR_SETTINGS = {
         "CourseSubjectAlignmentType": "domain.courses.choices.SubjectAlignmentType",
         "PublicationLifecycleStatus": "domain.publishing.choices.PublicationStatus",
         "PublicationEventType": "domain.publishing.choices.PublicationEventType",
+        "LearningAssignmentReason": "domain.learning.choices.AssignmentReason",
+        "LearningProgressStatus": "domain.learning.choices.ProgressStatus",
+        "LearningUnitProgressStatus": "domain.learning.choices.UnitProgressStatus",
+        "LearningEventType": "domain.learning.choices.LearningEventType",
+        "LearningAccessState": "domain.learning.choices.AccessState",
     },
 }

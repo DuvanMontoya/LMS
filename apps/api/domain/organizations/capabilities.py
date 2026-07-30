@@ -30,6 +30,12 @@ class Capability(StrEnum):
     COURSE_RELEASE_HISTORY_VIEW = "course.release.history.view"
     COURSE_RELEASE_CREATE_DRAFT = "course.release.create_draft"
     COURSE_PUBLISHED_VIEW = "course.published.view"
+    LEARNING_COHORT_VIEW = "learning.cohort.view"
+    LEARNING_COHORT_MANAGE = "learning.cohort.manage"
+    LEARNING_ENROLLMENT_VIEW = "learning.enrollment.view"
+    LEARNING_ENROLLMENT_MANAGE = "learning.enrollment.manage"
+    LEARNING_PROGRESS_VIEW = "learning.progress.view"
+    LEARNING_PROGRESS_MANAGE = "learning.progress.manage"
 
 
 _ALL_CAPABILITIES = frozenset(Capability)
@@ -54,6 +60,9 @@ _COURSE_AUTHOR_CAPABILITIES = frozenset(
         Capability.COURSE_RELEASE_HISTORY_VIEW,
         Capability.COURSE_RELEASE_CREATE_DRAFT,
         Capability.COURSE_PUBLISHED_VIEW,
+        Capability.LEARNING_COHORT_VIEW,
+        Capability.LEARNING_ENROLLMENT_VIEW,
+        Capability.LEARNING_PROGRESS_VIEW,
     }
 )
 
@@ -74,6 +83,7 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.COURSE_APPROVED_VIEW,
                 Capability.COURSE_RELEASE_HISTORY_VIEW,
                 Capability.COURSE_PUBLISHED_VIEW,
+                Capability.LEARNING_PROGRESS_VIEW,
             }
         ),
         RoleCode.INSTRUCTOR: _MEMBER_READ_CAPABILITIES
@@ -82,10 +92,13 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.CATALOG_VIEW,
                 Capability.COURSE_APPROVED_VIEW,
                 Capability.COURSE_PUBLISHED_VIEW,
+                Capability.LEARNING_COHORT_VIEW,
+                Capability.LEARNING_ENROLLMENT_VIEW,
+                Capability.LEARNING_PROGRESS_VIEW,
             }
         ),
         RoleCode.LEARNER: _MEMBER_READ_CAPABILITIES
-        | frozenset({Capability.CATALOG_VIEW, Capability.COURSE_PUBLISHED_VIEW}),
+        | frozenset({Capability.CATALOG_VIEW}),
     }
 )
 

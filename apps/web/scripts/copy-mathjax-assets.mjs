@@ -5,7 +5,11 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const source = join(root, 'node_modules', 'mathjax');
 const target = join(root, 'public', 'vendor', 'mathjax');
-const assets = ['tex-svg.js', join('ui', 'safe.js')];
+const assets = [
+  'tex-svg.js',
+  join('sre', 'speech-worker.js'),
+  join('ui', 'safe.js'),
+];
 const check = process.argv.includes('--check');
 
 for (const asset of assets) {

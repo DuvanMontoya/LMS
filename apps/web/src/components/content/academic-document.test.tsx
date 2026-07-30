@@ -22,5 +22,8 @@ describe('AcademicDocument', () => {
         ?.src,
     ).toBe('http://localhost:3000/vendor/mathjax/tex-svg.js');
     expect(document.querySelector('script[src^="http"]')).toBeNull();
+    const semanticNode = document.querySelector<HTMLElement>('[data-node-id]');
+    expect(semanticNode).not.toBeNull();
+    expect(semanticNode?.id).toBe(`node-${semanticNode?.dataset.nodeId}`);
   });
 });

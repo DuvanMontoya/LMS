@@ -484,3 +484,43 @@ navegador manual, libera 3000/8000 y usa `publishing:visual`; `Ctrl+C` detiene
 sólo sus procesos. E2E elimina recursos efímeros. El snapshot excluye HTML,
 secretos, usuarios y estado del alumno; el lector reutiliza renderer semántico,
 MathJax local, código inert, tablas y bloques pedagógicos del Prompt 10.
+
+## Matrículas y entrega del aprendizaje
+
+Publicar un curso no matricula estudiantes. `domain.learning` concede acceso
+mediante una matrícula vinculada a una membresía activa y fija un release
+inmutable. Un release posterior no mueve matrículas existentes; el upgrade de
+una matrícula individual es explícito, conserva la asignación previa y empieza
+otro progreso. Las cohortes fijan curso, release y ventana y se archivan sin
+borrar historial.
+
+El estudiante usa **Mi aprendizaje** en
+`/organizaciones/{slug}/aprendizaje`; sólo una matrícula efectiva abre
+`/aprender/{courseSlug}` y sus unidades. Suspensión, revocación, ventana
+futura/finalizada, publicación retirada o release inválido niegan contenido. El
+avance, la última unidad y el nodo semántico pertenecen al release asignado; no
+se guardan JWT, progreso ni permisos en Web Storage.
+
+Para preparar la demostración local, después de publicación ejecuta:
+
+```powershell
+pnpm learning:demo
+```
+
+El comando es idempotente, sólo funciona con `DEBUG=True`, no crea contraseñas
+y conserva progresos/release existentes. Owner y administrator gestionan
+`/aprendizaje/cohortes` y `/aprendizaje/matriculas`; author/reviewer/instructor
+son sólo lectura según capacidades y learner sólo ve sus matrículas.
+
+| Objetivo learning | Comando |
+| --- | --- |
+| Checks, migraciones, OpenAPI y drift | `pnpm learning:check` |
+| Suite PostgreSQL del dominio | `pnpm learning:test` |
+| Carreras reales | `pnpm learning:test:concurrency` |
+| Seguridad/API | `pnpm learning:test:security` |
+| Demo development | `pnpm learning:demo` |
+| Chromium aislado, axe y 390 px | `pnpm learning:e2e` |
+
+El criterio de completitud actual es provisional para cursos sin evaluaciones:
+todas las unidades del release deben estar completas. No se implementan
+evaluaciones, certificados, enrollment approval ni publicación automática.

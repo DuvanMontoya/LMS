@@ -110,3 +110,20 @@ visual; la autenticación continúa siendo el contrato allauth del LMS.
 
 Versiones/avisos se contrastaron en PyPI, npm Registry y repositorios oficiales.
 No se usaron blogs, tutoriales o respuestas de terceros.
+
+## Revalidación de learning — 2026-07-30
+
+| Autoridad oficial | Fuente | Aplicación |
+| --- | --- | --- |
+| Django 6.0 | https://docs.djangoproject.com/en/6.0/ref/models/querysets/#select-for-update | Locks con `of=("self",)` y `TransactionTestCase`; no lock sobre outer join nullable. |
+| PostgreSQL 18 | https://www.postgresql.org/docs/18/plpgsql-trigger.html | Triggers row-level que abortan UPDATE/DELETE. |
+| DRF | https://www.django-rest-framework.org/api-guide/throttling/ | Throttle scoped de posición; no es control de concurrencia. |
+| drf-spectacular | https://drf-spectacular.readthedocs.io/en/latest/customization.html | Serializers y operation IDs explícitos, schema sin warnings. |
+| django-filter 26.1 | https://django-filter.readthedocs.io/en/stable/guide/rest_framework.html | FilterSet DRF con campos allowlisted. |
+| Next 16 | `node_modules/next/dist/docs/01-app/01-getting-started/05-server-and-client-components.md` | Pages Server Components; browser APIs en Client Components. |
+| React 19 | https://react.dev/reference/react/useEffect ; https://react.dev/reference/react/useRef | Observer/timers en effect; refs fuera del render. |
+| TanStack Query 5 | https://tanstack.com/query/latest/docs/framework/react/guides/mutations | Mutaciones sin retry e invalidación tras éxito. |
+| React Hook Form | https://react-hook-form.com/docs/useform | Formularios con schema y errores accesibles. |
+| Zod 4 | https://zod.dev/basics | Validación de UUID, fechas y payloads antes de mutar. |
+| Playwright | https://playwright.dev/docs/accessibility-testing | E2E visible, locators por rol y axe A/AA. |
+| MDN | https://developer.mozilla.org/docs/Web/API/Intersection_Observer_API ; https://developer.mozilla.org/docs/Web/API/Window/pagehide_event ; https://developer.mozilla.org/docs/Web/API/Request/keepalive | Posición visible, debounce y flush de navegación. |

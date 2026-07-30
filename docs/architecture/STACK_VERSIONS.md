@@ -82,3 +82,10 @@ No se añadió dependencia. Se reutilizan Django 6.0.7, PostgreSQL 18.4,
 jsonschema 4.26.0, DRF 3.17.1, drf-spectacular 0.30.0, Ajv 8.20.0,
 json-schema-to-typescript 15.0.4, Next 16.2.12, React 19.2.8, TanStack Query
 5.101.4, Playwright 1.58.2 y axe 4.12.1 con pins bloqueados.
+
+## Stack de learning (Prompt 12)
+
+No se añadió dependencia. Se revalidaron los pins reales: Python 3.13.13,
+Django 6.0.7, PostgreSQL 18.4, DRF 3.17.1, drf-spectacular 0.30.0,
+django-filter 26.1, Next 16.2.12, React 19.2.8, TanStack Query 5.101.4,
+React Hook Form 7.83.0, Zod 4.4.3, Playwright 1.62.0 y axe 4.12.1.
