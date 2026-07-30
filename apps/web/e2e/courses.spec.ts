@@ -66,7 +66,7 @@ test('course authoring, conflict, review, approval, roles and axe work end to en
 
   await expectNoAxeViolations(page);
   const contextB = await browser.newContext({
-    baseURL: 'http://127.0.0.1:3000',
+    baseURL: `http://127.0.0.1:${process.env.E2E_WEB_PORT ?? '3000'}`,
   });
   const pageB = await contextB.newPage();
   await login(

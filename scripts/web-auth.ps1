@@ -65,6 +65,21 @@ function Invoke-WithTemporaryDjango([scriptblock]$Operation) {
     }
 }
 
+function Invoke-WithCurrentPlatformSchema([scriptblock]$Operation) {
+    $schemaFile = New-TemporaryFile
+    $previousSchemaFile = [Environment]::GetEnvironmentVariable('PLATFORM_OPENAPI_FILE', 'Process')
+    try {
+        & $pythonExecutable (Join-Path $apiDirectory 'manage.py') spectacular --file $schemaFile.FullName --format openapi-json --validate --fail-on-warn
+        Assert-LastExitCode 'current platform OpenAPI generation'
+        [Environment]::SetEnvironmentVariable('PLATFORM_OPENAPI_FILE', $schemaFile.FullName, 'Process')
+        & $Operation
+    }
+    finally {
+        [Environment]::SetEnvironmentVariable('PLATFORM_OPENAPI_FILE', $previousSchemaFile, 'Process')
+        Remove-Item -LiteralPath $schemaFile.FullName -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Clear-E2EMail {
     $resolvedApi = [IO.Path]::GetFullPath($apiDirectory)
     $resolvedMail = [IO.Path]::GetFullPath($e2eMailDirectory)
@@ -88,23 +103,28 @@ function Clear-E2EResults {
     }
 }
 
-function Assert-E2EPortsAvailable {
-    if (-not $IsWindows) { return }
-    $listeners = Get-NetTCPConnection -State Listen -LocalPort 3000,8000 -ErrorAction SilentlyContinue
-    if ($listeners) { throw 'Ports 3000 and 8000 must be free before isolated E2E starts.' }
+function Get-FreeLocalPort {
+    $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+    $listener.Start()
+    try { return ([System.Net.IPEndPoint]$listener.LocalEndpoint).Port }
+    finally { $listener.Stop() }
 }
 
 function Invoke-E2E([string]$Grep) {
-    Assert-E2EPortsAvailable
     & docker compose @composeArguments ps --status running postgres redis | Out-Null
     Assert-LastExitCode 'E2E infrastructure health check'
 
     $databaseName = "lms_e2e_$([Guid]::NewGuid().ToString('N'))"
     $redisPrefix = "lms-e2e-$([Guid]::NewGuid().ToString('N'))"
+    $apiPort = Get-FreeLocalPort
+    $webPort = Get-FreeLocalPort
+    while ($webPort -eq $apiPort) { $webPort = Get-FreeLocalPort }
+    $nextDistDirectoryName = ".local/e2e-next-$([Guid]::NewGuid().ToString('N'))"
+    $nextDistDirectory = Join-Path $webDirectory $nextDistDirectoryName
     $createDatabase = 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE {0}"' -f $databaseName
     $dropDatabase = 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS {0}"' -f $databaseName
     $savedEnvironment = @{}
-    foreach ($name in @('POSTGRES_DB', 'DJANGO_SETTINGS_MODULE', 'E2E_REDIS_PREFIX', 'E2E_MAIL_PATH', 'E2E_ORGANIZATIONS_PASSWORD')) {
+    foreach ($name in @('POSTGRES_DB', 'DJANGO_SETTINGS_MODULE', 'E2E_REDIS_PREFIX', 'E2E_MAIL_PATH', 'E2E_ORGANIZATIONS_PASSWORD', 'E2E_API_PORT', 'E2E_WEB_PORT', 'DJANGO_INTERNAL_ORIGIN', 'FRONTEND_ORIGIN', 'NEXT_DIST_DIR')) {
         $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
     }
 
@@ -118,10 +138,17 @@ function Invoke-E2E([string]$Grep) {
         [Environment]::SetEnvironmentVariable('E2E_REDIS_PREFIX', $redisPrefix, 'Process')
         [Environment]::SetEnvironmentVariable('E2E_MAIL_PATH', $e2eMailDirectory, 'Process')
         [Environment]::SetEnvironmentVariable('E2E_ORGANIZATIONS_PASSWORD', "E2E!$([Guid]::NewGuid().ToString('N'))aA", 'Process')
+        [Environment]::SetEnvironmentVariable('E2E_API_PORT', [string]$apiPort, 'Process')
+        [Environment]::SetEnvironmentVariable('E2E_WEB_PORT', [string]$webPort, 'Process')
+        [Environment]::SetEnvironmentVariable('DJANGO_INTERNAL_ORIGIN', "http://127.0.0.1:$apiPort", 'Process')
+        [Environment]::SetEnvironmentVariable('FRONTEND_ORIGIN', "http://127.0.0.1:$webPort", 'Process')
+        [Environment]::SetEnvironmentVariable('NEXT_DIST_DIR', $nextDistDirectoryName, 'Process')
         & $pythonExecutable (Join-Path $apiDirectory 'manage.py') migrate --noinput
         Assert-LastExitCode 'E2E migrations'
         & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_organizations
         Assert-LastExitCode 'E2E organization fixture creation'
+        & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_publication
+        Assert-LastExitCode 'E2E publication source fixture creation'
         $playwrightArguments = @('test')
         if (-not [string]::IsNullOrWhiteSpace($Grep)) {
             $playwrightArguments += @('--grep', $Grep)
@@ -141,8 +168,16 @@ function Invoke-E2E([string]$Grep) {
         Write-Host "E2E mail files before cleanup: $mailCount"
         Clear-E2EMail
         Clear-E2EResults
-        if ($IsWindows) {
-            $leftovers = Get-NetTCPConnection -State Listen -LocalPort 3000,8000 -ErrorAction SilentlyContinue
+        $resolvedWeb = [IO.Path]::GetFullPath($webDirectory)
+        $resolvedNextDist = [IO.Path]::GetFullPath($nextDistDirectory)
+        if (-not $resolvedNextDist.StartsWith($resolvedWeb + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Refusing to clean an E2E Next directory outside apps/web.'
+        }
+        if (Test-Path -LiteralPath $resolvedNextDist) {
+            Remove-Item -LiteralPath $resolvedNextDist -Recurse -Force
+        }
+        if ($IsWindows -and $apiPort -and $webPort) {
+            $leftovers = Get-NetTCPConnection -State Listen -LocalPort $apiPort,$webPort -ErrorAction SilentlyContinue
             foreach ($listener in $leftovers) { Stop-Process -Id $listener.OwningProcess -Force }
         }
     }
@@ -211,13 +246,13 @@ switch ($Action) {
         }
     }
     'GeneratePlatformClient' {
-        Invoke-WithTemporaryDjango {
+        Invoke-WithCurrentPlatformSchema {
             & pnpm --dir $webDirectory exec node scripts/generate-platform-client.mjs generate
             Assert-LastExitCode 'platform client generation'
         }
     }
     'CheckPlatformClient' {
-        Invoke-WithTemporaryDjango {
+        Invoke-WithCurrentPlatformSchema {
             & pnpm --dir $webDirectory exec node scripts/generate-platform-client.mjs check
             Assert-LastExitCode 'platform client drift check'
         }

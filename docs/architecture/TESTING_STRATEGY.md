@@ -71,3 +71,11 @@ La cobertura global mantiene el gate 75 %. Para `domain.content` se inspecciona
 además el reporte por archivo y se exige evidencia material de versiones,
 concurrencia, seguridad y readiness; migraciones, artefactos generados y
 bibliotecas se excluyen del juicio de lógica propia.
+
+# Publicación Prompt 11
+
+Pytest cubre schema, snapshot/límites, cadena/corrupción, publicación, retiro,
+clonación, permisos, IDOR, API, inmutabilidad ORM/SQL y carreras reales. Vitest
+cubre claves, etiquetas y schema inválido. Playwright crea PostgreSQL efímero,
+publica, lee con dos contextos, valida axe, teclado y 390 px, retira, comprueba
+404 y elimina base, Redis, correo y procesos.

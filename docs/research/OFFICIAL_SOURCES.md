@@ -93,3 +93,20 @@ La referencia visual privada del login fue leída directamente desde
 `DuvanMontoya/Frontera-Matematica` mediante el acceso GitHub autorizado, no
 mediante una copia pública o un contenido inventado. Se reutilizó su composición
 visual; la autenticación continúa siendo el contrato allauth del LMS.
+
+## Prompt 11 consultation — 2026-07-30
+
+| Tema | Fuente oficial | Evidencia aplicada |
+| --- | --- | --- |
+| Django transactions/locks | https://docs.djangoproject.com/en/6.0/topics/db/transactions/ ; https://docs.djangoproject.com/en/6.0/ref/models/querysets/#select-for-update | `atomic`, locks `of=("self",)` y carreras PostgreSQL. |
+| Django migrations/admin | https://docs.djangoproject.com/en/6.0/ref/migration-operations/#runsql ; https://docs.djangoproject.com/en/6.0/ref/contrib/admin/ | `RunSQL` para triggers y admin read-only. |
+| PostgreSQL 18 triggers/JSON | https://www.postgresql.org/docs/18/sql-createtrigger.html ; https://www.postgresql.org/docs/18/datatype-json.html | Bloqueo UPDATE/DELETE y snapshot JSONB. |
+| JSON Schema 2020-12 | https://json-schema.org/draft/2020-12/json-schema-core.html ; https://json-schema.org/draft/2020-12/json-schema-validation.html | Contrato estricto local sin refs remotos. |
+| jsonschema/Ajv | https://python-jsonschema.readthedocs.io/en/stable/validate/ ; https://ajv.js.org/json-schema.html | Mismo dialecto backend/frontend. |
+| DRF/drf-spectacular | https://www.django-rest-framework.org/api-guide/serializers/ ; https://drf-spectacular.readthedocs.io/en/latest/customization.html | Serializers cerrados y OpenAPI sin warnings. |
+| Next/React | https://nextjs.org/docs/app/api-reference/functions/fetch ; https://react.dev/reference/rsc/server-components | Server Components y `no-store`. |
+| TanStack Query | https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation | Invalidación acotada, sin optimistic/retry. |
+| Playwright/axe | https://playwright.dev/docs/accessibility-testing ; https://playwright.dev/docs/input | Chromium, teclado, axe y 390 px. |
+
+Versiones/avisos se contrastaron en PyPI, npm Registry y repositorios oficiales.
+No se usaron blogs, tutoriales o respuestas de terceros.

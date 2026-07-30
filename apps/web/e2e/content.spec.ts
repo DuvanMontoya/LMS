@@ -291,7 +291,7 @@ test('semantic content authoring, versioning, conflict, readiness, roles, securi
   await expectNoAxeViolations(page);
 
   const contextB = await browser.newContext({
-    baseURL: 'http://127.0.0.1:3000',
+    baseURL: `http://127.0.0.1:${process.env.E2E_WEB_PORT ?? '3000'}`,
   });
   rejectExternalRequests(contextB, externalRequests);
   const pageB = await contextB.newPage();

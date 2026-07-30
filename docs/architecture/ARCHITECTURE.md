@@ -226,3 +226,10 @@ flowchart TB
 La frontera browser continúa same-origin con sesión y CSRF Django. No hay CDN,
 HTML persistido, autosave, colaboración, ejecución, almacenamiento local ni
 servicio nuevo. ADR 0020 contiene las doce secuencias/diagramas detallados.
+
+# Publicación inmutable (Prompt 11)
+
+`domain.publishing` transforma revisión aprobada y contenido actual en snapshot
+completo, ordenado, validado y encadenado. PostgreSQL conserva release y eventos
+append-only; Next y DRF sirven la biblioteca sólo desde ese JSON. ADR 0021 y
+`PUBLISHING.md` contienen la decisión y diagramas.

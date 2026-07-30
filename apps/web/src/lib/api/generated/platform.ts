@@ -170,6 +170,30 @@ export interface paths {
   '/api/v1/organizations/{slug}/courses/{course_slug}/archive/': {
     post: operations['organizations_courses_archive_create'];
   };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/publication/': {
+    get: operations['organizations_courses_publication_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/publication/withdraw/': {
+    post: operations['organizations_courses_publication_withdraw_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/releases/': {
+    get: operations['organizations_courses_releases_list'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/releases/{release_number}/': {
+    get: operations['organizations_courses_releases_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/releases/{release_number}/create-draft/': {
+    post: operations['organizations_courses_releases_create_draft_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/releases/{release_number}/outline/': {
+    get: operations['organizations_courses_releases_outline_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/releases/{release_number}/units/{unit_id}/': {
+    get: operations['organizations_courses_releases_units_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/releases/{release_number}/verify/': {
+    get: operations['organizations_courses_releases_verify_retrieve'];
+  };
   '/api/v1/organizations/{slug}/courses/{course_slug}/restore/': {
     post: operations['organizations_courses_restore_create'];
   };
@@ -214,6 +238,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/outline/': {
     get: operations['organizations_courses_revisions_outline_retrieve'];
   };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/publish/': {
+    post: operations['organizations_courses_revisions_publish_create'];
+  };
   '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/readiness/': {
     get: operations['organizations_courses_revisions_readiness_retrieve'];
   };
@@ -247,6 +274,18 @@ export interface paths {
   '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/topics/': {
     get: operations['organizations_courses_revisions_units_topics_list'];
     put: operations['organizations_courses_revisions_units_topics_update'];
+  };
+  '/api/v1/organizations/{slug}/library/courses/': {
+    get: operations['organizations_library_courses_list'];
+  };
+  '/api/v1/organizations/{slug}/library/courses/{course_slug}/': {
+    get: operations['organizations_library_courses_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/library/courses/{course_slug}/outline/': {
+    get: operations['organizations_library_courses_outline_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/library/courses/{course_slug}/units/{unit_id}/': {
+    get: operations['organizations_library_courses_units_retrieve'];
   };
   '/api/v1/organizations/{slug}/memberships/': {
     get: operations['organizations_memberships_list'];
@@ -473,6 +512,9 @@ export interface components {
       name: string;
       slug: string;
     };
+    CreateDraft: {
+      expected_publication_version: number;
+    };
     CreateObjective: {
       code: string;
       cognitive_level?:
@@ -507,6 +549,12 @@ export interface components {
       slug: string;
       status: string;
     };
+    DraftResult: {
+      lock_version: number;
+      /** Format: uuid */
+      revision_id: string;
+      revision_number: number;
+    };
     /**
      * @description * `membership_created` - Membresía creada
      * * `membership_suspended` - Membresía suspendida
@@ -532,6 +580,37 @@ export interface components {
      * @enum {string}
      */
     KindEnum: 'required' | 'recommended';
+    LibraryCourse: {
+      /** Format: uuid */
+      course_id: string;
+      estimated_duration_minutes: number | null;
+      language_code: string;
+      module_count: number;
+      release_number: number;
+      slug: string;
+      summary: string;
+      title: string;
+      unit_count: number;
+      word_count: number;
+    };
+    LibraryDetail: {
+      /** Format: uuid */
+      course_id: string;
+      description: string;
+      estimated_duration_minutes: number | null;
+      language_code: string;
+      learning_objectives: unknown;
+      module_count: number;
+      outline: components['schemas']['PublishedOutlineModule'][];
+      release_number: number;
+      slug: string;
+      subjects: unknown;
+      subtitle: string | null;
+      summary: string;
+      title: string;
+      unit_count: number;
+      word_count: number;
+    };
     Membership: {
       /** Format: date-time */
       joined_at: string;
@@ -762,6 +841,66 @@ export interface components {
       id: string;
       name: string;
     };
+    PublicationState: {
+      /** Format: uuid */
+      approved_revision_id: string | null;
+      current_release_number: number | null;
+      /** Format: date-time */
+      first_published_at: string | null;
+      has_publication: boolean;
+      /** Format: date-time */
+      last_published_at: string | null;
+      lock_version: number;
+      status: string | null;
+      withdrawal_note: string;
+      /** Format: date-time */
+      withdrawn_at: string | null;
+    };
+    Publish: {
+      expected_publication_version: number;
+    };
+    PublishResult: {
+      already_released: boolean;
+      is_current: boolean;
+      publication_status: string;
+      publication_version: number;
+      release_number: number;
+      snapshot_digest: string;
+    };
+    PublishedOutlineModule: {
+      description: string;
+      /** Format: uuid */
+      id: string;
+      position: number;
+      title: string;
+      units: components['schemas']['PublishedOutlineUnit'][];
+    };
+    PublishedOutlineUnit: {
+      estimated_duration_minutes: number | null;
+      /** Format: uuid */
+      id: string;
+      position: number;
+      summary: string;
+      title: string;
+    };
+    PublishingError: {
+      code: string;
+      detail: string;
+    };
+    ReaderNavigation: {
+      next: components['schemas']['ReaderNavigationItem'] | null;
+      position: number;
+      previous: components['schemas']['ReaderNavigationItem'] | null;
+      total: number;
+    };
+    ReaderNavigationItem: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      module_id: string;
+      module_title: string;
+      title: string;
+    };
     Readiness: {
       issues: components['schemas']['ReadinessIssue'][];
       ready: boolean;
@@ -770,6 +909,56 @@ export interface components {
       code: string;
       message: string;
       path: string;
+    };
+    ReleaseDetail: {
+      course: unknown;
+      /** Format: date-time */
+      created_at: string;
+      curriculum: unknown;
+      estimated_duration_minutes: number | null;
+      is_current: boolean;
+      language_code: string;
+      module_count: number;
+      number: number;
+      previous_release_number: number | null;
+      schema_version: number;
+      snapshot_digest: string;
+      snapshot_size_bytes: number;
+      /** Format: uuid */
+      source_revision_id: string;
+      source_revision_number: number;
+      summary: string;
+      title: string;
+      unit_count: number;
+      word_count: number;
+    };
+    ReleaseOutline: {
+      modules: components['schemas']['PublishedOutlineModule'][];
+      release_number: number;
+    };
+    ReleaseSummary: {
+      /** Format: date-time */
+      created_at: string;
+      estimated_duration_minutes: number | null;
+      is_current: boolean;
+      language_code: string;
+      module_count: number;
+      number: number;
+      previous_release_number: number | null;
+      snapshot_digest: string;
+      /** Format: uuid */
+      source_revision_id: string;
+      source_revision_number: number;
+      summary: string;
+      title: string;
+      unit_count: number;
+      word_count: number;
+    };
+    ReleaseUnit: {
+      course: unknown;
+      navigation: components['schemas']['ReaderNavigation'];
+      release_number: number;
+      unit: unknown;
     };
     ReplaceConceptAssociations: {
       concept_ids: string[];
@@ -990,6 +1179,20 @@ export interface components {
       email: string;
       /** Format: uuid */
       id: string;
+    };
+    Verification: {
+      checked_releases: number;
+      issues: components['schemas']['VerificationIssue'][];
+      valid: boolean;
+    };
+    VerificationIssue: {
+      code: string;
+      detail: string;
+      release_number: number | null;
+    };
+    Withdraw: {
+      expected_publication_version: number;
+      note: string;
     };
     WorkflowAction: {
       expected_version: number;
@@ -2214,6 +2417,176 @@ export interface operations {
       };
     };
   };
+  organizations_courses_publication_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PublicationState'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['PublishingError'];
+        };
+      };
+    };
+  };
+  organizations_courses_publication_withdraw_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Withdraw'];
+        'application/x-www-form-urlencoded': components['schemas']['Withdraw'];
+        'multipart/form-data': components['schemas']['Withdraw'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PublicationState'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['PublishingError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['PublishingError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['PublishingError'];
+        };
+      };
+    };
+  };
+  organizations_courses_releases_list: {
+    parameters: {
+      path: {
+        course_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReleaseSummary'][];
+        };
+      };
+    };
+  };
+  organizations_courses_releases_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        release_number: number;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReleaseDetail'];
+        };
+      };
+    };
+  };
+  organizations_courses_releases_create_draft_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        release_number: number;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateDraft'];
+        'application/x-www-form-urlencoded': components['schemas']['CreateDraft'];
+        'multipart/form-data': components['schemas']['CreateDraft'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['DraftResult'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['PublishingError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['PublishingError'];
+        };
+      };
+    };
+  };
+  organizations_courses_releases_outline_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        release_number: number;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReleaseOutline'];
+        };
+      };
+    };
+  };
+  organizations_courses_releases_units_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        release_number: number;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReleaseUnit'];
+        };
+      };
+    };
+  };
+  organizations_courses_releases_verify_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        release_number: number;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Verification'];
+        };
+      };
+    };
+  };
   organizations_courses_restore_create: {
     parameters: {
       path: {
@@ -2577,6 +2950,44 @@ export interface operations {
       };
     };
   };
+  organizations_courses_revisions_publish_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['Publish'];
+        'application/x-www-form-urlencoded': components['schemas']['Publish'];
+        'multipart/form-data': components['schemas']['Publish'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PublishResult'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['PublishingError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['PublishingError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['PublishingError'];
+        };
+      };
+    };
+  };
   organizations_courses_revisions_readiness_retrieve: {
     parameters: {
       path: {
@@ -2861,6 +3272,66 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['MutationResult'];
+        };
+      };
+    };
+  };
+  organizations_library_courses_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LibraryCourse'][];
+        };
+      };
+    };
+  };
+  organizations_library_courses_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LibraryDetail'];
+        };
+      };
+    };
+  };
+  organizations_library_courses_outline_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReleaseOutline'];
+        };
+      };
+    };
+  };
+  organizations_library_courses_units_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ReleaseUnit'];
         };
       };
     };

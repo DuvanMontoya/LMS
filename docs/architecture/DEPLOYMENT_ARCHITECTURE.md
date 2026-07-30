@@ -55,3 +55,8 @@ assets con la misma versión de aplicación y mantener límites de request en el
 proxy iguales o más estrictos que el backend. Una publicación posterior no
 podrá apuntar al documento mutable actual: deberá capturar un snapshot inmutable
 completo del curso.
+
+Prompt 11 cumple esa frontera sin servicio adicional. El despliegue aplica
+`publishing.0001` y `0002` antes del tráfico, comprueba triggers y ejecuta
+`verify_course_releases` read-only. Un fallo de integridad bloquea promoción;
+no se repara reescribiendo releases históricos.

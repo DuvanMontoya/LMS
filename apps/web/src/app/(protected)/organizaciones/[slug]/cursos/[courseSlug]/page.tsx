@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, FileCheck2, ListTree } from 'lucide-react';
+import { ArrowRight, FileCheck2, ListTree, Send } from 'lucide-react';
 
 import { AlignmentEditor } from '@/components/courses/alignment-editor';
 import { CourseMetadataForm } from '@/components/courses/course-metadata-form';
@@ -30,6 +30,16 @@ export default async function CourseWorkspacePage({
                 Estructura
               </Link>
             </Button>
+            {capabilities.includes('course.release.history.view') ? (
+              <Button asChild size="sm" variant="outline">
+                <Link
+                  href={`/organizaciones/${slug}/cursos/${courseSlug}/publicacion`}
+                >
+                  <Send data-icon="inline-start" />
+                  Publicación
+                </Link>
+              </Button>
+            ) : null}
             <Button asChild size="sm" variant="outline">
               <Link
                 href={`/organizaciones/${slug}/cursos/${courseSlug}/revision`}

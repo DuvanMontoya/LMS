@@ -7,6 +7,7 @@
 | `catalog` | Implemented: area, discipline, subject, materialized-path topic tree, reusable concept, learning objective, ordered concept associations and prerequisite edges. Future: competencies and learning paths. | UUID/slug uniqueness is scoped by organization; topic structural fields remain owned by Treebeard; both prerequisite graphs are acyclic; archived entities cannot receive new associations. | Depends on organizations and identity policy only. Courses may read its public services, but catalog never owns enrolment, delivery, grades or attempts. |
 | `courses` | Implemented: stable Course identity, authoring revisions, append-only transitions, ordered modules/units and curriculum alignments. | At most one open revision; active positions are contiguous from 1; deferred uniqueness supports reorder; every mutation uses `expected_version`; approved structure is not publication. | Reads organization policy and catalog references; never owns taxonomy, semantic content, publication, enrolment, evaluations or grades. |
 | `content` | Semantic documents, blocks, references, resource links | Validated document schema; no arbitrary executable markup. Emits `content_revised`. | Media and authoring; cannot publish itself. |
+| `publishing` | Implemented: publication channel, immutable complete releases, integrity chain, withdrawal, draft cloning entry point and authenticated library. | Release/event rows are append-only and protected by PostgreSQL triggers; active points only to the newest release; reads use snapshots only. | Reads public courses/content/organization contracts. Courses and content never import publishing; no enrolment, progress, evaluation or delivery state. |
 | `authoring` | Draft, review, publication, immutable snapshots/history | Published revision immutable; restoration creates a new revision. Emits `published`, `publication_retracted`. | Courses/content/assessments; cannot alter attempts. |
 | `enrollments` | Enrolment, access window, status; future cohorts | Active access is evaluated at delivery time; historical enrolment facts retained. | Identity/courses/publication; no grading policy. |
 | `learning` | Study session, bookmark, continuation | Learner state tied to delivered version. Emits `learning_event`. | Enrolments/publications; no score ownership. |
@@ -56,5 +57,13 @@ agnósticos: `ContentConfig.ready()` registra providers sin consultar la base.
 Sólo servicios de `content` escriben sus tablas y siempre lo hacen dentro de una
 transacción que bloquea la revisión y la unidad propietarias. El módulo no posee
 curso, revisión, módulo, rol, catálogo, publicación, matrícula, evaluación,
-archivo ni delivery. Un documento aprobado continúa siendo borrador privado de
-autoría hasta que un futuro módulo de publicación produzca un snapshot completo.
+archivo ni delivery. Un documento aprobado continúa siendo autoría privada
+hasta que `publishing` produzca un snapshot completo.
+
+# Publishing boundary
+
+`publishing` posee `CoursePublication`, `CourseRelease`,
+`CoursePublicationEvent`, schema, cadena, servicios, políticas, API y
+biblioteca. Los contratos de clonación crean UUID nuevos y documentos v1 sin
+importarlo. Un retiro cambia el canal y agrega evento, no el release. Véanse
+`PUBLISHING.md` y ADR 0021.

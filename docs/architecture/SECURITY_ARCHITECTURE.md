@@ -68,3 +68,11 @@ ajeno es 404. Capacidad insuficiente es 403, versión obsoleta 409 y payload
 inválido 400. Campos derivados, actores, número, digest, unidad y estado no son
 asignables por request. Staff no evita policies; sólo superuser activo tiene
 bypass explícito.
+
+## Frontera de publicación
+
+La API deriva organización, curso, revisión, snapshot, digest, actores y
+versiones; serializers no los aceptan por mass assignment. Lookups ajenos son
+404. Releases/eventos tienen guardas de modelo y triggers. Biblioteca exige
+sesión/capacidad, usa snapshot, envía `private, no-store` y no usa JWT ni
+browser storage.

@@ -12,10 +12,11 @@ const python =
 
 if (!existsSync(python))
   throw new Error('Python virtualenv is missing for E2E.');
+const port = process.env.E2E_API_PORT ?? '8000';
 
 const child = spawn(
   python,
-  ['manage.py', 'runserver', '127.0.0.1:8000', '--noreload'],
+  ['manage.py', 'runserver', `127.0.0.1:${port}`, '--noreload'],
   {
     cwd: apiRoot,
     env: process.env,

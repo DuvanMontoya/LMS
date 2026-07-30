@@ -104,3 +104,13 @@ Los warnings peer opcionales de `@napi-rs/wasm-runtime` heredados por Vite y el
 resolver de ESLint permanecen visibles y no se suprimieron. No pertenecen a las
 dependencias UI añadidas; se aceptan únicamente mientras instalación congelada,
 lint, tests y build funcionen sin autorizar scripts bloqueados.
+
+## Evaluación Prompt 11
+
+No se añadió ni actualizó dependencia. JSONB, locks, constraints, triggers,
+SHA-256 y canonicalización se resuelven con PostgreSQL, Django y biblioteca
+estándar. jsonschema/Ajv/tipos, DRF/OpenAPI, TanStack, renderer y Playwright ya
+tenían problema, owner, licencia y alternativa documentados. Se rechazaron
+event sourcing externo, blockchain, cache de publicación, sanitizer adicional
+y storage porque aumentarían superficie sin resolver un requisito. Después del
+primer release, hechos y triggers son retención irreversible por diseño.

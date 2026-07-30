@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
+from uuid import UUID
 
 from django.db import IntegrityError, transaction
 
@@ -11,6 +12,7 @@ from domain.courses.models import CourseRevision, CourseUnit
 from domain.courses.policies import can_manage_course
 from domain.organizations.models import Organization
 
+from .canonical import deep_json_copy
 from .exceptions import (
     ContentAccessDenied,
     ContentDocumentConflict,
@@ -216,3 +218,53 @@ def restore_unit_content(
         actor=actor,
     )
     return SaveContentResult(document, version, False)
+
+
+@transaction.atomic
+def clone_current_unit_documents(
+    *, actor: Any, units_by_source_id: dict[UUID, CourseUnit]
+) -> list[UnitContentDocument]:
+    """Clone current content only; historical versions never cross the boundary."""
+
+    source_ids = list(units_by_source_id)
+    documents = list(
+        UnitContentDocument.objects.select_for_update(of=("self",))
+        .select_related("current_version")
+        .filter(unit_id__in=source_ids)
+    )
+    if len(documents) != len(source_ids):
+        raise ContentRestoreInvalid(
+            "No todas las unidades fuente tienen un documento vigente."
+        )
+    created: list[UnitContentDocument] = []
+    by_source = {document.unit_id: document for document in documents}
+    for source_id in source_ids:
+        source_document = by_source[source_id]
+        source_version = source_document.current_version
+        if source_version is None:
+            raise ContentRestoreInvalid(
+                "Una unidad fuente no tiene versión de contenido vigente."
+            )
+        validated = validate_content(
+            deep_json_copy(source_version.content),
+            schema_version=source_version.schema_version,
+        )
+        if validated.digest != source_version.digest:
+            raise ContentRestoreInvalid(
+                "El contenido fuente no supera la verificación de integridad."
+            )
+        target = units_by_source_id[source_id]
+        target_document = UnitContentDocument.objects.create(
+            unit=target,
+            created_by=actor,
+            updated_by=actor,
+        )
+        _append_version(
+            document=target_document,
+            validated=validated,
+            schema_version=source_version.schema_version,
+            number=1,
+            actor=actor,
+        )
+        created.append(target_document)
+    return created

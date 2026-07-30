@@ -2,6 +2,7 @@
 
 import {
   BookOpenCheck,
+  BookOpenText,
   Building2,
   ChevronDown,
   GraduationCap,
@@ -152,6 +153,12 @@ function PlatformSidebar({
           visible:
             capabilities.has('course.authoring.view') ||
             capabilities.has('course.approved.view'),
+        },
+        {
+          href: `/organizaciones/${activeOrganization.slug}/biblioteca`,
+          icon: BookOpenText,
+          label: 'Biblioteca',
+          visible: capabilities.has('course.published.view'),
         },
         {
           href: `/organizaciones/${activeOrganization.slug}/miembros`,

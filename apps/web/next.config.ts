@@ -7,6 +7,7 @@ const djangoInternalOrigin = requireInternalOrigin(
 );
 
 const nextConfig: NextConfig = {
+  distDir: process.env.NEXT_DIST_DIR ?? '.next',
   // Next dev blocks client assets when the application is opened through the
   // loopback host documented for local review instead of its localhost default.
   allowedDevOrigins: ['127.0.0.1'],

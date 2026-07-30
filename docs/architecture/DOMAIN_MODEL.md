@@ -258,3 +258,11 @@ stateDiagram-v2
 La edición sólo se permite si la revisión está `draft` o
 `changes_requested` y el actor posee capacidad de autoría. Readiness agrega
 `unit_content_missing` y `unit_content_empty` por unidad activa antes del submit.
+
+## 14. Publicación y releases (Prompt 11)
+
+Un `Course` tiene un `CoursePublication` mutable/versionado que apunta al
+release actual y registra `active` o `withdrawn`. Sus `CourseRelease` son
+inmutables, numerados, ligados una vez a revisión fuente y release previo.
+Snapshot, schema, digest, tamaño y métricas forman el hecho publicado.
+`CoursePublicationEvent` conserva publish/withdraw sin edición.

@@ -107,14 +107,20 @@ async function atomicWrite(path, content) {
   await rename(temporaryPath, path);
 }
 
-const origin = requireOrigin(process.env.DJANGO_INTERNAL_ORIGIN);
-const response = await fetch(`${origin}/api/v1/schema/`, {
-  headers: { Accept: 'application/json' },
-  cache: 'no-store',
-});
-if (!response.ok)
-  throw new Error(`No se pudo obtener el schema (HTTP ${response.status}).`);
-const schema = JSON.parse(await response.text());
+const localSchemaPath = process.env.PLATFORM_OPENAPI_FILE;
+let schema;
+if (localSchemaPath) {
+  schema = JSON.parse(await readFile(localSchemaPath, 'utf8'));
+} else {
+  const origin = requireOrigin(process.env.DJANGO_INTERNAL_ORIGIN);
+  const response = await fetch(`${origin}/api/v1/schema/`, {
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+  });
+  if (!response.ok)
+    throw new Error(`No se pudo obtener el schema (HTTP ${response.status}).`);
+  schema = JSON.parse(await response.text());
+}
 validateSchema(schema);
 const prettier = await import('prettier');
 const snapshot = await prettier.format(JSON.stringify(sortValue(schema)), {

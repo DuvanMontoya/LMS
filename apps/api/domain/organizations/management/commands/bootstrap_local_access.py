@@ -41,8 +41,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--organization-name",
             help=(
-                "Nombre para crear la organización cuando el slug todavía "
-                "no existe."
+                "Nombre para crear la organización cuando el slug todavía no existe."
             ),
         )
         parser.add_argument(
@@ -76,9 +75,7 @@ class Command(BaseCommand):
 
         with transaction.atomic():
             user = self._upsert_user(email=email, password=password)
-            organization = Organization.objects.filter(
-                slug=organization_slug
-            ).first()
+            organization = Organization.objects.filter(slug=organization_slug).first()
             if organization is None:
                 if not organization_name:
                     raise CommandError(
@@ -194,7 +191,7 @@ class Command(BaseCommand):
     @staticmethod
     def _upsert_user(*, email: str, password: str) -> User:
         manager = cast("UserManager", get_user_model().objects)
-        user = cast("User | None", manager.filter(email__iexact=email).first())
+        user = manager.filter(email__iexact=email).first()
         if user is None:
             user = manager.create_user(email=email, password=password)
         else:

@@ -292,3 +292,76 @@ warnings, drift checks, `pip-audit` y `pnpm audit --prod` quedaron verdes.
   Next.js 16.2.12 y las 24 pruebas de `domain.content`. Docker Desktop tuvo que
   reactivarse porque PostgreSQL no respondía en el primer intento; PostgreSQL y
   Redis quedaron saludables y la suite integrada pasó completa al repetirla.
+
+## Prompt 11 — Publicación inmutable empresarial — 2026-07-30
+
+- Git inicial: `main`, HEAD y `origin/main`
+  `1272d5d35e4e05fb6f4799341bee64b0221b03b3`, worktree limpio. Git final
+  conserva los mismos HEAD/remoto y sólo cambios locales de esta fase. Codex no
+  ejecutó commit, push, add, reset, rebase, merge ni clean. Los servidores del
+  usuario en 3000/8000 fueron preservados; E2E usó puertos y `.next` efímeros.
+- ADR 0021 asigna a `domain.publishing` el canal mutable, releases/eventos
+  append-only, snapshot completo, cadena SHA-256, retiro, clonación y biblioteca
+  snapshot-only. Courses/content no importan publishing y publican sólo
+  contratos estables de clonación.
+- No hubo dependencia nueva. Se revalidaron Django 6.0.7, PostgreSQL 18.4,
+  DRF 3.17.1, drf-spectacular 0.30.0, jsonschema 4.26.0, Ajv 8.20.0, Next
+  16.2.12, React 19.2.8, TanStack 5.101.4 y Playwright/axe bloqueados.
+- Capacidades nuevas: `course.release.publish`, `withdraw`, `history.view`,
+  `create_draft` y `course.published.view`, evaluadas sólo por policies de
+  organizaciones. Owner/administrator administran releases; learner lee.
+- `CoursePublication`, `CourseRelease` y `CoursePublicationEvent` usan UUID,
+  constraints/índices, lock version, current/previous pointers, métricas y
+  eventos. `publishing.0002` instala triggers PostgreSQL que rechazan
+  UPDATE/DELETE en releases y eventos; ORM y SQL directo están probados.
+- `course-release-v1.schema.json` es Draft 2020-12, estricto y local. Snapshot
+  determinista incluye curso, subject/objetivos, módulos/unidades/topics y
+  documento semántico vigente; excluye HTML, secretos, actores, permisos,
+  matrículas/progreso/evaluaciones. Límites, schema, canonicalización y digest
+  se validan antes del INSERT.
+- `publish_approved_revision` bloquea filas en `atomic`, exige aprobación,
+  readiness/contenido, valida snapshot, numera contiguamente, encadena digest,
+  inserta evento y actualiza el canal. Es idempotente para la misma revisión y
+  seguro ante carreras. Retiro exige nota, conserva current release y sólo un
+  release nuevo reactiva.
+- `create_draft_from_release` clona estructura con UUID nuevos y documentos v1
+  con digest conservado, sin historial previo; open draft y conflictos hacen
+  rollback. Los servicios públicos viven en courses/content.
+- API `/api/v1` cubre estado, publish, withdraw, releases, verify, create-draft
+  y biblioteca list/detail/outline/unit. No hay DELETE ni snapshot entrante.
+  IDOR devuelve 404, permisos 403, payload/version inválidos 400/409 y respuestas
+  de lectura son `private, no-store`.
+- OpenAPI fue generado/validado sin warnings y `platform.ts` quedó sincronizado.
+  El schema genera tipos/validator Ajv de forma atómica; drift checks no escriben.
+- Next agrega publicación, historial, retiro/draft confirmados y biblioteca con
+  lector semántico, anterior/siguiente, MathJax local, código inert, tablas y
+  bloques pedagógicos. Server Components usan no-store y TanStack desactiva
+  retry/optimistic updates. No usa JWT, localStorage, sessionStorage o IndexedDB.
+- Demo `introduccion-calculo-diferencial` fue publicado idempotentemente con
+  servicios reales y verificado. `bootstrap_demo_publication` rechaza
+  production. README y doce diagramas documentan uso, seguridad y operación.
+- Chromium aislado recorrió release 1, historial, biblioteca, dos unidades,
+  clonación, aprobación, release 2, independencia del snapshot, teclado, 390 px,
+  axe y retiro. La revisión detectó/fijó estructura `<dl>`,
+  conflicto de puertos/lock `.next` y cambio de identidad en un mismo contexto.
+  E2E terminó 1/1 verde en 1.1 min y eliminó base, Redis, correo y procesos.
+- Pytest publishing cubre schema, servicios, API y dos carreras; la suite
+  integrada cubre release 2, reactivación, clonación, corrupción, triggers,
+  roles e IDOR. Ruff, Pyright, cobertura ≥75 %, ESLint, Prettier, TypeScript,
+  Vitest, Next build, auditorías y regresiones auth/organizations/catalog/
+  courses/content forman el cierre obligatorio. La suite global cerró 126/126
+  con 81,94 % de cobertura y Vitest 34/34.
+- CI instala locks, levanta PostgreSQL/Redis, migra desde cero, valida triggers,
+  schema/tipos/OpenAPI/drift, ejecuta suites/concurrencia, calidad, build,
+  Chromium/axe y cleanup `always()`. No publica artefactos sensibles.
+- Riesgo residual: la cadena detecta corrupción pero no es firma externa; la
+  seguridad depende de control de acceso PostgreSQL y backups. Decisión
+  irreversible: releases/eventos productivos no se corrigen in-place. Deuda:
+  ampliar Playwright con visual regression estable; no bloquea contratos.
+- Matriz completa: `docs/project/PHASE_11_ACCEPTANCE.md` (158 PASS).
+- Trabajo no realizado: matrícula, progreso, evaluación, cache público,
+  restauración de publication, media, búsqueda y Prompt 12.
+
+Siguiente paso:
+
+> **Prompt 12 — Matrículas y entrega del aprendizaje: acceso por curso, cohortes, progreso, continuidad, completitud y experiencia del estudiante.**

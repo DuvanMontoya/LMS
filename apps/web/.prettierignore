@@ -5,3 +5,4 @@ src/lib/api/generated/allauth.ts
 src/lib/content/generated/
 public/vendor/mathjax/
 test-results/
+.local/

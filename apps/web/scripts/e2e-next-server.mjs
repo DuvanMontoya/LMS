@@ -4,9 +4,10 @@ import { fileURLToPath } from 'node:url';
 
 const webRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const nextCli = join(webRoot, 'node_modules', 'next', 'dist', 'bin', 'next');
+const port = process.env.E2E_WEB_PORT ?? '3000';
 const child = spawn(
   process.execPath,
-  [nextCli, 'dev', '--hostname', '127.0.0.1', '--port', '3000'],
+  [nextCli, 'dev', '--hostname', '127.0.0.1', '--port', port],
   {
     cwd: webRoot,
     env: process.env,

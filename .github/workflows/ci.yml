@@ -74,6 +74,12 @@ jobs:
           pnpm run content:test:security
           pnpm run content:test
           pnpm run content:schema:api
+          pnpm run publishing:check
+          pnpm run publishing:migrations
+          pnpm run publishing:schema
+          pnpm run publishing:test:concurrency
+          pnpm run publishing:test:api
+          pnpm run publishing:test
           pnpm run auth:check
           pnpm run auth:spec
           pnpm run auth:test
@@ -101,11 +107,14 @@ jobs:
           pnpm run catalog:client:check
           pnpm run courses:client:check
           pnpm run content:client:check
+          pnpm run publishing:types:check
+          pnpm run publishing:client:check
           pnpm audit --prod
           pnpm run auth:web:test:e2e
           pnpm run catalog:e2e
           pnpm run courses:e2e
           pnpm run content:e2e
+          pnpm run publishing:e2e
       - name: Remove schema-test infrastructure resources
         if: always()
         run: pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Reset -ConfirmReset

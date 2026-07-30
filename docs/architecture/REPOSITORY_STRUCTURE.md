@@ -82,3 +82,9 @@ validator viven en `src/lib/content/`. `scripts/generate-content-types.mjs` y
 `content:*` delegan en él. `apps/web/e2e/content.spec.ts` reutiliza el runner
 aislado institucional; no existe una segunda aplicación, API, base o cliente
 manual.
+
+Prompt 11 agrega `apps/api/domain/publishing/`,
+`schemas/publication/course-release-v1.schema.json`, rutas de publicación y
+biblioteca, tipos en `src/lib/publishing/generated/`, E2E
+`publication.spec.ts` y `scripts/publishing.ps1`. No crea otra aplicación,
+base, autenticación o cliente.

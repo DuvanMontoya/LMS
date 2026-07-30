@@ -1,7 +1,8 @@
-# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportAttributeAccessIssue=false
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportAttributeAccessIssue=false, reportUnknownLambdaType=false
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
@@ -19,6 +20,7 @@ from domain.organizations.models import Organization
 
 from .choices import (
     EDITABLE_AUTHORING_STATUSES,
+    OPEN_AUTHORING_STATUSES,
     AuthoringStatus,
     CourseStatus,
     StructureStatus,
@@ -32,6 +34,7 @@ from .exceptions import (
     CourseCurriculumAlignmentInvalid,
     CourseLimitExceeded,
     CourseOrderInvalid,
+    CourseRevisionAlreadyOpen,
     CourseRevisionConflict,
     CourseRevisionNotEditable,
     CourseRevisionNotReady,
@@ -1116,3 +1119,165 @@ def restore_course(*, actor: Any, organization: Organization, course: Course) ->
     locked.archived_at = None
     locked.save(update_fields=["status", "archived_by", "archived_at"])
     return locked
+
+
+@dataclass(frozen=True)
+class RevisionStructureClone:
+    revision: CourseRevision
+    units_by_source_id: dict[UUID, CourseUnit]
+
+
+@transaction.atomic
+def clone_approved_revision_structure(
+    *, actor: Any, source_revision: CourseRevision
+) -> RevisionStructureClone:
+    """Clone only Courses-owned structure through a stable public contract."""
+
+    source = (
+        CourseRevision.objects.select_for_update()
+        .select_related("course__organization")
+        .prefetch_related(
+            "subject_alignments",
+            "objective_alignments",
+            "modules__units__topic_alignments",
+            "modules__units__objective_alignments",
+        )
+        .get(pk=source_revision.pk)
+    )
+    _require(
+        source.authoring_status == AuthoringStatus.APPROVED,
+        CourseRevisionTransitionInvalid,
+        "Sólo una revisión aprobada puede clonarse.",
+    )
+    _require(
+        can_manage_course(actor, source.course.organization),
+        CourseAccessDenied,
+        "No tienes capacidad para crear la revisión.",
+    )
+    course = Course.objects.select_for_update().get(pk=source.course_id)
+    _require(
+        course.status == CourseStatus.ACTIVE,
+        CourseArchived,
+        "El curso debe estar activo.",
+    )
+    if CourseRevision.objects.filter(
+        course=course, authoring_status__in=OPEN_AUTHORING_STATUSES
+    ).exists():
+        raise CourseRevisionAlreadyOpen("El curso ya tiene una revisión abierta.")
+    next_number = (
+        CourseRevision.objects.filter(course=course)
+        .order_by("-number")
+        .values_list("number", flat=True)
+        .first()
+        or 0
+    ) + 1
+    now = timezone.now()
+    revision = CourseRevision.objects.create(
+        course=course,
+        number=next_number,
+        based_on_revision=source,
+        title=source.title,
+        subtitle=source.subtitle,
+        summary=source.summary,
+        description=source.description,
+        language_code=source.language_code,
+        estimated_duration_minutes=source.estimated_duration_minutes,
+        authoring_status=AuthoringStatus.DRAFT,
+        lock_version=1,
+        status_changed_at=now,
+        status_changed_by=actor,
+        created_by=actor,
+        updated_by=actor,
+    )
+    CourseRevisionSubject.objects.bulk_create(
+        [
+            CourseRevisionSubject(
+                revision=revision,
+                subject=link.subject,
+                alignment_type=link.alignment_type,
+                position=link.position,
+                created_by=actor,
+            )
+            for link in source.subject_alignments.all()
+        ]
+    )
+    CourseRevisionLearningObjective.objects.bulk_create(
+        [
+            CourseRevisionLearningObjective(
+                revision=revision,
+                learning_objective=link.learning_objective,
+                position=link.position,
+                created_by=actor,
+            )
+            for link in source.objective_alignments.all()
+        ]
+    )
+    units_by_source_id: dict[UUID, CourseUnit] = {}
+    source_modules = sorted(
+        (
+            module
+            for module in source.modules.all()
+            if module.status == StructureStatus.ACTIVE
+        ),
+        key=lambda module: module.position or 0,
+    )
+    for source_module in source_modules:
+        module = CourseModule.objects.create(
+            revision=revision,
+            title=source_module.title,
+            description=source_module.description,
+            status=StructureStatus.ACTIVE,
+            position=source_module.position,
+            created_by=actor,
+            updated_by=actor,
+        )
+        source_units = sorted(
+            (
+                unit
+                for unit in source_module.units.all()
+                if unit.status == StructureStatus.ACTIVE
+            ),
+            key=lambda unit: unit.position or 0,
+        )
+        for source_unit in source_units:
+            unit = CourseUnit.objects.create(
+                module=module,
+                title=source_unit.title,
+                summary=source_unit.summary,
+                estimated_duration_minutes=source_unit.estimated_duration_minutes,
+                status=StructureStatus.ACTIVE,
+                position=source_unit.position,
+                created_by=actor,
+                updated_by=actor,
+            )
+            units_by_source_id[source_unit.id] = unit
+            CourseUnitTopic.objects.bulk_create(
+                [
+                    CourseUnitTopic(
+                        unit=unit,
+                        topic=link.topic,
+                        position=link.position,
+                        created_by=actor,
+                    )
+                    for link in source_unit.topic_alignments.all()
+                ]
+            )
+            CourseUnitLearningObjective.objects.bulk_create(
+                [
+                    CourseUnitLearningObjective(
+                        unit=unit,
+                        learning_objective=link.learning_objective,
+                        position=link.position,
+                        created_by=actor,
+                    )
+                    for link in source_unit.objective_alignments.all()
+                ]
+            )
+    CourseRevisionTransition.objects.create(
+        revision=revision,
+        from_status=None,
+        to_status=AuthoringStatus.DRAFT,
+        actor=actor,
+        note="Revisión creada desde un release inmutable.",
+    )
+    return RevisionStructureClone(revision, units_by_source_id)

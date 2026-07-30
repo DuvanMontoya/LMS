@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "domain.catalog",
     "domain.courses",
     "domain.content",
+    "domain.publishing",
     "domain.learning",
     "domain.assessments",
 ]
@@ -234,5 +235,7 @@ SPECTACULAR_SETTINGS = {
         "CourseLifecycleStatus": "domain.courses.choices.CourseStatus",
         "CourseAuthoringStatus": "domain.courses.choices.AuthoringStatus",
         "CourseSubjectAlignmentType": "domain.courses.choices.SubjectAlignmentType",
+        "PublicationLifecycleStatus": "domain.publishing.choices.PublicationStatus",
+        "PublicationEventType": "domain.publishing.choices.PublicationEventType",
     },
 }

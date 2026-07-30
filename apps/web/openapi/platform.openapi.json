@@ -432,6 +432,13 @@
         "required": ["area_id", "name", "slug"],
         "type": "object"
       },
+      "CreateDraft": {
+        "properties": {
+          "expected_publication_version": { "minimum": 0, "type": "integer" }
+        },
+        "required": ["expected_publication_version"],
+        "type": "object"
+      },
       "CreateObjective": {
         "properties": {
           "code": { "maxLength": 32, "type": "string" },
@@ -492,6 +499,15 @@
         "required": ["area_id", "id", "name", "slug", "status"],
         "type": "object"
       },
+      "DraftResult": {
+        "properties": {
+          "lock_version": { "minimum": 1, "type": "integer" },
+          "revision_id": { "format": "uuid", "type": "string" },
+          "revision_number": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["lock_version", "revision_id", "revision_number"],
+        "type": "object"
+      },
       "EventTypeEnum": {
         "description": "* `membership_created` - Membresía creada\n* `membership_suspended` - Membresía suspendida\n* `membership_reactivated` - Membresía reactivada\n* `membership_revoked` - Membresía revocada\n* `role_assigned` - Rol asignado\n* `role_revoked` - Rol revocado",
         "enum": [
@@ -515,6 +531,81 @@
         "description": "* `required` - required\n* `recommended` - recommended",
         "enum": ["required", "recommended"],
         "type": "string"
+      },
+      "LibraryCourse": {
+        "properties": {
+          "course_id": { "format": "uuid", "type": "string" },
+          "estimated_duration_minutes": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "language_code": { "type": "string" },
+          "module_count": { "minimum": 0, "type": "integer" },
+          "release_number": { "minimum": 1, "type": "integer" },
+          "slug": { "pattern": "^[-a-zA-Z0-9_]+$", "type": "string" },
+          "summary": { "type": "string" },
+          "title": { "type": "string" },
+          "unit_count": { "minimum": 0, "type": "integer" },
+          "word_count": { "minimum": 0, "type": "integer" }
+        },
+        "required": [
+          "course_id",
+          "estimated_duration_minutes",
+          "language_code",
+          "module_count",
+          "release_number",
+          "slug",
+          "summary",
+          "title",
+          "unit_count",
+          "word_count"
+        ],
+        "type": "object"
+      },
+      "LibraryDetail": {
+        "properties": {
+          "course_id": { "format": "uuid", "type": "string" },
+          "description": { "type": "string" },
+          "estimated_duration_minutes": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "language_code": { "type": "string" },
+          "learning_objectives": {},
+          "module_count": { "minimum": 0, "type": "integer" },
+          "outline": {
+            "items": { "$ref": "#/components/schemas/PublishedOutlineModule" },
+            "type": "array"
+          },
+          "release_number": { "minimum": 1, "type": "integer" },
+          "slug": { "pattern": "^[-a-zA-Z0-9_]+$", "type": "string" },
+          "subjects": {},
+          "subtitle": { "nullable": true, "type": "string" },
+          "summary": { "type": "string" },
+          "title": { "type": "string" },
+          "unit_count": { "minimum": 0, "type": "integer" },
+          "word_count": { "minimum": 0, "type": "integer" }
+        },
+        "required": [
+          "course_id",
+          "description",
+          "estimated_duration_minutes",
+          "language_code",
+          "learning_objectives",
+          "module_count",
+          "outline",
+          "release_number",
+          "slug",
+          "subjects",
+          "subtitle",
+          "summary",
+          "title",
+          "unit_count",
+          "word_count"
+        ],
+        "type": "object"
       },
       "Membership": {
         "properties": {
@@ -998,6 +1089,146 @@
         "required": ["id", "name"],
         "type": "object"
       },
+      "PublicationState": {
+        "properties": {
+          "approved_revision_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "current_release_number": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "first_published_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "has_publication": { "type": "boolean" },
+          "last_published_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "lock_version": { "minimum": 0, "type": "integer" },
+          "status": { "nullable": true, "type": "string" },
+          "withdrawal_note": { "type": "string" },
+          "withdrawn_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "approved_revision_id",
+          "current_release_number",
+          "first_published_at",
+          "has_publication",
+          "last_published_at",
+          "lock_version",
+          "status",
+          "withdrawal_note",
+          "withdrawn_at"
+        ],
+        "type": "object"
+      },
+      "Publish": {
+        "properties": {
+          "expected_publication_version": { "minimum": 0, "type": "integer" }
+        },
+        "required": ["expected_publication_version"],
+        "type": "object"
+      },
+      "PublishResult": {
+        "properties": {
+          "already_released": { "type": "boolean" },
+          "is_current": { "type": "boolean" },
+          "publication_status": { "type": "string" },
+          "publication_version": { "minimum": 1, "type": "integer" },
+          "release_number": { "minimum": 1, "type": "integer" },
+          "snapshot_digest": { "pattern": "^[0-9a-f]{64}$", "type": "string" }
+        },
+        "required": [
+          "already_released",
+          "is_current",
+          "publication_status",
+          "publication_version",
+          "release_number",
+          "snapshot_digest"
+        ],
+        "type": "object"
+      },
+      "PublishedOutlineModule": {
+        "properties": {
+          "description": { "type": "string" },
+          "id": { "format": "uuid", "type": "string" },
+          "position": { "minimum": 1, "type": "integer" },
+          "title": { "type": "string" },
+          "units": {
+            "items": { "$ref": "#/components/schemas/PublishedOutlineUnit" },
+            "type": "array"
+          }
+        },
+        "required": ["description", "id", "position", "title", "units"],
+        "type": "object"
+      },
+      "PublishedOutlineUnit": {
+        "properties": {
+          "estimated_duration_minutes": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "id": { "format": "uuid", "type": "string" },
+          "position": { "minimum": 1, "type": "integer" },
+          "summary": { "type": "string" },
+          "title": { "type": "string" }
+        },
+        "required": [
+          "estimated_duration_minutes",
+          "id",
+          "position",
+          "summary",
+          "title"
+        ],
+        "type": "object"
+      },
+      "PublishingError": {
+        "properties": {
+          "code": { "type": "string" },
+          "detail": { "type": "string" }
+        },
+        "required": ["code", "detail"],
+        "type": "object"
+      },
+      "ReaderNavigation": {
+        "properties": {
+          "next": {
+            "allOf": [{ "$ref": "#/components/schemas/ReaderNavigationItem" }],
+            "nullable": true
+          },
+          "position": { "minimum": 1, "type": "integer" },
+          "previous": {
+            "allOf": [{ "$ref": "#/components/schemas/ReaderNavigationItem" }],
+            "nullable": true
+          },
+          "total": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["next", "position", "previous", "total"],
+        "type": "object"
+      },
+      "ReaderNavigationItem": {
+        "properties": {
+          "id": { "format": "uuid", "type": "string" },
+          "module_id": { "format": "uuid", "type": "string" },
+          "module_title": { "type": "string" },
+          "title": { "type": "string" }
+        },
+        "required": ["id", "module_id", "module_title", "title"],
+        "type": "object"
+      },
       "Readiness": {
         "properties": {
           "issues": {
@@ -1016,6 +1247,121 @@
           "path": { "type": "string" }
         },
         "required": ["code", "message", "path"],
+        "type": "object"
+      },
+      "ReleaseDetail": {
+        "properties": {
+          "course": {},
+          "created_at": { "format": "date-time", "type": "string" },
+          "curriculum": {},
+          "estimated_duration_minutes": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "is_current": { "type": "boolean" },
+          "language_code": { "type": "string" },
+          "module_count": { "minimum": 0, "type": "integer" },
+          "number": { "minimum": 1, "type": "integer" },
+          "previous_release_number": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "schema_version": { "minimum": 1, "type": "integer" },
+          "snapshot_digest": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+          "snapshot_size_bytes": { "minimum": 1, "type": "integer" },
+          "source_revision_id": { "format": "uuid", "type": "string" },
+          "source_revision_number": { "minimum": 1, "type": "integer" },
+          "summary": { "type": "string" },
+          "title": { "type": "string" },
+          "unit_count": { "minimum": 0, "type": "integer" },
+          "word_count": { "minimum": 0, "type": "integer" }
+        },
+        "required": [
+          "course",
+          "created_at",
+          "curriculum",
+          "estimated_duration_minutes",
+          "is_current",
+          "language_code",
+          "module_count",
+          "number",
+          "previous_release_number",
+          "schema_version",
+          "snapshot_digest",
+          "snapshot_size_bytes",
+          "source_revision_id",
+          "source_revision_number",
+          "summary",
+          "title",
+          "unit_count",
+          "word_count"
+        ],
+        "type": "object"
+      },
+      "ReleaseOutline": {
+        "properties": {
+          "modules": {
+            "items": { "$ref": "#/components/schemas/PublishedOutlineModule" },
+            "type": "array"
+          },
+          "release_number": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["modules", "release_number"],
+        "type": "object"
+      },
+      "ReleaseSummary": {
+        "properties": {
+          "created_at": { "format": "date-time", "type": "string" },
+          "estimated_duration_minutes": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "is_current": { "type": "boolean" },
+          "language_code": { "type": "string" },
+          "module_count": { "minimum": 0, "type": "integer" },
+          "number": { "minimum": 1, "type": "integer" },
+          "previous_release_number": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "snapshot_digest": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+          "source_revision_id": { "format": "uuid", "type": "string" },
+          "source_revision_number": { "minimum": 1, "type": "integer" },
+          "summary": { "type": "string" },
+          "title": { "type": "string" },
+          "unit_count": { "minimum": 0, "type": "integer" },
+          "word_count": { "minimum": 0, "type": "integer" }
+        },
+        "required": [
+          "created_at",
+          "estimated_duration_minutes",
+          "is_current",
+          "language_code",
+          "module_count",
+          "number",
+          "previous_release_number",
+          "snapshot_digest",
+          "source_revision_id",
+          "source_revision_number",
+          "summary",
+          "title",
+          "unit_count",
+          "word_count"
+        ],
+        "type": "object"
+      },
+      "ReleaseUnit": {
+        "properties": {
+          "course": {},
+          "navigation": { "$ref": "#/components/schemas/ReaderNavigation" },
+          "release_number": { "minimum": 1, "type": "integer" },
+          "unit": {}
+        },
+        "required": ["course", "navigation", "release_number", "unit"],
         "type": "object"
       },
       "ReplaceConceptAssociations": {
@@ -1528,6 +1874,39 @@
           "id": { "format": "uuid", "readOnly": true, "type": "string" }
         },
         "required": ["display", "email", "id"],
+        "type": "object"
+      },
+      "Verification": {
+        "properties": {
+          "checked_releases": { "minimum": 0, "type": "integer" },
+          "issues": {
+            "items": { "$ref": "#/components/schemas/VerificationIssue" },
+            "type": "array"
+          },
+          "valid": { "type": "boolean" }
+        },
+        "required": ["checked_releases", "issues", "valid"],
+        "type": "object"
+      },
+      "VerificationIssue": {
+        "properties": {
+          "code": { "type": "string" },
+          "detail": { "type": "string" },
+          "release_number": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": ["code", "detail", "release_number"],
+        "type": "object"
+      },
+      "Withdraw": {
+        "properties": {
+          "expected_publication_version": { "minimum": 0, "type": "integer" },
+          "note": { "maxLength": 2000, "minLength": 1, "type": "string" }
+        },
+        "required": ["expected_publication_version", "note"],
         "type": "object"
       },
       "WorkflowAction": {
@@ -3972,6 +4351,369 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/publication/": {
+      "get": {
+        "operationId": "organizations_courses_publication_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PublicationState" }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PublishingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/publication/withdraw/": {
+      "post": {
+        "operationId": "organizations_courses_publication_withdraw_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Withdraw" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/Withdraw" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/Withdraw" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PublicationState" }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PublishingError" }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PublishingError" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PublishingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/releases/": {
+      "get": {
+        "operationId": "organizations_courses_releases_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/ReleaseSummary" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/releases/{release_number}/": {
+      "get": {
+        "operationId": "organizations_courses_releases_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "release_number",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReleaseDetail" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/releases/{release_number}/create-draft/": {
+      "post": {
+        "operationId": "organizations_courses_releases_create_draft_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "release_number",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateDraft" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CreateDraft" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CreateDraft" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DraftResult" }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PublishingError" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PublishingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/releases/{release_number}/outline/": {
+      "get": {
+        "operationId": "organizations_courses_releases_outline_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "release_number",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReleaseOutline" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/releases/{release_number}/units/{unit_id}/": {
+      "get": {
+        "operationId": "organizations_courses_releases_units_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "release_number",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReleaseUnit" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/releases/{release_number}/verify/": {
+      "get": {
+        "operationId": "organizations_courses_releases_verify_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "release_number",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Verification" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/courses/{course_slug}/restore/": {
       "post": {
         "operationId": "organizations_courses_restore_create",
@@ -4816,6 +5558,81 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/publish/": {
+      "post": {
+        "operationId": "organizations_courses_revisions_publish_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Publish" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/Publish" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/Publish" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PublishResult" }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PublishingError" }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PublishingError" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PublishingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/readiness/": {
       "get": {
         "operationId": "organizations_courses_revisions_readiness_retrieve",
@@ -5489,6 +6306,133 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/MutationResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/library/courses/": {
+      "get": {
+        "operationId": "organizations_library_courses_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/LibraryCourse" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/library/courses/{course_slug}/": {
+      "get": {
+        "operationId": "organizations_library_courses_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LibraryDetail" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/library/courses/{course_slug}/outline/": {
+      "get": {
+        "operationId": "organizations_library_courses_outline_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReleaseOutline" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/library/courses/{course_slug}/units/{unit_id}/": {
+      "get": {
+        "operationId": "organizations_library_courses_units_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReleaseUnit" }
               }
             },
             "description": ""

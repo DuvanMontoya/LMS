@@ -48,9 +48,7 @@ class BootstrapLocalAccessTests(TestCase):
                 stdout=StringIO(),
             )
             initial_password_hash = (
-                get_user_model()
-                .objects.get(email="person@example.test")
-                .password
+                get_user_model().objects.get(email="person@example.test").password
             )
             call_command(
                 "bootstrap_local_access",

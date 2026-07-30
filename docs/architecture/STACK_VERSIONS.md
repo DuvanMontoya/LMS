@@ -75,3 +75,10 @@ el contrato persistido no depende de HTML ni del DOM de Tiptap. Los warnings de
 WASI alpha heredados por Vite/Rolldown y el lifecycle bloqueado de
 `unrs-resolver` permanecen visibles: no se aprobaron scripts ni se usaron flags
 inseguros, y la batería completa debe seguir demostrando que no son necesarios.
+
+## Stack de publicación (Prompt 11)
+
+No se añadió dependencia. Se reutilizan Django 6.0.7, PostgreSQL 18.4,
+jsonschema 4.26.0, DRF 3.17.1, drf-spectacular 0.30.0, Ajv 8.20.0,
+json-schema-to-typescript 15.0.4, Next 16.2.12, React 19.2.8, TanStack Query
+5.101.4, Playwright 1.58.2 y axe 4.12.1 con pins bloqueados.

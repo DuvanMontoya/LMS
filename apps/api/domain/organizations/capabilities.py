@@ -25,6 +25,11 @@ class Capability(StrEnum):
     COURSE_AUTHORING_REVIEW = "course.authoring.review"
     COURSE_AUTHORING_APPROVE = "course.authoring.approve"
     COURSE_APPROVED_VIEW = "course.approved.view"
+    COURSE_RELEASE_PUBLISH = "course.release.publish"
+    COURSE_RELEASE_WITHDRAW = "course.release.withdraw"
+    COURSE_RELEASE_HISTORY_VIEW = "course.release.history.view"
+    COURSE_RELEASE_CREATE_DRAFT = "course.release.create_draft"
+    COURSE_PUBLISHED_VIEW = "course.published.view"
 
 
 _ALL_CAPABILITIES = frozenset(Capability)
@@ -46,6 +51,9 @@ _COURSE_AUTHOR_CAPABILITIES = frozenset(
         Capability.COURSE_AUTHORING_MANAGE,
         Capability.COURSE_AUTHORING_SUBMIT,
         Capability.COURSE_APPROVED_VIEW,
+        Capability.COURSE_RELEASE_HISTORY_VIEW,
+        Capability.COURSE_RELEASE_CREATE_DRAFT,
+        Capability.COURSE_PUBLISHED_VIEW,
     }
 )
 
@@ -64,12 +72,20 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.COURSE_AUTHORING_VIEW,
                 Capability.COURSE_AUTHORING_REVIEW,
                 Capability.COURSE_APPROVED_VIEW,
+                Capability.COURSE_RELEASE_HISTORY_VIEW,
+                Capability.COURSE_PUBLISHED_VIEW,
             }
         ),
         RoleCode.INSTRUCTOR: _MEMBER_READ_CAPABILITIES
-        | frozenset({Capability.CATALOG_VIEW, Capability.COURSE_APPROVED_VIEW}),
+        | frozenset(
+            {
+                Capability.CATALOG_VIEW,
+                Capability.COURSE_APPROVED_VIEW,
+                Capability.COURSE_PUBLISHED_VIEW,
+            }
+        ),
         RoleCode.LEARNER: _MEMBER_READ_CAPABILITIES
-        | frozenset({Capability.CATALOG_VIEW}),
+        | frozenset({Capability.CATALOG_VIEW, Capability.COURSE_PUBLISHED_VIEW}),
     }
 )
 

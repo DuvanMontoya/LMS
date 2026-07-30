@@ -432,3 +432,55 @@ una captura estática.
   requiere confirmación.
 - No borres versiones para “limpiar”: el historial es evidencia inmutable. Los
   runners E2E ya limpian base, Redis, correo y procesos efímeros en `finally`.
+
+## Publicación inmutable y biblioteca
+
+Una revisión `approved` no está publicada. `publishing` crea un `CourseRelease`
+inmutable con snapshot completo, lo valida con Draft 2020-12, canonicaliza,
+calcula SHA-256 y enlaza al digest anterior. `CoursePublication` puede estar
+`active` o `withdrawn`; retirar exige nota y nunca modifica/restaura releases.
+Un draft nuevo clona estructura con UUID nuevos y contenido v1 conservando
+digests. Publicarlo después crea el release siguiente.
+
+La biblioteca autenticada lee exclusivamente el snapshot. Owner/administrator
+publican, retiran, ven historial y clonan; learner lee; author, reviewer e
+instructor no publican. Las respuestas son `private, no-store`. No hay acceso
+anónimo, JWT, browser storage, matrícula, progreso ni evaluación.
+
+- `/organizaciones/[slug]/cursos/[courseSlug]/publicacion`
+- `/organizaciones/[slug]/cursos/[courseSlug]/publicaciones/[releaseNumber]`
+- `/organizaciones/[slug]/biblioteca`
+- `/organizaciones/[slug]/biblioteca/[courseSlug]`
+- `/organizaciones/[slug]/biblioteca/[courseSlug]/unidades/[unitId]`
+
+```powershell
+pnpm publishing:check
+pnpm publishing:migrations
+pnpm publishing:schema
+pnpm publishing:types:generate
+pnpm publishing:types:check
+pnpm publishing:test
+pnpm publishing:test:concurrency
+pnpm publishing:test:api
+pnpm publishing:schema:api
+pnpm publishing:client:check
+pnpm publishing:verify
+pnpm publishing:demo
+pnpm publishing:smoke
+pnpm publishing:e2e
+pnpm publishing:visual
+```
+
+`publishing:demo` sólo funciona en development, usa servicios reales, asegura
+aprobación y publica idempotentemente `introduccion-calculo-diferencial`;
+production se rechaza. La URL demo es
+`/organizaciones/organizacion-demo/biblioteca`. `publishing:verify` recalcula
+schema, digest y cadena sin escribir.
+
+Si cambia el schema, genera tipos deliberadamente y ejecuta drift, OpenAPI,
+cliente, tests y build. Un 409 exige refrescar `lock_version`, no reintento
+ciego. Un release corrupto no se reescribe: se detiene la promoción. Para
+navegador manual, libera 3000/8000 y usa `publishing:visual`; `Ctrl+C` detiene
+sólo sus procesos. E2E elimina recursos efímeros. El snapshot excluye HTML,
+secretos, usuarios y estado del alumno; el lector reutiliza renderer semántico,
+MathJax local, código inert, tablas y bloques pedagógicos del Prompt 10.

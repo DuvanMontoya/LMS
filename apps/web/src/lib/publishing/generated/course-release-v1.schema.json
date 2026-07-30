@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lms:publication:course-release:1",
+  "title": "LMS immutable course release version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "release_number",
+    "previous_release_digest",
+    "organization",
+    "course",
+    "curriculum",
+    "modules"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "release_number": { "type": "integer", "minimum": 1 },
+    "previous_release_digest": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      ]
+    },
+    "organization": { "$ref": "#/$defs/organization" },
+    "course": { "$ref": "#/$defs/course" },
+    "curriculum": { "$ref": "#/$defs/curriculum" },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/module" }
+    }
+  },
+  "$defs": {
+    "uuid": { "type": "string", "format": "uuid" },
+    "slug": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "position": { "type": "integer", "minimum": 1 },
+    "organization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "slug"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "slug": { "$ref": "#/$defs/slug" }
+      }
+    },
+    "course": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "slug",
+        "source_revision_id",
+        "source_revision_number",
+        "title",
+        "subtitle",
+        "summary",
+        "description",
+        "language_code",
+        "estimated_duration_minutes"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "slug": { "$ref": "#/$defs/slug" },
+        "source_revision_id": { "$ref": "#/$defs/uuid" },
+        "source_revision_number": { "type": "integer", "minimum": 1 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "subtitle": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1, "maxLength": 240 }
+          ]
+        },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 1200 },
+        "description": { "type": "string", "maxLength": 5000 },
+        "language_code": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 12,
+          "pattern": "^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$"
+        },
+        "estimated_duration_minutes": {
+          "oneOf": [{ "type": "null" }, { "type": "integer", "minimum": 1 }]
+        }
+      }
+    },
+    "curriculum": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subjects", "learning_objectives"],
+      "properties": {
+        "subjects": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/subject" }
+        },
+        "learning_objectives": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5000,
+          "items": { "$ref": "#/$defs/learningObjective" }
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "slug", "name", "alignment_type", "position"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "slug": { "$ref": "#/$defs/slug" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "alignment_type": { "enum": ["primary", "supporting"] },
+        "position": { "$ref": "#/$defs/position" }
+      }
+    },
+    "learningObjective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "code",
+        "statement",
+        "description",
+        "cognitive_level",
+        "subject_id",
+        "position"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "code": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "statement": { "type": "string", "minLength": 1, "maxLength": 1200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "cognitive_level": { "type": "string", "maxLength": 16 },
+        "subject_id": { "$ref": "#/$defs/uuid" },
+        "position": { "$ref": "#/$defs/position" }
+      }
+    },
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "description", "position", "units"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 3000 },
+        "position": { "$ref": "#/$defs/position" },
+        "units": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/unit" }
+        }
+      }
+    },
+    "unit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "summary",
+        "estimated_duration_minutes",
+        "position",
+        "topics",
+        "learning_objectives",
+        "content"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "summary": { "type": "string", "maxLength": 1200 },
+        "estimated_duration_minutes": {
+          "oneOf": [{ "type": "null" }, { "type": "integer", "minimum": 1 }]
+        },
+        "position": { "$ref": "#/$defs/position" },
+        "topics": { "type": "array", "items": { "$ref": "#/$defs/topic" } },
+        "learning_objectives": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/unitLearningObjective" }
+        },
+        "content": { "$ref": "#/$defs/unitContent" }
+      }
+    },
+    "topic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "slug",
+        "title",
+        "subject_id",
+        "subject_slug",
+        "position"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "slug": { "$ref": "#/$defs/slug" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "subject_id": { "$ref": "#/$defs/uuid" },
+        "subject_slug": { "$ref": "#/$defs/slug" },
+        "position": { "$ref": "#/$defs/position" }
+      }
+    },
+    "unitLearningObjective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "code", "statement", "position"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "code": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "statement": { "type": "string", "minLength": 1, "maxLength": 1200 },
+        "position": { "$ref": "#/$defs/position" }
+      }
+    },
+    "unitContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "document_version",
+        "digest",
+        "character_count",
+        "word_count",
+        "node_count",
+        "document"
+      ],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "document_version": { "type": "integer", "minimum": 1 },
+        "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "character_count": { "type": "integer", "minimum": 0 },
+        "word_count": { "type": "integer", "minimum": 0 },
+        "node_count": { "type": "integer", "minimum": 1 },
+        "document": { "$ref": "urn:lms:content:unit-document:1" }
+      }
+    }
+  }
+}

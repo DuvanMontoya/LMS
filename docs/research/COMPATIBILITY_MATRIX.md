@@ -63,3 +63,13 @@ openapi-typescript/openapi-fetch ya validada para TypeScript 6.
 
 La compatibilidad observada no elimina la obligación de repetir frozen install,
 schema drift, lint, tipos, pruebas, build y Playwright al cambiar cualquier pin.
+
+## Compatibilidad Prompt 11
+
+| Combinación | Resultado | Evidencia 2026-07-30 |
+| --- | --- | --- |
+| Django 6.0.7 ↔ PostgreSQL 18.4 JSONB/triggers/locks | Compatible | Migración limpia y pruebas ORM/SQL/concurrencia. |
+| jsonschema 4.26.0 ↔ Ajv 8.20.0 ↔ Draft 2020-12 | Compatible | Corpus release y drift de tipos. |
+| DRF 3.17.1 ↔ drf-spectacular 0.30.0 | Compatible | OpenAPI válido sin warnings y cliente generado. |
+| Next 16.2.12 ↔ React 19.2.8 ↔ TanStack Query 5.101.4 | Compatible | Tipos, Vitest, build y lectura no-store. |
+| Playwright 1.58.2 ↔ Chromium ↔ axe 4.12.1 | Compatible | Publish/reader/withdraw, teclado, axe y 390 px. |

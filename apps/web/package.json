@@ -16,6 +16,8 @@
     "test:e2e": "playwright test",
     "content:types:generate": "node scripts/generate-content-types.mjs",
     "content:types:check": "node scripts/generate-content-types.mjs --check",
+    "publishing:types:generate": "node scripts/generate-publication-types.mjs",
+    "publishing:types:check": "node scripts/generate-publication-types.mjs --check",
     "content:assets:prepare": "node scripts/copy-mathjax-assets.mjs",
     "content:assets:check": "node scripts/copy-mathjax-assets.mjs --check"
   },
