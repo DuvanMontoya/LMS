@@ -2,14 +2,22 @@
 
 ## Phase
 
-**Phase 8 — Taxonomía y currículo académico** está completada localmente el
-2026-07-29. `domain.catalog` contiene la migración PostgreSQL, Treebeard,
-capacidades, servicios transaccionales, filtros declarativos, contrato OpenAPI,
-cliente TypeScript y superficie curricular verificados en Chromium aislado.
+**Phase 9 — Cursos y estructura académica** está completada localmente el
+2026-07-29. `domain.courses` contiene identidad de curso, revisiones de autoría,
+transiciones append-only, módulos y unidades ordenados, alineaciones con
+`domain.catalog`, políticas, servicios transaccionales, contrato OpenAPI,
+cliente TypeScript y las cinco superficies de autoría verificadas en PostgreSQL
+real y Chromium aislado.
 
 ## Delivered scaffold
 
-- Git initialized locally with `git init -b main`; branch `main`, no remote, no commit.
+- El checkout actual está en `main`, sigue `origin/main` y conserva su historial
+  previo. La precondición del Prompt 9 que afirmaba “sin remote/sin commit” no
+  coincidía con el estado autoritativo del repositorio. Mientras la validación
+  seguía activa, a las 14:05 del 2026-07-29, `HEAD` y `origin/main` avanzaron
+  externamente de `475c129` a `ee40ffd`; Codex no ejecutó `commit` ni `push`, no
+  creó una rama y no reescribió ese movimiento. Los ajustes del cierre hostil
+  permanecen preservados como cambios locales sobre ese commit.
 - Root pnpm workspace with Node 24.18.0 and pnpm 10.33.2 pinned in `.node-version` and `package.json`.
 - `apps/api`: uv project pinned to Python 3.13.13, Django 6.0.7, DRF 3.17.1, drf-spectacular 0.30.0, psycopg 3.3.4; `uv.lock` present.
 - Five official Django app skeletons: `identity`, `catalog`, `content`, `learning`, `assessments`; ADR 0010 records their intentional grouping.
@@ -72,13 +80,20 @@ TypeScript 7.0.2 and ESLint 10.8.0 were installed temporarily and rejected after
 - Django `check`: exit 0; `check --deploy` in development: exit 0 with five expected deployment warnings.
 - Production-like `check --deploy`: exit 0 with a long non-secret placeholder key and `lms.invalid` host.
 - Ruff lint/format, Pyright strict, pytest (36 tests, 91.95% coverage), ESLint, Prettier, `tsc`, Vitest (13 tests), Next build, production same-origin proxy smoke, isolated Playwright Chromium (5 tests) and isolated axe WCAG 2.2 A/AA (1 tagged test) have passed individually.
-- `pnpm install --frozen-lockfile` and `uv sync --locked` pass. PostgreSQL 18.4 and Redis 8.8.1 Docker Official Images are now available through local Compose only, locked by Linux amd64 digest, loopback-published, authenticated and persistence-smoke-tested. No migration, `makemigrations`, SQLite database, application container, Celery, S3, domain model, endpoint, authentication flow, commit, push, or remote was created.
+- `pnpm install --frozen-lockfile` and `uv sync --locked` pass. PostgreSQL 18.4
+  and Redis 8.8.1 Docker Official Images are available through local Compose
+  only, locked by Linux amd64 digest, loopback-published, authenticated and
+  persistence-smoke-tested. No SQLite database, application container, Celery,
+  S3 o cambio de remote fue creado por Codex; tampoco ejecutó `commit` ni
+  `push`. El avance externo de Git observado durante la validación queda
+  registrado en “Delivered scaffold”.
 
 ## Remaining risk / debt
 
 - Security overrides for `postcss` and `sharp` are necessary compatibility debt until Next updates its own dependency pins.
 - pnpm's optional WASM peer/build-script warnings are not hidden; they are non-blocking only because the checked toolchain passes without executing those scripts.
-- The custom user model must be created before the first migration in the identity phase. `AUTH_USER_MODEL` is intentionally not set to a nonexistent model.
+- `identity.0001` y el modelo de usuario permanecen inmutables. Cualquier cambio
+  futuro exige ADR, plan de migración y evidencia PostgreSQL real.
 - Redis 8 remains conditional for production pending a legal license choice and a production design for ACL users, rotation, TLS and network policy.
 - django-allauth 65.18.0 exports phone patterns even when `ACCOUNT_PHONE_VERIFICATION_ENABLED=False`. `domain.identity.headless_urls` filters only those exported URL leaves before Django includes them; tests prove they are 404 and absent from generated OpenAPI. Reassess the shim on every allauth upgrade.
 - The browser-only deployment intentionally omits allauth's optional `headless` extra because it installs `PyJWT[crypto]`; the installed distribution still provides, and tests prove, the supported browser-session headless routes and official OpenAPI schema through `headless-spec`. Re-evaluate this narrow dependency decision on every allauth upgrade.
@@ -87,7 +102,7 @@ TypeScript 7.0.2 and ESLint 10.8.0 were installed temporarily and rejected after
 
 ## Next exact step
 
-**Prompt 9 — Cursos y estructura académica: cursos, módulos, unidades, organización curricular y estados de autoría.**
+**Prompt 10 — Contenido semántico y editor académico: documentos estructurados, Tiptap/ProseMirror, bloques pedagógicos, matemáticas, código y validación de esquemas.**
 
 ## Prompt 8 latest evidence
 
@@ -118,3 +133,71 @@ el grafo antes de validar ciclos y sólo inserta, actualiza o retira el diff.
 Una regresión `TransactionTestCase` adicional ejecuta dos escrituras Treebeard
 simultáneas sobre la misma asignatura y confirma dos nodos válidos y
 `find_problems()` vacío tras la serialización por bloqueo.
+
+## Prompt 9 latest evidence
+
+El 2026-07-29 se creó `domain.courses` con el generador oficial de Django y una
+única migración inicial inspeccionada y aplicada en PostgreSQL 18.4. El dominio
+mantiene `Course`, revisiones de autoría, historial de transiciones append-only,
+módulos y unidades ordenados, y alineaciones explícitas con asignaturas, temas y
+objetivos de `domain.catalog`. No se alteró `identity.0001`, no se copiaron roles
+a `User`, `Group` ni almacenamiento del navegador, y una revisión aprobada no
+se modela como publicación.
+
+Se añadieron seis capacidades a la matriz central de organizaciones y todas las
+decisiones de autorización atraviesan policies/services. Las escrituras usan
+`transaction.atomic()`, `select_for_update()` y `expected_version`; los
+conflictos devuelven un `409 revision_conflict` estable y conservan la edición
+del usuario en la interfaz. La base protege slug reservado, unicidad por
+organización, cardinalidad de asignatura principal, posiciones válidas y únicas,
+transiciones inmutables y ausencia de borrado físico en la API. Dos
+transacciones PostgreSQL reales probaron que una actualización concurrente se
+guarda y la otra falla, y que la reordenación conserva una secuencia íntegra.
+
+El contrato `/api/v1/organizations/{organization_slug}/courses/` cubre listado,
+detalle, revisión, outline, readiness, metadatos, alineaciones, estructura,
+archivado/restauración y flujo draft → in_review → changes_requested/approved.
+Los `404` no revelan cursos, revisiones, módulos ni unidades de otra
+organización. El esquema drf-spectacular se generó sin warnings y el cliente
+TypeScript quedó sincronizado; el frontend consume únicamente esos tipos
+generados y mantiene las decisiones de autorización en el servidor.
+Como todas las vistas PATCH validan serializers explícitos sin `partial=True`,
+drf-spectacular usa `COMPONENT_SPLIT_PATCH=False`: `expected_version` permanece
+obligatorio también en el schema y el tipo TypeScript, no sólo en runtime.
+
+Las cinco rutas Next.js —lista, creación, workspace, estructura y revisión—
+fueron inspeccionadas en el navegador integrado con la cuenta owner de
+demostración. A 1280 px mostraron los encabezados y controles esperados; a
+390 px las cinco tuvieron `scrollWidth == clientWidth`. El editor de estructura
+mostró los tres módulos y ocho unidades del curso de demostración sin
+desbordamiento, y la consola no registró errores.
+
+`pnpm courses:e2e` pasó 3/3 escenarios Chromium aislados: flujo completo
+author/reviewer/owner, dos contextos con conflicto optimista visible y valores
+preservados, edición y reordenación de módulos/unidades, alineaciones, archivo y
+restauración por teclado, readiness, solicitud de cambios con foco en el
+faltante, corrección, reenvío, aprobación, solo lectura por rol, visibilidad del
+instructor, ocultamiento al learner, axe WCAG 2.2 A/AA, viewport de 390 px e
+IDOR multinivel. La base PostgreSQL temporal, el prefijo Redis y el correo
+temporal se eliminaron en `finally`.
+
+`pnpm courses:demo` es idempotente y sólo funciona con `DEBUG=True`. Mantiene
+los identificadores del curso `introduccion-calculo-diferencial`, su revisión
+draft, tres módulos, ocho unidades y sus alineaciones; una prueba impide su uso
+en configuración no development. La deuda intencional restante es mover una
+unidad entre módulos, que no forma parte del contrato del Prompt 9. Contenido
+semántico, publicación, enrolment, evaluación y delivery permanecen fuera de
+este dominio y de esta fase.
+
+El cierre hostil añadió regresiones directas para mass assignment,
+`expected_version` ausente, slug inmutable, inmutabilidad de `in_review` y
+`approved`, módulo sin unidad, unidad sin objetivo, referencias de catálogo
+archivadas, relaciones entre organizaciones, objetivos no alineados y una
+regresión N+1 que mantiene constante el número de consultas del outline al
+cuadruplicar módulos y unidades. La suite de Courses pasó 17/17 con 79.03% de
+cobertura aislada (`models` 88%, `services` 82%, `readiness` 78%, `policies`
+75%, serializers 97%); la suite global pasó 86 pruebas Python con 80.46% y 18
+pruebas Vitest. La ejecución
+Chromium global pasó 23/23 escenarios y limpió su base, Redis y correo. Ruff,
+Pyright (0 errores), ESLint, Prettier, TypeScript, Next build, OpenAPI sin
+warnings, drift checks, `pip-audit` y `pnpm audit --prod` quedaron verdes.

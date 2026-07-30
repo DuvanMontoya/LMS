@@ -225,6 +225,9 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "LMS Platform API",
     "VERSION": "0.2.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Every PATCH view validates an explicit serializer without partial=True.
+    # Preserve required fields such as expected_version in the generated client.
+    "COMPONENT_SPLIT_PATCH": False,
     "ENUM_NAME_OVERRIDES": {
         "OrganizationRole": "domain.organizations.choices.RoleCode",
         "OrganizationMembershipStatus": "domain.organizations.choices.MembershipStatus",

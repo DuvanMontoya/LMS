@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from domain.catalog.models import LearningObjective, Subject, Topic
-from domain.courses.models import Course
+from domain.courses.models import Course, CourseRevision
 from domain.courses.services import (
     create_course,
     create_module,
@@ -45,8 +45,8 @@ class Command(BaseCommand):
         objectives = list(
             LearningObjective.objects.filter(subject=differential).order_by("code")
         )
-        topics = {
-            topic.slug: topic
+        topics: dict[str, Topic] = {
+            _topic_slug(topic): topic
             for topic in Topic.objects.filter(
                 subject__in=[differential, precalculus]
             ).order_by("slug")
@@ -106,7 +106,7 @@ class Command(BaseCommand):
                 actor=actor,
                 organization=organization,
                 revision=revision,
-                expected_version=revision.lock_version,
+                expected_version=_lock_version(revision),
                 title=module_title,
             )
             for unit_title, topic_slug, objective in units:
@@ -114,23 +114,39 @@ class Command(BaseCommand):
                     actor=actor,
                     organization=organization,
                     module=module,
-                    expected_version=revision.lock_version,
+                    expected_version=_lock_version(revision),
                     title=unit_title,
                 )
                 revision = replace_unit_topics(
                     actor=actor,
                     organization=organization,
                     unit=unit,
-                    expected_version=revision.lock_version,
+                    expected_version=_lock_version(revision),
                     topics=[topics[topic_slug]],
                 )
                 revision = replace_unit_learning_objectives(
                     actor=actor,
                     organization=organization,
                     unit=unit,
-                    expected_version=revision.lock_version,
+                    expected_version=_lock_version(revision),
                     learning_objectives=[objective],
                 )
         self.stdout.write(
             "Curso demo creado en borrador; no se aprobó ni publicó automáticamente."
         )
+
+
+def _lock_version(revision: CourseRevision) -> int:
+    value = getattr(revision, "lock_version", None)
+    if not isinstance(value, int):
+        raise CommandError(
+            "La revisión demo no contiene una versión de bloqueo válida."
+        )
+    return value
+
+
+def _topic_slug(topic: Topic) -> str:
+    value = getattr(topic, "slug", None)
+    if not isinstance(value, str):
+        raise CommandError("Un tema demo no contiene un slug válido.")
+    return value

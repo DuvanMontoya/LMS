@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import uuid
+from io import StringIO
 
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.db import IntegrityError, transaction
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from domain.courses.choices import AuthoringStatus
 from domain.courses.exceptions import CourseSlugReserved
@@ -15,6 +18,13 @@ from .support import CourseFixtureMixin
 
 
 class CourseModelTests(CourseFixtureMixin, TestCase):
+    @override_settings(DEBUG=False)
+    def test_demo_bootstrap_rejects_non_development_settings(self) -> None:
+        with self.assertRaisesMessage(
+            CommandError, "Los cursos demo sólo se permiten con DEBUG=True."
+        ):
+            call_command("bootstrap_demo_courses", stdout=StringIO())
+
     def test_uuid_slug_rules_and_physical_delete_protection(self) -> None:
         owner, organization, subject, _, _ = self.curriculum()
         with self.assertRaises(CourseSlugReserved):
@@ -38,6 +48,9 @@ class CourseModelTests(CourseFixtureMixin, TestCase):
         self.assertIsInstance(revision.id, uuid.UUID)
         with self.assertRaises(ValidationError):
             revision.course.delete()
+        revision.course.slug = "otro-slug"
+        with self.assertRaises(ValidationError):
+            revision.course.full_clean()
 
     def test_case_insensitive_slug_and_only_one_open_revision(self) -> None:
         owner, organization, subject, _, _ = self.curriculum()

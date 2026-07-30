@@ -509,6 +509,11 @@ export interface components {
       /** Format: date-time */
       updated_at: string;
     };
+    ModuleUpdate: {
+      description?: string;
+      expected_version: number;
+      title?: string;
+    };
     MoveTopic: {
       /** @default sorted-child */
       position?: components['schemas']['PositionEnum'];
@@ -573,6 +578,9 @@ export interface components {
       | 'reviewer'
       | 'instructor'
       | 'learner';
+    OrganizationUpdate: {
+      name: string;
+    };
     Outline: {
       course: components['schemas']['Course'];
       learning_objectives: readonly components['schemas']['RevisionObjective'][];
@@ -647,52 +655,6 @@ export interface components {
        */
       previous?: string | null;
       results: components['schemas']['Membership'][];
-    };
-    PatchedModuleUpdate: {
-      description?: string;
-      expected_version?: number;
-      title?: string;
-    };
-    PatchedOrganizationUpdate: {
-      name?: string;
-    };
-    PatchedRevisionMetadataUpdate: {
-      description?: string;
-      estimated_duration_minutes?: number | null;
-      expected_version?: number;
-      language_code?: string;
-      subtitle?: string;
-      summary?: string;
-      title?: string;
-    };
-    PatchedUnitUpdate: {
-      estimated_duration_minutes?: number | null;
-      expected_version?: number;
-      summary?: string;
-      title?: string;
-    };
-    PatchedUpdateArea: {
-      description?: string;
-      name?: string;
-    };
-    PatchedUpdateConcept: {
-      definition?: string;
-      name?: string;
-    };
-    PatchedUpdateNamedEntity: {
-      description?: string;
-      name?: string;
-    };
-    PatchedUpdateObjective: {
-      cognitive_level?:
-        | components['schemas']['CognitiveLevelEnum']
-        | components['schemas']['BlankEnum'];
-      description?: string;
-      statement?: string;
-    };
-    PatchedUpdateTopic: {
-      description?: string;
-      title?: string;
     };
     /**
      * @description * `left` - left
@@ -774,6 +736,15 @@ export interface components {
       title: string;
       /** Format: date-time */
       updated_at: string;
+    };
+    RevisionMetadataUpdate: {
+      description?: string;
+      estimated_duration_minutes?: number | null;
+      expected_version: number;
+      language_code?: string;
+      subtitle?: string;
+      summary?: string;
+      title?: string;
     };
     RevisionObjective: {
       /** Format: uuid */
@@ -898,6 +869,35 @@ export interface components {
       position: number;
       topic: components['schemas']['TopicSummary'];
     };
+    UnitUpdate: {
+      estimated_duration_minutes?: number | null;
+      expected_version: number;
+      summary?: string;
+      title?: string;
+    };
+    UpdateArea: {
+      description?: string;
+      name?: string;
+    };
+    UpdateConcept: {
+      definition?: string;
+      name?: string;
+    };
+    UpdateNamedEntity: {
+      description?: string;
+      name?: string;
+    };
+    UpdateObjective: {
+      cognitive_level?:
+        | components['schemas']['CognitiveLevelEnum']
+        | components['schemas']['BlankEnum'];
+      description?: string;
+      statement?: string;
+    };
+    UpdateTopic: {
+      description?: string;
+      title?: string;
+    };
     UserSummary: {
       display: string;
       /** Format: email */
@@ -960,11 +960,11 @@ export interface operations {
         slug: string;
       };
     };
-    requestBody?: {
+    requestBody: {
       content: {
-        'application/json': components['schemas']['PatchedOrganizationUpdate'];
-        'application/x-www-form-urlencoded': components['schemas']['PatchedOrganizationUpdate'];
-        'multipart/form-data': components['schemas']['PatchedOrganizationUpdate'];
+        'application/json': components['schemas']['OrganizationUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['OrganizationUpdate'];
+        'multipart/form-data': components['schemas']['OrganizationUpdate'];
       };
     };
     responses: {
@@ -1041,9 +1041,9 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        'application/json': components['schemas']['PatchedUpdateArea'];
-        'application/x-www-form-urlencoded': components['schemas']['PatchedUpdateArea'];
-        'multipart/form-data': components['schemas']['PatchedUpdateArea'];
+        'application/json': components['schemas']['UpdateArea'];
+        'application/x-www-form-urlencoded': components['schemas']['UpdateArea'];
+        'multipart/form-data': components['schemas']['UpdateArea'];
       };
     };
     responses: {
@@ -1165,9 +1165,9 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        'application/json': components['schemas']['PatchedUpdateConcept'];
-        'application/x-www-form-urlencoded': components['schemas']['PatchedUpdateConcept'];
-        'multipart/form-data': components['schemas']['PatchedUpdateConcept'];
+        'application/json': components['schemas']['UpdateConcept'];
+        'application/x-www-form-urlencoded': components['schemas']['UpdateConcept'];
+        'multipart/form-data': components['schemas']['UpdateConcept'];
       };
     };
     responses: {
@@ -1312,9 +1312,9 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        'application/json': components['schemas']['PatchedUpdateNamedEntity'];
-        'application/x-www-form-urlencoded': components['schemas']['PatchedUpdateNamedEntity'];
-        'multipart/form-data': components['schemas']['PatchedUpdateNamedEntity'];
+        'application/json': components['schemas']['UpdateNamedEntity'];
+        'application/x-www-form-urlencoded': components['schemas']['UpdateNamedEntity'];
+        'multipart/form-data': components['schemas']['UpdateNamedEntity'];
       };
     };
     responses: {
@@ -1423,9 +1423,9 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        'application/json': components['schemas']['PatchedUpdateObjective'];
-        'application/x-www-form-urlencoded': components['schemas']['PatchedUpdateObjective'];
-        'multipart/form-data': components['schemas']['PatchedUpdateObjective'];
+        'application/json': components['schemas']['UpdateObjective'];
+        'application/x-www-form-urlencoded': components['schemas']['UpdateObjective'];
+        'multipart/form-data': components['schemas']['UpdateObjective'];
       };
     };
     responses: {
@@ -1601,9 +1601,9 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        'application/json': components['schemas']['PatchedUpdateNamedEntity'];
-        'application/x-www-form-urlencoded': components['schemas']['PatchedUpdateNamedEntity'];
-        'multipart/form-data': components['schemas']['PatchedUpdateNamedEntity'];
+        'application/json': components['schemas']['UpdateNamedEntity'];
+        'application/x-www-form-urlencoded': components['schemas']['UpdateNamedEntity'];
+        'multipart/form-data': components['schemas']['UpdateNamedEntity'];
       };
     };
     responses: {
@@ -1757,9 +1757,9 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        'application/json': components['schemas']['PatchedUpdateTopic'];
-        'application/x-www-form-urlencoded': components['schemas']['PatchedUpdateTopic'];
-        'multipart/form-data': components['schemas']['PatchedUpdateTopic'];
+        'application/json': components['schemas']['UpdateTopic'];
+        'application/x-www-form-urlencoded': components['schemas']['UpdateTopic'];
+        'multipart/form-data': components['schemas']['UpdateTopic'];
       };
     };
     responses: {
@@ -1987,11 +1987,11 @@ export interface operations {
         slug: string;
       };
     };
-    requestBody?: {
+    requestBody: {
       content: {
-        'application/json': components['schemas']['PatchedRevisionMetadataUpdate'];
-        'application/x-www-form-urlencoded': components['schemas']['PatchedRevisionMetadataUpdate'];
-        'multipart/form-data': components['schemas']['PatchedRevisionMetadataUpdate'];
+        'application/json': components['schemas']['RevisionMetadataUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['RevisionMetadataUpdate'];
+        'multipart/form-data': components['schemas']['RevisionMetadataUpdate'];
       };
     };
     responses: {
@@ -2152,11 +2152,11 @@ export interface operations {
         slug: string;
       };
     };
-    requestBody?: {
+    requestBody: {
       content: {
-        'application/json': components['schemas']['PatchedModuleUpdate'];
-        'application/x-www-form-urlencoded': components['schemas']['PatchedModuleUpdate'];
-        'multipart/form-data': components['schemas']['PatchedModuleUpdate'];
+        'application/json': components['schemas']['ModuleUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['ModuleUpdate'];
+        'multipart/form-data': components['schemas']['ModuleUpdate'];
       };
     };
     responses: {
@@ -2439,11 +2439,11 @@ export interface operations {
         unit_id: string;
       };
     };
-    requestBody?: {
+    requestBody: {
       content: {
-        'application/json': components['schemas']['PatchedUnitUpdate'];
-        'application/x-www-form-urlencoded': components['schemas']['PatchedUnitUpdate'];
-        'multipart/form-data': components['schemas']['PatchedUnitUpdate'];
+        'application/json': components['schemas']['UnitUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['UnitUpdate'];
+        'multipart/form-data': components['schemas']['UnitUpdate'];
       };
     };
     responses: {

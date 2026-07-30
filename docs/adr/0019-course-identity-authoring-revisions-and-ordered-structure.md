@@ -29,7 +29,9 @@ Cada mutación recibe `expected_version`, bloquea la revisión con
 `select_for_update()` y compara contra `lock_version`. Un valor obsoleto produce
 `revision_conflict` con HTTP 409; no se hace last-write-wins. Las escrituras de
 módulos, unidades, orden, alineaciones y estados incrementan una sola versión
-estructural compartida.
+estructural compartida. Las vistas PATCH validan serializers explícitos sin
+`partial=True`; `COMPONENT_SPLIT_PATCH=False` conserva por ello
+`expected_version` como requerido también en OpenAPI y el cliente generado.
 
 Las alineaciones referencian `Subject`, `LearningObjective` y `Topic` de
 `domain.catalog`, siempre dentro de la organización de la URL y con estado

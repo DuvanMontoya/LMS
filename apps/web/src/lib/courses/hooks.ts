@@ -59,9 +59,7 @@ const pathFor = ({ courseSlug, revisionId, slug }: RevisionPath) => ({
 export function useUpdateRevisionMetadata(path: RevisionPath) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (
-      body: components['schemas']['PatchedRevisionMetadataUpdate'],
-    ) =>
+    mutationFn: (body: components['schemas']['RevisionMetadataUpdate']) =>
       requireData(
         platformBrowserClient.PATCH(
           '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/',
@@ -137,12 +135,12 @@ export function useUpdateStructure(path: RevisionPath) {
       kind,
     }:
       | {
-          body: components['schemas']['PatchedModuleUpdate'];
+          body: components['schemas']['ModuleUpdate'];
           id: string;
           kind: 'module';
         }
       | {
-          body: components['schemas']['PatchedUnitUpdate'];
+          body: components['schemas']['UnitUpdate'];
           id: string;
           kind: 'unit';
         }): Promise<unknown> => {

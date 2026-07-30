@@ -120,3 +120,11 @@ class CourseWorkflowTests(CourseFixtureMixin, TestCase):
         )
         self.assertEqual(revision.authoring_status, AuthoringStatus.APPROVED)
         self.assertEqual(revision.transitions.count(), 5)
+        with self.assertRaises(CourseRevisionNotEditable):
+            update_revision_metadata(
+                actor=owner,
+                organization=organization,
+                revision=revision,
+                expected_version=revision.lock_version,
+                title="Una revisión aprobada tampoco se edita",
+            )

@@ -536,6 +536,15 @@
         ],
         "type": "object"
       },
+      "ModuleUpdate": {
+        "properties": {
+          "description": { "maxLength": 3000, "type": "string" },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": ["expected_version"],
+        "type": "object"
+      },
       "MoveTopic": {
         "properties": {
           "position": {
@@ -614,6 +623,11 @@
           "learner"
         ],
         "type": "string"
+      },
+      "OrganizationUpdate": {
+        "properties": { "name": { "maxLength": 160, "type": "string" } },
+        "required": ["name"],
+        "type": "object"
       },
       "Outline": {
         "properties": {
@@ -804,88 +818,6 @@
         "required": ["count", "results"],
         "type": "object"
       },
-      "PatchedModuleUpdate": {
-        "properties": {
-          "description": { "maxLength": 3000, "type": "string" },
-          "expected_version": { "minimum": 1, "type": "integer" },
-          "title": { "maxLength": 200, "type": "string" }
-        },
-        "type": "object"
-      },
-      "PatchedOrganizationUpdate": {
-        "properties": { "name": { "maxLength": 160, "type": "string" } },
-        "type": "object"
-      },
-      "PatchedRevisionMetadataUpdate": {
-        "properties": {
-          "description": { "maxLength": 5000, "type": "string" },
-          "estimated_duration_minutes": {
-            "minimum": 1,
-            "nullable": true,
-            "type": "integer"
-          },
-          "expected_version": { "minimum": 1, "type": "integer" },
-          "language_code": { "maxLength": 12, "type": "string" },
-          "subtitle": { "maxLength": 240, "type": "string" },
-          "summary": { "maxLength": 1200, "type": "string" },
-          "title": { "maxLength": 200, "type": "string" }
-        },
-        "type": "object"
-      },
-      "PatchedUnitUpdate": {
-        "properties": {
-          "estimated_duration_minutes": {
-            "minimum": 1,
-            "nullable": true,
-            "type": "integer"
-          },
-          "expected_version": { "minimum": 1, "type": "integer" },
-          "summary": { "maxLength": 1200, "type": "string" },
-          "title": { "maxLength": 200, "type": "string" }
-        },
-        "type": "object"
-      },
-      "PatchedUpdateArea": {
-        "properties": {
-          "description": { "maxLength": 2000, "type": "string" },
-          "name": { "maxLength": 160, "type": "string" }
-        },
-        "type": "object"
-      },
-      "PatchedUpdateConcept": {
-        "properties": {
-          "definition": { "maxLength": 3000, "type": "string" },
-          "name": { "maxLength": 160, "type": "string" }
-        },
-        "type": "object"
-      },
-      "PatchedUpdateNamedEntity": {
-        "properties": {
-          "description": { "maxLength": 2000, "type": "string" },
-          "name": { "maxLength": 160, "type": "string" }
-        },
-        "type": "object"
-      },
-      "PatchedUpdateObjective": {
-        "properties": {
-          "cognitive_level": {
-            "oneOf": [
-              { "$ref": "#/components/schemas/CognitiveLevelEnum" },
-              { "$ref": "#/components/schemas/BlankEnum" }
-            ]
-          },
-          "description": { "maxLength": 2000, "type": "string" },
-          "statement": { "maxLength": 1200, "type": "string" }
-        },
-        "type": "object"
-      },
-      "PatchedUpdateTopic": {
-        "properties": {
-          "description": { "maxLength": 2000, "type": "string" },
-          "title": { "maxLength": 160, "type": "string" }
-        },
-        "type": "object"
-      },
       "PositionEnum": {
         "description": "* `left` - left\n* `right` - right\n* `first-child` - first-child\n* `last-child` - last-child\n* `sorted-child` - sorted-child",
         "enum": ["left", "right", "first-child", "last-child", "sorted-child"],
@@ -1069,6 +1001,23 @@
           "title",
           "updated_at"
         ],
+        "type": "object"
+      },
+      "RevisionMetadataUpdate": {
+        "properties": {
+          "description": { "maxLength": 5000, "type": "string" },
+          "estimated_duration_minutes": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "language_code": { "maxLength": 12, "type": "string" },
+          "subtitle": { "maxLength": 240, "type": "string" },
+          "summary": { "maxLength": 1200, "type": "string" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": ["expected_version"],
         "type": "object"
       },
       "RevisionObjective": {
@@ -1353,6 +1302,61 @@
         "required": ["id", "position", "topic"],
         "type": "object"
       },
+      "UnitUpdate": {
+        "properties": {
+          "estimated_duration_minutes": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "summary": { "maxLength": 1200, "type": "string" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": ["expected_version"],
+        "type": "object"
+      },
+      "UpdateArea": {
+        "properties": {
+          "description": { "maxLength": 2000, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" }
+        },
+        "type": "object"
+      },
+      "UpdateConcept": {
+        "properties": {
+          "definition": { "maxLength": 3000, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" }
+        },
+        "type": "object"
+      },
+      "UpdateNamedEntity": {
+        "properties": {
+          "description": { "maxLength": 2000, "type": "string" },
+          "name": { "maxLength": 160, "type": "string" }
+        },
+        "type": "object"
+      },
+      "UpdateObjective": {
+        "properties": {
+          "cognitive_level": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/CognitiveLevelEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "description": { "maxLength": 2000, "type": "string" },
+          "statement": { "maxLength": 1200, "type": "string" }
+        },
+        "type": "object"
+      },
+      "UpdateTopic": {
+        "properties": {
+          "description": { "maxLength": 2000, "type": "string" },
+          "title": { "maxLength": 160, "type": "string" }
+        },
+        "type": "object"
+      },
       "UserSummary": {
         "properties": {
           "display": { "readOnly": true, "type": "string" },
@@ -1452,21 +1456,16 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedOrganizationUpdate"
-              }
+              "schema": { "$ref": "#/components/schemas/OrganizationUpdate" }
             },
             "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedOrganizationUpdate"
-              }
+              "schema": { "$ref": "#/components/schemas/OrganizationUpdate" }
             },
             "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedOrganizationUpdate"
-              }
+              "schema": { "$ref": "#/components/schemas/OrganizationUpdate" }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -1601,13 +1600,13 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/PatchedUpdateArea" }
+              "schema": { "$ref": "#/components/schemas/UpdateArea" }
             },
             "application/x-www-form-urlencoded": {
-              "schema": { "$ref": "#/components/schemas/PatchedUpdateArea" }
+              "schema": { "$ref": "#/components/schemas/UpdateArea" }
             },
             "multipart/form-data": {
-              "schema": { "$ref": "#/components/schemas/PatchedUpdateArea" }
+              "schema": { "$ref": "#/components/schemas/UpdateArea" }
             }
           }
         },
@@ -1837,13 +1836,13 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/PatchedUpdateConcept" }
+              "schema": { "$ref": "#/components/schemas/UpdateConcept" }
             },
             "application/x-www-form-urlencoded": {
-              "schema": { "$ref": "#/components/schemas/PatchedUpdateConcept" }
+              "schema": { "$ref": "#/components/schemas/UpdateConcept" }
             },
             "multipart/form-data": {
-              "schema": { "$ref": "#/components/schemas/PatchedUpdateConcept" }
+              "schema": { "$ref": "#/components/schemas/UpdateConcept" }
             }
           }
         },
@@ -2127,19 +2126,13 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedUpdateNamedEntity"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateNamedEntity" }
             },
             "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedUpdateNamedEntity"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateNamedEntity" }
             },
             "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedUpdateNamedEntity"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateNamedEntity" }
             }
           }
         },
@@ -2344,19 +2337,13 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedUpdateObjective"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateObjective" }
             },
             "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedUpdateObjective"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateObjective" }
             },
             "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedUpdateObjective"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateObjective" }
             }
           }
         },
@@ -2707,19 +2694,13 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedUpdateNamedEntity"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateNamedEntity" }
             },
             "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedUpdateNamedEntity"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateNamedEntity" }
             },
             "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchedUpdateNamedEntity"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateNamedEntity" }
             }
           }
         },
@@ -3040,13 +3021,13 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/PatchedUpdateTopic" }
+              "schema": { "$ref": "#/components/schemas/UpdateTopic" }
             },
             "application/x-www-form-urlencoded": {
-              "schema": { "$ref": "#/components/schemas/PatchedUpdateTopic" }
+              "schema": { "$ref": "#/components/schemas/UpdateTopic" }
             },
             "multipart/form-data": {
-              "schema": { "$ref": "#/components/schemas/PatchedUpdateTopic" }
+              "schema": { "$ref": "#/components/schemas/UpdateTopic" }
             }
           }
         },
@@ -3525,20 +3506,21 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PatchedRevisionMetadataUpdate"
+                "$ref": "#/components/schemas/RevisionMetadataUpdate"
               }
             },
             "application/x-www-form-urlencoded": {
               "schema": {
-                "$ref": "#/components/schemas/PatchedRevisionMetadataUpdate"
+                "$ref": "#/components/schemas/RevisionMetadataUpdate"
               }
             },
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/PatchedRevisionMetadataUpdate"
+                "$ref": "#/components/schemas/RevisionMetadataUpdate"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -3907,15 +3889,16 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/PatchedModuleUpdate" }
+              "schema": { "$ref": "#/components/schemas/ModuleUpdate" }
             },
             "application/x-www-form-urlencoded": {
-              "schema": { "$ref": "#/components/schemas/PatchedModuleUpdate" }
+              "schema": { "$ref": "#/components/schemas/ModuleUpdate" }
             },
             "multipart/form-data": {
-              "schema": { "$ref": "#/components/schemas/PatchedModuleUpdate" }
+              "schema": { "$ref": "#/components/schemas/ModuleUpdate" }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -4581,15 +4564,16 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/PatchedUnitUpdate" }
+              "schema": { "$ref": "#/components/schemas/UnitUpdate" }
             },
             "application/x-www-form-urlencoded": {
-              "schema": { "$ref": "#/components/schemas/PatchedUnitUpdate" }
+              "schema": { "$ref": "#/components/schemas/UnitUpdate" }
             },
             "multipart/form-data": {
-              "schema": { "$ref": "#/components/schemas/PatchedUnitUpdate" }
+              "schema": { "$ref": "#/components/schemas/UnitUpdate" }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
