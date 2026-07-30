@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { Button } from '@/components/ui/button';
 import type { components } from '@/lib/api/generated/platform';
 import { useReplaceCourseAlignment } from '@/lib/courses/hooks';
 
@@ -99,72 +100,76 @@ export function AlignmentEditor({
   }
 
   return (
-    <section
-      aria-labelledby="alignment-title"
-      className="rounded-xl border border-slate-200 bg-white p-6"
-    >
-      <h2 className="text-xl font-semibold" id="alignment-title">
+    <section aria-labelledby="alignment-title" className="border-t pt-5">
+      <h2 className="text-base font-semibold" id="alignment-title">
         Alineación curricular
       </h2>
-      <p aria-live="polite" className="mt-3 text-sm text-slate-700">
+      <p aria-live="polite" className="mt-3 text-sm text-foreground/80">
         {status}
       </p>
       <fieldset className="mt-5" disabled={!editable}>
         <legend className="font-semibold">
           Asignatura principal y complementarias
         </legend>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <div className="mt-3 divide-y border-y">
           {subjects.map((subject) => (
-            <div className="rounded-lg border p-3" key={subject.id}>
-              <label className="flex gap-2">
-                <input
-                  checked={primary === subject.id}
-                  name="workspace-primary"
-                  onChange={() => {
-                    setPrimary(subject.id);
-                    setSupporting((ids) =>
-                      ids.filter((id) => id !== subject.id),
-                    );
-                  }}
-                  type="radio"
-                />
-                Principal: {subject.name}
-              </label>
-              <label className="mt-2 flex gap-2 text-sm">
-                <input
-                  checked={supporting.includes(subject.id)}
-                  disabled={!editable || primary === subject.id}
-                  onChange={(event) =>
-                    setSupporting((ids) =>
-                      event.target.checked
-                        ? [...ids, subject.id]
-                        : ids.filter((id) => id !== subject.id),
-                    )
-                  }
-                  type="checkbox"
-                />
-                Complementaria
-              </label>
+            <div
+              className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+              key={subject.id}
+            >
+              <span className="font-medium">{subject.name}</span>
+              <div className="flex gap-5">
+                <label className="flex gap-2">
+                  <input
+                    checked={primary === subject.id}
+                    name="workspace-primary"
+                    onChange={() => {
+                      setPrimary(subject.id);
+                      setSupporting((ids) =>
+                        ids.filter((id) => id !== subject.id),
+                      );
+                    }}
+                    type="radio"
+                  />
+                  Principal
+                </label>
+                <label className="mt-2 flex gap-2 text-sm">
+                  <input
+                    checked={supporting.includes(subject.id)}
+                    disabled={!editable || primary === subject.id}
+                    onChange={(event) =>
+                      setSupporting((ids) =>
+                        event.target.checked
+                          ? [...ids, subject.id]
+                          : ids.filter((id) => id !== subject.id),
+                      )
+                    }
+                    type="checkbox"
+                  />
+                  Complementaria
+                </label>
+              </div>
             </div>
           ))}
         </div>
         {editable ? (
-          <button
-            className="mt-4 rounded-lg border border-slate-900 px-4 py-2 font-medium"
+          <Button
+            className="mt-4"
             onClick={() => void saveSubjects()}
             type="button"
+            variant="outline"
           >
             Guardar asignaturas
-          </button>
+          </Button>
         ) : null}
       </fieldset>
       <fieldset className="mt-7" disabled={!editable}>
         <legend className="font-semibold">Objetivos de la revisión</legend>
         {visibleObjectives.length ? (
-          <ul className="mt-3 space-y-2">
+          <ul className="mt-3 divide-y border-y">
             {visibleObjectives.map((objective) => (
               <li key={objective.id}>
-                <label className="flex gap-3 rounded-lg border p-3">
+                <label className="flex gap-3 px-3 py-3">
                   <input
                     checked={selectedObjectives.includes(objective.id)}
                     onChange={(event) =>
@@ -184,18 +189,19 @@ export function AlignmentEditor({
             ))}
           </ul>
         ) : (
-          <p className="mt-3 text-slate-600">
+          <p className="mt-3 text-muted-foreground">
             No hay objetivos para las asignaturas alineadas.
           </p>
         )}
         {editable ? (
-          <button
-            className="mt-4 rounded-lg border border-slate-900 px-4 py-2 font-medium"
+          <Button
+            className="mt-4"
             onClick={() => void saveObjectives()}
             type="button"
+            variant="outline"
           >
             Guardar objetivos
-          </button>
+          </Button>
         ) : null}
       </fieldset>
     </section>

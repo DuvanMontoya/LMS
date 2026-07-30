@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ConceptAssociationEditor } from '@/components/catalog/concept-association-editor';
 import { TopicActions } from '@/components/catalog/topic-actions';
 import { TopicForm } from '@/components/catalog/topic-form';
+import { PageHeader } from '@/components/platform/page-header';
 import { createPlatformServerClient } from '@/lib/api/platform-server-client';
 import { getOrganizationForPage } from '@/lib/organizations/server';
 
@@ -10,7 +10,7 @@ export default async function SubjectWorkspace({
   params,
 }: Readonly<{ params: Promise<{ slug: string; subjectId: string }> }>) {
   const { slug, subjectId } = await params;
-  const { access } = await getOrganizationForPage(slug);
+  const { access, organization } = await getOrganizationForPage(slug);
   if (!access.capabilities.includes('catalog.view')) notFound();
   const client = await createPlatformServerClient();
   const { data: subject } = await client.GET(
@@ -80,26 +80,35 @@ export default async function SubjectWorkspace({
       return dependent ? [dependent] : [];
     });
   return (
-    <main className="mx-auto min-h-screen max-w-4xl px-6 py-12">
-      <Link
-        className="text-sm underline"
-        href={`/organizaciones/${slug}/curriculo`}
-      >
-        Volver al currículo
-      </Link>
-      <h1 className="mt-4 text-3xl font-semibold text-slate-950">
-        {subject.name}
-      </h1>
-      {subject.description ? (
-        <p className="mt-2 max-w-3xl text-slate-700">{subject.description}</p>
-      ) : null}
-      <section
-        className="mt-8 rounded-xl border border-slate-200 bg-white p-6"
-        aria-labelledby="topic-tree"
-      >
-        <h2 id="topic-tree" className="text-xl font-semibold">
-          Árbol de temas
-        </h2>
+    <main className="academic-page">
+      <PageHeader
+        breadcrumbs={[
+          { href: `/organizaciones/${slug}`, label: organization.name },
+          { href: `/organizaciones/${slug}/curriculo`, label: 'Currículo' },
+          { label: subject.name },
+        ]}
+        description={subject.description}
+        eyebrow="Asignatura"
+        title={subject.name}
+      />
+      <section className="mt-6" aria-labelledby="topic-tree">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 id="topic-tree" className="text-base font-semibold">
+              Estructura temática
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Jerarquía de temas y sus conceptos asociados.
+            </p>
+          </div>
+          {access.capabilities.includes('catalog.manage') ? (
+            <TopicForm
+              slug={slug}
+              subjectId={subjectId}
+              topics={flattenedTopics}
+            />
+          ) : null}
+        </div>
         <TopicTree
           canManage={access.capabilities.includes('catalog.manage')}
           concepts={concepts ?? []}
@@ -108,17 +117,10 @@ export default async function SubjectWorkspace({
           slug={slug}
           topics={flattenedTopics}
         />
-        {access.capabilities.includes('catalog.manage') ? (
-          <TopicForm
-            slug={slug}
-            subjectId={subjectId}
-            topics={flattenedTopics}
-          />
-        ) : null}
       </section>
-      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="text-xl font-semibold">Contexto de la asignatura</h2>
-        <div className="mt-4 grid gap-6 md:grid-cols-2">
+      <section className="mt-6 border-t pt-5">
+        <h2 className="text-base font-semibold">Contexto académico</h2>
+        <div className="mt-3 grid overflow-hidden rounded-md border bg-card [&>*]:p-4 [&>*+*]:border-t md:grid-cols-2 md:[&>*+*]:border-t-0 md:[&>*:nth-child(odd)]:border-r md:[&>*:nth-child(n+3)]:border-t">
           <ContextList
             empty="No hay conceptos asociados a sus temas."
             items={associatedConcepts.map((concept) => concept.name)}
@@ -154,15 +156,15 @@ function ContextList({
 }: Readonly<{ empty: string; items: readonly string[]; title: string }>) {
   return (
     <section aria-label={title}>
-      <h3 className="font-medium text-slate-900">{title}</h3>
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       {items.length ? (
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-700">
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-foreground/80">
           {items.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-sm text-slate-600">{empty}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{empty}</p>
       )}
     </section>
   );
@@ -204,20 +206,32 @@ function TopicTree({
   }>;
 }>) {
   return items.length ? (
-    <ul className="mt-4 space-y-2" aria-label="Temas de la asignatura">
+    <ul
+      className={
+        parentId ? 'space-y-2 border-l border-border pl-4' : 'mt-3 space-y-3'
+      }
+      aria-label="Temas de la asignatura"
+    >
       {items.map((topic) => (
-        <li data-topic-title={topic.title} key={topic.id}>
-          <span className="font-medium">{topic.title}</span>
-          {canManage ? (
-            <TopicActions
-              slug={slug}
-              topic={{ ...topic, parentId }}
-              topics={topics}
-            />
-          ) : null}
+        <li
+          className="overflow-hidden rounded-md border bg-card shadow-[0_1px_2px_rgb(0_0_0_/_0.025)]"
+          data-topic-title={topic.title}
+          key={topic.id}
+        >
+          <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <span className="font-semibold">{topic.title}</span>
+            {canManage ? (
+              <TopicActions
+                slug={slug}
+                topic={{ ...topic, parentId }}
+                topics={topics}
+              />
+            ) : null}
+          </div>
           {canManage ? (
             <ConceptAssociationEditor
               concepts={concepts}
+              embedded
               entity="topic"
               entityId={topic.id}
               initialIds={conceptIdsByTopic.get(topic.id) ?? []}
@@ -225,28 +239,30 @@ function TopicTree({
             />
           ) : null}
           {Array.isArray(topic.children) && topic.children.length ? (
-            <TopicTree
-              items={
-                topic.children as Array<{
-                  id: string;
-                  status?: string;
-                  title: string;
-                  children: unknown;
-                }>
-              }
-              parentId={topic.id}
-              canManage={canManage}
-              concepts={concepts}
-              conceptIdsByTopic={conceptIdsByTopic}
-              slug={slug}
-              topics={topics}
-            />
+            <div className="border-t bg-muted/10 p-3">
+              <TopicTree
+                items={
+                  topic.children as Array<{
+                    id: string;
+                    status?: string;
+                    title: string;
+                    children: unknown;
+                  }>
+                }
+                parentId={topic.id}
+                canManage={canManage}
+                concepts={concepts}
+                conceptIdsByTopic={conceptIdsByTopic}
+                slug={slug}
+                topics={topics}
+              />
+            </div>
           ) : null}
         </li>
       ))}
     </ul>
   ) : (
-    <p className="mt-3 text-slate-600">No hay temas activos.</p>
+    <p className="mt-3 text-muted-foreground">No hay temas activos.</p>
   );
 }
 

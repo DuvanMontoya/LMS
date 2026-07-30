@@ -3,9 +3,43 @@
 import type { Editor, JSONContent } from '@tiptap/core';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import { EditorContent, useEditor } from '@tiptap/react';
+import {
+  Braces,
+  CheckCircle2,
+  CircleAlert,
+  Code2,
+  Eye,
+  Link2,
+  List,
+  ListOrdered,
+  LoaderCircle,
+  PencilLine,
+  Quote,
+  Save,
+  Sigma,
+  Table2,
+  Undo2,
+  Unlink,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import type { components } from '@/lib/api/generated/platform';
 import {
   ContentConflictError,
@@ -23,6 +57,7 @@ import {
   safeContentHref,
   validateContentDocument,
 } from '@/lib/content/schema/validator';
+import { cn } from '@/lib/utils';
 
 import { AcademicDocument } from './academic-document';
 import { MathJaxFormula } from './mathjax-formula';
@@ -52,6 +87,17 @@ const pedagogicalKinds = [
   ['summary', 'Resumen'],
 ] as const;
 
+function revisionStatusLabel(value: string) {
+  return (
+    {
+      approved: 'Aprobada',
+      changes_requested: 'Cambios solicitados',
+      draft: 'Borrador',
+      in_review: 'En revisión',
+    }[value] ?? value
+  );
+}
+
 function blockInsertionChain(editor: Editor) {
   const chain = editor.chain().focus();
   return editor.state.selection instanceof NodeSelection
@@ -76,19 +122,20 @@ function EditorButton({
   onClick: () => void;
 }>) {
   return (
-    <button
+    <Button
       aria-pressed={active}
-      className={`rounded-md border px-3 py-2 text-sm font-medium ${
-        active
-          ? 'border-sky-700 bg-sky-50 text-sky-900'
-          : 'border-slate-300 bg-white text-slate-800'
-      }`}
+      className={cn(
+        'h-7 rounded-md px-2 text-xs',
+        active && 'border-primary/20 bg-primary/10 text-primary',
+      )}
       disabled={disabled}
       onClick={onClick}
+      size="sm"
       type="button"
+      variant={active ? 'secondary' : 'ghost'}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -115,6 +162,7 @@ function VersionHistory({
   }>();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [restoreTarget, setRestoreTarget] = useState<number>();
 
   async function view(number: number) {
     setBusy(true);
@@ -137,12 +185,6 @@ function VersionHistory({
   }
 
   async function restore(number: number) {
-    if (
-      !window.confirm(
-        `Restaurar la versión ${number} creará una versión nueva y reemplazará el editor actual. ¿Continuar?`,
-      )
-    )
-      return;
     setBusy(true);
     setError('');
     try {
@@ -152,6 +194,7 @@ function VersionHistory({
         throw new Error('El servidor devolvió un documento incompatible.');
       onRestore(number, validation.document, next);
       setViewed(undefined);
+      setRestoreTarget(undefined);
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : 'No fue posible restaurar.',
@@ -162,12 +205,15 @@ function VersionHistory({
   }
 
   return (
-    <details className="rounded-xl border border-slate-200 bg-white p-4">
-      <summary className="cursor-pointer text-lg font-semibold">
+    <details className="rounded-md border bg-card p-4 shadow-[0_1px_2px_rgb(0_0_0_/_0.025)]">
+      <summary className="cursor-pointer text-base font-semibold">
         Historial de versiones ({versions.length})
       </summary>
       {error ? (
-        <p className="mt-3 rounded-lg bg-red-50 p-3 text-red-800" role="alert">
+        <p
+          className="mt-3 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}
@@ -183,14 +229,14 @@ function VersionHistory({
                   Versión {version.number}
                   {version.is_current ? ' · actual' : ''}
                 </p>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-muted-foreground">
                   {version.created_by_display} ·{' '}
                   {new Intl.DateTimeFormat('es-CO', {
                     dateStyle: 'medium',
                     timeStyle: 'short',
                   }).format(new Date(version.created_at))}
                 </p>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-muted-foreground">
                   {version.word_count} palabras · {version.character_count}{' '}
                   caracteres · {version.node_count} nodos
                 </p>
@@ -206,9 +252,9 @@ function VersionHistory({
                 </button>
                 {canRestore ? (
                   <button
-                    className="rounded border border-sky-700 px-3 py-2 text-sm text-sky-800"
+                    className="rounded-md border border-primary/40 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/5"
                     disabled={busy}
-                    onClick={() => restore(version.number)}
+                    onClick={() => setRestoreTarget(version.number)}
                     type="button"
                   >
                     Restaurar
@@ -219,23 +265,52 @@ function VersionHistory({
           ))}
         </ol>
       ) : (
-        <p className="mt-3 text-slate-600">
+        <p className="mt-3 text-muted-foreground">
           Todavía no hay versiones guardadas.
         </p>
       )}
       {viewed ? (
         <section
           aria-labelledby="historical-preview"
-          className="mt-5 border-t border-slate-200 pt-5"
+          className="mt-5 border-t pt-5"
         >
           <h3 className="text-lg font-semibold" id="historical-preview">
             Vista de la versión {viewed.number}
           </h3>
-          <div className="mt-4 rounded-xl bg-slate-50 p-5">
+          <div className="mt-4 rounded-md bg-muted/30 p-5">
             <AcademicDocument document={viewed.document} />
           </div>
         </section>
       ) : null}
+      <AlertDialog
+        onOpenChange={(open) => {
+          if (!open) setRestoreTarget(undefined);
+        }}
+        open={restoreTarget !== undefined}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Restaurar versión {restoreTarget}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Se creará una versión nueva a partir de este historial y el
+              contenido actual del editor será reemplazado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busy || restoreTarget === undefined}
+              onClick={() => {
+                if (restoreTarget !== undefined) void restore(restoreTarget);
+              }}
+            >
+              {busy ? 'Restaurando…' : 'Restaurar versión'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </details>
   );
 }
@@ -423,18 +498,12 @@ function EditableContent({
 
   if (!editor)
     return (
-      <p className="mt-6 rounded-xl border p-5" role="status">
+      <p className="mt-6 rounded-md border bg-card p-5" role="status">
         Preparando el editor…
       </p>
     );
 
   async function loadServerVersion() {
-    if (
-      !window.confirm(
-        'Cargar la versión del servidor reemplazará los cambios locales no guardados. ¿Continuar?',
-      )
-    )
-      return;
     setError('');
     try {
       const next = await fetchCurrentContent(path);
@@ -516,56 +585,96 @@ function EditableContent({
   return (
     <>
       <div aria-live="polite" className="mt-6 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
-          <div>
-            <p className="text-sm text-slate-600">Estado guardado</p>
-            <p className="font-semibold">{dirtyState}</p>
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card px-3 py-2.5 shadow-xs">
+          <div className="flex min-w-0 items-center gap-2">
+            {dirtyState === 'Guardando' ? (
+              <LoaderCircle className="size-4 animate-spin text-primary" />
+            ) : dirtyState === 'Guardado' || dirtyState === 'Sin cambios' ? (
+              <CheckCircle2 className="size-4 text-emerald-700" />
+            ) : (
+              <CircleAlert className="size-4 text-amber-700" />
+            )}
+            <span className="text-sm font-medium">{dirtyState}</span>
           </div>
-          <p className="text-sm text-slate-600">
-            Versión actual: {documentVersion}
-          </p>
-          <div className="flex rounded-lg border border-slate-300 p-1">
-            <button
+          <Badge className="rounded" variant="outline">
+            Versión {documentVersion}
+          </Badge>
+          <div className="ml-auto flex rounded-lg border bg-muted/20 p-0.5">
+            <Button
               aria-pressed={mode === 'edit'}
-              className="rounded px-3 py-2 text-sm"
+              className="h-7 rounded-md"
               onClick={() => setMode('edit')}
+              size="sm"
               type="button"
+              variant={mode === 'edit' ? 'secondary' : 'ghost'}
             >
+              <PencilLine />
               Editar
-            </button>
-            <button
+            </Button>
+            <Button
               aria-pressed={mode === 'preview'}
-              className="rounded px-3 py-2 text-sm"
+              className="h-7 rounded-md"
               onClick={() => setMode('preview')}
+              size="sm"
               type="button"
+              variant={mode === 'preview' ? 'secondary' : 'ghost'}
             >
+              <Eye />
               Vista previa
-            </button>
+            </Button>
           </div>
         </div>
         {['Cambios sin guardar', 'Conflicto'].includes(dirtyState) ? (
-          <p className="rounded-lg bg-amber-50 p-3 text-amber-950">
-            Hay cambios locales que todavía no están guardados.
-          </p>
+          <Alert className="border-amber-600/20 bg-amber-500/5">
+            <CircleAlert className="text-amber-700" />
+            <AlertTitle>Cambios locales pendientes</AlertTitle>
+            <AlertDescription>
+              Guarda antes de salir para conservar esta versión.
+            </AlertDescription>
+          </Alert>
         ) : null}
         {message ? (
-          <p className="rounded-lg bg-emerald-50 p-3 text-emerald-900">
-            {message}
-          </p>
+          <Alert className="border-emerald-600/20 bg-emerald-500/5">
+            <CheckCircle2 className="text-emerald-700" />
+            <AlertTitle>Contenido actualizado</AlertTitle>
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
         ) : null}
         {error ? (
-          <div className="rounded-lg bg-red-50 p-3 text-red-900" role="alert">
-            <p>{error}</p>
+          <Alert variant="destructive">
+            <CircleAlert />
+            <AlertTitle>No se pudo completar la operación</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
             {dirtyState === 'Conflicto' ? (
-              <button
-                className="mt-3 rounded border border-red-700 px-3 py-2 font-medium"
-                onClick={loadServerVersion}
-                type="button"
-              >
-                Cargar versión del servidor
-              </button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button className="mt-3" size="sm" variant="outline">
+                    Cargar versión del servidor
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Reemplazar cambios locales
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Se cargará la versión más reciente del servidor y se
+                      descartarán los cambios locales que aún no se guardaron.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => void loadServerVersion()}
+                      variant="destructive"
+                    >
+                      Cargar versión del servidor
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             ) : null}
-          </div>
+          </Alert>
         ) : null}
       </div>
 
@@ -573,14 +682,14 @@ function EditableContent({
         <section className="mt-6" aria-label="Editor académico">
           <div
             aria-label="Herramientas de formato"
-            className="flex flex-wrap gap-2 rounded-t-xl border border-b-0 border-slate-300 bg-slate-50 p-3"
+            className="sticky top-12 z-10 flex flex-wrap gap-1 rounded-lg border bg-card/95 p-2 shadow-sm backdrop-blur"
             role="toolbar"
           >
             <EditorButton
               active={editor.isActive('paragraph')}
               onClick={() => editor.chain().focus().setParagraph().run()}
             >
-              Párrafo
+              Texto
             </EditorButton>
             {[2, 3, 4].map((level) => (
               <EditorButton
@@ -594,50 +703,67 @@ function EditableContent({
                     .run()
                 }
               >
-                Título nivel {level}
+                H{level}
               </EditorButton>
             ))}
             <EditorButton
               active={editor.isActive('bold')}
               onClick={() => editor.chain().focus().toggleBold().run()}
             >
+              <strong aria-hidden="true">B</strong>
               Negrita
             </EditorButton>
             <EditorButton
               active={editor.isActive('italic')}
               onClick={() => editor.chain().focus().toggleItalic().run()}
             >
+              <em aria-hidden="true">I</em>
               Cursiva
             </EditorButton>
             <EditorButton
               active={editor.isActive('code')}
               onClick={() => editor.chain().focus().toggleCode().run()}
             >
+              <Code2 />
               Código inline
             </EditorButton>
-            <EditorButton onClick={() => setLinkPanel((value) => !value)}>
+            <EditorButton
+              active={editor.isActive('link') || linkPanel}
+              onClick={() => {
+                const activeHref = editor.getAttributes('link').href;
+                setLinkHref(typeof activeHref === 'string' ? activeHref : '');
+                setLinkPanel((value) => !value);
+              }}
+            >
+              <Link2 />
               Enlace
             </EditorButton>
             <EditorButton
               active={editor.isActive('bulletList')}
               onClick={() => editor.chain().focus().toggleBulletList().run()}
             >
-              Lista con viñetas
+              <List />
+              Viñetas
             </EditorButton>
             <EditorButton
               active={editor.isActive('orderedList')}
               onClick={() => editor.chain().focus().toggleOrderedList().run()}
             >
-              Lista numerada
+              <ListOrdered />
+              Numerada
             </EditorButton>
             <EditorButton
               active={editor.isActive('blockquote')}
               onClick={() => editor.chain().focus().toggleBlockquote().run()}
             >
+              <Quote />
               Cita
             </EditorButton>
-            <EditorButton onClick={() => setPedagogyPanel((value) => !value)}>
-              Bloque pedagógico
+            <EditorButton
+              active={pedagogyPanel}
+              onClick={() => setPedagogyPanel((value) => !value)}
+            >
+              Bloque académico
             </EditorButton>
             <EditorButton
               onClick={() => {
@@ -648,7 +774,8 @@ function EditableContent({
                 setMathPanel(true);
               }}
             >
-              Matemática inline
+              <Sigma />
+              Fórmula
             </EditorButton>
             <EditorButton
               onClick={() => {
@@ -659,42 +786,52 @@ function EditableContent({
                 setMathPanel(true);
               }}
             >
-              Matemática display
+              <Sigma />
+              Ecuación
             </EditorButton>
-            <EditorButton onClick={() => setCodePanel((value) => !value)}>
-              Bloque de código
+            <EditorButton
+              active={codePanel}
+              onClick={() => setCodePanel((value) => !value)}
+            >
+              <Braces />
+              Código
             </EditorButton>
-            <EditorButton onClick={() => setTablePanel((value) => !value)}>
+            <EditorButton
+              active={tablePanel}
+              onClick={() => setTablePanel((value) => !value)}
+            >
+              <Table2 />
               Tabla
             </EditorButton>
             <EditorButton
               disabled={!editor.can().chain().focus().undo().run()}
               onClick={() => editor.chain().focus().undo().run()}
             >
+              <Undo2 />
               Deshacer
             </EditorButton>
             <EditorButton
               disabled={!editor.can().chain().focus().redo().run()}
               onClick={() => editor.chain().focus().redo().run()}
             >
+              <Undo2 className="-scale-x-100" />
               Rehacer
             </EditorButton>
           </div>
 
           {linkPanel ? (
-            <div className="border-x border-slate-300 bg-white p-3">
-              <label className="font-medium">
-                URL segura
-                <input
-                  className="ml-3 min-w-72 rounded border px-3 py-2"
+            <div className="mt-2 flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <Label htmlFor="content-link">Dirección del enlace</Label>
+                <Input
+                  id="content-link"
                   onChange={(event) => setLinkHref(event.target.value)}
-                  placeholder="https://…"
+                  placeholder="https://sitio.edu/recurso"
                   type="url"
                   value={linkHref}
                 />
-              </label>
-              <button
-                className="ml-3 rounded border px-3 py-2"
+              </div>
+              <Button
                 onClick={() => {
                   try {
                     if (!safeContentHref(linkHref)) throw new Error();
@@ -704,6 +841,7 @@ function EditableContent({
                       .extendMarkRange('link')
                       .setLink({ href: linkHref })
                       .run();
+                    setError('');
                     setLinkPanel(false);
                   } catch {
                     setError(
@@ -713,17 +851,31 @@ function EditableContent({
                 }}
                 type="button"
               >
+                <Link2 />
                 Aplicar enlace
-              </button>
+              </Button>
+              {editor.isActive('link') ? (
+                <Button
+                  onClick={() => {
+                    editor.chain().focus().unsetLink().run();
+                    setLinkPanel(false);
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  <Unlink />
+                  Quitar
+                </Button>
+              ) : null}
             </div>
           ) : null}
 
           {pedagogyPanel ? (
-            <div className="grid gap-3 border-x border-slate-300 bg-white p-3 sm:grid-cols-3">
-              <label className="font-medium">
+            <div className="mt-2 grid gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-3">
+              <label className="text-sm font-medium">
                 Tipo
                 <select
-                  className="mt-1 w-full rounded border px-3 py-2"
+                  className="mt-1.5 h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                   onChange={(event) => setPedagogyKind(event.target.value)}
                   value={pedagogyKind}
                 >
@@ -734,17 +886,17 @@ function EditableContent({
                   ))}
                 </select>
               </label>
-              <label className="font-medium">
+              <label className="text-sm font-medium">
                 Título opcional
-                <input
-                  className="mt-1 w-full rounded border px-3 py-2"
+                <Input
+                  className="mt-1.5"
                   maxLength={300}
                   onChange={(event) => setPedagogyTitle(event.target.value)}
                   value={pedagogyTitle}
                 />
               </label>
-              <button
-                className="self-end rounded bg-slate-950 px-4 py-2 font-medium text-white"
+              <Button
+                className="self-end"
                 onClick={() => {
                   blockInsertionChain(editor)
                     .insertContent({
@@ -767,12 +919,12 @@ function EditableContent({
                 type="button"
               >
                 Insertar bloque
-              </button>
+              </Button>
             </div>
           ) : null}
 
           {mathPanel ? (
-            <div className="space-y-3 border-x border-slate-300 bg-white p-4">
+            <div className="mt-2 space-y-3 rounded-lg border bg-muted/20 p-4">
               <div className="flex flex-wrap gap-4">
                 <label>
                   <input
@@ -795,48 +947,45 @@ function EditableContent({
               </div>
               <MathLiveField onChange={setMathLatex} value={mathLatex} />
               {mathDisplay ? (
-                <label className="block font-medium">
+                <label className="block text-sm font-medium">
                   Etiqueta opcional
-                  <input
-                    className="mt-1 w-full rounded border px-3 py-2"
+                  <Input
+                    className="mt-1.5"
                     maxLength={120}
                     onChange={(event) => setMathLabel(event.target.value)}
                     value={mathLabel}
                   />
                 </label>
               ) : null}
-              <div className="rounded-lg bg-slate-50 p-3">
+              <div className="rounded-lg border bg-card p-3">
                 <p className="mb-2 text-sm font-medium">Vista previa segura</p>
                 <MathJaxFormula display={mathDisplay} latex={mathLatex} />
               </div>
               <div className="flex gap-2">
-                <button
-                  className="rounded bg-slate-950 px-4 py-2 text-white"
-                  onClick={applyMath}
-                  type="button"
-                >
+                <Button onClick={applyMath} type="button">
+                  <Sigma />
                   Aplicar matemática
-                </button>
-                <button
-                  className="rounded border px-4 py-2"
+                </Button>
+                <Button
                   onClick={() => {
                     setMathPanel(false);
                     setMathPosition(undefined);
                   }}
                   type="button"
+                  variant="outline"
                 >
                   Cancelar
-                </button>
+                </Button>
               </div>
             </div>
           ) : null}
 
           {codePanel ? (
-            <div className="grid gap-3 border-x border-slate-300 bg-white p-3 sm:grid-cols-3">
-              <label className="font-medium">
+            <div className="mt-2 grid gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-3">
+              <label className="text-sm font-medium">
                 Lenguaje
                 <select
-                  className="mt-1 w-full rounded border px-3 py-2"
+                  className="mt-1.5 h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                   onChange={(event) => setCodeLanguage(event.target.value)}
                   value={codeLanguage}
                 >
@@ -853,17 +1002,17 @@ function EditableContent({
                   ))}
                 </select>
               </label>
-              <label className="font-medium">
+              <label className="text-sm font-medium">
                 Descripción opcional
-                <input
-                  className="mt-1 w-full rounded border px-3 py-2"
+                <Input
+                  className="mt-1.5"
                   maxLength={300}
                   onChange={(event) => setCodeCaption(event.target.value)}
                   value={codeCaption}
                 />
               </label>
-              <button
-                className="self-end rounded bg-slate-950 px-4 py-2 text-white"
+              <Button
+                className="self-end"
                 onClick={() => {
                   blockInsertionChain(editor)
                     .insertContent({
@@ -880,17 +1029,18 @@ function EditableContent({
                 }}
                 type="button"
               >
+                <Braces />
                 Insertar bloque de código
-              </button>
+              </Button>
             </div>
           ) : null}
 
           {tablePanel ? (
-            <div className="grid gap-3 border-x border-slate-300 bg-white p-3 sm:grid-cols-4">
-              <label className="font-medium">
+            <div className="mt-2 grid gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-4">
+              <label className="text-sm font-medium">
                 Filas
-                <input
-                  className="mt-1 w-full rounded border px-3 py-2"
+                <Input
+                  className="mt-1.5"
                   max={20}
                   min={2}
                   onChange={(event) => setTableRows(event.target.valueAsNumber)}
@@ -898,10 +1048,10 @@ function EditableContent({
                   value={tableRows}
                 />
               </label>
-              <label className="font-medium">
+              <label className="text-sm font-medium">
                 Columnas
-                <input
-                  className="mt-1 w-full rounded border px-3 py-2"
+                <Input
+                  className="mt-1.5"
                   max={10}
                   min={1}
                   onChange={(event) =>
@@ -911,18 +1061,18 @@ function EditableContent({
                   value={tableColumns}
                 />
               </label>
-              <label className="font-medium">
+              <label className="text-sm font-medium">
                 Descripción
-                <input
-                  className="mt-1 w-full rounded border px-3 py-2"
+                <Input
+                  className="mt-1.5"
                   maxLength={300}
                   onChange={(event) => setTableCaption(event.target.value)}
                   required
                   value={tableCaption}
                 />
               </label>
-              <button
-                className="self-end rounded bg-slate-950 px-4 py-2 text-white"
+              <Button
+                className="self-end"
                 onClick={() => {
                   if (!tableCaption.trim()) {
                     setError('La tabla requiere una descripción.');
@@ -942,15 +1092,16 @@ function EditableContent({
                 }}
                 type="button"
               >
+                <Table2 />
                 Insertar tabla
-              </button>
+              </Button>
             </div>
           ) : null}
 
           {editor.isActive('table') ? (
             <div
               aria-label="Herramientas de tabla"
-              className="flex flex-wrap gap-2 border-x border-slate-300 bg-white p-3"
+              className="mt-2 flex flex-wrap gap-1 rounded-lg border bg-card p-2"
               role="toolbar"
             >
               <EditorButton
@@ -982,12 +1133,11 @@ function EditableContent({
           ) : null}
 
           <EditorContent
-            className="min-h-[30rem] rounded-b-xl border border-slate-300 bg-white p-6 shadow-sm [&_.tiptap]:min-h-[27rem] [&_.tiptap]:space-y-4 [&_.tiptap]:outline-none"
+            className="mt-2 min-h-[30rem] rounded-lg border border-input bg-card p-5 shadow-xs sm:p-6 [&_.tiptap]:min-h-[27rem] [&_.tiptap]:space-y-4 [&_.tiptap]:outline-none"
             editor={editor}
           />
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <button
-              className="rounded-lg bg-sky-700 px-5 py-3 font-semibold text-white disabled:opacity-50"
+            <Button
               disabled={
                 incompatible ||
                 dirtyState === 'Guardando' ||
@@ -996,9 +1146,14 @@ function EditableContent({
               onClick={() => void save()}
               type="button"
             >
+              {dirtyState === 'Guardando' ? (
+                <LoaderCircle className="animate-spin" />
+              ) : (
+                <Save />
+              )}
               {dirtyState === 'Guardando' ? 'Guardando…' : 'Guardar contenido'}
-            </button>
-            <p className="text-sm text-slate-600">
+            </Button>
+            <p className="text-xs text-muted-foreground">
               Atajo: Ctrl+S o Cmd+S. El guardado es explícito; no hay autosave.
             </p>
           </div>
@@ -1006,7 +1161,7 @@ function EditableContent({
       ) : (
         <section
           aria-labelledby="content-preview"
-          className="mt-6 rounded-xl border border-slate-200 bg-white p-6"
+          className="mt-6 rounded-md border bg-card p-6"
         >
           <h2 className="sr-only" id="content-preview">
             Vista previa
@@ -1066,30 +1221,26 @@ export function ContentWorkspace({
       <h2 className="sr-only" id="content-workspace">
         Espacio de trabajo de contenido
       </h2>
-      <div className="flex flex-wrap gap-3 text-sm">
-        <span className="rounded-full bg-slate-100 px-3 py-1.5">
-          Estado de revisión: {revisionStatus}
-        </span>
-        <span className="rounded-full bg-slate-100 px-3 py-1.5">
-          Schema: v{current.schema_version}
-        </span>
-        <span className="rounded-full bg-slate-100 px-3 py-1.5">
-          {current.word_count} palabras
-        </span>
+      <div className="flex flex-wrap items-center gap-2 border-b pb-4">
+        <Badge className="rounded" variant="secondary">
+          {revisionStatusLabel(revisionStatus)}
+        </Badge>
+        <Badge className="rounded" variant="outline">
+          {current.word_count}{' '}
+          {current.word_count === 1 ? 'palabra' : 'palabras'}
+        </Badge>
       </div>
 
       {!validation.valid ? (
-        <div
-          className="mt-6 rounded-xl border border-red-300 bg-red-50 p-5 text-red-950"
-          role="alert"
-        >
-          <h3 className="font-semibold">Documento incompatible</h3>
-          <p className="mt-2">
+        <Alert className="mt-6" variant="destructive">
+          <CircleAlert />
+          <AlertTitle>Documento incompatible</AlertTitle>
+          <AlertDescription>
             El contenido se conserva intacto en el backend. No se truncará ni se
             guardará desde esta pantalla hasta que exista una migración
             explícita de schema.
-          </p>
-        </div>
+          </AlertDescription>
+        </Alert>
       ) : current.editable ? (
         <EditableContent
           current={current}
@@ -1099,11 +1250,14 @@ export function ContentWorkspace({
         />
       ) : (
         <>
-          <p className="mt-6 rounded-lg bg-amber-50 p-3 text-amber-950">
-            Esta revisión está en modo de solo lectura. El editor, la barra de
-            herramientas, el guardado y la restauración están deshabilitados.
-          </p>
-          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
+          <Alert className="mt-5 border-amber-600/20 bg-amber-500/5">
+            <CircleAlert className="text-amber-700" />
+            <AlertTitle>Contenido en solo lectura</AlertTitle>
+            <AlertDescription>
+              Esta revisión ya no admite cambios.
+            </AlertDescription>
+          </Alert>
+          <div className="mt-5 rounded-md border bg-card p-5 sm:p-7">
             <AcademicDocument document={validation.document} />
           </div>
           <div className="mt-8">

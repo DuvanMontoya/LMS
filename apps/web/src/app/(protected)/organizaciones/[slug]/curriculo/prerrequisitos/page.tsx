@@ -1,13 +1,13 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PrerequisiteEditor } from '@/components/catalog/prerequisite-editor';
+import { PageHeader } from '@/components/platform/page-header';
 import { createPlatformServerClient } from '@/lib/api/platform-server-client';
 import { getOrganizationForPage } from '@/lib/organizations/server';
 export default async function PrerequisitesPage({
   params,
 }: Readonly<{ params: Promise<{ slug: string }> }>) {
   const { slug } = await params;
-  const { access } = await getOrganizationForPage(slug);
+  const { access, organization } = await getOrganizationForPage(slug);
   if (!access.capabilities.includes('catalog.view')) notFound();
   const client = await createPlatformServerClient();
   const [
@@ -36,22 +36,20 @@ export default async function PrerequisitesPage({
     (concept) => concept.status === 'active',
   );
   return (
-    <main className="mx-auto min-h-screen max-w-4xl px-6 py-12">
-      <Link
-        className="text-sm underline"
-        href={`/organizaciones/${slug}/curriculo`}
-      >
-        Volver al currículo
-      </Link>
-      <h1 className="mt-4 text-3xl font-semibold">Prerrequisitos</h1>
-      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="text-xl font-semibold">Relaciones académicas</h2>
-        <p className="mt-2 text-slate-700">
-          Las listas muestran qué requiere cada entidad y de qué entidades es
-          requisito. El servidor rechaza relaciones que produzcan un ciclo.
-        </p>
+    <main className="academic-page">
+      <PageHeader
+        breadcrumbs={[
+          { href: `/organizaciones/${slug}`, label: organization.name },
+          { href: `/organizaciones/${slug}/curriculo`, label: 'Currículo' },
+          { label: 'Prerrequisitos' },
+        ]}
+        description="Define dependencias obligatorias o recomendadas. Las relaciones cíclicas se rechazan automáticamente."
+        eyebrow="Currículo"
+        title="Prerrequisitos"
+      />
+      <section className="mt-6">
         {access.capabilities.includes('catalog.manage_prerequisites') ? (
-          <>
+          <div className="grid gap-6 xl:grid-cols-2">
             <PrerequisiteEditor
               entity="subject"
               initial={groupPrerequisites(subjectEntries ?? [])}
@@ -64,9 +62,11 @@ export default async function PrerequisitesPage({
               items={activeConcepts}
               slug={slug}
             />
-          </>
+          </div>
         ) : (
-          <p className="mt-4 text-sm text-slate-600">Solo lectura.</p>
+          <p className="border-y px-4 py-6 text-sm text-muted-foreground">
+            No tienes permiso para modificar estas relaciones.
+          </p>
         )}
       </section>
     </main>

@@ -18,7 +18,7 @@
 | Sentry, OpenTelemetry | Error/tracing operations, absent natively. | Privacy/vendor/config risk. | Approve for observability phase, not scaffold. |
 | TypeScript 7 / ESLint 10 | Latest compiler/linter candidates. | `eslint-config-next` installed peer ranges do not support them. | Reject for current scaffold; TS 6.0.2 and ESLint 9.39.5 under ADR 0011. |
 | Tailwind | Tokenized responsive styling; plain CSS remains available. | Modern browser floor. | Installed. |
-| Radix / shadcn | Accessible primitives / optional code generator. | UI churn and copied generated code. | Radix approve; shadcn defer. |
+| Radix / shadcn | Primitivas accesibles y código UI propio generado para una interfaz institucional coherente. | Churn visual y riesgo de conservar componentes copiados sin uso. | Aprobado: Radix en runtime; shadcn sólo como generador fijado y retirado del runtime tras `eject`. |
 | TanStack Query, RHF, Zod | Client cache/forms/edge validation; React alone lacks ergonomic contracts. | Do not make client authoritative. | Approve. |
 | openapi-fetch / openapi-typescript | One typed browser contract from official allauth OpenAPI; native fetch alone loses generated path/body checking. | MIT; allauth marks two code-flow bodies optional, so the encapsulated fallback is reviewed in ADR 0016. | Approve: `openapi-fetch 0.17.0`; `openapi-typescript 6.7.6` is selected over 7.x because the latter peers only with TypeScript 5 while the repository pins TS 6. |
 | @hookform/resolvers / @axe-core/playwright | Bind Zod to React Hook Form and exercise browser accessibility. | MIT / MPL-2.0; axe is necessary but not sufficient for WCAG acceptance. | Approve. |
@@ -77,3 +77,30 @@ extensiones y warnings transitivos WASI/lifecycle; se controlan con asset drift,
 auditorías, unit tests, Next build, Chromium, axe y requests externas bloqueadas.
 Se rechazaron collaboration/CRDT, autosave, IndexedDB, upload/media, ejecución,
 plantillas HTML y un segundo schema frontend por no pertenecer a esta fase.
+
+## Evaluación del sistema visual institucional — 2026-07-29
+
+Se ejecutó el generador oficial `shadcn 4.16.0` con el estilo `radix-nova` sobre
+el proyecto Next existente. El resultado usa `radix-ui 1.6.7` (MIT), compatible
+por peer con React 19, `lucide-react 1.27.0` (ISC),
+`class-variance-authority 0.7.1` (Apache-2.0), `clsx 2.1.1`,
+`tailwind-merge 3.6.0` y `tw-animate-css 1.4.0` (MIT), todos con versión exacta.
+El equipo frontend es propietario de su actualización.
+
+`shadcn` no permanece como dependencia de runtime: `eject` integró su hoja
+Tailwind en `globals.css` y retiró el paquete. Se conservaron solamente las
+primitivas usadas por la plataforma; se eliminaron checkbox, empty, field,
+pagination, select, table, tabs y button-group generados pero no consumidos.
+También se retiraron `next-themes` y `sonner` porque ninguna ruta los usaba.
+
+El problema resuelto es consistente y acotado: sidebar responsive, diálogos,
+alertas, formularios, breadcrumbs, tooltips y controles accesibles sin crear
+otro sistema de navegación o autorización. La alternativa de retirada es
+mantener las firmas locales de `components/ui` y sustituir internamente cada
+primitiva por HTML/React accesible. El dominio, los contratos OpenAPI, las
+políticas y los datos no dependen de estas piezas visuales.
+
+Los warnings peer opcionales de `@napi-rs/wasm-runtime` heredados por Vite y el
+resolver de ESLint permanecen visibles y no se suprimieron. No pertenecen a las
+dependencias UI añadidas; se aceptan únicamente mientras instalación congelada,
+lint, tests y build funcionen sin autorizar scripts bloqueados.

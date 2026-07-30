@@ -1,8 +1,9 @@
 import Link from 'next/link';
 
-import { AreaForm } from '@/components/catalog/area-form';
+import { CurriculumCreateActions } from '@/components/catalog/curriculum-create-actions';
 import { CurriculumExplorer } from '@/components/catalog/curriculum-explorer';
-import { StructureForms } from '@/components/catalog/structure-forms';
+import { PageHeader } from '@/components/platform/page-header';
+import { Button } from '@/components/ui/button';
 import { createPlatformServerClient } from '@/lib/api/platform-server-client';
 import { getOrganizationForPage } from '@/lib/organizations/server';
 
@@ -37,50 +38,54 @@ export default async function CurriculumPage({
   ]);
   const canManage = access.capabilities.includes('catalog.manage');
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-6 py-12">
-      <p className="text-sm font-medium text-slate-600">{organization.name}</p>
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+    <main className="academic-page">
+      <PageHeader
+        actions={
+          <nav aria-label="Herramientas de currículo" className="flex gap-2">
+            {[
+              ['Conceptos', 'conceptos'],
+              ['Objetivos', 'objetivos'],
+              ['Prerrequisitos', 'prerrequisitos'],
+            ].map(([label, route]) => (
+              <Button asChild key={route} size="sm" variant="outline">
+                <Link href={`/organizaciones/${slug}/curriculo/${route}`}>
+                  {label}
+                </Link>
+              </Button>
+            ))}
+          </nav>
+        }
+        breadcrumbs={[
+          { href: `/organizaciones/${slug}`, label: organization.name },
+          { label: 'Currículo' },
+        ]}
+        description="Organiza áreas, disciplinas, asignaturas y sus relaciones de aprendizaje."
+        eyebrow="Currículo institucional"
+        title="Currículo"
+      />
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-slate-950">Currículo</h1>
-          <p className="mt-2 text-slate-700">
-            Taxonomía académica institucional y relaciones de aprendizaje.
+          <h2 className="text-sm font-semibold">Estructura académica</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Explora la jerarquía y selecciona un elemento para administrarlo.
           </p>
         </div>
-        <nav aria-label="Herramientas de currículo" className="flex gap-3">
-          <Link
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium"
-            href={`/organizaciones/${slug}/curriculo/conceptos`}
-          >
-            Conceptos
-          </Link>
-          <Link
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium"
-            href={`/organizaciones/${slug}/curriculo/objetivos`}
-          >
-            Objetivos
-          </Link>
-          <Link
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium"
-            href={`/organizaciones/${slug}/curriculo/prerrequisitos`}
-          >
-            Prerrequisitos
-          </Link>
-        </nav>
+        {canManage ? (
+          <CurriculumCreateActions
+            areas={areas}
+            disciplines={disciplines}
+            slug={slug}
+          />
+        ) : null}
       </div>
-      <section
-        className="mt-8 rounded-xl border border-slate-200 bg-white p-6"
-        aria-labelledby="curriculum-structure"
-      >
-        <h2
-          id="curriculum-structure"
-          className="text-xl font-semibold text-slate-950"
-        >
-          Área, disciplina y asignatura
-        </h2>
+      <div className="mt-3">
         {areas.length === 0 ? (
-          <p className="mt-4 text-slate-600">
-            Aún no hay estructura curricular.
-          </p>
+          <div className="rounded-lg border border-dashed p-10 text-center">
+            <p className="font-medium">Aún no hay estructura curricular.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Crea la primera área institucional para comenzar.
+            </p>
+          </div>
         ) : (
           <CurriculumExplorer
             areas={areas}
@@ -90,17 +95,7 @@ export default async function CurriculumPage({
             subjects={subjects}
           />
         )}
-      </section>
-      {canManage ? (
-        <>
-          <AreaForm slug={slug} />
-          <StructureForms areas={areas} disciplines={disciplines} slug={slug} />
-        </>
-      ) : (
-        <p className="mt-5 text-sm text-slate-600">
-          Tu membresía puede consultar únicamente entidades activas.
-        </p>
-      )}
+      </div>
     </main>
   );
 }

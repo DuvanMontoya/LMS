@@ -36,4 +36,38 @@ describe('Tiptap and canonical schema compatibility', () => {
     expect(contentError).toHaveBeenCalled();
     editor.destroy();
   });
+
+  it('serializes links with canonical attributes only', () => {
+    const editor = new Editor({
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            attrs: { nodeId: '00000000-0000-4000-8000-000000000020' },
+            content: [{ type: 'text', text: 'Fuente académica' }],
+          },
+        ],
+      },
+      enableContentCheck: true,
+      extensions: contentEditorExtensions,
+    });
+
+    editor.commands.setTextSelection({ from: 1, to: 18 });
+    expect(
+      editor.commands.setLink({ href: 'https://example.test/fuente' }),
+    ).toBe(true);
+
+    const document = editor.getJSON();
+    expect(document.content?.[0]?.content?.[0]?.marks).toEqual([
+      {
+        attrs: { href: 'https://example.test/fuente' },
+        type: 'link',
+      },
+    ]);
+    const result = validateContentDocument(document);
+    if (!result.valid) throw new Error(result.message);
+    expect(result.valid).toBe(true);
+    editor.destroy();
+  });
 });

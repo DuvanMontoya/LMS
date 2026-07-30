@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { LoginResearchField } from '@/components/auth/login-research-field';
+
 export function AuthShell({
   title,
   description,
@@ -10,25 +12,34 @@ export function AuthShell({
   children: React.ReactNode;
 }>) {
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl items-center px-5 py-12">
-      <section
-        aria-labelledby="auth-title"
-        className="w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
-      >
-        <Link
-          href="/"
-          className="text-sm font-semibold text-slate-700 underline-offset-4 hover:underline"
-        >
-          Plataforma académica
+    <main className="research-login">
+      <LoginResearchField />
+      <section className="research-login__context" aria-hidden="true">
+        <p>Conocimiento académico institucional</p>
+        <h1>Acceso académico.</h1>
+        <span>Currículo, autoría y conocimiento estructurado.</span>
+      </section>
+      <section className="research-login__panel" aria-labelledby="auth-title">
+        <Link className="research-login__brand" href="/">
+          <span>Plataforma académica</span>
+          <small>Entorno institucional privado</small>
         </Link>
-        <h1
-          id="auth-title"
-          className="mt-6 text-3xl font-semibold tracking-tight text-slate-950"
-        >
-          {title}
-        </h1>
-        <p className="mt-3 text-slate-600">{description}</p>
-        <div className="mt-8">{children}</div>
+        <div className="research-login__intro">
+          <p>Acceso institucional</p>
+          <h2 id="auth-title">
+            Aula <em>Académica</em>
+          </h2>
+          {title === 'Iniciar sesión' ? (
+            <span className="sr-only">{title}. </span>
+          ) : (
+            <span className="research-login__screen-title">{title}</span>
+          )}
+          <span>{description}</span>
+        </div>
+        <div className="research-login__form">{children}</div>
+        <p className="research-login__security">
+          Sesión protegida · credenciales privadas · cierre seguro.
+        </p>
       </section>
     </main>
   );

@@ -29,20 +29,50 @@ pnpm platform:client:check
 `infra:init` crea `infrastructure/local/.env` con secretos locales aleatorios
 e ignorados por Git. No copies ese archivo a otro entorno ni lo publiques.
 
-En una terminal inicia Django:
+Para el uso diario, inicia ambos procesos en segundo plano con:
 
 ```powershell
-pnpm api:dev
+pnpm dev:start
 ```
 
-En otra terminal inicia Next.js:
+Los procesos permanecen activos aunque finalice una tarea de Codex. Puedes
+comprobarlos, ver sus registros, reiniciarlos o detenerlos de forma explícita:
 
 ```powershell
-pnpm web:dev
+pnpm dev:status
+pnpm dev:logs
+pnpm dev:restart
+pnpm dev:stop
 ```
 
 Abre [http://127.0.0.1:3000](http://127.0.0.1:3000). Next reescribe solamente
 `/_allauth`, `/api/v1` y `/health` al Django local; `/admin` no se reescribe.
+Si prefieres procesos visibles, `pnpm api:dev` y `pnpm web:dev` siguen
+disponibles en terminales separadas.
+
+## Acceso personal local
+
+La base local actual contiene la cuenta `rmontoyac@local.test` y su espacio
+`espacio-academico-rmontoyac`. La cuenta usa la contraseña entregada directamente
+por el propietario; esa contraseña no se documenta, imprime ni guarda en Git.
+No es necesario cargar la organización de demostración para entrar.
+
+Para reproducir el acceso en otra base de desarrollo, entrega la contraseña sólo
+mediante una variable temporal y retírala inmediatamente:
+
+```powershell
+$env:LMS_LOCAL_ACCESS_PASSWORD = '<contraseña entregada fuera de Git>'
+uv run --directory apps/api python manage.py bootstrap_local_access `
+  --email rmontoyac@local.test `
+  --organization-name 'Espacio académico de rmontoyac' `
+  --exclusive
+Remove-Item Env:LMS_LOCAL_ACCESS_PASSWORD
+```
+
+El comando falla fuera de `DEBUG=True`, es idempotente, no imprime la
+contraseña y no crea datos académicos ficticios. `--exclusive` revoca otras
+membresías activas mediante el servicio de organizaciones; no elimina
+organizaciones ni historial.
 
 ## Datos de demostración locales
 
@@ -82,10 +112,10 @@ En las páginas de asignaturas y objetivos, quien tenga gestión curricular pued
 asociar conceptos, quitarlos y cambiar su orden desde controles visibles. Los
 prerrequisitos de asignaturas y de conceptos se validan como grafos acíclicos:
 la API devuelve un error claro si una relación forma un ciclo.
-Cada nivel del catálogo se edita desde su propia tarjeta: área, disciplina,
-asignatura, tema, concepto y objetivo. También se archiva/restaura desde la
-interfaz; los identificadores estructurales (slug, código, asignación y ruta
-interna de Treebeard) permanecen inmutables.
+Cada nivel del catálogo se gestiona desde el explorador curricular y diálogos
+en contexto: área, disciplina, asignatura, tema, concepto y objetivo. También
+se archiva/restaura desde la interfaz; los identificadores estructurales (slug,
+código, asignación y ruta interna de Treebeard) permanecen inmutables.
 La asignatura permite crear un tema raíz o un hijo. Cada tema expone controles
 visibles para subir, bajar, reducir su nivel, moverlo como hijo de otro tema y
 archivar/restaurar su subárbol. El servidor aplica la misma validación

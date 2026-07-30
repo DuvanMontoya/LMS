@@ -1,4 +1,4 @@
-import { mergeAttributes, Node, type Extensions } from '@tiptap/core';
+import { Mark, mergeAttributes, Node, type Extensions } from '@tiptap/core';
 import {
   Table,
   TableCell,
@@ -16,6 +16,91 @@ const idAttribute = {
   renderHTML: (attributes: Record<string, unknown>) =>
     attributes.nodeId ? { 'data-node-id': attributes.nodeId } : {},
 };
+
+export const CanonicalLink = Mark.create({
+  name: 'link',
+  priority: 1000,
+  inclusive: false,
+  keepOnSplit: false,
+  exitable: true,
+  addAttributes() {
+    return {
+      href: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('href'),
+      },
+      title: {
+        default: undefined,
+        parseHTML: (element: HTMLElement) =>
+          element.getAttribute('title') ?? undefined,
+      },
+    };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: 'a[href]',
+        getAttrs: (element: HTMLElement) => {
+          const href = element.getAttribute('href');
+          if (!safeContentHref(href)) return false;
+          const title = element.getAttribute('title');
+          return { href, ...(title ? { title } : {}) };
+        },
+      },
+    ];
+  },
+  renderHTML({ HTMLAttributes }) {
+    const href = HTMLAttributes.href;
+    if (!safeContentHref(href)) return ['span', {}, 0];
+    const title =
+      typeof HTMLAttributes.title === 'string' && HTMLAttributes.title
+        ? HTMLAttributes.title
+        : undefined;
+    return [
+      'a',
+      mergeAttributes(
+        { rel: 'noopener noreferrer' },
+        { href, ...(title ? { title } : {}) },
+      ),
+      0,
+    ];
+  },
+  addCommands() {
+    return {
+      setLink:
+        (attributes) =>
+        ({ commands }) => {
+          if (!safeContentHref(attributes.href)) return false;
+          const title =
+            typeof attributes.title === 'string' && attributes.title
+              ? attributes.title
+              : undefined;
+          return commands.setMark(this.name, {
+            href: attributes.href,
+            ...(title ? { title } : {}),
+          });
+        },
+      toggleLink:
+        (attributes) =>
+        ({ commands }) => {
+          if (!attributes) return commands.unsetMark(this.name);
+          if (!safeContentHref(attributes.href)) return false;
+          const title =
+            typeof attributes.title === 'string' && attributes.title
+              ? attributes.title
+              : undefined;
+          return commands.toggleMark(this.name, {
+            href: attributes.href,
+            ...(title ? { title } : {}),
+          });
+        },
+      unsetLink:
+        () =>
+        ({ commands }) =>
+          commands.unsetMark(this.name),
+    };
+  },
+});
 
 export const PedagogicalBlock = Node.create({
   name: 'pedagogicalBlock',
@@ -161,19 +246,10 @@ export const contentEditorExtensions: Extensions = [
   StarterKit.configure({
     codeBlock: false,
     heading: { levels: [2, 3, 4] },
-    link: {
-      HTMLAttributes: {
-        rel: 'noopener noreferrer',
-        target: null,
-      },
-      autolink: false,
-      defaultProtocol: 'https',
-      isAllowedUri: safeContentHref,
-      openOnClick: false,
-      protocols: ['http', 'https'],
-    },
+    link: false,
     strike: false,
   }),
+  CanonicalLink,
   PedagogicalBlock,
   InlineMath,
   DisplayMath,

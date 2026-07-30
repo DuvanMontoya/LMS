@@ -1,6 +1,5 @@
-import Link from 'next/link';
-
 import { ReviewPanel } from '@/components/courses/review-panel';
+import { PageHeader } from '@/components/platform/page-header';
 import { getCourseWorkspace } from '@/lib/courses/server';
 
 export default async function CourseReviewPage({
@@ -10,17 +9,20 @@ export default async function CourseReviewPage({
   const data = await getCourseWorkspace(slug, courseSlug);
   const capabilities = data.access.capabilities;
   return (
-    <main className="mx-auto min-h-screen max-w-4xl px-6 py-10">
-      <nav aria-label="Migas de pan" className="text-sm text-slate-600">
-        <Link href={`/organizaciones/${slug}/cursos/${courseSlug}`}>
-          {data.revision.title}
-        </Link>
-        {' / Revisión'}
-      </nav>
-      <h1 className="mt-5 text-3xl font-semibold">Revisión de estructura</h1>
-      <p className="mt-2 text-slate-700">
-        Verifica integridad, consulta problemas y registra decisiones.
-      </p>
+    <main className="academic-page">
+      <PageHeader
+        breadcrumbs={[
+          { href: `/organizaciones/${slug}/cursos`, label: 'Cursos' },
+          {
+            href: `/organizaciones/${slug}/cursos/${courseSlug}`,
+            label: data.revision.title,
+          },
+          { label: 'Revisión' },
+        ]}
+        description="Verifica la integridad académica, resuelve bloqueos y registra una decisión."
+        eyebrow="Control académico"
+        title="Revisión de estructura"
+      />
       <div className="mt-8">
         <ReviewPanel
           canApprove={capabilities.includes('course.authoring.approve')}

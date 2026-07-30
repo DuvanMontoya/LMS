@@ -3,8 +3,21 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { useState } from 'react';
 import { z } from 'zod';
 
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import type { components } from '@/lib/api/generated/platform';
 import { useCreateObjective } from '@/lib/catalog/hooks';
 
@@ -30,6 +43,7 @@ export function ObjectiveForm({
   subjects,
 }: Readonly<{ slug: string; subjects: readonly Subject[] }>) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const createObjective = useCreateObjective(slug);
   const form = useForm<ObjectiveValues>({
     resolver: zodResolver(objectiveSchema),
@@ -49,72 +63,87 @@ export function ObjectiveForm({
       ...(cognitive_level ? { cognitive_level } : {}),
     });
     form.reset({ ...values, code: '', statement: '' });
+    setOpen(false);
     router.refresh();
   }
   return (
-    <form
-      className="mt-6 space-y-3 rounded-xl border border-slate-200 bg-white p-5"
-      noValidate
-      onSubmit={form.handleSubmit(onSubmit)}
-    >
-      <h2 className="text-lg font-semibold">Nuevo objetivo</h2>
-      <label className="block text-sm font-medium">
-        Asignatura
-        <select
-          className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2"
-          {...form.register('subject_id')}
-        >
-          <option value="">Selecciona una asignatura</option>
-          {subjects.map((subject) => (
-            <option key={subject.id} value={subject.id}>
-              {subject.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="block text-sm font-medium">
-        Código
-        <input
-          className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2"
-          {...form.register('code')}
-        />
-      </label>
-      <label className="block text-sm font-medium">
-        Enunciado
-        <textarea
-          className="mt-1 block min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2"
-          {...form.register('statement')}
-        />
-      </label>
-      <label className="block text-sm font-medium">
-        Descripción (opcional)
-        <textarea
-          className="mt-1 block min-h-20 w-full rounded-lg border border-slate-300 px-3 py-2"
-          {...form.register('description')}
-        />
-      </label>
-      <label className="block text-sm font-medium">
-        Nivel cognitivo (opcional)
-        <select
-          className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2"
-          {...form.register('cognitive_level')}
-        >
-          <option value="">Sin especificar</option>
-          <option value="remember">Recordar</option>
-          <option value="understand">Comprender</option>
-          <option value="apply">Aplicar</option>
-          <option value="analyze">Analizar</option>
-          <option value="evaluate">Evaluar</option>
-          <option value="create">Crear</option>
-        </select>
-      </label>
-      <button
-        className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-60"
-        disabled={createObjective.isPending || subjects.length === 0}
-        type="submit"
-      >
-        Crear objetivo
-      </button>
-    </form>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button disabled={subjects.length === 0}>Nuevo objetivo</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-xl">
+        <form noValidate onSubmit={form.handleSubmit(onSubmit)}>
+          <DialogHeader>
+            <DialogTitle>Crear objetivo de aprendizaje</DialogTitle>
+            <DialogDescription>
+              Formula un resultado observable y vincúlalo con una asignatura.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <label className="academic-field sm:col-span-2">
+              Asignatura
+              <select
+                className="academic-control"
+                {...form.register('subject_id')}
+              >
+                <option value="">Selecciona una asignatura</option>
+                {subjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="academic-field">
+              Código
+              <Input placeholder="MAT.CAL.01" {...form.register('code')} />
+            </label>
+            <label className="academic-field">
+              Nivel cognitivo
+              <select
+                className="academic-control"
+                {...form.register('cognitive_level')}
+              >
+                <option value="">Sin especificar</option>
+                <option value="remember">Recordar</option>
+                <option value="understand">Comprender</option>
+                <option value="apply">Aplicar</option>
+                <option value="analyze">Analizar</option>
+                <option value="evaluate">Evaluar</option>
+                <option value="create">Crear</option>
+              </select>
+            </label>
+            <label className="academic-field sm:col-span-2">
+              Enunciado
+              <Textarea className="min-h-24" {...form.register('statement')} />
+            </label>
+            <label className="academic-field sm:col-span-2">
+              Descripción (opcional)
+              <Textarea
+                className="min-h-20"
+                {...form.register('description')}
+              />
+            </label>
+          </div>
+          <p aria-live="polite" className="mt-3 text-sm text-destructive">
+            {createObjective.error instanceof Error
+              ? createObjective.error.message
+              : ''}
+          </p>
+          <DialogFooter className="mt-5">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button disabled={createObjective.isPending} type="submit">
+              {createObjective.isPending ? 'Guardando…' : 'Crear objetivo'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

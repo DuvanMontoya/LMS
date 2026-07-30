@@ -1,8 +1,32 @@
 'use client';
 
+import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   useSetNamedEntityArchived,
   useUpdateNamedEntity,
@@ -43,8 +67,6 @@ export function NamedEntityActions({
   }
 
   async function setStatus() {
-    if (!isArchived && !window.confirm(`¿Archivar ${noun} ${entity.name}?`))
-      return;
     try {
       await archive.mutateAsync({
         entityId: entity.id,
@@ -60,55 +82,99 @@ export function NamedEntityActions({
   return (
     <section
       aria-label={`Acciones de ${entity.name}`}
-      className="mt-2 space-y-2"
+      className="flex flex-wrap items-center gap-2"
     >
-      {editing ? (
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="text-sm font-medium">
-            Editar nombre de {entity.name}
-            <input
-              className="mt-1 block rounded border border-slate-300 px-2 py-1"
+      <Dialog
+        open={editing}
+        onOpenChange={(open) => {
+          setEditing(open);
+          if (!open) setName(entity.name);
+        }}
+      >
+        <DialogTrigger asChild>
+          <Button size="sm" type="button" variant="outline">
+            <Pencil data-icon="inline-start" />
+            Editar {noun}
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar {noun}</DialogTitle>
+            <DialogDescription>
+              Actualiza el nombre visible de {entity.name}. Su identidad y slug
+              permanecen intactos.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor={`entity-name-${entity.id}`}>Nombre</Label>
+            <Input
+              autoFocus
+              id={`entity-name-${entity.id}`}
               onChange={(event) => setName(event.target.value)}
               value={name}
             />
-          </label>
-          <button
-            className="rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-60"
-            disabled={update.isPending || !name.trim()}
-            onClick={save}
-            type="button"
-          >
-            Guardar nombre
-          </button>
-          <button
-            className="rounded border border-slate-300 px-2 py-1 text-sm"
-            onClick={() => {
-              setName(entity.name);
-              setEditing(false);
-            }}
-            type="button"
-          >
-            Cancelar
-          </button>
-        </div>
-      ) : (
-        <button
-          className="rounded border border-slate-300 px-2 py-1 text-sm"
-          onClick={() => setEditing(true)}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => setEditing(false)}
+              type="button"
+              variant="outline"
+            >
+              Cancelar
+            </Button>
+            <Button
+              disabled={update.isPending || !name.trim()}
+              onClick={save}
+              type="button"
+            >
+              Guardar nombre
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {isArchived ? (
+        <Button
+          disabled={archive.isPending}
+          onClick={setStatus}
+          size="sm"
           type="button"
+          variant="outline"
         >
-          Editar {noun}
-        </button>
+          <RotateCcw data-icon="inline-start" />
+          Restaurar {noun}
+        </Button>
+      ) : (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              disabled={archive.isPending}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              <Archive data-icon="inline-start" />
+              Archivar {noun}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Archivar {entity.name}</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se ocultará de los flujos activos, pero conservará su identidad
+                y sus relaciones históricas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={setStatus}>
+                Archivar {noun}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
-      <button
-        className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-60"
-        disabled={archive.isPending}
-        onClick={setStatus}
-        type="button"
-      >
-        {isArchived ? `Restaurar ${noun}` : `Archivar ${noun}`}
-      </button>
-      <p aria-live="polite" className="text-sm text-slate-700">
+      <p aria-live="polite" className="basis-full text-sm text-destructive">
         {update.error instanceof Error ? update.error.message : ''}
         {archive.error instanceof Error ? archive.error.message : ''}
       </p>

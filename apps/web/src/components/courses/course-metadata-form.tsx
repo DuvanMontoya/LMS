@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { Button } from '@/components/ui/button';
 import type { components } from '@/lib/api/generated/platform';
 import {
   RevisionConflictError,
@@ -78,16 +79,16 @@ export function CourseMetadataForm({
   return (
     <section
       aria-labelledby="course-metadata-heading"
-      className="mt-7 rounded-xl border border-slate-200 bg-white p-6"
+      className="mt-7 border-y py-6"
     >
-      <h2 className="text-xl font-semibold" id="course-metadata-heading">
+      <h2 className="text-base font-semibold" id="course-metadata-heading">
         Información básica
       </h2>
       <form action={save} className="mt-4 grid gap-4 md:grid-cols-2">
-        <label className="font-medium">
+        <label className="academic-field">
           Título
           <input
-            className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2"
+            className="academic-control"
             maxLength={200}
             name="title"
             onChange={(event) =>
@@ -100,10 +101,10 @@ export function CourseMetadataForm({
             value={values.title}
           />
         </label>
-        <label className="font-medium">
+        <label className="academic-field">
           Subtítulo
           <input
-            className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2"
+            className="academic-control"
             maxLength={240}
             name="subtitle"
             onChange={(event) =>
@@ -115,10 +116,10 @@ export function CourseMetadataForm({
             value={values.subtitle}
           />
         </label>
-        <label className="font-medium md:col-span-2">
+        <label className="academic-field md:col-span-2">
           Resumen
           <textarea
-            className="mt-2 min-h-28 w-full rounded-lg border border-slate-300 px-3 py-2"
+            className="academic-control min-h-24"
             maxLength={1200}
             name="summary"
             onChange={(event) =>
@@ -131,10 +132,10 @@ export function CourseMetadataForm({
             value={values.summary}
           />
         </label>
-        <label className="font-medium md:col-span-2">
+        <label className="academic-field md:col-span-2">
           Descripción en texto plano
           <textarea
-            className="mt-2 min-h-32 w-full rounded-lg border border-slate-300 px-3 py-2"
+            className="academic-control min-h-28"
             maxLength={5000}
             name="description"
             onChange={(event) =>
@@ -146,10 +147,10 @@ export function CourseMetadataForm({
             value={values.description}
           />
         </label>
-        <label className="font-medium">
+        <label className="academic-field">
           Idioma
           <input
-            className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2"
+            className="academic-control"
             maxLength={12}
             name="language"
             onChange={(event) =>
@@ -162,10 +163,10 @@ export function CourseMetadataForm({
             value={values.language}
           />
         </label>
-        <label className="font-medium">
+        <label className="academic-field">
           Duración estimada en minutos
           <input
-            className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2"
+            className="academic-control"
             min={1}
             name="duration"
             onChange={(event) =>
@@ -178,12 +179,13 @@ export function CourseMetadataForm({
             value={values.duration}
           />
         </label>
-        <button
-          className="w-fit rounded-lg bg-slate-950 px-4 py-2 font-medium text-white"
+        <Button
+          aria-label="Guardar información básica"
+          className="w-fit"
           type="submit"
         >
-          Guardar información básica
-        </button>
+          Guardar cambios
+        </Button>
       </form>
       <div aria-live="polite" className="mt-4 space-y-2">
         {message ? <p className="text-sky-900">{message}</p> : null}

@@ -31,6 +31,11 @@ async function expectNoAxeViolations(page: import('@playwright/test').Page) {
   expect(results.violations).toEqual([]);
 }
 
+async function submitForReview(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'Enviar a revisión' }).click();
+  await page.getByRole('button', { name: 'Enviar revisión' }).click();
+}
+
 test('course authoring, conflict, review, approval, roles and axe work end to end', async ({
   browser,
   page,
@@ -237,9 +242,8 @@ test('course authoring, conflict, review, approval, roles and axe work end to en
   await page.goto(`${coursePath}/revision`);
   await expectNoAxeViolations(page);
   await expect(page.getByText('Lista para revisión')).toBeVisible();
-  page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: 'Enviar a revisión' }).click();
-  await expect(page.getByText('Estado actual: in_review')).toBeVisible();
+  await submitForReview(page);
+  await expect(page.getByText('Estado actual: En revisión')).toBeVisible();
   await page.goto(coursePath);
   await expect(
     page.getByRole('button', { name: 'Guardar información básica' }),
@@ -256,7 +260,7 @@ test('course authoring, conflict, review, approval, roles and axe work end to en
   await reviewNote.fill('Aclara la secuencia pedagógica.');
   await page.getByRole('button', { name: 'Solicitar cambios' }).press('Enter');
   await expect(
-    page.getByText('Estado actual: changes_requested'),
+    page.getByText('Estado actual: Cambios solicitados'),
   ).toBeVisible();
 
   await logout(page);
@@ -265,7 +269,7 @@ test('course authoring, conflict, review, approval, roles and axe work end to en
     page.getByRole('button', { name: 'Aprobar estructura' }),
   ).toHaveCount(0);
   await page.goto(`${coursePath}/estructura`);
-  await page.getByText('Editar unidad «Modelación contextual»').click();
+  await page.getByLabel('Editar unidad «Modelación contextual»').click();
   await page
     .getByLabel('Nuevo título de unidad «Modelación contextual»')
     .fill('Modelación contextual corregida');
@@ -274,16 +278,15 @@ test('course authoring, conflict, review, approval, roles and axe work end to en
     .click();
   await expect(page.getByText('Unidad actualizada.')).toBeVisible();
   await page.goto(coursePath);
-  page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: 'Enviar a revisión' }).click();
-  await expect(page.getByText('Estado actual: in_review')).toBeVisible();
+  await submitForReview(page);
+  await expect(page.getByText('Estado actual: En revisión')).toBeVisible();
 
   await logout(page);
   await login(page, 'owner@organizations.e2e.test', coursePath);
   await page.getByRole('button', { name: 'Aprobar estructura' }).click();
   await expect(
     page.getByText(
-      'La estructura fue aprobada. La publicación y el contenido se implementarán en fases posteriores.',
+      'La estructura fue aprobada. La publicación y el contenido se mantienen separados: aprobar no publica el curso.',
     ),
   ).toBeVisible();
 
@@ -325,13 +328,12 @@ test('incomplete course cannot enter review and focuses its readiness issues', a
   await page.getByLabel('Principal: Precálculo').check();
   await page.getByRole('button', { name: 'Crear curso' }).click();
   await expect(page.getByText('Problemas por resolver')).toBeVisible();
-  page.once('dialog', (dialog) => dialog.accept());
-  await page.getByRole('button', { name: 'Enviar a revisión' }).click();
+  await submitForReview(page);
   await expect(
     page.getByText('Resuelve los problemas de integridad antes de enviar.'),
   ).toBeVisible();
   await expect(page.locator('#readiness-issues')).toBeFocused();
-  await expect(page.getByText('Estado actual: draft')).toBeVisible();
+  await expect(page.getByText('Estado actual: Borrador')).toBeVisible();
 });
 
 test('foreign organization course URL is hidden with 404', async ({ page }) => {

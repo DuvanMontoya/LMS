@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff, LoaderCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
@@ -11,6 +12,10 @@ import {
   type UseFormRegister,
 } from 'react-hook-form';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { AuthApiError, mapAllauthErrorToSpanish } from '@/lib/auth/errors';
 import { getBrowserAuthSession } from '@/lib/auth/api';
 import {
@@ -55,21 +60,19 @@ function Field<T extends FieldValues>({
   const id = useId();
   const errorId = `${id}-error`;
   return (
-    <div>
-      <label className="block text-sm font-medium text-slate-900" htmlFor={id}>
-        {label}
-      </label>
-      <input
+    <div className="auth-field">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
         id={id}
         type={type}
         autoComplete={autoComplete}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : undefined}
-        className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none ring-slate-900 focus:ring-2"
+        className="auth-control"
         {...register(name)}
       />
       {error ? (
-        <p id={errorId} className="mt-1 text-sm text-red-700">
+        <p id={errorId} className="text-sm text-destructive">
           {error}
         </p>
       ) : null}
@@ -84,31 +87,34 @@ function PasswordField<T extends FieldValues>(
   const id = useId();
   const errorId = `${id}-error`;
   return (
-    <div>
-      <label className="block text-sm font-medium text-slate-900" htmlFor={id}>
-        {props.label}
-      </label>
-      <div className="mt-1 flex gap-2">
-        <input
+    <div className="auth-field">
+      <Label htmlFor={id}>{props.label}</Label>
+      <div className="relative">
+        <Input
           id={id}
           type={visible ? 'text' : 'password'}
           autoComplete={props.autoComplete}
           aria-invalid={Boolean(props.error)}
           aria-describedby={props.error ? errorId : undefined}
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none ring-slate-900 focus:ring-2"
+          className="auth-control pr-14"
           {...props.register(props.name)}
         />
-        <button
+        <Button
           type="button"
           aria-pressed={visible}
+          aria-label={
+            visible ? 'Ocultar clave de acceso' : 'Mostrar clave de acceso'
+          }
           onClick={() => setVisible((current) => !current)}
-          className="rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
+          className="auth-password-toggle"
+          size="icon"
+          variant="ghost"
         >
-          {visible ? 'Ocultar' : 'Mostrar'}
-        </button>
+          {visible ? <EyeOff /> : <Eye />}
+        </Button>
       </div>
       {props.error ? (
-        <p id={errorId} className="mt-1 text-sm text-red-700">
+        <p id={errorId} className="text-sm text-destructive">
           {props.error}
         </p>
       ) : null}
@@ -123,15 +129,15 @@ function ErrorSummary({ message }: Readonly<{ message: string | null }>) {
   }, [message]);
   if (!message) return null;
   return (
-    <div
+    <Alert
       ref={ref}
       tabIndex={-1}
       role="alert"
       aria-live="assertive"
-      className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+      variant="destructive"
     >
-      {message}
-    </div>
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
 
@@ -157,13 +163,10 @@ function SubmitButton({
   children,
 }: Readonly<{ pending: boolean; children: string }>) {
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full rounded-lg bg-slate-950 px-4 py-2 font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-500"
-    >
+    <Button type="submit" disabled={pending} className="auth-submit">
+      {pending ? <LoaderCircle className="animate-spin" /> : null}
       {pending ? 'Enviando…' : children}
-    </button>
+    </Button>
   );
 }
 
@@ -190,7 +193,7 @@ export function LoginForm() {
     <form
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
-      className="space-y-5"
+      className="auth-form-grid"
     >
       <ErrorSummary message={message} />
       <Field
@@ -209,11 +212,17 @@ export function LoginForm() {
         error={form.formState.errors.password?.message}
       />
       <SubmitButton pending={login.isPending}>Iniciar sesión</SubmitButton>
-      <nav className="space-y-2 text-sm">
-        <Link className="block underline" href="/auth/recuperar-contrasena">
+      <nav className="auth-form-links">
+        <Link
+          className="font-medium text-primary underline-offset-4 hover:underline"
+          href="/auth/recuperar-contrasena"
+        >
           ¿Olvidaste tu contraseña?
         </Link>
-        <Link className="block underline" href="/auth/registro">
+        <Link
+          className="font-medium text-primary underline-offset-4 hover:underline"
+          href="/auth/registro"
+        >
           Crear una cuenta
         </Link>
       </nav>
@@ -243,7 +252,7 @@ export function SignUpForm() {
     <form
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
-      className="space-y-5"
+      className="auth-form-grid"
     >
       <ErrorSummary message={message} />
       <Field
@@ -315,7 +324,7 @@ export function VerifyEmailForm() {
     <form
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
-      className="space-y-5"
+      className="auth-form-grid"
     >
       <ErrorSummary message={message} />
       <Field
@@ -326,14 +335,15 @@ export function VerifyEmailForm() {
         error={form.formState.errors.code?.message}
       />
       <SubmitButton pending={verify.isPending}>Verificar correo</SubmitButton>
-      <button
+      <Button
         type="button"
         disabled={resend.isPending}
         onClick={onResend}
-        className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium disabled:opacity-60"
+        className="h-11 w-full"
+        variant="outline"
       >
         {resend.isPending ? 'Reenviando…' : 'Reenviar código'}
-      </button>
+      </Button>
       <p className="text-sm">
         <Link className="underline" href="/auth/iniciar-sesion">
           Volver a inicio de sesión
@@ -364,7 +374,7 @@ export function PasswordRequestForm() {
     <form
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
-      className="space-y-5"
+      className="auth-form-grid"
     >
       <ErrorSummary message={message} />
       <Field
@@ -408,7 +418,7 @@ export function PasswordResetForm() {
     <form
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
-      className="space-y-5"
+      className="auth-form-grid"
     >
       <ErrorSummary message={message} />
       <Field

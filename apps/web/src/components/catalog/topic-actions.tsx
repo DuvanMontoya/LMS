@@ -1,8 +1,34 @@
 'use client';
 
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowDown,
+  ArrowUp,
+  Check,
+  CornerDownRight,
+  LoaderCircle,
+  Outdent,
+  Pencil,
+  X,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   useMoveTopic,
   useSetTopicArchived,
@@ -32,6 +58,7 @@ export function TopicActions({
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(topic.title);
   const [targetId, setTargetId] = useState('');
+  const targetInputId = useId();
   const move = useMoveTopic(slug);
   const archive = useSetTopicArchived(slug);
   const update = useUpdateTopic(slug);
@@ -63,12 +90,6 @@ export function TopicActions({
     await moveTopic(targetId, 'last-child');
   }
   async function changeArchive() {
-    if (
-      !isArchived &&
-      !window.confirm(`¿Archivar ${topic.title} y sus descendientes?`)
-    ) {
-      return;
-    }
     try {
       await archive.mutateAsync({ restore: isArchived, topicId: topic.id });
       router.refresh();
@@ -86,110 +107,182 @@ export function TopicActions({
     }
   }
   return (
-    <fieldset className="mt-2 flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 p-2">
-      <legend className="px-1 text-xs font-medium">
-        Acciones de {topic.title}
-      </legend>
+    <div
+      aria-label={`Acciones de ${topic.title}`}
+      className="flex flex-wrap items-center justify-end gap-1.5"
+      role="group"
+    >
       {editing ? (
-        <label className="text-xs">
-          Editar título de {topic.title}
-          <input
-            className="ml-1 rounded border border-slate-300 p-1"
+        <>
+          <Label className="sr-only" htmlFor={`${targetInputId}-title`}>
+            Editar título de {topic.title}
+          </Label>
+          <Input
+            className="h-8 w-48"
+            id={`${targetInputId}-title`}
             onChange={(event) => setTitle(event.target.value)}
             value={title}
           />
-        </label>
-      ) : (
-        <button
-          className="rounded border border-slate-300 px-2 py-1 text-sm"
-          onClick={() => setEditing(true)}
-          type="button"
-        >
-          Editar tema
-        </button>
-      )}
-      {editing ? (
-        <>
-          <button
-            className="rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-50"
+          <Button
+            aria-label={`Guardar ${topic.title}`}
             disabled={update.isPending || !title.trim()}
-            onClick={saveTitle}
+            onClick={() => void saveTitle()}
+            size="icon-sm"
             type="button"
           >
-            Guardar tema
-          </button>
-          <button
-            className="rounded border border-slate-300 px-2 py-1 text-sm"
+            {update.isPending ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              <Check />
+            )}
+          </Button>
+          <Button
+            aria-label="Cancelar edición"
             onClick={() => {
               setTitle(topic.title);
               setEditing(false);
             }}
+            size="icon-sm"
             type="button"
+            variant="ghost"
           >
-            Cancelar
-          </button>
+            <X />
+          </Button>
+        </>
+      ) : (
+        <Button
+          onClick={() => setEditing(true)}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <Pencil />
+          Editar tema
+        </Button>
+      )}
+      {!editing ? (
+        <>
+          <Label className="sr-only" htmlFor={targetInputId}>
+            Mover {topic.title} bajo otro tema
+          </Label>
+          <select
+            aria-label={`Mover ${topic.title} bajo otro tema`}
+            className="h-8 max-w-44 rounded-md border border-input bg-background px-2 text-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+            id={targetInputId}
+            onChange={(event) => setTargetId(event.target.value)}
+            value={targetId}
+          >
+            <option value="">Tema superior…</option>
+            {topics.filter(canTarget).map((candidate) => (
+              <option key={candidate.id} value={candidate.id}>
+                {candidate.title}
+              </option>
+            ))}
+          </select>
+          <Button
+            disabled={!targetId || move.isPending}
+            onClick={() => void moveUnderTarget()}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <CornerDownRight />
+            Anidar
+          </Button>
+          <Button
+            aria-label={`Subir ${topic.title}`}
+            disabled={!previousSibling || move.isPending}
+            onClick={() =>
+              previousSibling && void moveTopic(previousSibling.id, 'left')
+            }
+            size="icon-sm"
+            title="Subir"
+            type="button"
+            variant="ghost"
+          >
+            <ArrowUp />
+          </Button>
+          <Button
+            aria-label={`Bajar ${topic.title}`}
+            disabled={!nextSibling || move.isPending}
+            onClick={() =>
+              nextSibling && void moveTopic(nextSibling.id, 'right')
+            }
+            size="icon-sm"
+            title="Bajar"
+            type="button"
+            variant="ghost"
+          >
+            <ArrowDown />
+          </Button>
+          <Button
+            aria-label={`Reducir nivel de ${topic.title}`}
+            disabled={!topic.parentId || move.isPending}
+            onClick={() =>
+              topic.parentId && void moveTopic(topic.parentId, 'right')
+            }
+            size="icon-sm"
+            title="Reducir nivel"
+            type="button"
+            variant="ghost"
+          >
+            <Outdent />
+          </Button>
         </>
       ) : null}
-      <label className="text-xs">
-        Mover bajo
-        <select
-          className="ml-1 rounded border border-slate-300 p-1"
-          onChange={(event) => setTargetId(event.target.value)}
-          value={targetId}
+      {isArchived ? (
+        <Button
+          disabled={archive.isPending}
+          onClick={() => void changeArchive()}
+          size="sm"
+          type="button"
+          variant="outline"
         >
-          <option value="">Selecciona un tema</option>
-          {topics.filter(canTarget).map((candidate) => (
-            <option key={candidate.id} value={candidate.id}>
-              {candidate.title}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button
-        className="rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-50"
-        disabled={!targetId || move.isPending}
-        onClick={moveUnderTarget}
-        type="button"
+          <ArchiveRestore />
+          Restaurar
+        </Button>
+      ) : (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="sm" type="button" variant="ghost">
+              <Archive />
+              Archivar
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Archivar {topic.title}</AlertDialogTitle>
+              <AlertDialogDescription>
+                El tema y sus descendientes dejarán de estar activos. Podrás
+                restaurarlos desde la vista de archivados.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={archive.isPending}
+                onClick={() => void changeArchive()}
+                variant="destructive"
+              >
+                {archive.isPending ? (
+                  <LoaderCircle className="animate-spin" />
+                ) : (
+                  <Archive />
+                )}
+                Archivar tema
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+      <span
+        aria-live="polite"
+        className="basis-full text-right text-xs text-destructive"
       >
-        Mover como hijo
-      </button>
-      <button
-        className="rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-50"
-        disabled={!previousSibling || move.isPending}
-        onClick={() => previousSibling && moveTopic(previousSibling.id, 'left')}
-        type="button"
-      >
-        Subir
-      </button>
-      <button
-        className="rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-50"
-        disabled={!nextSibling || move.isPending}
-        onClick={() => nextSibling && moveTopic(nextSibling.id, 'right')}
-        type="button"
-      >
-        Bajar
-      </button>
-      <button
-        className="rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-50"
-        disabled={!topic.parentId || move.isPending}
-        onClick={() => topic.parentId && moveTopic(topic.parentId, 'right')}
-        type="button"
-      >
-        Reducir nivel
-      </button>
-      <button
-        className="rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-50"
-        disabled={archive.isPending}
-        onClick={changeArchive}
-        type="button"
-      >
-        {isArchived ? 'Restaurar tema' : 'Archivar tema'}
-      </button>
-      <span aria-live="polite" className="text-sm text-slate-700">
         {move.error instanceof Error ? move.error.message : ''}
         {archive.error instanceof Error ? archive.error.message : ''}
         {update.error instanceof Error ? update.error.message : ''}
       </span>
-    </fieldset>
+    </div>
   );
 }

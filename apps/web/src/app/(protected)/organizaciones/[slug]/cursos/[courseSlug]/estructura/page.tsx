@@ -1,5 +1,4 @@
-import Link from 'next/link';
-
+import { PageHeader } from '@/components/platform/page-header';
 import { StructureEditor } from '@/components/courses/structure-editor';
 import { getCourseWorkspace } from '@/lib/courses/server';
 
@@ -9,21 +8,21 @@ export default async function CourseStructurePage({
   const { courseSlug, slug } = await params;
   const data = await getCourseWorkspace(slug, courseSlug);
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-6 py-10">
-      <nav aria-label="Migas de pan" className="text-sm text-slate-600">
-        <Link href={`/organizaciones/${slug}/cursos`}>Cursos</Link>
-        {' / '}
-        <Link href={`/organizaciones/${slug}/cursos/${courseSlug}`}>
-          {data.revision.title}
-        </Link>
-        {' / Estructura'}
-      </nav>
-      <h1 className="mt-5 text-3xl font-semibold">Editor de estructura</h1>
-      <p className="mt-2 text-slate-700">
-        Lista jerárquica de módulos y unidades con acceso a su contenido
-        académico semántico.
-      </p>
-      <div className="mt-8">
+    <main className="academic-page">
+      <PageHeader
+        breadcrumbs={[
+          { href: `/organizaciones/${slug}/cursos`, label: 'Cursos' },
+          {
+            href: `/organizaciones/${slug}/cursos/${courseSlug}`,
+            label: data.revision.title,
+          },
+          { label: 'Estructura' },
+        ]}
+        description="Organiza módulos y unidades, y accede al contenido académico semántico de cada unidad."
+        eyebrow="Autoría estructural"
+        title="Estructura del curso"
+      />
+      <div className="mt-6">
         <StructureEditor
           canManage={data.access.capabilities.includes(
             'course.authoring.manage',

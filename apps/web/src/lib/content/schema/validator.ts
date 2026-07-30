@@ -20,18 +20,39 @@ export function validateContentDocument(
 ): ContentValidationResult {
   if (validateDocument(value)) return { document: value, valid: true };
   const errors = validateDocument.errors ?? [];
-  const message = errors
-    .slice(0, 5)
-    .map(
-      (error) =>
-        `${error.instancePath || '/'}: ${error.message ?? 'valor inválido'}`,
-    )
-    .join(' · ');
+  const message = validationMessage(errors);
   return {
     errors,
     message: message || 'El documento no cumple el contrato semántico.',
     valid: false,
   };
+}
+
+function validationMessage(errors: readonly ErrorObject[]): string {
+  const useful = errors.filter((error) => error.keyword !== 'oneOf');
+  const source = useful.length ? useful : errors;
+  const messages = source.map((error) => {
+    const path = error.instancePath || 'Documento';
+    if (error.keyword === 'additionalProperties') {
+      const property = String(error.params.additionalProperty ?? '');
+      return `${path}: contiene una propiedad no admitida${property ? ` (${property})` : ''}`;
+    }
+    if (error.keyword === 'required') {
+      const property = String(error.params.missingProperty ?? '');
+      return `${path}: falta el dato obligatorio${property ? ` «${property}»` : ''}`;
+    }
+    if (error.keyword === 'const')
+      return `${path}: usa un tipo de contenido no admitido`;
+    if (error.keyword === 'type')
+      return `${path}: tiene un formato incompatible`;
+    if (error.keyword === 'maxLength')
+      return `${path}: supera la longitud permitida`;
+    return `${path}: ${error.message ?? 'valor inválido'}`;
+  });
+  return (
+    [...new Set(messages)].slice(0, 3).join(' · ') ||
+    'El documento no cumple el contrato semántico.'
+  );
 }
 
 export function assertContentDocument(

@@ -1,8 +1,13 @@
 import Link from 'next/link';
+import { ArrowRight, FileCheck2, ListTree } from 'lucide-react';
 
 import { AlignmentEditor } from '@/components/courses/alignment-editor';
 import { CourseMetadataForm } from '@/components/courses/course-metadata-form';
 import { ReviewPanel } from '@/components/courses/review-panel';
+import { PageHeader } from '@/components/platform/page-header';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { courseStatusLabel } from '@/lib/courses/labels';
 import { getCourseWorkspace } from '@/lib/courses/server';
 
 export default async function CourseWorkspacePage({
@@ -13,50 +18,56 @@ export default async function CourseWorkspacePage({
   const capabilities = data.access.capabilities;
   const canManage = capabilities.includes('course.authoring.manage');
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-6 py-10">
-      <nav aria-label="Migas de pan" className="text-sm text-slate-600">
-        <Link href={`/organizaciones/${slug}`}>{data.organization.name}</Link>
-        {' / '}
-        <Link href={`/organizaciones/${slug}/cursos`}>Cursos</Link>
-        {' / '}
-        {data.revision.title}
-      </nav>
-      <header className="mt-5 rounded-2xl bg-slate-950 p-7 text-white">
-        <p className="text-sm text-slate-300">Workspace del curso</p>
-        <h1 className="mt-2 text-3xl font-semibold">{data.revision.title}</h1>
-        <p className="mt-3 max-w-3xl text-slate-200">{data.revision.summary}</p>
-        <dl className="mt-5 flex flex-wrap gap-6 text-sm">
-          <div>
-            <dt className="text-slate-400">Estado del curso</dt>
-            <dd>{data.course.status}</dd>
-          </div>
-          <div>
-            <dt className="text-slate-400">Estado de autoría</dt>
-            <dd>{data.revision.authoring_status}</dd>
-          </div>
-          <div>
-            <dt className="text-slate-400">Revisión estructural</dt>
-            <dd>Número {data.revision.number}</dd>
-          </div>
-        </dl>
-      </header>
-      <nav
-        aria-label="Secciones del curso"
-        className="mt-5 flex flex-wrap gap-3"
-      >
-        <Link
-          className="rounded-lg border px-4 py-2 font-medium"
-          href={`/organizaciones/${slug}/cursos/${courseSlug}/estructura`}
-        >
-          Editar estructura
-        </Link>
-        <Link
-          className="rounded-lg border px-4 py-2 font-medium"
-          href={`/organizaciones/${slug}/cursos/${courseSlug}/revision`}
-        >
-          Abrir revisión
-        </Link>
-      </nav>
+    <main className="academic-page">
+      <PageHeader
+        actions={
+          <nav aria-label="Secciones del curso" className="flex gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link
+                href={`/organizaciones/${slug}/cursos/${courseSlug}/estructura`}
+              >
+                <ListTree data-icon="inline-start" />
+                Estructura
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link
+                href={`/organizaciones/${slug}/cursos/${courseSlug}/revision`}
+              >
+                <FileCheck2 data-icon="inline-start" />
+                Revisión
+              </Link>
+            </Button>
+          </nav>
+        }
+        breadcrumbs={[
+          { href: `/organizaciones/${slug}`, label: data.organization.name },
+          { href: `/organizaciones/${slug}/cursos`, label: 'Cursos' },
+          { label: data.revision.title },
+        ]}
+        description={data.revision.summary}
+        eyebrow="Espacio de autoría"
+        title={data.revision.title}
+      />
+      <dl className="mt-5 grid border-y sm:grid-cols-2 lg:grid-cols-4">
+        <CourseFact
+          label="Estado del curso"
+          value={courseStatusLabel(data.course.status)}
+        />
+        <CourseFact
+          badge
+          label="Estado de autoría"
+          value={courseStatusLabel(data.revision.authoring_status)}
+        />
+        <CourseFact
+          label="Revisión estructural"
+          value={`Número ${data.revision.number}`}
+        />
+        <CourseFact
+          label="Estructura"
+          value={`${data.outline.modules.length} módulos`}
+        />
+      </dl>
       <CourseMetadataForm
         canManage={canManage}
         courseSlug={courseSlug}
@@ -83,19 +94,61 @@ export default async function CourseWorkspacePage({
           slug={slug}
         />
       </div>
-      <section className="mt-7 rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="text-xl font-semibold">Outline</h2>
-        <p className="mt-2 text-slate-600">
-          {data.outline.modules.length} módulos en la revisión actual.
-        </p>
-        <ol className="mt-4 space-y-3">
+      <section className="mt-7 border-y">
+        <header className="border-b px-5 py-4">
+          <h2 className="font-semibold">Estructura del curso</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {data.outline.modules.length} módulos en la revisión actual.
+          </p>
+        </header>
+        <ol className="divide-y">
           {data.outline.modules.map((module) => (
-            <li className="rounded-lg bg-slate-50 p-4" key={module.id}>
-              <strong>{module.title}</strong>
-              <ul className="mt-2 list-disc pl-5 text-sm text-slate-700">
+            <li
+              className="grid lg:grid-cols-[17rem_minmax(0,1fr)]"
+              key={module.id}
+            >
+              <div className="border-b bg-muted/15 px-5 py-4 lg:border-r lg:border-b-0">
+                <span className="text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase">
+                  Módulo
+                </span>
+                <strong className="mt-1 block text-sm">{module.title}</strong>
+              </div>
+              <ul className="divide-y text-sm">
                 {module.units.map((unit) => (
-                  <li key={unit.id}>
-                    {unit.title} — Contenido académico pendiente
+                  <li
+                    className="flex flex-wrap items-center gap-3 px-5 py-3 hover:bg-muted/20"
+                    key={unit.id}
+                  >
+                    <span className="min-w-0 flex-1 font-medium">
+                      {unit.title}
+                    </span>
+                    <Badge
+                      className="rounded"
+                      variant={
+                        unit.content_status === 'ready'
+                          ? 'secondary'
+                          : 'outline'
+                      }
+                    >
+                      {unit.content_status === 'ready'
+                        ? `Contenido v${unit.content_version}`
+                        : unit.content_status === 'empty'
+                          ? 'Contenido vacío'
+                          : 'Sin contenido'}
+                    </Badge>
+                    <Button
+                      asChild
+                      className="ml-auto"
+                      size="xs"
+                      variant="ghost"
+                    >
+                      <Link
+                        href={`/organizaciones/${slug}/cursos/${courseSlug}/unidades/${unit.id}/contenido`}
+                      >
+                        Abrir
+                        <ArrowRight data-icon="inline-end" />
+                      </Link>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -103,23 +156,44 @@ export default async function CourseWorkspacePage({
           ))}
         </ol>
       </section>
-      <section className="mt-7 rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="text-xl font-semibold">Historial de transiciones</h2>
-        <ol className="mt-4 space-y-3">
+      <section className="mt-7 border-t pt-5">
+        <h2 className="text-sm font-semibold">Historial de transiciones</h2>
+        <ol className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {data.transitions.map((transition) => (
             <li
-              className="border-l-2 border-slate-300 pl-4"
+              className="border-l-2 border-primary pl-3 text-sm"
               key={transition.id}
             >
-              <strong>{transition.to_status}</strong> por{' '}
+              <strong>{courseStatusLabel(transition.to_status)}</strong> por{' '}
               {transition.actor_display}
               {transition.note ? (
-                <p className="text-slate-700">{transition.note}</p>
+                <p className="text-foreground/80">{transition.note}</p>
               ) : null}
             </li>
           ))}
         </ol>
       </section>
     </main>
+  );
+}
+
+function CourseFact({
+  badge = false,
+  label,
+  value,
+}: Readonly<{ badge?: boolean; label: string; value: string }>) {
+  return (
+    <div className="border-b px-5 py-4 last:border-b-0 sm:border-r sm:nth-[2n]:border-r-0 lg:border-b-0 lg:nth-[2n]:border-r lg:last:border-r-0">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-1 text-sm font-semibold">
+        {badge ? (
+          <Badge className="rounded" variant="secondary">
+            {value}
+          </Badge>
+        ) : (
+          value
+        )}
+      </dd>
+    </div>
   );
 }

@@ -3,7 +3,22 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useRef, useState } from 'react';
+import {
+  Archive,
+  ArchiveRestore,
+  BookOpenText,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  CircleAlert,
+  Clock3,
+  Network,
+  Plus,
+} from 'lucide-react';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import type { components } from '@/lib/api/generated/platform';
 import {
   RevisionConflictError,
@@ -23,6 +38,19 @@ const contentStatusLabels: Record<string, string> = {
   missing: 'Sin contenido',
   ready: 'Contenido listo',
 };
+
+function statusLabel(value: string) {
+  return (
+    {
+      active: 'Activo',
+      approved: 'aprobada',
+      archived: 'Archivado',
+      changes_requested: 'con cambios solicitados',
+      draft: 'en borrador',
+      in_review: 'en revisión',
+    }[value] ?? value
+  );
+}
 
 export function StructureEditor({
   canManage,
@@ -267,83 +295,102 @@ export function StructureEditor({
     <section aria-labelledby="course-structure">
       <div aria-live="polite" className="mb-4 space-y-2">
         {message ? (
-          <p className="rounded-lg bg-sky-50 p-3 text-sky-950">{message}</p>
+          <Alert className="border-emerald-600/20 bg-emerald-500/5">
+            <CheckCircle2 className="text-emerald-700" />
+            <AlertTitle>Estructura actualizada</AlertTitle>
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
         ) : null}
         {error ? (
-          <p className="rounded-lg bg-red-50 p-3 text-red-950">{error}</p>
+          <Alert variant="destructive">
+            <CircleAlert />
+            <AlertTitle>No se pudo guardar</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         ) : null}
       </div>
-      <h2 className="text-2xl font-semibold" id="course-structure">
+      <h2 className="sr-only" id="course-structure">
         Estructura del curso
       </h2>
       {!editable ? (
-        <p className="mt-3 rounded-lg bg-amber-50 p-3 text-amber-950">
-          Esta revisión está en estado {outline.revision.authoring_status} y es
-          de solo lectura.
-        </p>
+        <Alert className="border-amber-600/20 bg-amber-500/5">
+          <CircleAlert className="text-amber-700" />
+          <AlertTitle>Solo lectura</AlertTitle>
+          <AlertDescription>
+            La revisión está {statusLabel(outline.revision.authoring_status)}.
+          </AlertDescription>
+        </Alert>
       ) : null}
       {canManage && editable ? (
-        <form action={addModule} className="mt-5 flex flex-wrap gap-3">
-          <label className="min-w-64 flex-1 font-medium">
+        <form
+          action={addModule}
+          className="mt-5 flex flex-wrap gap-3 rounded-lg border bg-muted/20 p-3"
+        >
+          <label className="academic-field min-w-64 flex-1">
             Título del nuevo módulo
             <input
-              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2"
+              className="academic-control"
               maxLength={200}
               name="module-title"
               ref={moduleTitle}
               required
             />
           </label>
-          <button
-            className="self-end rounded-lg bg-slate-950 px-4 py-2 font-medium text-white"
-            type="submit"
-          >
+          <Button className="self-end" type="submit">
+            <Plus />
             Añadir módulo
-          </button>
+          </Button>
         </form>
       ) : null}
       {modules.length ? (
-        <ol className="mt-6 space-y-5">
+        <ol className="mt-5 space-y-4">
           {modules.map((module, moduleIndex) => (
             <li
-              className="rounded-xl border border-slate-200 bg-white p-5"
+              className="overflow-hidden rounded-lg border bg-card shadow-xs"
               key={module.id}
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b bg-muted/20 px-5 py-4">
                 <div>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase">
                     Módulo {module.position ?? 'archivado'}
                   </p>
-                  <h3 className="text-xl font-semibold">{module.title}</h3>
-                  <p className="text-sm text-slate-600">
-                    Estado: {module.status}
+                  <h3 className="mt-1 text-base font-semibold">
+                    {module.title}
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {statusLabel(module.status)} · {module.units.length}{' '}
+                    {module.units.length === 1 ? 'unidad' : 'unidades'}
                   </p>
                 </div>
                 {canManage && editable ? (
                   <div className="flex flex-wrap gap-2">
-                    <button
+                    <Button
                       aria-label={`Mover «${module.title}» una posición arriba`}
-                      className="rounded border px-3 py-2 text-sm"
                       disabled={moduleIndex === 0 || module.status !== 'active'}
                       onClick={() => moveModule(moduleIndex, -1)}
+                      size="icon-sm"
+                      title="Mover arriba"
                       type="button"
+                      variant="outline"
                     >
-                      Mover módulo arriba
-                    </button>
-                    <button
+                      <ChevronUp />
+                    </Button>
+                    <Button
                       aria-label={`Mover «${module.title}» una posición abajo`}
-                      className="rounded border px-3 py-2 text-sm"
                       disabled={
                         moduleIndex === modules.length - 1 ||
                         module.status !== 'active'
                       }
                       onClick={() => moveModule(moduleIndex, 1)}
+                      size="icon-sm"
+                      title="Mover abajo"
                       type="button"
+                      variant="outline"
                     >
-                      Mover módulo abajo
-                    </button>
-                    <button
-                      className="rounded border px-3 py-2 text-sm"
+                      <ChevronDown />
+                    </Button>
+                    <Button
+                      aria-label={`${module.status === 'archived' ? 'Restaurar' : 'Archivar'} módulo «${module.title}»`}
                       onClick={() =>
                         setArchived(
                           module.id,
@@ -351,86 +398,136 @@ export function StructureEditor({
                           module.status === 'archived',
                         )
                       }
+                      size="icon-sm"
+                      title={
+                        module.status === 'archived' ? 'Restaurar' : 'Archivar'
+                      }
                       type="button"
+                      variant="outline"
                     >
-                      {module.status === 'archived' ? 'Restaurar' : 'Archivar'}{' '}
-                      módulo
-                    </button>
+                      {module.status === 'archived' ? (
+                        <ArchiveRestore />
+                      ) : (
+                        <Archive />
+                      )}
+                    </Button>
                   </div>
                 ) : null}
               </div>
               {canManage && editable && module.status === 'active' ? (
-                <details className="mt-4 rounded-lg border border-slate-200 p-3">
-                  <summary className="cursor-pointer font-medium">
-                    Editar módulo «{module.title}»
+                <details className="border-b bg-muted/10 px-5 py-3">
+                  <summary
+                    aria-label={`Editar módulo «${module.title}»`}
+                    className="cursor-pointer text-sm font-medium"
+                  >
+                    Editar información
                   </summary>
                   <form
                     action={(formData) => editModule(module.id, formData)}
                     className="mt-3 grid gap-3"
                   >
-                    <label className="font-medium">
-                      Nuevo título de módulo «{module.title}»
+                    <label className="academic-field">
+                      Título
                       <input
-                        className="mt-2 w-full rounded border px-3 py-2"
+                        className="academic-control"
                         defaultValue={module.title}
                         maxLength={200}
                         name="module-title"
                         required
                       />
                     </label>
-                    <label className="font-medium">
-                      Descripción del módulo «{module.title}»
+                    <label className="academic-field">
+                      Descripción
                       <textarea
-                        className="mt-2 min-h-20 w-full rounded border px-3 py-2"
+                        className="academic-control min-h-20"
                         defaultValue={module.description}
                         maxLength={3000}
                         name="module-description"
                       />
                     </label>
-                    <button
-                      className="w-fit rounded border px-3 py-2 text-sm"
+                    <Button
+                      className="w-fit"
+                      size="sm"
                       type="submit"
+                      variant="outline"
                     >
-                      Guardar módulo «{module.title}»
-                    </button>
+                      Guardar cambios
+                    </Button>
                   </form>
                 </details>
               ) : null}
               {module.units.length ? (
-                <ol className="mt-4 space-y-3">
+                <ol className="divide-y">
                   {module.units.map((unit, unitIndex) => (
-                    <li className="rounded-lg bg-slate-50 p-4" key={unit.id}>
+                    <li
+                      className="px-5 py-4 transition-colors hover:bg-muted/15"
+                      key={unit.id}
+                    >
                       <div className="flex flex-wrap justify-between gap-3">
-                        <div>
-                          <h4 className="font-semibold">
-                            {unit.position ?? 'Archivada'}. {unit.title}
-                          </h4>
-                          <p className="mt-1 text-sm text-slate-600">
-                            Contenido:{' '}
-                            {contentStatusLabels[unit.content_status] ??
-                              unit.content_status}
-                            {unit.content_version
-                              ? ` · versión ${unit.content_version}`
-                              : ''}
-                          </p>
-                          {unit.status === 'active' ? (
-                            <Link
-                              className="mt-2 inline-block rounded border border-sky-700 px-3 py-2 text-sm font-medium text-sky-800"
-                              href={`/organizaciones/${slug}/cursos/${courseSlug}/unidades/${unit.id}/contenido`}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="font-semibold">
+                              {unit.position ?? 'Archivada'}. {unit.title}
+                            </h4>
+                            <Badge
+                              className="rounded"
+                              variant={
+                                unit.content_status === 'ready'
+                                  ? 'secondary'
+                                  : 'outline'
+                              }
                             >
-                              {canManage && editable
-                                ? 'Editar contenido'
-                                : 'Ver contenido'}
-                            </Link>
+                              {contentStatusLabels[unit.content_status] ??
+                                unit.content_status}
+                            </Badge>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1">
+                              <BookOpenText className="size-3.5" />
+                              {unit.content_version
+                                ? `Versión ${unit.content_version}`
+                                : 'Sin versión'}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <Network className="size-3.5" />
+                              {unit.topics.length}{' '}
+                              {unit.topics.length === 1 ? 'tema' : 'temas'} ·{' '}
+                              {unit.learning_objectives.length}{' '}
+                              {unit.learning_objectives.length === 1
+                                ? 'objetivo'
+                                : 'objetivos'}
+                            </span>
+                            {unit.estimated_duration_minutes ? (
+                              <span className="inline-flex items-center gap-1">
+                                <Clock3 className="size-3.5" />
+                                {unit.estimated_duration_minutes} min
+                              </span>
+                            ) : null}
+                          </div>
+                          {unit.status === 'active' ? (
+                            <Button
+                              asChild
+                              className="mt-3"
+                              size="sm"
+                              variant="outline"
+                            >
+                              <Link
+                                href={`/organizaciones/${slug}/cursos/${courseSlug}/unidades/${unit.id}/contenido`}
+                              >
+                                <BookOpenText />
+                                {canManage && editable
+                                  ? 'Editar contenido'
+                                  : 'Ver contenido'}
+                              </Link>
+                            </Button>
                           ) : null}
-                          <p className="text-sm text-slate-600">
-                            Temas: {unit.topics.length} · Objetivos:{' '}
-                            {unit.learning_objectives.length}
-                          </p>
                           {canManage && editable && unit.status === 'active' ? (
-                            <details className="mt-3">
-                              <summary className="cursor-pointer font-medium">
-                                Editar unidad «{unit.title}»
+                            <details className="mt-3 rounded-lg border bg-muted/10 px-3 py-2">
+                              <summary
+                                aria-label={`Editar unidad «${unit.title}»`}
+                                className="cursor-pointer text-sm font-medium"
+                              >
+                                Editar información
                               </summary>
                               <form
                                 action={(formData) =>
@@ -438,29 +535,30 @@ export function StructureEditor({
                                 }
                                 className="mt-3 grid gap-3"
                               >
-                                <label className="font-medium">
-                                  Nuevo título de unidad «{unit.title}»
+                                <label className="academic-field">
+                                  Título
                                   <input
-                                    className="mt-2 w-full rounded border px-3 py-2"
+                                    aria-label={`Nuevo título de unidad «${unit.title}»`}
+                                    className="academic-control"
                                     defaultValue={unit.title}
                                     maxLength={200}
                                     name="unit-title"
                                     required
                                   />
                                 </label>
-                                <label className="font-medium">
-                                  Resumen de unidad «{unit.title}»
+                                <label className="academic-field">
+                                  Resumen
                                   <textarea
-                                    className="mt-2 min-h-20 w-full rounded border px-3 py-2"
+                                    className="academic-control min-h-20"
                                     defaultValue={unit.summary}
                                     maxLength={1200}
                                     name="unit-summary"
                                   />
                                 </label>
-                                <label className="font-medium">
-                                  Duración de unidad «{unit.title}»
+                                <label className="academic-field">
+                                  Duración (minutos)
                                   <input
-                                    className="mt-2 w-full rounded border px-3 py-2"
+                                    className="academic-control"
                                     defaultValue={
                                       unit.estimated_duration_minutes ?? ''
                                     }
@@ -469,118 +567,155 @@ export function StructureEditor({
                                     type="number"
                                   />
                                 </label>
-                                <button
-                                  className="w-fit rounded border px-3 py-2 text-sm"
+                                <Button
+                                  aria-label={`Guardar unidad «${unit.title}»`}
+                                  className="w-fit"
+                                  size="sm"
                                   type="submit"
+                                  variant="outline"
                                 >
-                                  Guardar unidad «{unit.title}»
-                                </button>
+                                  Guardar cambios
+                                </Button>
                               </form>
                             </details>
                           ) : null}
                           {canManage && editable && unit.status === 'active' ? (
-                            <details className="mt-3">
-                              <summary className="cursor-pointer font-medium">
-                                Gestionar alineación de «{unit.title}»
+                            <details className="mt-2 rounded-lg border bg-muted/10 px-3 py-2">
+                              <summary className="cursor-pointer text-sm font-medium">
+                                Alineación curricular
                               </summary>
-                              <form
-                                action={(formData) =>
-                                  saveUnitAlignment(unit.id, 'topics', formData)
-                                }
-                                className="mt-3"
-                              >
-                                <fieldset>
-                                  <legend className="font-medium">Temas</legend>
-                                  <div className="mt-2 space-y-2">
-                                    {topics.map((topic) => (
-                                      <label
-                                        className="flex gap-2"
-                                        key={topic.id}
-                                      >
-                                        <input
-                                          defaultChecked={unit.topics.some(
-                                            (item) =>
-                                              item.topic.id === topic.id,
-                                          )}
-                                          name="topics"
-                                          type="checkbox"
-                                          value={topic.id}
-                                        />
-                                        {topic.title}
-                                      </label>
-                                    ))}
-                                  </div>
-                                </fieldset>
-                                <button
-                                  className="mt-3 rounded border px-3 py-2 text-sm"
-                                  type="submit"
+                              <div className="mt-3 grid gap-4 xl:grid-cols-2">
+                                <form
+                                  action={(formData) =>
+                                    saveUnitAlignment(
+                                      unit.id,
+                                      'topics',
+                                      formData,
+                                    )
+                                  }
+                                  className="rounded-lg border bg-card p-3"
                                 >
-                                  Guardar temas de {unit.title}
-                                </button>
-                              </form>
-                              <form
-                                action={(formData) =>
-                                  saveUnitAlignment(
-                                    unit.id,
-                                    'objectives',
-                                    formData,
-                                  )
-                                }
-                                className="mt-4"
-                              >
-                                <fieldset>
-                                  <legend className="font-medium">
-                                    Objetivos
-                                  </legend>
-                                  <div className="mt-2 space-y-2">
-                                    {objectives.map((objective) => (
-                                      <label
-                                        className="flex gap-2"
-                                        key={objective.id}
-                                      >
-                                        <input
-                                          defaultChecked={unit.learning_objectives.some(
-                                            (item) =>
-                                              item.learning_objective.id ===
-                                              objective.id,
-                                          )}
-                                          name="objectives"
-                                          type="checkbox"
-                                          value={objective.id}
-                                        />
-                                        {objective.code} — {objective.statement}
-                                      </label>
-                                    ))}
-                                  </div>
-                                </fieldset>
-                                <button
-                                  className="mt-3 rounded border px-3 py-2 text-sm"
-                                  type="submit"
+                                  <fieldset>
+                                    <legend className="text-sm font-semibold">
+                                      Temas
+                                    </legend>
+                                    <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+                                      {topics.length ? (
+                                        topics.map((topic) => (
+                                          <label
+                                            className="flex gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                                            key={topic.id}
+                                          >
+                                            <input
+                                              className="mt-0.5 size-4 accent-primary"
+                                              defaultChecked={unit.topics.some(
+                                                (item) =>
+                                                  item.topic.id === topic.id,
+                                              )}
+                                              name="topics"
+                                              type="checkbox"
+                                              value={topic.id}
+                                            />
+                                            {topic.title}
+                                          </label>
+                                        ))
+                                      ) : (
+                                        <p className="text-sm text-muted-foreground">
+                                          No hay temas disponibles.
+                                        </p>
+                                      )}
+                                    </div>
+                                  </fieldset>
+                                  <Button
+                                    className="mt-3"
+                                    size="sm"
+                                    type="submit"
+                                    variant="outline"
+                                  >
+                                    {topics.length
+                                      ? 'Guardar temas'
+                                      : 'Limpiar temas'}
+                                  </Button>
+                                </form>
+                                <form
+                                  action={(formData) =>
+                                    saveUnitAlignment(
+                                      unit.id,
+                                      'objectives',
+                                      formData,
+                                    )
+                                  }
+                                  className="rounded-lg border bg-card p-3"
                                 >
-                                  Guardar objetivos de {unit.title}
-                                </button>
-                              </form>
+                                  <fieldset>
+                                    <legend className="text-sm font-semibold">
+                                      Objetivos
+                                    </legend>
+                                    <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+                                      {objectives.length ? (
+                                        objectives.map((objective) => (
+                                          <label
+                                            className="flex gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                                            key={objective.id}
+                                          >
+                                            <input
+                                              className="mt-0.5 size-4 accent-primary"
+                                              defaultChecked={unit.learning_objectives.some(
+                                                (item) =>
+                                                  item.learning_objective.id ===
+                                                  objective.id,
+                                              )}
+                                              name="objectives"
+                                              type="checkbox"
+                                              value={objective.id}
+                                            />
+                                            <span>
+                                              <strong>{objective.code}</strong>{' '}
+                                              — {objective.statement}
+                                            </span>
+                                          </label>
+                                        ))
+                                      ) : (
+                                        <p className="text-sm text-muted-foreground">
+                                          No hay objetivos disponibles.
+                                        </p>
+                                      )}
+                                    </div>
+                                  </fieldset>
+                                  <Button
+                                    className="mt-3"
+                                    size="sm"
+                                    type="submit"
+                                    variant="outline"
+                                  >
+                                    {objectives.length
+                                      ? 'Guardar objetivos'
+                                      : 'Limpiar objetivos'}
+                                  </Button>
+                                </form>
+                              </div>
                             </details>
                           ) : null}
                         </div>
                         {canManage && editable ? (
                           <div className="flex flex-wrap gap-2">
-                            <button
+                            <Button
                               aria-label={`Mover «${unit.title}» una posición arriba`}
-                              className="rounded border px-3 py-2 text-sm"
                               disabled={
                                 unitIndex === 0 || unit.status !== 'active'
                               }
                               onClick={() =>
                                 moveUnit(moduleIndex, unitIndex, -1)
                               }
+                              size="icon-sm"
+                              title="Mover arriba"
                               type="button"
+                              variant="outline"
                             >
-                              Mover unidad arriba
-                            </button>
-                            <button
+                              <ChevronUp />
+                            </Button>
+                            <Button
                               aria-label={`Mover «${unit.title}» una posición abajo`}
-                              className="rounded border px-3 py-2 text-sm"
                               disabled={
                                 unitIndex === module.units.length - 1 ||
                                 unit.status !== 'active'
@@ -588,12 +723,15 @@ export function StructureEditor({
                               onClick={() =>
                                 moveUnit(moduleIndex, unitIndex, 1)
                               }
+                              size="icon-sm"
+                              title="Mover abajo"
                               type="button"
+                              variant="outline"
                             >
-                              Mover unidad abajo
-                            </button>
-                            <button
-                              className="rounded border px-3 py-2 text-sm"
+                              <ChevronDown />
+                            </Button>
+                            <Button
+                              aria-label={`${unit.status === 'archived' ? 'Restaurar' : 'Archivar'} unidad «${unit.title}»`}
                               onClick={() =>
                                 setArchived(
                                   unit.id,
@@ -601,13 +739,21 @@ export function StructureEditor({
                                   unit.status === 'archived',
                                 )
                               }
+                              size="icon-sm"
+                              title={
+                                unit.status === 'archived'
+                                  ? 'Restaurar'
+                                  : 'Archivar'
+                              }
                               type="button"
+                              variant="outline"
                             >
-                              {unit.status === 'archived'
-                                ? 'Restaurar'
-                                : 'Archivar'}{' '}
-                              unidad
-                            </button>
+                              {unit.status === 'archived' ? (
+                                <ArchiveRestore />
+                              ) : (
+                                <Archive />
+                              )}
+                            </Button>
                           </div>
                         ) : null}
                       </div>
@@ -615,37 +761,35 @@ export function StructureEditor({
                   ))}
                 </ol>
               ) : (
-                <p className="mt-4 text-slate-600">
+                <p className="px-5 py-6 text-sm text-muted-foreground">
                   Este módulo todavía no tiene unidades.
                 </p>
               )}
               {canManage && editable && module.status === 'active' ? (
                 <form
                   action={(formData) => addUnit(module.id, formData)}
-                  className="mt-4 flex flex-wrap gap-3 border-t border-slate-200 pt-4"
+                  className="flex flex-wrap gap-3 border-t border-border bg-muted/10 px-5 py-4"
                 >
-                  <label className="min-w-56 flex-1 text-sm font-medium">
-                    Nueva unidad en «{module.title}»
+                  <label className="academic-field min-w-56 flex-1">
+                    Título de la nueva unidad
                     <input
-                      className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2"
+                      className="academic-control"
                       maxLength={200}
                       name="unit-title"
                       required
                     />
                   </label>
-                  <button
-                    className="self-end rounded-lg border border-slate-900 px-4 py-2 font-medium"
-                    type="submit"
-                  >
+                  <Button className="self-end" type="submit" variant="outline">
+                    <Plus />
                     Añadir unidad
-                  </button>
+                  </Button>
                 </form>
               ) : null}
             </li>
           ))}
         </ol>
       ) : (
-        <p className="mt-6 rounded-xl border border-dashed border-slate-300 p-6 text-slate-600">
+        <p className="mt-6 rounded-xl border border-dashed border-border p-6 text-muted-foreground">
           Aún no hay módulos. Empieza por definir la estructura del curso.
         </p>
       )}

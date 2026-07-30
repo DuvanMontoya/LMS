@@ -1,8 +1,33 @@
 'use client';
 
+import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useSetConceptArchived, useUpdateConcept } from '@/lib/catalog/hooks';
 import type { components } from '@/lib/api/generated/platform';
 
@@ -34,34 +59,35 @@ export function ConceptList({
   }
 
   return (
-    <ul className="mt-6 divide-y rounded-xl border border-slate-200 bg-white">
-      {concepts.length ? (
-        concepts.map((concept) => (
-          <ConceptRow
-            canManage={canManage}
-            concept={concept}
-            key={concept.id}
-            onSetStatus={setStatus}
-            onUpdate={async (values) => {
-              await updateConcept.mutateAsync(values);
-              router.refresh();
-            }}
-            pending={setArchived.isPending || updateConcept.isPending}
-          />
-        ))
-      ) : (
-        <li className="p-4 text-slate-600">Aún no hay conceptos activos.</li>
-      )}
-      <li
-        aria-live="polite"
-        className="min-h-5 px-4 py-2 text-sm text-slate-700"
-      >
+    <>
+      <ul className="mt-6 divide-y border-y">
+        {concepts.length ? (
+          concepts.map((concept) => (
+            <ConceptRow
+              canManage={canManage}
+              concept={concept}
+              key={concept.id}
+              onSetStatus={setStatus}
+              onUpdate={async (values) => {
+                await updateConcept.mutateAsync(values);
+                router.refresh();
+              }}
+              pending={setArchived.isPending || updateConcept.isPending}
+            />
+          ))
+        ) : (
+          <li className="px-4 py-10 text-center text-sm text-muted-foreground">
+            No hay conceptos registrados.
+          </li>
+        )}
+      </ul>
+      <p aria-live="polite" className="mt-2 min-h-5 text-sm text-destructive">
         {setArchived.error instanceof Error ? setArchived.error.message : ''}
         {updateConcept.error instanceof Error
           ? updateConcept.error.message
           : ''}
-      </li>
-    </ul>
+      </p>
+    </>
   );
 }
 
@@ -86,77 +112,129 @@ function ConceptRow({
   const [name, setName] = useState(concept.name);
   const [definition, setDefinition] = useState(concept.definition);
   return (
-    <li className="flex flex-wrap items-start justify-between gap-4 p-4">
-      <div>
+    <li className="flex flex-wrap items-start justify-between gap-4 px-1 py-5 sm:px-3">
+      <div className="min-w-0 flex-1">
         <h2 className="font-semibold">{concept.name}</h2>
-        <p className="mt-1 text-slate-700">{concept.definition}</p>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-1 text-foreground/80">{concept.definition}</p>
+        <p className="mt-2 text-sm text-muted-foreground">
           {concept.status === 'archived' ? 'Archivado' : 'Activo'}
         </p>
-        {canManage && editing ? (
-          <div className="mt-3 space-y-2">
-            <label className="block text-sm font-medium">
-              Editar nombre de {concept.name}
-              <input
-                className="mt-1 block rounded border border-slate-300 px-2 py-1"
-                onChange={(event) => setName(event.target.value)}
-                value={name}
-              />
-            </label>
-            <label className="block text-sm font-medium">
-              Editar definición de {concept.name}
-              <textarea
-                className="mt-1 block min-h-20 rounded border border-slate-300 px-2 py-1"
-                onChange={(event) => setDefinition(event.target.value)}
-                value={definition}
-              />
-            </label>
-            <button
-              className="rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-60"
-              disabled={pending || !name.trim() || !definition.trim()}
-              onClick={async () => {
-                try {
-                  await onUpdate({ conceptId: concept.id, definition, name });
-                  setEditing(false);
-                } catch {
-                  // The parent mutation exposes the safe API message.
-                }
-              }}
-              type="button"
-            >
-              Guardar concepto
-            </button>
-            <button
-              className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm"
-              onClick={() => {
-                setName(concept.name);
-                setDefinition(concept.definition);
-                setEditing(false);
-              }}
-              type="button"
-            >
-              Cancelar
-            </button>
-          </div>
-        ) : null}
       </div>
       {canManage ? (
         <div className="flex flex-wrap gap-2">
-          <button
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium"
-            onClick={() => setEditing(true)}
-            type="button"
+          <Dialog
+            onOpenChange={(open) => {
+              setEditing(open);
+              if (!open) {
+                setName(concept.name);
+                setDefinition(concept.definition);
+              }
+            }}
+            open={editing}
           >
-            Editar concepto
-          </button>
-          <button
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium disabled:opacity-60"
-            disabled={pending}
-            onClick={() => onSetStatus(concept)}
-            type="button"
-          >
-            {concept.status === 'archived' ? 'Restaurar' : 'Archivar'}
-          </button>
+            <DialogTrigger asChild>
+              <Button size="sm" type="button" variant="outline">
+                <Pencil />
+                Editar
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-xl">
+              <DialogHeader>
+                <DialogTitle>Editar {concept.name}</DialogTitle>
+                <DialogDescription>
+                  Actualiza el nombre y la definición canónica del concepto.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor={`concept-name-${concept.id}`}>Nombre</Label>
+                  <Input
+                    id={`concept-name-${concept.id}`}
+                    onChange={(event) => setName(event.target.value)}
+                    value={name}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`concept-definition-${concept.id}`}>
+                    Definición
+                  </Label>
+                  <Textarea
+                    className="min-h-28"
+                    id={`concept-definition-${concept.id}`}
+                    onChange={(event) => setDefinition(event.target.value)}
+                    value={definition}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  onClick={() => setEditing(false)}
+                  type="button"
+                  variant="outline"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  disabled={pending || !name.trim() || !definition.trim()}
+                  onClick={async () => {
+                    try {
+                      await onUpdate({
+                        conceptId: concept.id,
+                        definition,
+                        name,
+                      });
+                      setEditing(false);
+                    } catch {
+                      // The parent mutation exposes the safe API message.
+                    }
+                  }}
+                  type="button"
+                >
+                  Guardar cambios
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          {concept.status === 'archived' ? (
+            <Button
+              disabled={pending}
+              onClick={() => void onSetStatus(concept)}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <RotateCcw />
+              Restaurar
+            </Button>
+          ) : (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" type="button" variant="ghost">
+                  <Archive />
+                  Archivar
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Archivar {concept.name}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    El concepto dejará de estar disponible en asociaciones
+                    activas, pero conservará su historial.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={pending}
+                    onClick={() => void onSetStatus(concept)}
+                    variant="destructive"
+                  >
+                    Archivar concepto
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       ) : null}
     </li>

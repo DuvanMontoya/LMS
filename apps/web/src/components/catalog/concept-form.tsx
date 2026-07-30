@@ -3,9 +3,21 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { z } from 'zod';
 
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useCreateConcept } from '@/lib/catalog/hooks';
 
 const conceptSchema = z.object({
@@ -22,6 +34,7 @@ type ConceptValues = z.infer<typeof conceptSchema>;
 
 export function ConceptForm({ slug }: Readonly<{ slug: string }>) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const createConcept = useCreateConcept(slug);
   const form = useForm<ConceptValues>({
     resolver: zodResolver(conceptSchema),
@@ -31,51 +44,60 @@ export function ConceptForm({ slug }: Readonly<{ slug: string }>) {
   async function onSubmit(values: ConceptValues) {
     await createConcept.mutateAsync(values);
     form.reset();
+    setOpen(false);
     router.refresh();
   }
 
   return (
-    <form
-      className="mt-6 space-y-4 rounded-xl border border-slate-200 bg-white p-5"
-      noValidate
-      onSubmit={form.handleSubmit(onSubmit)}
-    >
-      <h2 className="text-lg font-semibold text-slate-950">Nuevo concepto</h2>
-      <Field label="Nombre" error={form.formState.errors.name?.message}>
-        <input
-          className="w-full rounded-lg border border-slate-300 px-3 py-2"
-          {...form.register('name')}
-        />
-      </Field>
-      <Field label="Slug" error={form.formState.errors.slug?.message}>
-        <input
-          className="w-full rounded-lg border border-slate-300 px-3 py-2"
-          {...form.register('slug')}
-        />
-      </Field>
-      <Field
-        label="Definición"
-        error={form.formState.errors.definition?.message}
-      >
-        <textarea
-          className="min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2"
-          {...form.register('definition')}
-        />
-      </Field>
-      <button
-        className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-60"
-        disabled={createConcept.isPending}
-        type="submit"
-      >
-        {createConcept.isPending ? 'Guardando…' : 'Crear concepto'}
-      </button>
-      <p aria-live="polite" className="min-h-5 text-sm text-slate-700">
-        {createConcept.isSuccess ? 'Concepto creado.' : ''}
-        {createConcept.error instanceof Error
-          ? createConcept.error.message
-          : ''}
-      </p>
-    </form>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>Nuevo concepto</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <form noValidate onSubmit={form.handleSubmit(onSubmit)}>
+          <DialogHeader>
+            <DialogTitle>Crear concepto</DialogTitle>
+            <DialogDescription>
+              Registra una definición reutilizable dentro del currículo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-5 grid gap-4">
+            <Field label="Nombre" error={form.formState.errors.name?.message}>
+              <Input autoFocus {...form.register('name')} />
+            </Field>
+            <Field label="Slug" error={form.formState.errors.slug?.message}>
+              <Input
+                placeholder="limite-de-una-funcion"
+                {...form.register('slug')}
+              />
+            </Field>
+            <Field
+              label="Definición"
+              error={form.formState.errors.definition?.message}
+            >
+              <Textarea className="min-h-28" {...form.register('definition')} />
+            </Field>
+          </div>
+          <p aria-live="polite" className="mt-3 text-sm text-destructive">
+            {createConcept.error instanceof Error
+              ? createConcept.error.message
+              : ''}
+          </p>
+          <DialogFooter className="mt-5">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button disabled={createConcept.isPending} type="submit">
+              {createConcept.isPending ? 'Guardando…' : 'Crear concepto'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -89,12 +111,12 @@ function Field({
   label: string;
 }>) {
   return (
-    <label className="block text-sm font-medium text-slate-900">
+    <label className="grid gap-1.5 text-sm font-medium text-foreground">
       {label}
-      <span className="mt-1 block">{children}</span>
-      <span className="mt-1 block min-h-5 text-sm font-normal text-red-700">
-        {error}
-      </span>
+      {children}
+      {error ? (
+        <span className="text-sm font-normal text-destructive">{error}</span>
+      ) : null}
     </label>
   );
 }

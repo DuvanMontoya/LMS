@@ -2,11 +2,17 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { LogOut } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { mapAllauthErrorToSpanish } from '@/lib/auth/errors';
 import { useLogout } from '@/lib/auth/hooks';
 
-export function LogoutButton() {
+export function LogoutButton({
+  className,
+  compact = false,
+}: Readonly<{ className?: string; compact?: boolean }>) {
   const router = useRouter();
   const logout = useLogout();
   const [message, setMessage] = useState<string | null>(null);
@@ -22,16 +28,19 @@ export function LogoutButton() {
   };
   return (
     <div className="space-y-2">
-      <button
+      <Button
         type="button"
         disabled={logout.isPending}
         onClick={onLogout}
-        className="rounded-lg border border-slate-300 px-4 py-2 font-medium text-slate-900 disabled:opacity-60"
+        className={cn(className)}
+        size={compact ? 'sm' : 'default'}
+        variant="ghost"
       >
+        <LogOut data-icon="inline-start" />
         {logout.isPending ? 'Cerrando sesión…' : 'Cerrar sesión'}
-      </button>
+      </Button>
       {message ? (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-destructive">
           {message}
         </p>
       ) : null}

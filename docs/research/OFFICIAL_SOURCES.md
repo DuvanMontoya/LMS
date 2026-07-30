@@ -78,3 +78,18 @@ No blog, tutorial, forum, AI output, or third-party comparison was used as versi
 
 No se usaron CDN, tutoriales ni blogs como autoridad. Cada bundle matemático se
 copia desde la dependencia bloqueada y el check de assets falla si falta.
+
+## Sistema visual institucional — consulta 2026-07-29
+
+| Tema | Fuente oficial | Evidencia usada |
+|---|---|---|
+| shadcn/ui para Next.js | https://ui.shadcn.com/docs/installation/next | Configuración sobre proyecto existente, alias `@/*` y generación local de componentes. |
+| Sidebar shadcn/ui | https://ui.shadcn.com/docs/components/radix/sidebar | Composición `SidebarProvider`, sidebar colapsable, grupos, trigger y superficie móvil. |
+| Tailwind v4 | https://ui.shadcn.com/docs/changelog/2025-02-tailwind-v4 | Variables CSS, tokens y compatibilidad del generador con Tailwind 4. |
+| Accesibilidad Radix | https://www.radix-ui.com/primitives/docs/overview/accessibility | Gestión de foco, teclado y atributos ARIA en diálogos, menús y overlays. |
+| Versiones y licencias | https://registry.npmjs.org/ | `shadcn 4.16.0`, `radix-ui 1.6.7`, `lucide-react 1.27.0` y utilidades visuales, con peers y licencias comprobados mediante `pnpm view`. |
+
+La referencia visual privada del login fue leída directamente desde
+`DuvanMontoya/Frontera-Matematica` mediante el acceso GitHub autorizado, no
+mediante una copia pública o un contenido inventado. Se reutilizó su composición
+visual; la autenticación continúa siendo el contrato allauth del LMS.

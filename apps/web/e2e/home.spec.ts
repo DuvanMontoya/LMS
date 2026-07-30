@@ -4,6 +4,6 @@ test('shows the operational scaffolding page', async ({ page }) => {
   await page.goto('/');
 
   await expect(
-    page.getByRole('heading', { name: 'Plataforma académica' }),
+    page.getByRole('heading', { name: 'Conocimiento con estructura.' }),
   ).toBeVisible();
 });

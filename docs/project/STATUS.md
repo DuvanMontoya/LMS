@@ -102,7 +102,7 @@ TypeScript 7.0.2 and ESLint 10.8.0 were installed temporarily and rejected after
 
 ## Next exact step
 
-**Prompt 10 — Contenido semántico y editor académico: documentos estructurados, Tiptap/ProseMirror, bloques pedagógicos, matemáticas, código y validación de esquemas.**
+**Prompt 11 — Publicación inmutable: snapshots completos del curso, versiones publicadas, validación, retiro y experiencia de lectura.**
 
 ## Prompt 8 latest evidence
 
@@ -201,3 +201,58 @@ pruebas Vitest. La ejecución
 Chromium global pasó 23/23 escenarios y limpió su base, Redis y correo. Ruff,
 Pyright (0 errores), ESLint, Prettier, TypeScript, Next build, OpenAPI sin
 warnings, drift checks, `pip-audit` y `pnpm audit --prod` quedaron verdes.
+
+## Acceso local persistente y experiencia institucional — 2026-07-29
+
+- `bootstrap_local_access` crea o reconcilia únicamente en desarrollo la cuenta
+  local solicitada y un espacio institucional real. Recibe la contraseña por la
+  variable efímera `LMS_LOCAL_ACCESS_PASSWORD`, no la imprime, no la escribe en
+  Git y evita recalcular el hash si ya coincide. `--exclusive` revoca otras
+  membresías mediante el servicio de organizaciones sin borrar datos ni
+  historial. La cuenta local quedó como owner de
+  `espacio-academico-rmontoyac`; no necesita ejecutar los bootstraps demo.
+- `pnpm dev:start`, `dev:status`, `dev:logs`, `dev:restart` y `dev:stop`
+  administran Django y Next en procesos ocultos identificados, con estado y logs
+  bajo `.local/dev` ignorado. PostgreSQL y Redis permanecen administrados por
+  Compose. El objetivo operativo es que una revisión o tarea no detenga el
+  entorno que el propietario está probando.
+- El frontend adoptó una única base visual generada con shadcn/ui y Radix:
+  blanco, grises fríos y azul sólo como énfasis. El sidebar es claro,
+  colapsable y móvil; su estado activo usa una marca discreta y no bloques de
+  color. El encabezado global dejó de duplicar el título de cada página.
+- Currículo usa explorador jerárquico con inspector; cursos usa catálogo en
+  filas y workspace; miembros usa directorio y diálogos; organizaciones e
+  inicio académico usan listas de trabajo. La creación de áreas, disciplinas,
+  asignaturas, conceptos, objetivos y temas ocurre en diálogos contextuales.
+  Los formularios de curso, alineación, revisión y metadatos se compactaron con
+  divisores, controles consistentes y acciones breves.
+- El login reproduce la composición visual autorizada de
+  `DuvanMontoya/Frontera-Matematica`: campo geométrico de investigación,
+  ecuaciones, tipografía editorial y panel translúcido. Sólo se adaptó la
+  identidad textual; formularios, CSRF, errores, recuperación, verificación y
+  sesión siguen usando allauth/Django reales.
+- `shadcn` se usó como generador fijado en `4.16.0` y se retiró del runtime con
+  `eject`. Permanecen sólo componentes consumidos; se eliminaron componentes,
+  `next-themes` y `sonner` sin consumidores. Las nuevas dependencias directas
+  están fijadas exactamente y su evaluación/licencia está en
+  `docs/research/DEPENDENCY_EVALUATION.md`.
+- El micro-pulido final se realizó sobre las rutas reales con la cuenta local:
+  inicio, organizaciones, resumen, currículo, asignatura, conceptos, objetivos,
+  prerrequisitos, cursos, creación y miembros. Se compactaron encabezados,
+  espacios, estados vacíos y formularios; las acciones de temas, conceptos,
+  objetivos, membresías, historial y conflictos usan controles y diálogos
+  coherentes, sin `window.confirm`. El editor semántico conserva su lógica y
+  schema, pero adoptó los mismos tokens, superficies y estados del resto de la
+  plataforma.
+- Un Chromium aislado a 390 px recorrió once rutas autenticadas y confirmó
+  `scrollWidth == clientWidth` en todas. La revisión visual detectó y corrigió
+  el estrechamiento del inspector curricular móvil y la superposición de la
+  acción del formulario de curso. Axe con WCAG 2 A/AA y 2.2 AA quedó sin
+  violaciones en login y los flujos representativos de inicio, resumen,
+  currículo, asignatura, prerrequisitos, creación de curso y miembros; también
+  se corrigieron los dos contrastes detectados en avatar y acción destructiva.
+- Después del último cambio pasaron Prettier, ESLint, TypeScript, las 27 pruebas
+  Vitest y `next build` 16.2.12 con todas las rutas. La suite API global ya había
+  pasado 113 pruebas con 82.69% de cobertura, `check` y verificación de
+  migraciones. La sesión real quedó abierta y `pnpm dev:status` confirma Django
+  en `127.0.0.1:8000` y Next en `127.0.0.1:3000`.

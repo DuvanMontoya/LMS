@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { apiErrorMessage } from '@/lib/api/api-error';
 import { platformBrowserClient } from '@/lib/api/platform-browser-client';
 import type { components } from '@/lib/api/generated/platform';
 import { accessKeys, organizationKeys } from '@/lib/query/organization-keys';
@@ -9,21 +10,16 @@ import { accessKeys, organizationKeys } from '@/lib/query/organization-keys';
 type OrganizationRole = components['schemas']['OrganizationRole'];
 
 async function requireData<T>(
-  request: Promise<{ response: Response; data?: T }>,
+  request: Promise<{ error?: unknown; response: Response; data?: T }>,
 ): Promise<T> {
-  const { response, data } = await request;
-  if (response.ok && data) return data;
-  let message = 'No fue posible completar la operación institucional.';
-  try {
-    const body: unknown = await response.clone().json();
-    if (body && typeof body === 'object' && 'detail' in body) {
-      const detail = body.detail;
-      if (typeof detail === 'string') message = detail;
-    }
-  } catch {
-    // Preserve the neutral error when the response has no compatible body.
-  }
-  throw new Error(message);
+  const { response, data, error } = await request;
+  if (response.ok && data !== undefined) return data;
+  throw new Error(
+    apiErrorMessage(
+      error,
+      'No fue posible completar la operación institucional.',
+    ),
+  );
 }
 
 export function useAccessContext() {

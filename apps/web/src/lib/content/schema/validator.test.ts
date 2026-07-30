@@ -35,4 +35,31 @@ describe('canonical content schema', () => {
     displayMath.attrs.latex = String.raw`\require{texhtml}`;
     expect(contentSafetyError(malicious)).toMatch(/fórmula/i);
   });
+
+  it('reports concise Spanish validation messages without repeating Ajv internals', () => {
+    const invalid = structuredClone(completeContentFixture()) as unknown as {
+      content: Array<{
+        content?: Array<{
+          marks?: Array<Record<string, unknown>>;
+        }>;
+      }>;
+    };
+    invalid.content[1]!.content![2]!.marks = [
+      {
+        attrs: {
+          href: 'https://example.test',
+          rel: 'noopener noreferrer',
+          target: '_blank',
+        },
+        type: 'link',
+      },
+    ];
+    const result = validateContentDocument(invalid);
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.message).toContain('propiedad no admitida');
+      expect(result.message).not.toContain('must NOT');
+      expect(result.message.split(' · ').length).toBeLessThanOrEqual(3);
+    }
+  });
 });

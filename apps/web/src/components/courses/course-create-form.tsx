@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import type { components } from '@/lib/api/generated/platform';
 import { useCreateCourse } from '@/lib/courses/hooks';
 
@@ -65,160 +67,167 @@ export function CourseCreateForm({
   }
 
   return (
-    <form action={submit} className="mt-8 space-y-7">
+    <form action={submit} className="mt-6 max-w-5xl pb-16">
       <div aria-live="polite">
         {error ? (
-          <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-red-900">
-            {error}
-          </p>
+          <Alert className="mb-5" variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         ) : null}
       </div>
-      <fieldset className="rounded-xl border border-slate-200 bg-white p-6">
-        <legend className="px-2 text-lg font-semibold">
-          Información básica
-        </legend>
-        <div className="grid gap-5 md:grid-cols-2">
-          <label className="font-medium">
-            Slug
-            <input
-              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2"
-              name="slug"
-              pattern="[a-z0-9-]+"
-              ref={firstField}
-              required
-            />
-          </label>
-          <label className="font-medium">
-            Título
-            <input
-              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2"
-              maxLength={200}
-              name="title"
-              required
-            />
-          </label>
-          <label className="font-medium md:col-span-2">
-            Subtítulo opcional
-            <input
-              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2"
-              maxLength={240}
-              name="subtitle"
-            />
-          </label>
-          <label className="font-medium md:col-span-2">
-            Resumen
-            <textarea
-              className="mt-2 min-h-28 w-full rounded-lg border border-slate-300 px-3 py-2"
-              maxLength={1200}
-              name="summary"
-              required
-            />
-          </label>
-          <label className="font-medium md:col-span-2">
-            Descripción opcional
-            <textarea
-              className="mt-2 min-h-28 w-full rounded-lg border border-slate-300 px-3 py-2"
-              maxLength={5000}
-              name="description"
-            />
-          </label>
-          <label className="font-medium">
-            Duración estimada en minutos
-            <input
-              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2"
-              min={1}
-              name="duration"
-              type="number"
-            />
-          </label>
-        </div>
-      </fieldset>
-      <fieldset className="rounded-xl border border-slate-200 bg-white p-6">
-        <legend className="px-2 text-lg font-semibold">
-          Alineación de asignaturas
-        </legend>
-        <p className="mb-4 text-sm text-slate-600">
-          Elige exactamente una principal y las complementarias necesarias.
-        </p>
-        <div className="grid gap-3 md:grid-cols-2">
-          {subjects.map((subject) => (
-            <div
-              className="rounded-lg border border-slate-200 p-3"
-              key={subject.id}
-            >
-              <label className="flex gap-2 font-medium">
-                <input
-                  checked={primary === subject.id}
-                  name="primary-subject"
-                  onChange={() => {
-                    setPrimary(subject.id);
-                    setSupporting((ids) =>
-                      ids.filter((id) => id !== subject.id),
-                    );
-                  }}
-                  type="radio"
-                />
-                Principal: {subject.name}
-              </label>
-              <label className="mt-2 flex gap-2 text-sm">
-                <input
-                  checked={supporting.includes(subject.id)}
-                  disabled={primary === subject.id}
-                  onChange={(event) =>
-                    setSupporting((ids) =>
-                      event.target.checked
-                        ? [...ids, subject.id]
-                        : ids.filter((id) => id !== subject.id),
-                    )
-                  }
-                  type="checkbox"
-                />
-                Complementaria
-              </label>
-            </div>
-          ))}
-        </div>
-      </fieldset>
-      <fieldset className="rounded-xl border border-slate-200 bg-white p-6">
-        <legend className="px-2 text-lg font-semibold">
-          Objetivos de aprendizaje
-        </legend>
-        {availableObjectives.length ? (
-          <ul className="space-y-3">
-            {availableObjectives.map((objective) => (
-              <li key={objective.id}>
-                <label className="flex gap-3 rounded-lg border border-slate-200 p-3">
-                  <input
-                    checked={selectedObjectives.includes(objective.id)}
-                    onChange={(event) =>
-                      setSelectedObjectives((ids) =>
-                        event.target.checked
-                          ? [...ids, objective.id]
-                          : ids.filter((id) => id !== objective.id),
-                      )
-                    }
-                    type="checkbox"
-                  />
-                  <span>
-                    <strong>{objective.code}</strong> — {objective.statement}
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-slate-600">
-            No hay objetivos activos para las asignaturas seleccionadas.
+      <div className="border-y">
+        <fieldset className="academic-form-section">
+          <legend className="academic-form-legend">
+            1. Identidad del curso
+          </legend>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="academic-field">
+              Slug
+              <input
+                className="academic-control"
+                name="slug"
+                pattern="[a-z0-9-]+"
+                placeholder="calculo-diferencial"
+                ref={firstField}
+                required
+              />
+            </label>
+            <label className="academic-field">
+              Título
+              <input
+                className="academic-control"
+                maxLength={200}
+                name="title"
+                placeholder="Cálculo diferencial"
+                required
+              />
+            </label>
+            <label className="academic-field md:col-span-2">
+              Subtítulo (opcional)
+              <input
+                className="academic-control"
+                maxLength={240}
+                name="subtitle"
+              />
+            </label>
+            <label className="academic-field md:col-span-2">
+              Resumen
+              <textarea
+                className="academic-control min-h-20"
+                maxLength={1200}
+                name="summary"
+                required
+              />
+            </label>
+            <label className="academic-field md:col-span-2">
+              Descripción (opcional)
+              <textarea
+                className="academic-control min-h-24"
+                maxLength={5000}
+                name="description"
+              />
+            </label>
+            <label className="academic-field max-w-xs">
+              Duración estimada (minutos)
+              <input
+                className="academic-control"
+                min={1}
+                name="duration"
+                type="number"
+              />
+            </label>
+          </div>
+        </fieldset>
+        <fieldset className="academic-form-section">
+          <legend className="academic-form-legend">
+            2. Alineación con asignaturas
+          </legend>
+          <p className="-mt-2 mb-4 text-sm text-muted-foreground">
+            Selecciona una principal y, si aportan al curso, asignaturas
+            complementarias.
           </p>
-        )}
-      </fieldset>
-      <button
-        className="rounded-lg bg-slate-950 px-5 py-3 font-semibold text-white disabled:opacity-60"
-        disabled={mutation.isPending}
-        type="submit"
-      >
-        {mutation.isPending ? 'Creando…' : 'Crear curso'}
-      </button>
+          <div className="divide-y border-y">
+            {subjects.map((subject) => (
+              <div
+                className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                key={subject.id}
+              >
+                <span className="font-medium">{subject.name}</span>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium">
+                    <input
+                      aria-label={`Principal: ${subject.name}`}
+                      checked={primary === subject.id}
+                      name="primary-subject"
+                      onChange={() => {
+                        setPrimary(subject.id);
+                        setSupporting((ids) =>
+                          ids.filter((id) => id !== subject.id),
+                        );
+                      }}
+                      type="radio"
+                    />
+                    Principal
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      checked={supporting.includes(subject.id)}
+                      disabled={primary === subject.id}
+                      onChange={(event) =>
+                        setSupporting((ids) =>
+                          event.target.checked
+                            ? [...ids, subject.id]
+                            : ids.filter((id) => id !== subject.id),
+                        )
+                      }
+                      type="checkbox"
+                    />
+                    Complementaria
+                  </label>
+                </div>
+              </div>
+            ))}
+          </div>
+        </fieldset>
+        <fieldset className="academic-form-section">
+          <legend className="academic-form-legend">
+            3. Objetivos de aprendizaje
+          </legend>
+          {availableObjectives.length ? (
+            <ul className="divide-y border-y">
+              {availableObjectives.map((objective) => (
+                <li key={objective.id}>
+                  <label className="flex gap-3 px-3 py-3">
+                    <input
+                      checked={selectedObjectives.includes(objective.id)}
+                      onChange={(event) =>
+                        setSelectedObjectives((ids) =>
+                          event.target.checked
+                            ? [...ids, objective.id]
+                            : ids.filter((id) => id !== objective.id),
+                        )
+                      }
+                      type="checkbox"
+                    />
+                    <span>
+                      <strong>{objective.code}</strong> — {objective.statement}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="border-y bg-muted/30 px-4 py-5 text-sm text-muted-foreground">
+              No hay objetivos activos para las asignaturas seleccionadas.
+            </p>
+          )}
+        </fieldset>
+      </div>
+      <div className="mt-5 flex justify-end border-t px-2 py-3 sm:sticky sm:bottom-0 sm:z-10 sm:-mx-2 sm:bg-background/95 sm:backdrop-blur">
+        <Button disabled={mutation.isPending} type="submit">
+          {mutation.isPending ? 'Creando…' : 'Crear curso'}
+        </Button>
+      </div>
     </form>
   );
 }

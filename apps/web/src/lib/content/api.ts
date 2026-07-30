@@ -1,5 +1,6 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/api-error';
 import type { components } from '@/lib/api/generated/platform';
 import { platformBrowserClient } from '@/lib/api/platform-browser-client';
 
@@ -40,11 +41,12 @@ async function requireData<T>(
 ): Promise<T> {
   const { data, error, response } = await request;
   if (response.ok && data !== undefined) return data;
-  let detail = 'No fue posible completar la operación.';
+  const detail = apiErrorMessage(
+    error,
+    'No fue posible completar la operación.',
+  );
   let currentVersion: number | undefined;
   if (error && typeof error === 'object') {
-    if ('detail' in error && typeof error.detail === 'string')
-      detail = error.detail;
     if (
       'current_document_version' in error &&
       typeof error.current_document_version === 'number'

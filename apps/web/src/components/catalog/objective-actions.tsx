@@ -1,13 +1,37 @@
 'use client';
 
+import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import type { components } from '@/lib/api/generated/platform';
+import {
   useSetObjectiveArchived,
   useUpdateObjective,
 } from '@/lib/catalog/hooks';
-import type { components } from '@/lib/api/generated/platform';
 
 type Objective = components['schemas']['Objective'];
 
@@ -28,12 +52,11 @@ export function ObjectiveActions({
       setEditing(false);
       router.refresh();
     } catch {
-      // The API message is rendered below without exposing transport details.
+      // The safe API message is rendered in the live region.
     }
   }
 
   async function setStatus() {
-    if (!isArchived && !window.confirm(`¿Archivar ${objective.code}?`)) return;
     try {
       await archive.mutateAsync({
         objectiveId: objective.id,
@@ -41,64 +64,106 @@ export function ObjectiveActions({
       });
       router.refresh();
     } catch {
-      // The API message is rendered below without exposing transport details.
+      // The safe API message is rendered in the live region.
     }
   }
 
   return (
     <section
       aria-label={`Acciones de ${objective.code}`}
-      className="mt-4 space-y-3"
+      className="mt-3 flex flex-wrap items-center gap-2"
     >
-      {editing ? (
-        <>
-          <label className="block text-sm font-medium">
-            Editar enunciado de {objective.code}
-            <textarea
-              className="mt-1 block min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2"
+      <Dialog
+        onOpenChange={(open) => {
+          setEditing(open);
+          if (!open) setStatement(objective.statement);
+        }}
+        open={editing}
+      >
+        <DialogTrigger asChild>
+          <Button size="sm" type="button" variant="outline">
+            <Pencil />
+            Editar objetivo
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Editar {objective.code}</DialogTitle>
+            <DialogDescription>
+              Ajusta el resultado observable sin cambiar su identidad.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor={`objective-statement-${objective.id}`}>
+              Enunciado
+            </Label>
+            <Textarea
+              className="min-h-28"
+              id={`objective-statement-${objective.id}`}
               onChange={(event) => setStatement(event.target.value)}
               value={statement}
             />
-          </label>
-          <div className="flex gap-2">
-            <button
-              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
-              disabled={update.isPending || !statement.trim()}
-              onClick={save}
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => setEditing(false)}
               type="button"
-            >
-              Guardar cambios
-            </button>
-            <button
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium"
-              onClick={() => {
-                setStatement(objective.statement);
-                setEditing(false);
-              }}
-              type="button"
+              variant="outline"
             >
               Cancelar
-            </button>
-          </div>
-        </>
-      ) : (
-        <button
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium"
-          onClick={() => setEditing(true)}
+            </Button>
+            <Button
+              disabled={update.isPending || !statement.trim()}
+              onClick={() => void save()}
+              type="button"
+            >
+              {update.isPending ? 'Guardando…' : 'Guardar cambios'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {isArchived ? (
+        <Button
+          disabled={archive.isPending}
+          onClick={() => void setStatus()}
+          size="sm"
           type="button"
+          variant="outline"
         >
-          Editar objetivo
-        </button>
+          <RotateCcw />
+          Restaurar objetivo
+        </Button>
+      ) : (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="sm" type="button" variant="ghost">
+              <Archive />
+              Archivar
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Archivar {objective.code}</AlertDialogTitle>
+              <AlertDialogDescription>
+                El objetivo dejará de estar disponible en las alineaciones
+                activas, pero conservará su historial.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={archive.isPending}
+                onClick={() => void setStatus()}
+                variant="destructive"
+              >
+                Archivar objetivo
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
-      <button
-        className="ml-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium disabled:opacity-60"
-        disabled={archive.isPending}
-        onClick={setStatus}
-        type="button"
-      >
-        {isArchived ? 'Restaurar objetivo' : 'Archivar objetivo'}
-      </button>
-      <p aria-live="polite" className="text-sm text-slate-700">
+      <p aria-live="polite" className="basis-full text-xs text-destructive">
         {update.error instanceof Error ? update.error.message : ''}
         {archive.error instanceof Error ? archive.error.message : ''}
       </p>

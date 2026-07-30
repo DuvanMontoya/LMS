@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { apiErrorMessage } from '@/lib/api/api-error';
 import { platformBrowserClient } from '@/lib/api/platform-browser-client';
 import type { components } from '@/lib/api/generated/platform';
 import { catalogKeys } from '@/lib/query/catalog-keys';
@@ -24,22 +25,10 @@ async function requireData<T>(
   request: Promise<{ error?: unknown; response: Response; data?: T }>,
 ): Promise<T> {
   const { error, response, data } = await request;
-  if (response.ok && data) return data;
-  let message = 'No fue posible guardar el concepto.';
-  if (error && typeof error === 'object' && 'detail' in error) {
-    const detail = error.detail;
-    if (typeof detail === 'string') message = detail;
-  }
-  try {
-    const body: unknown = await response.clone().json();
-    if (body && typeof body === 'object' && 'detail' in body) {
-      const detail = body.detail;
-      if (typeof detail === 'string') message = detail;
-    }
-  } catch {
-    // The neutral Spanish message is safe if the API cannot provide details.
-  }
-  throw new Error(message);
+  if (response.ok && data !== undefined) return data;
+  throw new Error(
+    apiErrorMessage(error, 'No fue posible guardar la información.'),
+  );
 }
 
 export function useCreateConcept(slug: string) {

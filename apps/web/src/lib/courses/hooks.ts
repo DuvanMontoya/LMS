@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { apiErrorMessage } from '@/lib/api/api-error';
 import type { components } from '@/lib/api/generated/platform';
 import { platformBrowserClient } from '@/lib/api/platform-browser-client';
 import { courseKeys } from '@/lib/query/course-keys';
@@ -20,13 +21,9 @@ async function requireData<T>(
   const { data, error, response } = await request;
   if (response.ok && data !== undefined) return data;
   if (response.status === 409) throw new RevisionConflictError();
-  let message = 'No fue posible completar la operación.';
-  const source = error;
-  if (source && typeof source === 'object' && 'detail' in source) {
-    const detail = source.detail;
-    if (typeof detail === 'string') message = detail;
-  }
-  throw new Error(message);
+  throw new Error(
+    apiErrorMessage(error, 'No fue posible completar la operación.'),
+  );
 }
 
 export function useCreateCourse(slug: string) {

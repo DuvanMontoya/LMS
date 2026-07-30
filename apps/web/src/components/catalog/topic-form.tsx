@@ -3,8 +3,20 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { useState } from 'react';
 import { z } from 'zod';
 
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { useCreateTopic } from '@/lib/catalog/hooks';
 
 const topicSchema = z.object({
@@ -27,6 +39,7 @@ export function TopicForm({
   topics: ReadonlyArray<{ id: string; title: string }>;
 }>) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const createTopic = useCreateTopic(slug, subjectId);
   const form = useForm<TopicValues>({
     resolver: zodResolver(topicSchema),
@@ -38,50 +51,68 @@ export function TopicForm({
       : { slug: values.slug, title: values.title };
     await createTopic.mutateAsync(input);
     form.reset();
+    setOpen(false);
     router.refresh();
   }
   return (
-    <form
-      className="mt-5 space-y-3"
-      noValidate
-      onSubmit={form.handleSubmit(onSubmit)}
-    >
-      <h3 className="text-lg font-semibold">Nuevo tema</h3>
-      <label className="block text-sm font-medium">
-        Tema padre
-        <select
-          className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2"
-          {...form.register('parent_id')}
-        >
-          <option value="">Sin padre (tema raíz)</option>
-          {topics.map((topic) => (
-            <option key={topic.id} value={topic.id}>
-              {topic.title}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="block text-sm font-medium">
-        Título
-        <input
-          className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2"
-          {...form.register('title')}
-        />
-      </label>
-      <label className="block text-sm font-medium">
-        Slug
-        <input
-          className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2"
-          {...form.register('slug')}
-        />
-      </label>
-      <button
-        className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-60"
-        disabled={createTopic.isPending}
-        type="submit"
-      >
-        {createTopic.isPending ? 'Guardando…' : 'Crear tema'}
-      </button>
-    </form>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>Nuevo tema</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <form noValidate onSubmit={form.handleSubmit(onSubmit)}>
+          <DialogHeader>
+            <DialogTitle>Crear tema</DialogTitle>
+            <DialogDescription>
+              Añádelo a la raíz o ubícalo bajo un tema existente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-5 grid gap-4">
+            <label className="academic-field">
+              Tema padre
+              <select
+                className="academic-control"
+                {...form.register('parent_id')}
+              >
+                <option value="">Sin padre (tema raíz)</option>
+                {topics.map((topic) => (
+                  <option key={topic.id} value={topic.id}>
+                    {topic.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="academic-field">
+              Título
+              <Input autoFocus {...form.register('title')} />
+            </label>
+            <label className="academic-field">
+              Slug
+              <Input
+                placeholder="limites-y-continuidad"
+                {...form.register('slug')}
+              />
+            </label>
+          </div>
+          <p aria-live="polite" className="mt-3 text-sm text-destructive">
+            {createTopic.error instanceof Error
+              ? createTopic.error.message
+              : ''}
+          </p>
+          <DialogFooter className="mt-5">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button disabled={createTopic.isPending} type="submit">
+              {createTopic.isPending ? 'Guardando…' : 'Crear tema'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -3,7 +3,20 @@
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import type { components } from '@/lib/api/generated/platform';
+import { courseStatusLabel } from '@/lib/courses/labels';
 import { useReviewAction } from '@/lib/courses/hooks';
 
 type Revision = components['schemas']['Revision'];
@@ -73,22 +86,21 @@ export function ReviewPanel({
   }
 
   return (
-    <section
-      aria-labelledby="review-title"
-      className="rounded-xl border border-slate-200 bg-white p-6"
-    >
-      <h2 className="text-xl font-semibold" id="review-title">
+    <section aria-labelledby="review-title" className="border-t pt-5">
+      <h2 className="text-base font-semibold" id="review-title">
         Flujo de revisión
       </h2>
-      <p className="mt-2">Estado actual: {revision.authoring_status}</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Estado actual: {courseStatusLabel(revision.authoring_status)}
+      </p>
       <div aria-live="polite" className="mt-3">
-        {message ? <p className="rounded bg-sky-50 p-3">{message}</p> : null}
+        {message ? <p className="rounded bg-primary/5 p-3">{message}</p> : null}
         {error ? (
           <p className="rounded bg-red-50 p-3 text-red-950">{error}</p>
         ) : null}
       </div>
       <div
-        className="mt-4 rounded-lg bg-slate-50 p-4"
+        className="mt-4 border-y bg-muted/25 px-4 py-4"
         id="readiness-issues"
         tabIndex={-1}
       >
@@ -112,7 +124,7 @@ export function ReviewPanel({
             ))}
           </ul>
         ) : (
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             No hay bloqueos estructurales.
           </p>
         )}
@@ -120,25 +132,35 @@ export function ReviewPanel({
       <div className="mt-5 flex flex-wrap gap-3">
         {canSubmit &&
         ['draft', 'changes_requested'].includes(revision.authoring_status) ? (
-          <button
-            className="rounded-lg bg-slate-950 px-4 py-2 font-medium text-white"
-            onClick={() => {
-              if (window.confirm('¿Enviar esta revisión para evaluación?'))
-                void act('submit-review');
-            }}
-            type="button"
-          >
-            Enviar a revisión
-          </button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button>Enviar a revisión</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Enviar para evaluación</AlertDialogTitle>
+                <AlertDialogDescription>
+                  La estructura quedará en modo de solo lectura mientras se
+                  revisa.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void act('submit-review')}>
+                  Enviar revisión
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         ) : null}
         {canApprove && revision.authoring_status === 'in_review' ? (
-          <button
-            className="rounded-lg bg-emerald-800 px-4 py-2 font-medium text-white"
+          <Button
             onClick={() => void act('approve')}
             type="button"
+            variant="outline"
           >
             Aprobar estructura
-          </button>
+          </Button>
         ) : null}
       </div>
       {canReview && revision.authoring_status === 'in_review' ? (
@@ -151,19 +173,16 @@ export function ReviewPanel({
           <label className="font-medium">
             Nota para solicitar cambios
             <textarea
-              className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 p-3"
+              className="mt-2 min-h-24 w-full rounded-lg border border-border p-3"
               maxLength={2000}
               name="review-note"
               ref={note}
               required
             />
           </label>
-          <button
-            className="mt-3 rounded-lg border px-4 py-2 font-medium"
-            type="submit"
-          >
+          <Button className="mt-3" type="submit" variant="outline">
             Solicitar cambios
-          </button>
+          </Button>
         </form>
       ) : null}
       {revision.authoring_status === 'approved' ? (

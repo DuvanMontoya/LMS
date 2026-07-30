@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useUpdateOrganization } from '@/lib/organizations/hooks';
 
 const nameSchema = z.object({
@@ -31,45 +33,51 @@ export function OrganizationNameForm({
 
   return (
     <form
-      className="mt-8 max-w-xl space-y-4"
+      className="max-w-2xl"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
     >
-      <div>
-        <label
-          className="block font-medium text-slate-900"
-          htmlFor="organization-name"
-        >
-          Nombre institucional
-        </label>
-        <input
-          aria-describedby="organization-name-error"
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+      <label
+        className="block text-sm font-medium text-foreground"
+        htmlFor="organization-name"
+      >
+        Nombre institucional
+      </label>
+      <div className="mt-1.5 flex items-start gap-2">
+        <Input
+          aria-describedby={
+            form.formState.errors.name ? 'organization-name-error' : undefined
+          }
           id="organization-name"
           {...form.register('name')}
         />
+        <Button
+          aria-label="Guardar nombre"
+          disabled={updateOrganization.isPending}
+          type="submit"
+        >
+          {updateOrganization.isPending ? 'Guardando…' : 'Guardar'}
+        </Button>
+      </div>
+      {form.formState.errors.name?.message ? (
         <p
-          className="mt-1 min-h-5 text-sm text-red-700"
+          className="mt-1.5 text-sm text-destructive"
           id="organization-name-error"
         >
-          {form.formState.errors.name?.message}
+          {form.formState.errors.name.message}
         </p>
-      </div>
-      <button
-        className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-60"
-        disabled={updateOrganization.isPending}
-        type="submit"
-      >
-        {updateOrganization.isPending ? 'Guardando…' : 'Guardar nombre'}
-      </button>
-      <p aria-live="polite" className="text-sm text-slate-700">
-        {updateOrganization.isSuccess
-          ? 'Nombre institucional actualizado.'
-          : ''}
-        {updateOrganization.error instanceof Error
-          ? updateOrganization.error.message
-          : ''}
-      </p>
+      ) : null}
+      {updateOrganization.isSuccess ||
+      updateOrganization.error instanceof Error ? (
+        <p aria-live="polite" className="mt-1.5 text-sm text-muted-foreground">
+          {updateOrganization.isSuccess
+            ? 'Nombre institucional actualizado.'
+            : ''}
+          {updateOrganization.error instanceof Error
+            ? updateOrganization.error.message
+            : ''}
+        </p>
+      ) : null}
     </form>
   );
 }

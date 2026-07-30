@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useCreateArea } from '@/lib/catalog/hooks';
 
 const areaSchema = z.object({
@@ -19,7 +24,15 @@ const areaSchema = z.object({
 
 type AreaValues = z.infer<typeof areaSchema>;
 
-export function AreaForm({ slug }: Readonly<{ slug: string }>) {
+export function AreaForm({
+  embedded = false,
+  onCreated,
+  slug,
+}: Readonly<{
+  embedded?: boolean;
+  onCreated?: () => void;
+  slug: string;
+}>) {
   const router = useRouter();
   const createArea = useCreateArea(slug);
   const form = useForm<AreaValues>({
@@ -31,53 +44,62 @@ export function AreaForm({ slug }: Readonly<{ slug: string }>) {
     await createArea.mutateAsync(values);
     form.reset();
     router.refresh();
+    onCreated?.();
   }
 
-  return (
+  const formContent = (
     <form
-      className="mt-6 max-w-2xl space-y-4 rounded-xl border border-slate-200 bg-white p-5"
+      className="grid gap-5 sm:grid-cols-2"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
     >
-      <h2 className="text-lg font-semibold text-slate-950">Nueva área</h2>
-      <label className="block text-sm font-medium text-slate-900">
-        Nombre
-        <input
-          className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2"
-          {...form.register('name')}
-        />
-        <span className="mt-1 block min-h-5 text-sm font-normal text-red-700">
+      <div className="space-y-2">
+        <Label htmlFor="area-name">Nombre</Label>
+        <Input id="area-name" {...form.register('name')} />
+        <p className="min-h-5 text-sm text-destructive">
           {form.formState.errors.name?.message}
-        </span>
-      </label>
-      <label className="block text-sm font-medium text-slate-900">
-        Slug
-        <input
-          className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2"
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="area-slug">Slug</Label>
+        <Input
+          className="font-mono"
+          id="area-slug"
           {...form.register('slug')}
         />
-        <span className="mt-1 block min-h-5 text-sm font-normal text-red-700">
+        <p className="min-h-5 text-sm text-destructive">
           {form.formState.errors.slug?.message}
-        </span>
-      </label>
-      <label className="block text-sm font-medium text-slate-900">
-        Descripción (opcional)
-        <textarea
-          className="mt-1 block min-h-20 w-full rounded-lg border border-slate-300 px-3 py-2"
+        </p>
+      </div>
+      <div className="space-y-2 sm:col-span-2">
+        <Label htmlFor="area-description">Descripción (opcional)</Label>
+        <Textarea
+          className="min-h-24"
+          id="area-description"
           {...form.register('description')}
         />
-      </label>
-      <button
-        className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-60"
-        disabled={createArea.isPending}
-        type="submit"
-      >
-        {createArea.isPending ? 'Guardando…' : 'Crear área'}
-      </button>
-      <p aria-live="polite" className="min-h-5 text-sm text-slate-700">
-        {createArea.isSuccess ? 'Área creada.' : ''}
-        {createArea.error instanceof Error ? createArea.error.message : ''}
-      </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
+        <Button disabled={createArea.isPending} type="submit">
+          {createArea.isPending ? 'Guardando…' : 'Crear área'}
+        </Button>
+        <p aria-live="polite" className="min-h-5 text-sm text-muted-foreground">
+          {createArea.isSuccess ? 'Área creada.' : ''}
+          {createArea.error instanceof Error ? createArea.error.message : ''}
+        </p>
+      </div>
     </form>
+  );
+  if (embedded) return formContent;
+  return (
+    <Card className="mt-6 max-w-3xl">
+      <CardHeader>
+        <CardTitle>Nueva área</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Nivel superior para agrupar disciplinas relacionadas.
+        </p>
+      </CardHeader>
+      <CardContent>{formContent}</CardContent>
+    </Card>
   );
 }

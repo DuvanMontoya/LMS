@@ -1,7 +1,9 @@
 'use client';
 
+import { ArrowDown, ArrowUp, LoaderCircle, Plus, Save, X } from 'lucide-react';
 import { useState } from 'react';
 
+import { Button } from '@/components/ui/button';
 import type { components } from '@/lib/api/generated/platform';
 import {
   useReplaceObjectiveConcepts,
@@ -16,9 +18,11 @@ export function ConceptAssociationEditor({
   entity,
   entityId,
   initialIds,
+  embedded = false,
   slug,
 }: Readonly<{
   concepts: readonly Concept[];
+  embedded?: boolean;
   entity: Entity;
   entityId: string;
   initialIds: readonly string[];
@@ -54,84 +58,107 @@ export function ConceptAssociationEditor({
   return (
     <section
       aria-label={`Editor de conceptos del ${noun}`}
-      className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4"
+      className={
+        embedded
+          ? 'border-t bg-muted/15 px-4 py-4'
+          : 'mt-4 rounded-md border bg-muted/15 p-4'
+      }
     >
-      <h3 className="font-semibold">Conceptos del {noun}</h3>
-      <p className="mt-1 text-sm text-slate-700">
-        Añade conceptos y ordena cómo se presentan en este {noun}.
-      </p>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="text-sm font-semibold">Conceptos del {noun}</h3>
+        <span className="text-xs text-muted-foreground">
+          {selected.length} asociados
+        </span>
+      </div>
       <div
-        className="mt-3 flex flex-wrap gap-2"
+        className="mt-3 flex flex-wrap gap-1.5"
         aria-label={`Conceptos disponibles del ${noun}`}
         role="group"
       >
         {available.map((concept) => (
-          <button
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm"
+          <Button
             key={concept.id}
             onClick={() =>
               setSelectedIds((current) => [...current, concept.id])
             }
+            size="sm"
             type="button"
+            variant="outline"
           >
+            <Plus />
             Añadir {concept.name}
-          </button>
+          </Button>
         ))}
       </div>
       <ol
-        className="mt-3 space-y-2"
+        className="mt-3 divide-y border-y"
         aria-label={`Orden de conceptos del ${noun}`}
       >
         {selected.map((concept, index) => (
           <li
-            className="flex items-center gap-2 rounded-lg bg-white p-2"
+            className="flex min-h-11 items-center gap-2 px-1.5 py-1.5"
             key={concept.id}
           >
             <span className="min-w-0 flex-1 text-sm font-medium">
               {concept.name}
             </span>
-            <button
+            <Button
               aria-label={`Subir ${concept.name}`}
-              className="rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-40"
               disabled={index === 0}
               onClick={() => move(concept.id, -1)}
+              size="icon-sm"
+              title="Subir"
               type="button"
+              variant="ghost"
             >
-              ↑
-            </button>
-            <button
+              <ArrowUp />
+            </Button>
+            <Button
               aria-label={`Bajar ${concept.name}`}
-              className="rounded border border-slate-300 px-2 py-1 text-sm disabled:opacity-40"
               disabled={index === selected.length - 1}
               onClick={() => move(concept.id, 1)}
+              size="icon-sm"
+              title="Bajar"
               type="button"
+              variant="ghost"
             >
-              ↓
-            </button>
-            <button
+              <ArrowDown />
+            </Button>
+            <Button
               aria-label={`Quitar ${concept.name}`}
-              className="rounded border border-slate-300 px-2 py-1 text-sm"
               onClick={() =>
                 setSelectedIds((current) =>
                   current.filter((id) => id !== concept.id),
                 )
               }
+              size="icon-sm"
+              title="Quitar"
               type="button"
+              variant="ghost"
             >
-              Quitar
-            </button>
+              <X />
+            </Button>
           </li>
         ))}
       </ol>
-      <button
-        className="mt-4 rounded-lg bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-60"
+      <Button
+        className="mt-3"
         disabled={mutation.isPending}
         onClick={() => mutation.mutate({ conceptIds: selectedIds, entityId })}
+        size="sm"
         type="button"
       >
+        {mutation.isPending ? (
+          <LoaderCircle className="animate-spin" />
+        ) : (
+          <Save />
+        )}
         Guardar conceptos
-      </button>
-      <p aria-live="polite" className="min-h-5 pt-2 text-sm text-slate-700">
+      </Button>
+      <p
+        aria-live="polite"
+        className="min-h-5 pt-2 text-xs text-muted-foreground"
+      >
         {mutation.isSuccess ? 'Asociaciones guardadas.' : ''}
         {mutation.error instanceof Error ? mutation.error.message : ''}
       </p>
