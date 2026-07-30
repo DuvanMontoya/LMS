@@ -55,3 +55,23 @@ openapi-fetch 0.17.0 y Playwright 1.62.0 contra documentación o registros
 oficiales. Todas siguen siendo las selecciones estables. openapi-typescript
 7.13.0 continúa rechazado por la política TypeScript 6 ya registrada; no se
 añadió ni actualizó ninguna dependencia.
+
+## Stack de contenido semántico (Prompt 10)
+
+Consultado e instalado el 2026-07-29 con pins exactos:
+
+| Área | Selección | Compatibilidad y decisión |
+| --- | --- | --- |
+| Backend schema | `jsonschema==4.26.0` | Python 3.13; valida Draft 2020-12 con `Draft202012Validator`; licencia MIT. |
+| Editor | Tiptap core/react/pm/starter-kit/static-renderer/unique-id/character-count/placeholder/table `3.29.2` | Una sola línea 3.x y ProseMirror transitivo compartido; extensiones propias para nodos académicos. |
+| Matemática | MathLive `0.110.0`, MathJax `4.1.3` | LaTeX se edita separado del renderer; assets y fuentes locales; `ui/safe`; no KaTeX. |
+| Código | CodeMirror state `6.7.1`, view `6.43.7`, commands `6.10.4`, language `6.12.4`, Python `6.2.1`, JavaScript `6.2.5`, JSON `6.0.2`, SQL `6.10.0` | Módulos 6.x publicados, usados sólo como editor de texto; no runtime de ejecución. |
+| Contrato frontend | Ajv `8.20.0`, json-schema-to-typescript `15.0.4` | Draft 2020-12 mediante Ajv 2020; generación reproducible del mismo schema canónico. |
+
+Las licencias consultadas son permisivas (MIT o equivalentes declaradas por los
+paquetes). El propietario operativo es el equipo de contenido. La alternativa
+de retirada es conservar JSON Schema/backend y sustituir cada adaptador de UI;
+el contrato persistido no depende de HTML ni del DOM de Tiptap. Los warnings de
+WASI alpha heredados por Vite/Rolldown y el lifecycle bloqueado de
+`unrs-resolver` permanecen visibles: no se aprobaron scripts ni se usaron flags
+inseguros, y la batería completa debe seguir demostrando que no son necesarios.

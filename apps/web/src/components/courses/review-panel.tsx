@@ -9,6 +9,11 @@ import { useReviewAction } from '@/lib/courses/hooks';
 type Revision = components['schemas']['Revision'];
 type Readiness = components['schemas']['Readiness'];
 
+function contentIssueUnitId(path: string): string | undefined {
+  const match = path.match(/^modules\.[^.]+\.units\.([^.]+)\.content$/);
+  return match?.[1];
+}
+
 export function ReviewPanel({
   canApprove,
   canReview,
@@ -93,7 +98,17 @@ export function ReviewPanel({
         {readiness.issues.length ? (
           <ul className="mt-2 list-disc space-y-1 pl-5">
             {readiness.issues.map((issue) => (
-              <li key={`${issue.code}-${issue.path}`}>{issue.message}</li>
+              <li key={`${issue.code}-${issue.path}`}>
+                {issue.message}{' '}
+                {contentIssueUnitId(issue.path) ? (
+                  <a
+                    className="font-medium text-sky-800 underline"
+                    href={`/organizaciones/${slug}/cursos/${courseSlug}/unidades/${contentIssueUnitId(issue.path)}/contenido`}
+                  >
+                    Abrir unidad
+                  </a>
+                ) : null}
+              </li>
             ))}
           </ul>
         ) : (
@@ -153,8 +168,8 @@ export function ReviewPanel({
       ) : null}
       {revision.authoring_status === 'approved' ? (
         <p className="mt-5 rounded-lg bg-emerald-50 p-4 text-emerald-950">
-          La estructura fue aprobada. La publicación y el contenido se
-          implementarán en fases posteriores.
+          La estructura fue aprobada. La publicación y el contenido se mantienen
+          separados: aprobar no publica el curso.
         </p>
       ) : null}
     </section>

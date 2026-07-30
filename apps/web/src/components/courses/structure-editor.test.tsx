@@ -33,6 +33,8 @@ const outline: components['schemas']['Outline'] = {
         {
           archived_at: null,
           content_status: 'Contenido académico pendiente',
+          content_updated_at: null,
+          content_version: null,
           created_at: '2026-07-29T00:00:00Z',
           estimated_duration_minutes: null,
           id: '00000000-0000-0000-0000-000000000004',
@@ -70,7 +72,7 @@ const outline: components['schemas']['Outline'] = {
 };
 
 describe('StructureEditor', () => {
-  it('renders an accessible read-only hierarchy without fake content controls', () => {
+  it('renders an accessible read-only hierarchy with a real content route', () => {
     render(
       <QueryProvider>
         <StructureEditor
@@ -87,8 +89,12 @@ describe('StructureEditor', () => {
       screen.getByRole('heading', { name: 'Estructura del curso' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Contenido académico pendiente'),
+      screen.getByText(/Contenido académico pendiente/),
     ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ver contenido' })).toHaveAttribute(
+      'href',
+      '/organizaciones/institucion/cursos/algebra/unidades/00000000-0000-0000-0000-000000000004/contenido',
+    );
     expect(
       screen.queryByRole('button', { name: 'Añadir módulo' }),
     ).not.toBeInTheDocument();

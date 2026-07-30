@@ -66,6 +66,14 @@ jobs:
           pnpm run courses:test:concurrency
           pnpm run courses:test:api
           pnpm run courses:test
+          pnpm run content:check
+          pnpm run content:migrations
+          pnpm run content:schema
+          pnpm run content:test:versioning
+          pnpm run content:test:readiness
+          pnpm run content:test:security
+          pnpm run content:test
+          pnpm run content:schema:api
           pnpm run auth:check
           pnpm run auth:spec
           pnpm run auth:test
@@ -77,8 +85,12 @@ jobs:
           pnpm run api:typecheck
           pnpm run api:test
           pnpm run api:health
+          uv run --directory apps/api pip-audit
       - name: Frontend checks
         run: |
+          pnpm run content:types:check
+          pnpm run content:test:math
+          pnpm run content:test:editor
           pnpm run web:lint
           pnpm run web:format:check
           pnpm run web:typecheck
@@ -88,9 +100,12 @@ jobs:
           pnpm run platform:client:check
           pnpm run catalog:client:check
           pnpm run courses:client:check
+          pnpm run content:client:check
+          pnpm audit --prod
           pnpm run auth:web:test:e2e
           pnpm run catalog:e2e
           pnpm run courses:e2e
+          pnpm run content:e2e
       - name: Remove schema-test infrastructure resources
         if: always()
         run: pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Reset -ConfirmReset

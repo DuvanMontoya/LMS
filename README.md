@@ -268,3 +268,137 @@ visual.
 Consulta [docs/project/STATUS.md](docs/project/STATUS.md) para el estado real,
 [AGENTS.md](AGENTS.md) para reglas de contribución y `docs/` para arquitectura,
 seguridad, fuentes oficiales y roadmap.
+
+## Contenido semántico y editor académico
+
+El contenido de cada unidad es JSON semántico validado por
+`schemas/content/unit-document-v1.schema.json` (Draft 2020-12), no HTML. Django
+usa `jsonschema==4.26.0`; el navegador usa `ajv==8.20.0` y tipos generados con
+`json-schema-to-typescript==15.0.4`. El editor usa Tiptap 3.29.2, MathLive
+0.110.0, MathJax local 4.1.3 y CodeMirror 6 con versiones exactas en
+`apps/web/package.json`. La decisión completa está en
+[ADR 0020](docs/adr/0020-semantic-unit-documents-and-schema-versioned-academic-editor.md).
+
+### Preparación, migración y arranque
+
+Desde una copia limpia, con Docker Desktop disponible:
+
+```powershell
+corepack enable
+pnpm install --frozen-lockfile
+uv sync --directory apps/api --locked
+pnpm infra:init
+pnpm infra:up
+pnpm infra:status
+pnpm api:migrate
+pnpm content:demo
+pnpm api:dev
+# En otra terminal:
+pnpm web:dev
+```
+
+`content:demo` ejecuta primero los bootstrap institucional, curricular y de
+Courses, y después crea contenido en las ocho unidades. Es idempotente, preserva
+IDs y versiones sin cambios y rechaza configuración no development. La ruta se
+abre desde Estructura o directamente como:
+
+```text
+http://127.0.0.1:3000/organizaciones/organizacion-demo/cursos/introduccion-calculo-diferencial/unidades/<unitId>/contenido
+```
+
+La migración `content.0001` crea `UnitContentDocument` (UUID y relación
+`OneToOne` con la unidad) y `UnitContentVersion` (UUID, JSONB, texto, métricas,
+digest y número único). Las versiones no se actualizan ni eliminan.
+
+### Contrato y capacidades
+
+Los nodos admitidos son párrafo, heading, listas ordenadas/no ordenadas, item,
+blockquote, hard break, bloque pedagógico, matemática inline/display, bloque de
+código, tabla, fila, celda de encabezado y celda de datos. Los marks admitidos
+son bold, italic, strike, inline code y link seguro. Los bloques pedagógicos son
+`definition`, `theorem`, `proof`, `example`, `note`, `warning` y `exercise`.
+Cada bloque tiene UUID estable y el backend impide IDs duplicados.
+
+MathLive edita sólo el atributo LaTeX; MathJax sirve sus assets desde
+`/vendor/mathjax`, activa `ui/safe` y no carga `texhtml` ni `require`
+arbitrario. CodeMirror edita texto para los lenguajes enumerados; nada compila
+ni ejecuta código. Las tablas exigen caption y encabezados y se representan con
+semántica accesible. Los links se normalizan y restringen a destinos seguros.
+
+El guardado es explícito mediante el botón o `Ctrl/Cmd+S`; no existe autosave,
+`localStorage`, `sessionStorage` ni IndexedDB. Cada PUT exige
+`expected_document_version`. Un cambio crea una versión append-only; un digest
+idéntico es no-op. Un 409 conserva íntegro el JSON local y permite comparar con
+el servidor. Restaurar una versión histórica crea otra versión actual, nunca
+reescribe la anterior. Cambios dirty activan aviso de salida.
+
+Preview y lectura usan el mismo renderer estático tipado. No almacenan HTML,
+SVG o MathML y el código propio no usa `dangerouslySetInnerHTML`. En `draft` y
+`changes_requested` un owner/author autorizado puede editar; `in_review` y
+`approved` son sólo lectura. Reviewer e instructor leen según su rol; learner
+no accede al workspace. Readiness impide enviar una revisión si una unidad
+activa carece de contenido válido y significativo.
+
+### Límites y seguridad
+
+Se rechazan documentos mayores de 1 MiB, más de 5.000 nodos, profundidad mayor
+de 32, más de 300.000 caracteres o 1.000 bloques superiores. El código se
+limita a 50.000 caracteres, las tablas a 100 filas × 20 columnas, matemática
+inline a 2.048 caracteres, display a 12.000 y URLs a 2.048. El backend hace
+pre-scan antes del JSON Schema, valida semántica, UUID, links y comandos LaTeX,
+deriva texto/métricas/digest y sólo entonces persiste. La política devuelve 404
+ante referencias de otra organización y serializers cerrados evitan mass
+assignment.
+
+### Generación, pruebas y revisión visual
+
+```powershell
+pnpm content:check
+pnpm content:migrations
+pnpm content:schema
+pnpm content:types:generate     # actualización deliberada
+pnpm content:types:check        # drift, sin escribir
+pnpm content:test
+pnpm content:test:versioning
+pnpm content:test:readiness
+pnpm content:test:security
+pnpm content:test:math
+pnpm content:test:editor
+pnpm content:schema:api
+pnpm content:client:check
+pnpm content:smoke
+pnpm content:e2e
+pnpm content:visual
+```
+
+`content:e2e` crea una base PostgreSQL UUID, un prefijo Redis y correo
+temporales; migra desde cero y prueba editor, schema, matemática/código/tabla,
+persistencia, preview, dos contextos en conflicto, historial/restauración,
+readiness, autor/reviewer/instructor/learner, IDOR, payloads maliciosos, teclado,
+axe WCAG 2.2 A/AA y ausencia de requests externas. Su `finally` elimina sólo
+esos recursos. `content:visual` exige libres los puertos 3000/8000, prepara el
+demo y levanta procesos visibles para inspección real; `Ctrl+C` detiene sólo
+los procesos que inició el script.
+
+Para una revisión manual, comprueba escritorio y 390 px: estructura, editor,
+toolbar con teclado, matemática inline/display, código, tabla, preview,
+historial, dirty, conflicto y modo read-only. No sustituyas esta inspección por
+una captura estática.
+
+### Problemas frecuentes y limpieza
+
+- Si faltan fuentes o bundles matemáticos, ejecuta
+  `pnpm --dir apps/web content:assets:prepare`; el build usa
+  `content:assets:check` y falla ante drift.
+- Si cambió el schema, genera tipos, revisa el diff y ejecuta
+  `pnpm content:schema`; no edites el archivo generado.
+- Un `409 content_version_conflict` no autoriza reintento ciego: conserva el
+  editor local, revisa la versión del servidor y reaplica deliberadamente.
+- Un submit bloqueado expone issues `unit_content_missing` o
+  `unit_content_empty`; completa cada unidad activa.
+- Para detener desarrollo usa `Ctrl+C` en cada terminal. Antes de matar otro
+  proceso, identifica el PID que escucha 3000 u 8000. `pnpm infra:down` detiene
+  los contenedores conservando volúmenes; `pnpm infra:reset` es destructivo y
+  requiere confirmación.
+- No borres versiones para “limpiar”: el historial es evidencia inmutable. Los
+  runners E2E ya limpian base, Redis, correo y procesos efímeros en `finally`.

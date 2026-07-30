@@ -23,6 +23,7 @@ urlpatterns = [
     path("api/v1/", include("domain.organizations.api.urls")),
     path("api/v1/", include("domain.catalog.api.urls")),
     path("api/v1/", include("domain.courses.api.urls")),
+    path("api/v1/", include("domain.content.api.urls")),
     path("api/v1/schema/", SpectacularAPIView.as_view(), name="platform-schema"),
     path("admin/", admin.site.urls),
     path("health/", include("config.health.urls")),

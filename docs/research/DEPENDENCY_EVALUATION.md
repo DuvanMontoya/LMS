@@ -53,3 +53,27 @@ máquinas de estados, grafos y drag-and-drop porque duplicarían invariantes
 pequeñas y explícitas. Sus licencias no cambian la decisión: no existe un
 problema técnico que justifique añadir propietario, actualización ni alternativa
 de retirada.
+
+## Evaluación Prompt 10
+
+`jsonschema==4.26.0` resuelve validación portable Draft 2020-12 en el servidor;
+se seleccionó sobre validadores manuales como fuente exclusiva porque los
+validadores semánticos sólo complementan el contrato. Tiptap 3.29.2 y sus
+extensiones oficiales resuelven ProseMirror, schema, React y render estático sin
+crear un editor paralelo. Ajv 8.20.0 y json-schema-to-typescript 15.0.4 mantienen
+el navegador derivado del mismo archivo.
+
+MathLive 0.110.0 se limita a entrada LaTeX y MathJax 4.1.3 a representación local
+segura; no se aceptó KaTeX, CDN, SVG/MathML almacenado ni HTML TeX. CodeMirror 6
+se instaló sólo para edición inert de Python, JavaScript/TypeScript, JSON, SQL y
+texto; Monaco fue rechazado por tamaño y complejidad, y no existe runtime de
+ejecución. Todas las dependencias tienen pin exacto y licencias permisivas
+registradas; axe conserva MPL-2.0 ya aceptada.
+
+El equipo de contenido es owner de actualización y retirada. Si se elimina una
+biblioteca UI, el JSON Schema, las versiones y el API sobreviven: los adaptadores
+son reemplazables. Los riesgos aceptados son bundle, fuentes locales, churn de
+extensiones y warnings transitivos WASI/lifecycle; se controlan con asset drift,
+auditorías, unit tests, Next build, Chromium, axe y requests externas bloqueadas.
+Se rechazaron collaboration/CRDT, autosave, IndexedDB, upload/media, ejecución,
+plantillas HTML y un segundo schema frontend por no pertenecer a esta fase.

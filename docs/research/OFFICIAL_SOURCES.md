@@ -58,3 +58,23 @@ No blog, tutorial, forum, AI output, or third-party comparison was used as versi
 | Next.js Server Components | https://nextjs.org/docs/app/getting-started/server-and-client-components ; https://nextjs.org/docs/app/api-reference/functions/fetch | Server-side authorization boundary and `cache: no-store`. |
 | TanStack Query invalidation | https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation | Scoped invalidation after course mutations; global retries remain disabled. |
 | Playwright keyboard and accessibility | https://playwright.dev/docs/input ; https://playwright.dev/docs/accessibility-testing | Real Chromium keyboard controls, responsive checks and axe integration. |
+
+## Prompt 10 consultation — 2026-07-29
+
+| Tema | Fuente oficial | Evidencia aplicada |
+| --- | --- | --- |
+| JSON Schema 2020-12 | https://json-schema.org/draft/2020-12/json-schema-core.html ; https://json-schema.org/draft/2020-12/json-schema-validation.html | Dialecto, vocabularios, `$schema`, validación estructural y ausencia de refs remotos. |
+| Python jsonschema | https://python-jsonschema.readthedocs.io/en/stable/validate/ ; https://pypi.org/project/jsonschema/ | `Draft202012Validator.check_schema`, validación por instancia y versión estable 4.26.0. |
+| Ajv | https://ajv.js.org/json-schema.html ; https://www.npmjs.com/package/ajv | Instancia 2020 para Draft 2020-12 y pin 8.20.0. |
+| Tiptap React y schema | https://tiptap.dev/docs/editor/getting-started/install/react ; https://tiptap.dev/docs/editor/core-concepts/schema ; https://tiptap.dev/docs/editor/extensions/functionality/unique-id | SSR con render inmediato desactivado, nodos/marks declarativos y IDs estables. |
+| Tiptap static renderer y content checking | https://tiptap.dev/docs/editor/api/utilities/static-renderer ; https://tiptap.dev/docs/editor/core-concepts/schema#content-checking | Representación React desde JSON y rechazo de contenido no conforme. |
+| MathLive | https://mathlive.io/mathfield/guides/integration/ ; https://mathlive.io/mathfield/api/ | Campo matemático web, valor LaTeX, accesibilidad y directorio local de fuentes. |
+| MathJax local y Safe | https://docs.mathjax.org/en/latest/web/start.html ; https://docs.mathjax.org/en/latest/options/safe.html ; https://docs.mathjax.org/en/latest/web/components/combined.html | Componentes locales, configuración `ui/safe`, allowlists y paquetes TeX explícitos. |
+| CodeMirror 6 | https://codemirror.net/docs/ref/ ; https://codemirror.net/examples/tab/ | Estado/vista/extensiones, keymaps y escape de Tab para no crear trampa de teclado. |
+| Django transacciones | https://docs.djangoproject.com/en/6.0/topics/db/transactions/ ; https://docs.djangoproject.com/en/6.0/ref/models/querysets/#select-for-update | Transacción corta y locks reales para primera creación, updates y restauración concurrentes. |
+| PostgreSQL JSON y constraints | https://www.postgresql.org/docs/18/datatype-json.html ; https://www.postgresql.org/docs/18/ddl-constraints.html | `jsonb`, unicidad, checks e índices del historial. |
+| WCAG 2.2 | https://www.w3.org/TR/WCAG22/ | Objetivo A/AA, teclado, foco, nombres accesibles, tablas y contenido matemático. |
+| Registros | https://pypi.org/project/jsonschema/ ; https://registry.npmjs.org/ | Versiones estables, metadatos, licencias y peer dependencies consultados antes del lock. |
+
+No se usaron CDN, tutoriales ni blogs como autoridad. Cada bundle matemático se
+copia desde la dependencia bloqueada y el check de assets falla si falta.

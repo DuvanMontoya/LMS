@@ -67,3 +67,18 @@ migración, bootstrap y pruebas. Next agrega
 `app/(protected)/organizaciones/[slug]/cursos/`, `components/courses/`,
 `lib/courses/` y su E2E. `scripts/courses.ps1` orquesta las validaciones sin
 infraestructura paralela.
+
+Prompt 10 implementa `apps/api/domain/content/` con modelos, validadores,
+seguridad, servicios, selectores, policies, readiness, API, admin, migración,
+bootstrap y pruebas. El contrato fuente es
+`schemas/content/unit-document-v1.schema.json`. En Next, la ruta
+`app/(protected)/organizaciones/[slug]/cursos/[courseSlug]/unidades/[unitId]/contenido`
+compone `components/content/`; adaptadores, schema copiado, tipos generados y
+validator viven en `src/lib/content/`. `scripts/generate-content-types.mjs` y
+`copy-mathjax-assets.mjs` generan artefactos verificables; los bundles en
+`public/vendor/` se ignoran y nunca se editan.
+
+`scripts/content.ps1` es el único runbook de la fase y los scripts raíz
+`content:*` delegan en él. `apps/web/e2e/content.spec.ts` reutiliza el runner
+aislado institucional; no existe una segunda aplicación, API, base o cliente
+manual.

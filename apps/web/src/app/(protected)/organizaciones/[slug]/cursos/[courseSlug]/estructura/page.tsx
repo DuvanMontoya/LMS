@@ -20,8 +20,8 @@ export default async function CourseStructurePage({
       </nav>
       <h1 className="mt-5 text-3xl font-semibold">Editor de estructura</h1>
       <p className="mt-2 text-slate-700">
-        Lista jerárquica de módulos y unidades. El contenido académico vendrá en
-        una fase posterior.
+        Lista jerárquica de módulos y unidades con acceso a su contenido
+        académico semántico.
       </p>
       <div className="mt-8">
         <StructureEditor

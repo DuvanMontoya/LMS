@@ -50,3 +50,24 @@ Playwright usa base UUID, prefijo Redis y correo aislados: tres escenarios
 recorren autoría completa con dos contextos para 409, edición, orden,
 archivado/restauración, revisión inválida con foco e IDOR en curso, revisión,
 módulo y unidad. Axe se ejecuta sin reglas deshabilitadas en las cinco rutas.
+
+# Contenido Prompt 10
+
+El corpus del schema se ejecuta en jsonschema y Ajv. Backend cubre modelos,
+pre-scan/límites, nodos/marks, seguridad, derivación, digest/no-op, estados,
+permisos, IDOR, mass assignment, query budgets, demo, API y readiness. Dos
+`TransactionTestCase` reales cubren primera save y update concurrentes; las
+pruebas de restauración confirman una versión nueva y la inmutabilidad histórica.
+
+Vitest prueba drift/round-trip, renderer, toolbar, MathLive, MathJax Safe,
+CodeMirror, tablas, dirty, atajos, conflictos y read-only. Playwright crea una
+base PostgreSQL UUID, prefijo Redis y correo aislados, migra desde cero y recorre
+autor → reviewer → owner → instructor → learner/usuario externo. Usa dos
+contextos para 409, verifica JSON real, restore, readiness, API hostil, teclado,
+axe A/AA y una lista de requests externas vacía. El `finally` elimina base,
+prefijo, correo y procesos; no reutiliza servidores.
+
+La cobertura global mantiene el gate 75 %. Para `domain.content` se inspecciona
+además el reporte por archivo y se exige evidencia material de versiones,
+concurrencia, seguridad y readiness; migraciones, artefactos generados y
+bibliotecas se excluyen del juicio de lógica propia.

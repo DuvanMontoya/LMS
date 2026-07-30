@@ -515,6 +515,7 @@ dependencies = [
     { name = "django-treebeard" },
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
+    { name = "jsonschema" },
     { name = "psycopg", extra = ["binary"] },
     { name = "redis" },
 ]
@@ -537,6 +538,7 @@ requires-dist = [
     { name = "django-treebeard", specifier = "==6.0.0" },
     { name = "djangorestframework", specifier = "==3.17.1" },
     { name = "drf-spectacular", specifier = "==0.30.0" },
+    { name = "jsonschema", specifier = "==4.26.0" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.4" },
     { name = "redis", specifier = "==8.0.1" },
 ]

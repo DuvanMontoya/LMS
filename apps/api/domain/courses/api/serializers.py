@@ -376,7 +376,9 @@ class OutlineUnitSerializer(UnitSerializer):
     learning_objectives = UnitObjectiveSerializer(
         source="objective_alignments", many=True, read_only=True
     )
-    content_status = serializers.CharField(default="Contenido académico pendiente")
+    content_status = serializers.CharField(default="missing", read_only=True)
+    content_version = serializers.IntegerField(allow_null=True, read_only=True)
+    content_updated_at = serializers.DateTimeField(allow_null=True, read_only=True)
 
     class Meta(UnitSerializer.Meta):
         fields = (
@@ -384,6 +386,8 @@ class OutlineUnitSerializer(UnitSerializer):
             "topics",
             "learning_objectives",
             "content_status",
+            "content_version",
+            "content_updated_at",
         )
 
 

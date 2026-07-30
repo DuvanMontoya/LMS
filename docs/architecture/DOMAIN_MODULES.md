@@ -43,3 +43,18 @@ units and their alignments. Transport code supplies actor and URL-scoped
 organization, then calls application services. Catalog references remain owned
 by `catalog`; courses validates their organization and status but never mutates
 them. Semantic documents and publication snapshots remain outside this module.
+
+# Content boundary
+
+`content` es propietario exclusivo del documento semántico asociado a
+`CourseUnit`, sus versiones append-only, validación, canonicalización, texto,
+métricas, digest, API y renderer frontend. Puede importar el modelo público de
+unidad y las políticas institucionales; `courses` no importa `content`.
+`courses.readiness` y `courses.extensions` exponen registries estables y
+agnósticos: `ContentConfig.ready()` registra providers sin consultar la base.
+
+Sólo servicios de `content` escriben sus tablas y siempre lo hacen dentro de una
+transacción que bloquea la revisión y la unidad propietarias. El módulo no posee
+curso, revisión, módulo, rol, catálogo, publicación, matrícula, evaluación,
+archivo ni delivery. Un documento aprobado continúa siendo borrador privado de
+autoría hasta que un futuro módulo de publicación produzca un snapshot completo.

@@ -11,6 +11,22 @@ export interface paths {
   '/api/v1/organizations/': {
     get: operations['organizations_list'];
   };
+  '/api/v1/organizations/{organization_slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/content/': {
+    get: operations['organizations_courses_revisions_units_content_retrieve'];
+    put: operations['organizations_courses_revisions_units_content_update'];
+  };
+  '/api/v1/organizations/{organization_slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/content/validate/': {
+    post: operations['organizations_courses_revisions_units_content_validate_create'];
+  };
+  '/api/v1/organizations/{organization_slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/content/versions/': {
+    get: operations['organizations_courses_revisions_units_content_versions_list'];
+  };
+  '/api/v1/organizations/{organization_slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/content/versions/{version_number}/': {
+    get: operations['organizations_courses_revisions_units_content_versions_retrieve'];
+  };
+  '/api/v1/organizations/{organization_slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/content/versions/{version_number}/restore/': {
+    post: operations['organizations_courses_revisions_units_content_versions_restore_create'];
+  };
   '/api/v1/organizations/{slug}/': {
     get: operations['organizations_retrieve'];
     patch: operations['organizations_partial_update'];
@@ -314,6 +330,70 @@ export interface components {
       /** Format: uuid */
       entity_id: string;
     };
+    ContentCurrent: {
+      character_count: number;
+      content: unknown;
+      digest: string;
+      /** Format: uuid */
+      document_id: string | null;
+      document_version: number;
+      editable: boolean;
+      is_meaningful: boolean;
+      /** @default false */
+      no_op?: boolean;
+      node_count: number;
+      schema_version: number;
+      /** Format: date-time */
+      updated_at: string | null;
+      word_count: number;
+    };
+    ContentError: {
+      code: string;
+      current_document_version?: number;
+      detail: string;
+      path?: string;
+    };
+    ContentMetrics: {
+      character_count: number;
+      is_meaningful: boolean;
+      node_count: number;
+      word_count: number;
+    };
+    ContentValidate: {
+      content: unknown;
+      schema_version: number;
+    };
+    ContentVersionDetail: {
+      character_count: number;
+      content: unknown;
+      /** Format: date-time */
+      created_at: string;
+      created_by_display: string;
+      digest: string;
+      is_current: boolean;
+      node_count: number;
+      number: number;
+      plain_text: string;
+      schema_version: number;
+      word_count: number;
+    };
+    ContentVersionSummary: {
+      character_count: number;
+      /** Format: date-time */
+      created_at: string;
+      created_by_display: string;
+      digest: string;
+      is_current: boolean;
+      node_count: number;
+      number: number;
+      schema_version: number;
+      word_count: number;
+    };
+    ContentWrite: {
+      content: unknown;
+      expected_document_version: number;
+      schema_version: number;
+    };
     Course: {
       /** Format: date-time */
       archived_at: string | null;
@@ -608,8 +688,11 @@ export interface components {
     OutlineUnit: {
       /** Format: date-time */
       archived_at: string | null;
-      /** @default Contenido académico pendiente */
-      content_status?: string;
+      /** @default missing */
+      content_status: string;
+      /** Format: date-time */
+      content_updated_at: string | null;
+      content_version: number | null;
       /** Format: date-time */
       created_at: string;
       estimated_duration_minutes: number | null;
@@ -714,6 +797,9 @@ export interface components {
     ReplaceTopics: {
       expected_version: number;
       topic_ids: string[];
+    };
+    RestoreContent: {
+      expected_document_version: number;
     };
     Revision: {
       authoring_status: string;
@@ -936,6 +1022,201 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['Organization'][];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_content_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        organization_slug: string;
+        revision_id: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ContentCurrent'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_content_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        organization_slug: string;
+        revision_id: string;
+        unit_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ContentWrite'];
+        'application/x-www-form-urlencoded': components['schemas']['ContentWrite'];
+        'multipart/form-data': components['schemas']['ContentWrite'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ContentCurrent'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_content_validate_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        organization_slug: string;
+        revision_id: string;
+        unit_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ContentValidate'];
+        'application/x-www-form-urlencoded': components['schemas']['ContentValidate'];
+        'multipart/form-data': components['schemas']['ContentValidate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ContentMetrics'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_content_versions_list: {
+    parameters: {
+      path: {
+        course_slug: string;
+        organization_slug: string;
+        revision_id: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ContentVersionSummary'][];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_content_versions_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        organization_slug: string;
+        revision_id: string;
+        unit_id: string;
+        version_number: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ContentVersionDetail'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_content_versions_restore_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        organization_slug: string;
+        revision_id: string;
+        unit_id: string;
+        version_number: number;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RestoreContent'];
+        'application/x-www-form-urlencoded': components['schemas']['RestoreContent'];
+        'multipart/form-data': components['schemas']['RestoreContent'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ContentCurrent'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
         };
       };
     };

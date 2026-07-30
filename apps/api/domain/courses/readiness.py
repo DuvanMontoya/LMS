@@ -1,10 +1,30 @@
 # pyright: reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportAttributeAccessIssue=false, reportUnknownLambdaType=false
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
+from types import MappingProxyType
 
 from .choices import CourseStatus, StructureStatus, SubjectAlignmentType
 from .models import CourseRevision
+
+type ReadinessIssue = dict[str, str]
+type ReadinessProvider = Callable[[CourseRevision], list[ReadinessIssue]]
+_READINESS_PROVIDERS: dict[str, ReadinessProvider] = {}
+
+
+def register_readiness_provider(name: str, provider: ReadinessProvider) -> None:
+    """Register one deterministic extension without touching the database."""
+
+    normalized = name.strip()
+    if not normalized:
+        raise ValueError("El nombre del proveedor de readiness es obligatorio.")
+    if normalized in _READINESS_PROVIDERS:
+        raise ValueError(f"El proveedor de readiness '{normalized}' ya existe.")
+    _READINESS_PROVIDERS[normalized] = provider
+
+
+def registered_readiness_providers():
+    return MappingProxyType(_READINESS_PROVIDERS)
 
 
 def _contiguous(values: Iterable[int | None]) -> bool:
@@ -12,8 +32,8 @@ def _contiguous(values: Iterable[int | None]) -> bool:
     return positions == list(range(1, len(positions) + 1))
 
 
-def revision_readiness_issues(revision: CourseRevision) -> list[dict[str, str]]:
-    issues: list[dict[str, str]] = []
+def revision_readiness_issues(revision: CourseRevision) -> list[ReadinessIssue]:
+    issues: list[ReadinessIssue] = []
 
     def add(code: str, path: str, message: str) -> None:
         issues.append({"code": code, "path": path, "message": message})
@@ -156,4 +176,6 @@ def revision_readiness_issues(revision: CourseRevision) -> list[dict[str, str]]:
                         f"{unit_path}.topics.{link.topic_id}",
                         "Un tema de la unidad está archivado.",
                     )
+    for provider_name in sorted(_READINESS_PROVIDERS):
+        issues.extend(_READINESS_PROVIDERS[provider_name](revision))
     return issues

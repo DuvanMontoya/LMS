@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from domain.organizations.models import Organization
 
 from .choices import AuthoringStatus, StructureStatus
+from .extensions import enrich_outline
 from .models import (
     Course,
     CourseModule,
@@ -116,7 +117,8 @@ def revision_outline_queryset(course: Course) -> QuerySet[CourseRevision]:
 
 def course_outline(actor: object, course: Course, revision_id: str) -> CourseRevision:
     visible = revision_visible_to_actor(actor, course, revision_id)
-    return get_object_or_404(revision_outline_queryset(course), pk=visible.pk)
+    revision = get_object_or_404(revision_outline_queryset(course), pk=visible.pk)
+    return enrich_outline(revision)
 
 
 def course_review_history(

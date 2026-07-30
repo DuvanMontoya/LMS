@@ -43,3 +43,15 @@ Prompt 9 tampoco añade servicios, puertos, colas ni almacenamiento. PostgreSQL
 conserva cursos, revisiones, transiciones, orden y alineaciones. Next reutiliza
 el rewrite same-origin y Django continúa como única autoridad de sesión y CSRF.
 No existe despliegue público de cursos ni job de publicación.
+
+Prompt 10 tampoco añade contenedores. Los documentos y versiones viven en
+PostgreSQL; Redis sólo conserva sus usos previos. Next sirve bundles MathJax y
+fuentes MathLive copiados en build desde dependencias bloqueadas y el prebuild
+falla si los assets están ausentes. No hay CDN, object storage, worker, sandbox
+de código ni endpoint público de contenido.
+
+El despliegue futuro debe ejecutar migraciones antes del rollout, conservar
+assets con la misma versión de aplicación y mantener límites de request en el
+proxy iguales o más estrictos que el backend. Una publicación posterior no
+podrá apuntar al documento mutable actual: deberá capturar un snapshot inmutable
+completo del curso.

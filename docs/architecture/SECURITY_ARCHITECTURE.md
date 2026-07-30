@@ -48,3 +48,23 @@ estado, posición y `lock_version`. Cada mutación exige `expected_version`,
 bloquea la revisión y rechaza una versión obsoleta con 409. Ni permisos,
 estructura ni borradores se almacenan en cookies, Redis, `localStorage` o
 `sessionStorage`; la sesión conserva sólo identidad Django.
+
+## Frontera de contenido semántico
+
+El body se limita por bytes antes de decodificar en profundidad. Después pasan
+pre-scan iterativo, meta-schema Draft 2020-12, validadores semánticos, unicidad
+UUID, protocolos de links y denylist/allowlist LaTeX. Sólo JSON canónico
+aceptado llega a JSONB. No se persisten HTML, SVG ni MathML; paste/drop de
+archivos se rechaza y el renderer propio no usa `dangerouslySetInnerHTML`.
+
+MathJax y fuentes MathLive se sirven localmente. La configuración carga
+`ui/safe`, paquetes base/ams explícitos y excluye `texhtml` y `require`
+arbitrario. SVG generado queda fuera del árbol accesible duplicado y su
+contenedor matemático tiene nombre. CodeMirror jamás evalúa el texto. Links
+renderizados mantienen protocolo permitido y atributos seguros.
+
+La consulta siempre resuelve organización → curso → revisión → unidad; un UUID
+ajeno es 404. Capacidad insuficiente es 403, versión obsoleta 409 y payload
+inválido 400. Campos derivados, actores, número, digest, unidad y estado no son
+asignables por request. Staff no evita policies; sólo superuser activo tiene
+bypass explícito.

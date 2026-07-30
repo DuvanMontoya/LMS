@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useRef, useState } from 'react';
 
 import type { components } from '@/lib/api/generated/platform';
@@ -17,6 +18,11 @@ import {
 type Outline = components['schemas']['Outline'];
 type Objective = components['schemas']['Objective'];
 type Topic = components['schemas']['Topic'];
+const contentStatusLabels: Record<string, string> = {
+  empty: 'Contenido vacío',
+  missing: 'Sin contenido',
+  ready: 'Contenido listo',
+};
 
 export function StructureEditor({
   canManage,
@@ -400,8 +406,23 @@ export function StructureEditor({
                             {unit.position ?? 'Archivada'}. {unit.title}
                           </h4>
                           <p className="mt-1 text-sm text-slate-600">
-                            Contenido académico pendiente
+                            Contenido:{' '}
+                            {contentStatusLabels[unit.content_status] ??
+                              unit.content_status}
+                            {unit.content_version
+                              ? ` · versión ${unit.content_version}`
+                              : ''}
                           </p>
+                          {unit.status === 'active' ? (
+                            <Link
+                              className="mt-2 inline-block rounded border border-sky-700 px-3 py-2 text-sm font-medium text-sky-800"
+                              href={`/organizaciones/${slug}/cursos/${courseSlug}/unidades/${unit.id}/contenido`}
+                            >
+                              {canManage && editable
+                                ? 'Editar contenido'
+                                : 'Ver contenido'}
+                            </Link>
+                          ) : null}
                           <p className="text-sm text-slate-600">
                             Temas: {unit.topics.length} · Objetivos:{' '}
                             {unit.learning_objectives.length}
@@ -625,8 +646,7 @@ export function StructureEditor({
         </ol>
       ) : (
         <p className="mt-6 rounded-xl border border-dashed border-slate-300 p-6 text-slate-600">
-          Aún no hay módulos. Empieza por la estructura, sin contenido
-          semántico.
+          Aún no hay módulos. Empieza por definir la estructura del curso.
         </p>
       )}
     </section>

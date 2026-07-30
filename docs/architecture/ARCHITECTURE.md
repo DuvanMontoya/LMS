@@ -202,3 +202,27 @@ flowchart LR
   services --> postgres["PostgreSQL 18"]
   services --> catalog["catalog references"]
 ```
+
+## Contenido semántico de unidades (Prompt 10)
+
+`domain.content` añade una proyección semántica versionada a `CourseUnit` sin
+mover la jerarquía de `courses`. El schema canónico vive en la raíz y alimenta
+jsonschema, Ajv y generación TypeScript. La escritura es servicio transaccional;
+la lectura del frontend es React estático y componentes especializados.
+
+```mermaid
+flowchart TB
+  schema["unit-document-v1.schema.json"] --> backend["jsonschema + semantic validators"]
+  schema --> types["generated TypeScript + Ajv"]
+  editor["Tiptap + MathLive + CodeMirror"] --> types
+  editor --> api["versioned content REST API"]
+  api --> backend
+  backend --> versions["PostgreSQL append-only versions"]
+  versions --> renderer["typed static renderer + local Safe MathJax"]
+  renderer --> preview["preview / read-only"]
+  content["content provider"] --> registry["courses readiness registry"]
+```
+
+La frontera browser continúa same-origin con sesión y CSRF Django. No hay CDN,
+HTML persistido, autosave, colaboración, ejecución, almacenamiento local ni
+servicio nuevo. ADR 0020 contiene las doce secuencias/diagramas detallados.

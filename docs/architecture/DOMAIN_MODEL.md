@@ -232,3 +232,29 @@ flowchart TD
   workspace --> structure["/[courseSlug]/estructura"]
   workspace --> review["/[courseSlug]/revision"]
 ```
+
+## 13. Modelo de contenido semántico (Prompt 10)
+
+Una unidad tiene cero o un `UnitContentDocument`; un GET vacío devuelve una
+representación virtual v0 y no escribe. La primera save crea documento y versión
+1 de forma segura incluso en carrera. El puntero `current_version` permite leer
+sin buscar el máximo, mientras `UnitContentVersion(document, number)` conserva
+la secuencia única e inmutable. `content`, `plain_text`, conteos y digest son
+datos de la versión, por lo que un restore reproduce una carga histórica en un
+número nuevo.
+
+```mermaid
+stateDiagram-v2
+  [*] --> VirtualV0
+  VirtualV0 --> V1: first explicit save
+  V1 --> V1: equal digest / no-op
+  V1 --> V2: changed save
+  V2 --> V3: restore V1 payload
+  state "revision in_review or approved" as Locked
+  V3 --> Locked: course transition
+  Locked --> Locked: content writes rejected
+```
+
+La edición sólo se permite si la revisión está `draft` o
+`changes_requested` y el actor posee capacidad de autoría. Readiness agrega
+`unit_content_missing` y `unit_content_empty` por unidad activa antes del submit.

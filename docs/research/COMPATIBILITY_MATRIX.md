@@ -47,3 +47,19 @@ openapi-typescript/openapi-fetch ya validada para TypeScript 6.
 | drf-spectacular 0.30.0 ↔ OpenAPI 3.0.3 | Compatible | schema sin warnings y cliente sincronizado. |
 | Next 16.2.12 ↔ React 19.2.8 ↔ TanStack Query 5.101.4 | Compatible | lint, tipos, Vitest, build y Chromium. |
 | Playwright 1.58.2 ↔ Chromium ↔ axe 4.12.1 | Compatible | cinco rutas, 390 px, teclado, dos contextos y cero violaciones A/AA. |
+
+## Compatibilidad Prompt 10
+
+| Combinación | Resultado | Evidencia 2026-07-29 |
+| --- | --- | --- |
+| Python 3.13.13 ↔ jsonschema 4.26.0 ↔ Draft 2020-12 | Compatible | meta-schema, corpus válido/inválido y suite backend sobre el schema canónico. |
+| Django 6.0.7 ↔ PostgreSQL 18.4 JSONB/locks | Compatible | migración real, checks/constraints y pruebas `TransactionTestCase` de primera save y update concurrentes. |
+| Tiptap 3.29.2 ↔ React 19.2.8 ↔ Next 16.2.12 | Compatible | SSR con `immediatelyRender: false`, unit tests, round-trip, build y Chromium real. |
+| Ajv 8.20.0 ↔ JSON Schema Draft 2020-12 | Compatible | `Ajv2020`, formatos propios estrictos y el mismo corpus frontend/backend. |
+| MathLive 0.110.0 ↔ MathJax 4.1.3 | Compatible | edición LaTeX, bundles/fuentes locales, safe extension, unit tests y axe. |
+| CodeMirror 6 modular ↔ React 19 | Compatible | lifecycle estable sin remount por tecla, lenguajes enumerados y salida de teclado probada. |
+| json-schema-to-typescript 15.0.4 ↔ TypeScript 6.0.2 | Compatible | generación determinista, typecheck y drift check sin escritura. |
+| Tiptap/MathJax/CodeMirror ↔ CSP futura | Compatible por diseño | no CDN, eval, ejecución de código ni HTML persistido; la política CSP de producción sigue diferida. |
+
+La compatibilidad observada no elimina la obligación de repetir frozen install,
+schema drift, lint, tipos, pruebas, build y Playwright al cambiar cualquier pin.

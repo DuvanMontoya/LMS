@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from django.test import TestCase
 
 from domain.courses.choices import AuthoringStatus
@@ -24,7 +26,9 @@ from .support import CourseFixtureMixin
 
 
 class CourseWorkflowTests(CourseFixtureMixin, TestCase):
+    @patch.dict("domain.courses.readiness._READINESS_PROVIDERS", clear=True)
     def test_readiness_and_complete_review_cycle(self) -> None:
+        """Exercise the base course workflow without optional domain extensions."""
         owner, organization, _, objective, topic, revision = self.course_revision()
         author = self.member(
             owner, organization, RoleCode.AUTHOR, "author@example.test"

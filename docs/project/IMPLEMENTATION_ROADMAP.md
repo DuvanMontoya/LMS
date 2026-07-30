@@ -14,9 +14,9 @@ Each phase requires its predecessor's acceptance criteria, a scoped pull request
 | 8 | Authorization. Requires 7. **Completed 2026-07-29 (Prompt 7).** | Organization-scoped RBAC, historical memberships/roles/events, transactional policies, generated platform client and protected institutional routes. | No broad admin bypass, courses, invitations or taxonomy. |
 | 9 | Taxonomy and curriculum. Requires 8. **Completed 2026-07-29 (Prompt 8).** | Areas, subjects, concepts, prerequisites, learning objectives. | No course editor. |
 | 10 | Courses and structure. Requires 9. **Completed 2026-07-29 (Prompt 9).** | Logical courses, revisions, explicit review workflow, ordered modules/units and curriculum alignments. | No semantic content or publication snapshots. |
-| 11 | Semantic content. Requires 10. | Typed academic document model, media references and rendering contract. | No unrestricted HTML. |
-| 12 | Versioning and publication. Requires 10–11. | Draft/review/publish snapshots, immutable references, API tests. | No retroactive edits. |
-| 13 | Academic editor. Requires 11–12. | Tiptap/MathLive integration, validation, accessibility tests. | No arbitrary plugin ecosystem. |
+| 11 | Semantic content and academic editor. Requires 10. **Completed 2026-07-29 (Prompt 10).** | Schema-versioned JSON documents, append-only content versions, Tiptap/MathLive/MathJax/CodeMirror, static rendering, readiness, isolated Chromium and axe. | No unrestricted HTML, files, code execution or publication. |
+| 12 | Immutable publication. Requires 10–11. | Full-course publication snapshots, published versions, validation, withdrawal and reading experience. | No retroactive edits or draft leakage. |
+| 13 | Advanced academic editor. Requires 11–12. | Only later capabilities justified by publication and user evidence. | No arbitrary plugin ecosystem, collaboration or hidden autosave by default. |
 | 14 | Enrolments. Requires 8, 10, 12. | Access dates/status and future cohorts. | No billing. |
 | 15 | Study experience. Requires 12, 14. | Delivery, bookmarks, study sessions, continuity. | No native app. |
 | 16 | Question bank. Requires 8, 11–12. | Versioned question types, hints and rubrics. | No grades on mutable questions. |
