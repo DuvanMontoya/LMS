@@ -379,16 +379,22 @@ warnings, drift checks, `pip-audit` y `pnpm audit --prod` quedaron verdes.
 - El drawer móvil cierra al seleccionar enlaces principales o anidados y la
   navegación actual usa `aria-current="page"` sólo para coincidencias exactas.
   El modo colapsado conserva iconos y tooltips del componente existente.
-- La revisión en el navegador integrado recorrió 13 pantallas reales en
+- La revisión en el navegador integrado recorrió 15 pantallas reales en
   escritorio sin errores ni overflow: inicio, resumen institucional, las cuatro
   superficies de currículo, listado y creación de curso, resumen, estructura,
-  revisión, contenido de unidad y miembros. En 390 px se verificaron el drawer,
-  la ruta activa, el cierre tras navegar y `scrollWidth <= clientWidth`.
+  revisión, publicación, biblioteca, contenido de unidad y miembros. En 390 px
+  se verificaron el drawer, la ruta activa, el cierre tras navegar, Biblioteca,
+  Publicación y `scrollWidth <= clientWidth`.
 - Pasaron Prettier, ESLint, TypeScript, las 37 pruebas Vitest —incluidas tres
   nuevas sobre el contexto dinámico del curso— y el build de producción de
-  Next.js 16.2.12. La publicación y biblioteca no se mostraron en la sesión
-  auditada porque el contexto real no devolvió sus capacidades; no se forzó ni
-  simuló ese acceso.
+  Next.js 16.2.12. El backend persistente, iniciado con `--noreload` antes de
+  Phase 11, entregaba capacidades antiguas; tras reiniciarlo, el contexto real
+  de owner/administrator expuso Biblioteca y Publicación como establecen las
+  policies, sin modificar datos ni permisos.
+- La suite E2E aislada de publicación pasó 1/1 en Chromium: permisos de
+  navegación para owner y learner, publicación de dos releases, historial,
+  detalle inmutable, Biblioteca, lector de curso y unidades, 390 px, axe,
+  clonación, retiro, 404 posterior y limpieza de base/Redis/correo/procesos.
 
 Siguiente paso:
 

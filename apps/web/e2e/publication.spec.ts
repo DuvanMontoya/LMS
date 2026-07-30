@@ -33,6 +33,14 @@ test('immutable publication, authenticated library, withdrawal and axe work end 
   await expect(
     page.getByRole('heading', { name: 'Publicación del curso' }),
   ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Biblioteca', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator('[data-sidebar="sidebar"]')
+      .getByRole('link', { name: 'Publicación', exact: true }),
+  ).toBeVisible();
   await expect(page.getByText('Sin publicar', { exact: true })).toBeVisible();
   await expectAccessible(page);
 
@@ -74,6 +82,16 @@ test('immutable publication, authenticated library, withdrawal and axe work end 
   await expect(
     learnerPage.getByRole('heading', { name: 'Biblioteca' }),
   ).toBeVisible();
+  const learnerSidebar = learnerPage.locator('[data-sidebar="sidebar"]');
+  await expect(
+    learnerSidebar.getByRole('link', { name: 'Biblioteca', exact: true }),
+  ).toBeVisible();
+  await expect(
+    learnerSidebar.getByRole('link', { name: 'Cursos', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    learnerSidebar.getByRole('link', { name: 'Miembros', exact: true }),
+  ).toHaveCount(0);
   await learnerPage
     .getByRole('link', {
       name: /Abrir curso/,
@@ -111,6 +129,20 @@ test('immutable publication, authenticated library, withdrawal and axe work end 
   ).toBeVisible({ timeout: 20_000 });
 
   await learnerPage.setViewportSize({ width: 390, height: 844 });
+  await learnerPage
+    .getByRole('button', { name: 'Mostrar u ocultar navegación' })
+    .click();
+  const mobileNavigation = learnerPage.getByRole('dialog', {
+    name: 'Navegación principal',
+  });
+  await expect(
+    mobileNavigation.getByRole('link', { name: 'Biblioteca', exact: true }),
+  ).toBeVisible();
+  await expect(
+    mobileNavigation.getByRole('link', { name: 'Cursos', exact: true }),
+  ).toHaveCount(0);
+  await learnerPage.keyboard.press('Escape');
+  await expect(mobileNavigation).toBeHidden();
   expect(
     await learnerPage.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
