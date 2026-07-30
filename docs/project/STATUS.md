@@ -362,6 +362,34 @@ warnings, drift checks, `pip-audit` y `pnpm audit --prod` quedaron verdes.
 - Trabajo no realizado: matrícula, progreso, evaluación, cache público,
   restauración de publication, media, búsqueda y Prompt 12.
 
+## Remediación de navegación del frontend — 2026-07-30
+
+- Se auditó el shell protegido y la matriz real de rutas antes de modificar la
+  interfaz. El sidebar conservó su única implementación y ahora separa
+  plataforma, institución, gestión académica, curso actual y administración.
+- Currículo expone estructura curricular, conceptos, objetivos y
+  prerrequisitos. Cursos expone listado y creación sólo con
+  `course.authoring.manage`; dentro de un curso aparecen resumen, estructura,
+  revisión y, únicamente con `course.release.history.view`, publicación.
+  Biblioteca y miembros continúan filtrados por sus capacidades existentes.
+- Las rutas dinámicas se derivan del `pathname` institucional ya autorizado; no
+  se agregó estado, endpoint, ruta, permiso, capa de navegación ni regla de
+  negocio paralela. Las unidades mantienen activa la sección Estructura y los
+  releases la sección Publicación sin declarar como actual una URL distinta.
+- El drawer móvil cierra al seleccionar enlaces principales o anidados y la
+  navegación actual usa `aria-current="page"` sólo para coincidencias exactas.
+  El modo colapsado conserva iconos y tooltips del componente existente.
+- La revisión en el navegador integrado recorrió 13 pantallas reales en
+  escritorio sin errores ni overflow: inicio, resumen institucional, las cuatro
+  superficies de currículo, listado y creación de curso, resumen, estructura,
+  revisión, contenido de unidad y miembros. En 390 px se verificaron el drawer,
+  la ruta activa, el cierre tras navegar y `scrollWidth <= clientWidth`.
+- Pasaron Prettier, ESLint, TypeScript, las 37 pruebas Vitest —incluidas tres
+  nuevas sobre el contexto dinámico del curso— y el build de producción de
+  Next.js 16.2.12. La publicación y biblioteca no se mostraron en la sesión
+  auditada porque el contexto real no devolvió sus capacidades; no se forzó ni
+  simuló ese acceso.
+
 Siguiente paso:
 
 > **Prompt 12 — Matrículas y entrega del aprendizaje: acceso por curso, cohortes, progreso, continuidad, completitud y experiencia del estudiante.**

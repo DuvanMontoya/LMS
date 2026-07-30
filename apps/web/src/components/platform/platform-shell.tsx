@@ -5,9 +5,16 @@ import {
   BookOpenText,
   Building2,
   ChevronDown,
+  FileCheck2,
+  GitBranch,
   GraduationCap,
   LayoutDashboard,
   LibraryBig,
+  ListTree,
+  Plus,
+  Send,
+  Tags,
+  Target,
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -35,6 +42,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
@@ -55,11 +65,17 @@ type ShellOrganization = {
 };
 
 type NavigationItem = {
+  activePrefixes?: readonly string[];
+  children?: readonly NavigationChild[];
   exact?: boolean;
   href: string;
   icon: typeof LayoutDashboard;
   label: string;
   visible?: boolean;
+};
+
+type NavigationChild = Omit<NavigationItem, 'children' | 'icon'> & {
+  icon?: typeof LayoutDashboard;
 };
 
 export function PlatformShell({
@@ -114,6 +130,9 @@ function PlatformSidebar({
   pathname: string;
 }>) {
   const capabilities = new Set(activeOrganization?.capabilities ?? []);
+  const organizationBase = activeOrganization
+    ? `/organizaciones/${activeOrganization.slug}`
+    : undefined;
   const generalNavigation: NavigationItem[] = [
     {
       href: '/estudiar',
@@ -132,22 +151,66 @@ function PlatformSidebar({
         ]
       : []),
   ];
-  const organizationNavigation: NavigationItem[] = activeOrganization
+  const organizationNavigation: NavigationItem[] = organizationBase
     ? [
         {
-          href: `/organizaciones/${activeOrganization.slug}`,
+          href: organizationBase,
           icon: GraduationCap,
           label: 'Resumen institucional',
           exact: true,
         },
+      ]
+    : [];
+  const academicNavigation: NavigationItem[] = organizationBase
+    ? [
         {
-          href: `/organizaciones/${activeOrganization.slug}/curriculo`,
+          children: [
+            {
+              activePrefixes: [`${organizationBase}/curriculo/asignaturas/`],
+              href: `${organizationBase}/curriculo`,
+              label: 'Estructura curricular',
+              exact: true,
+            },
+            {
+              href: `${organizationBase}/curriculo/conceptos`,
+              icon: Tags,
+              label: 'Conceptos',
+              exact: true,
+            },
+            {
+              href: `${organizationBase}/curriculo/objetivos`,
+              icon: Target,
+              label: 'Objetivos',
+              exact: true,
+            },
+            {
+              href: `${organizationBase}/curriculo/prerrequisitos`,
+              icon: GitBranch,
+              label: 'Prerrequisitos',
+              exact: true,
+            },
+          ],
+          href: `${organizationBase}/curriculo`,
           icon: LibraryBig,
           label: 'Currículo',
           visible: capabilities.has('catalog.view'),
         },
         {
-          href: `/organizaciones/${activeOrganization.slug}/cursos`,
+          children: [
+            {
+              href: `${organizationBase}/cursos`,
+              label: 'Todos los cursos',
+              exact: true,
+            },
+            {
+              href: `${organizationBase}/cursos/nuevo`,
+              icon: Plus,
+              label: 'Crear curso',
+              exact: true,
+              visible: capabilities.has('course.authoring.manage'),
+            },
+          ],
+          href: `${organizationBase}/cursos`,
           icon: BookOpenCheck,
           label: 'Cursos',
           visible:
@@ -155,16 +218,54 @@ function PlatformSidebar({
             capabilities.has('course.approved.view'),
         },
         {
-          href: `/organizaciones/${activeOrganization.slug}/biblioteca`,
+          href: `${organizationBase}/biblioteca`,
           icon: BookOpenText,
           label: 'Biblioteca',
           visible: capabilities.has('course.published.view'),
         },
+      ]
+    : [];
+  const administrationNavigation: NavigationItem[] = organizationBase
+    ? [
         {
-          href: `/organizaciones/${activeOrganization.slug}/miembros`,
+          href: `${organizationBase}/miembros`,
           icon: Users,
           label: 'Miembros',
           visible: capabilities.has('membership.view'),
+        },
+      ]
+    : [];
+  const courseBase = organizationBase
+    ? courseWorkspaceBase(pathname, organizationBase)
+    : undefined;
+  const courseNavigation: NavigationItem[] = courseBase
+    ? [
+        {
+          href: courseBase,
+          icon: BookOpenCheck,
+          label: 'Resumen del curso',
+          exact: true,
+        },
+        {
+          activePrefixes: [`${courseBase}/unidades/`],
+          href: `${courseBase}/estructura`,
+          icon: ListTree,
+          label: 'Estructura',
+          exact: true,
+        },
+        {
+          href: `${courseBase}/revision`,
+          icon: FileCheck2,
+          label: 'Revisión',
+          exact: true,
+        },
+        {
+          activePrefixes: [`${courseBase}/publicaciones/`],
+          href: `${courseBase}/publicacion`,
+          icon: Send,
+          label: 'Publicación',
+          exact: true,
+          visible: capabilities.has('course.release.history.view'),
         },
       ]
     : [];
@@ -208,7 +309,7 @@ function PlatformSidebar({
 
         {activeOrganization ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Espacio institucional</SidebarGroupLabel>
+            <SidebarGroupLabel>Institución</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
@@ -272,6 +373,36 @@ function PlatformSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
         ) : null}
+
+        {academicNavigation.some((item) => item.visible !== false) ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Gestión académica</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavigationList items={academicNavigation} pathname={pathname} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
+
+        {courseNavigation.some((item) => item.visible !== false) ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Curso actual</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavigationList items={courseNavigation} pathname={pathname} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
+
+        {administrationNavigation.some((item) => item.visible !== false) ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Administración</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavigationList
+                items={administrationNavigation}
+                pathname={pathname}
+              />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-3">
@@ -319,19 +450,41 @@ function NavigationList({
     <SidebarMenu>
       {items
         .filter((item) => item.visible !== false)
-        .map((item) => (
-          <SidebarMenuItem key={item.href}>
-            <PlatformNavigationLink
-              href={item.href}
-              icon={item.icon}
-              isActive={
-                pathname === item.href ||
-                (!item.exact && pathname.startsWith(`${item.href}/`))
-              }
-              label={item.label}
-            />
-          </SidebarMenuItem>
-        ))}
+        .map((item) => {
+          const visibleChildren = item.children?.filter(
+            (child) => child.visible !== false,
+          );
+          const childIsActive =
+            visibleChildren?.some((child) =>
+              isNavigationItemActive(child, pathname),
+            ) ?? false;
+          return (
+            <SidebarMenuItem key={item.href}>
+              <PlatformNavigationLink
+                href={item.href}
+                icon={item.icon}
+                isActive={isNavigationItemActive(item, pathname)}
+                isCurrent={pathname === item.href && !childIsActive}
+                label={item.label}
+              />
+              {visibleChildren?.length ? (
+                <SidebarMenuSub>
+                  {visibleChildren.map((child) => (
+                    <SidebarMenuSubItem key={child.href}>
+                      <PlatformNavigationSubLink
+                        href={child.href}
+                        isActive={isNavigationItemActive(child, pathname)}
+                        isCurrent={pathname === child.href}
+                        label={child.label}
+                        {...(child.icon ? { icon: child.icon } : {})}
+                      />
+                    </SidebarMenuSubItem>
+                  ))}
+                </SidebarMenuSub>
+              ) : null}
+            </SidebarMenuItem>
+          );
+        })}
     </SidebarMenu>
   );
 }
@@ -340,11 +493,13 @@ function PlatformNavigationLink({
   href,
   icon: Icon,
   isActive,
+  isCurrent,
   label,
 }: Readonly<{
   href: string;
   icon: typeof LayoutDashboard;
   isActive: boolean;
+  isCurrent: boolean;
   label: string;
 }>) {
   const { isMobile, setOpenMobile } = useSidebar();
@@ -356,6 +511,7 @@ function PlatformNavigationLink({
       tooltip={label}
     >
       <Link
+        aria-current={isCurrent ? 'page' : undefined}
         href={href}
         onClick={() => {
           if (isMobile) setOpenMobile(false);
@@ -366,6 +522,59 @@ function PlatformNavigationLink({
       </Link>
     </SidebarMenuButton>
   );
+}
+
+function PlatformNavigationSubLink({
+  href,
+  icon: Icon,
+  isActive,
+  isCurrent,
+  label,
+}: Readonly<{
+  href: string;
+  icon?: typeof LayoutDashboard;
+  isActive: boolean;
+  isCurrent: boolean;
+  label: string;
+}>) {
+  const { isMobile, setOpenMobile } = useSidebar();
+  return (
+    <SidebarMenuSubButton asChild isActive={isActive}>
+      <Link
+        aria-current={isCurrent ? 'page' : undefined}
+        href={href}
+        onClick={() => {
+          if (isMobile) setOpenMobile(false);
+        }}
+      >
+        {Icon ? <Icon /> : null}
+        <span>{label}</span>
+      </Link>
+    </SidebarMenuSubButton>
+  );
+}
+
+function isNavigationItemActive(
+  item: Pick<NavigationItem, 'activePrefixes' | 'exact' | 'href'>,
+  pathname: string,
+) {
+  return (
+    pathname === item.href ||
+    item.activePrefixes?.some((prefix) => pathname.startsWith(prefix)) ===
+      true ||
+    (!item.exact && pathname.startsWith(`${item.href}/`))
+  );
+}
+
+export function courseWorkspaceBase(
+  pathname: string,
+  organizationBase: string,
+) {
+  const prefix = `${organizationBase}/cursos/`;
+  if (!pathname.startsWith(prefix)) return undefined;
+  const courseSlug = pathname.slice(prefix.length).split('/')[0];
+  if (!courseSlug || courseSlug === 'nuevo') return undefined;
+  return `${prefix}${courseSlug}`;
 }
 
 function initials(email: string) {
