@@ -2,13 +2,152 @@
 
 ## Phase
 
-**Phase 13 — Banco de preguntas y evaluaciones** está completada localmente el
-2026-07-30. `domain.assessments` contiene autoría y snapshots inmutables,
-delivery fijada a learning, intentos/respuestas, scoring Decimal y grading
-manual append-only. La matriz institucional y las experiencias por rol fueron
-verificadas en PostgreSQL y Chromium real, incluida creación, 390 px y axe.
-Partial credit, symbolic grading, pools, regrading, gradebook, analítica y QTI
-import/export permanecen fuera del alcance.
+**Phase 14 — Motor avanzado de calificación y analítica** está completada
+localmente el 2026-07-30. `domain.assessments` conserva la propiedad de scoring
+v2, expresiones matemáticas seguras, pools, grade versions, regrading,
+gradebooks y analítica. PostgreSQL es autoritativo; Celery ejecuta jobs
+durables mediante Redis DB 2. La implementación y sus rutas fueron verificadas
+con PostgreSQL, un worker Linux real y Chromium real en escritorio y 390 px.
+
+## Phase 14 — Motor avanzado de calificación y analítica
+
+- **Fecha y prompt:** 2026-07-30; Prompt 14 ejecutado de principio a fin sin
+  iniciar el Prompt 15.
+- **Git:** `HEAD` y `origin/main` iniciales en
+  `1bd5afde0726c64a0189589932df8066175cbd50`, rama `main`, remoto
+  `https://github.com/DuvanMontoya/LMS.git`. Codex no ejecutó add, commit,
+  push, reset, restore, clean, rebase, merge ni pull; los cambios locales
+  heredados y nuevos permanecen sin publicar.
+- **Versiones:** Python 3.13.13, Django 6.0.7, PostgreSQL 18.4, Redis 8.8.1,
+  SymPy 1.14.0, Celery 5.6.3, redis-py 6.4.0, Node 24.18.0, pnpm 10.33.2,
+  Next.js 16.2.12, React 19.2.8, TypeScript 6.0.2, Compute Engine 0.99.0,
+  MathLive 0.110.0 y Playwright 1.62.0.
+- **Dependencias:** SymPy, `celery[redis]` y Compute Engine se añadieron con
+  versiones exactas. No se instalaron NumPy, SciPy, pandas, ANTLR, Lark,
+  parsers LaTeX backend, Celery Beat, result backend ni serialización pickle.
+  Redis 8 conserva el riesgo legal/operativo ya registrado para producción.
+- **Arquitectura:** ADR 0024 mantiene todo el dominio en
+  `domain.assessments`; Celery invoca servicios, Redis sólo transporta y
+  PostgreSQL conserva jobs, grades, revisiones, gradebooks y snapshots.
+  Learning, publishing, courses, content e identity no importan assessments.
+- **Scoring v2:** cada ítem produce `credit_basis_points` entero entre 0 y
+  10.000. Multiple choice, ordering, matching y numeric banded aplican partial
+  credit determinista y cuantizado; Decimal sigue siendo la representación de
+  puntajes.
+- **Matemática:** MathLive y Compute Engine generan MathJSON; el backend valida
+  shape, nodos, símbolos, funciones, tamaño, profundidad, enteros, exponentes y
+  assumptions antes de reconstruir SymPy con constructores explícitos. No usa
+  `eval`, `exec`, `sympify` sobre strings, `parse_expr` ni `parse_latex`.
+  Equivalencia estructural/algebraica y contraejemplos deterministas distinguen
+  correcto, incorrecto e inconcluso; timeout o inconcluso van a revisión.
+- **Worker:** imagen Python 3.13.13 slim-trixie fijada por digest, usuario no
+  root, `prefork`, concurrencia 2, prefetch 1, límites soft/hard, JSON y colas
+  separadas para grading, regrading y analytics. Redis DB 2 es broker y DB 1
+  continúa reservada a cache; no hay puertos ni result backend.
+- **Pools:** candidatos aprobados y `selection_count` quedan versionados; el
+  intento materializa una selección sin reemplazo, reproducible por seed y
+  nunca la recalcula durante lecturas.
+- **Policies y grades:** la política original se backfilló; las correcciones
+  exigen razón y crean revisiones append-only. `AttemptGradeVersion` y sus
+  ítems son inmutables, conservan historial y un puntero explícito identifica
+  el grade vigente.
+- **Grading y regrading:** jobs durables despachados tras commit, idempotencia,
+  retries controlados, locks y contadores coherentes. Regrading agrega una
+  versión sin borrar las anteriores y preserva decisiones manuales.
+- **Gradebook:** libros por `CourseRelease`, columnas ponderadas en basis points
+  con activación exacta a 10.000, agregaciones `highest`/`latest`, entries
+  materializadas, summaries y vista learner propia. No modifica
+  `CourseProgress` ni finalización.
+- **Analítica:** snapshots append-only calculan facilidad mediante crédito
+  promedio, discriminación contra score sin el ítem, distribución de opciones,
+  omisiones y percentiles con agregados PostgreSQL. Muestras pequeñas se
+  suprimen y varianza cero produce `NULL`.
+- **API y seguridad:** endpoints v1 para policies, jobs, pools, grades,
+  gradebooks y analytics; jobs devuelven 202, serializers cerrados impiden mass
+  assignment y las políticas devuelven 404 anti-IDOR. Learner no recibe seeds,
+  expected MathJSON, grading payloads, claves ni analítica institucional.
+- **OpenAPI y contratos:** schemas Draft 2020-12, tipos TypeScript y cliente
+  OpenAPI están generados y protegidos por drift checks. La paginación de
+  bancos y versiones aprobadas está documentada y el frontend consume hasta
+  100 filas sin la truncación que afectaba la autoría extensa.
+- **Frontend:** editor y respuesta matemática presentan validación explícita;
+  “Validando expresión” bloquea el guardado y “Expresión lista para guardar”
+  confirma que MathJSON ya está sincronizado. El compositor de pools, consola
+  de jobs, gradebook y analítica comparten jerarquía, estados, tablas y lenguaje
+  académico coherentes.
+- **Accesibilidad y navegador:** labels, navegación por teclado, tablas,
+  equivalentes textuales, axe y responsive están cubiertos. En Chromium
+  integrado se creó desde el PDF `Ejercicios_06.pdf` un banco real de 57
+  preguntas aprobadas y una evaluación premium de 4 secciones, 18 preguntas,
+  180 puntos y versión aprobada v1; a 390 × 844 no hubo overflow horizontal.
+- **Entrega real:** se creó `Aplicación integral · Taller 06` como delivery
+  draft fijada a v1. No se activó ni asignó porque el usuario no especificó
+  cohorte, learners ni ventana; no se inventaron identidades o fechas.
+- **E2E:** `pnpm assessments:advanced-e2e` pasa 1/1 en Chromium con base
+  PostgreSQL UUID, namespace Redis y worker Linux aislados. Cubre pregunta
+  matemática, aprobación, pool 5/20, 10 ítems distintos, partial credit
+  2.833/10, gradebook 28,33 %, scoring correction, regrading, analítica, axe,
+  390 px y cleanup de base, Redis, worker y correo.
+- **Pruebas y CI:** scoring, seguridad matemática, timeouts, jobs, pools,
+  versiones, regrading, gradebook, analítica, concurrencia, API y frontend
+  tienen suites específicas. CI construye el worker, migra desde cero, ejecuta
+  PostgreSQL/Redis/Celery, contratos, Ruff, Pyright, pytest, frontend, build y
+  Chromium, y limpia con `always()`.
+- **Demo y README:** el bootstrap avanzado reutiliza los servicios reales, es
+  development-only e idempotente. README documenta scoring, fórmulas, MathJSON,
+  límites, worker, colas, jobs, grade history, gradebook, analítica, comandos,
+  rutas, seguridad, troubleshooting y limpieza.
+- **Migraciones:** `0006_advanced_grading_models`,
+  `0007_backfill_advanced_grading` y
+  `0008_enforce_advanced_grading_immutability` crean/backfillean el modelo y
+  activan triggers de inmutabilidad desde una base PostgreSQL vacía.
+- **Riesgos y deuda:** Redis 8 requiere decisión legal antes de producción; la
+  equivalencia simbólica permanece deliberadamente acotada y puede producir
+  revisión manual; catálogos institucionales mayores a 100 registros requieren
+  búsqueda remota paginada/virtualizada. Ninguno bloquea el alcance aprobado.
+- **Trabajo no realizado:** no se implementaron ejecución de código, QTI, IRT,
+  integrales abiertas, matrices/tensores, completion derivado del gradebook,
+  certificados, notificaciones, S3 ni recursos multimedia.
+- **Criterios:** los 189 criterios están clasificados individualmente en
+  `docs/project/PHASE_14_ACCEPTANCE.md`.
+- **Siguiente paso:** **Prompt 15 — Recursos multimedia y archivos académicos: almacenamiento S3, imágenes, documentos, audio, video, datasets, procesamiento y seguridad.**
+
+## Remediación UX del recorrido estudiantil — 2026-07-30
+
+- La Biblioteca incorpora una página individual de curso publicada con resumen,
+  objetivos, currículo real, duración, módulos, lecciones y acción de inicio.
+  La matrícula incorpora una portada propia con pestañas separadas para
+  resumen, contenido, evaluaciones y calificaciones, sin duplicar servicios,
+  estado o rutas de negocio.
+- El aula de cada unidad usa un player dedicado con barra superior, outline
+  lateral propio, navegación anterior/siguiente, continuidad y control de
+  progreso. El shell institucional se oculta sólo en esta ruta. Se redujo el
+  encabezado editorial y el documento semántico pasó a ser el protagonista;
+  objetivos y metadatos académicos quedan en un bloque secundario desplegable.
+- Las cuadrículas de cursos y evaluaciones usan cuatro columnas desde escritorio
+  ancho y dos en tablet. Las tarjetas redujeron padding, altura, tipografía y
+  bloques de datos sin perder estado, intentos, cierre, progreso o acción.
+  En el navegador integrado a 1546 × 912 la Biblioteca produjo cuatro tracks
+  reales de 297,5 px, tarjeta de 298 px y cero overflow horizontal.
+- `/evaluaciones/asignadas` obtiene y muestra exclusivamente entregas.
+  `/evaluaciones/calificaciones` obtiene exclusivamente gradebooks y presenta
+  resumen personal, promedio consolidado sólo de libros completos, actividades
+  calificadas/pendientes y detalle ponderado por curso. Ambas rutas comparten
+  navegación explícita y `aria-current`; el sidebar enlaza la nueva pantalla.
+- El análisis visual se apoyó en la documentación oficial de Tutor LMS sobre
+  course design, frontend dashboard, sticky sidebar y gradebook, y en la de
+  MasterStudy sobre course pages y course player; fuentes consultadas el
+  2026-07-30. Se adoptaron patrones de jerarquía y navegación, no código,
+  contenido ficticio ni contratos externos.
+- Verificación final: Prettier, ESLint, TypeScript y `next build` 16.2.12
+  pasaron. `pnpm learning:e2e` pasó 1/1 en 5,0 min con matrícula, tabs, player,
+  dos unidades, 100 %, ciclo de vida, concurrencia, publicación, retiro,
+  responsive 390 px y axe. `pnpm assessments:advanced-e2e` pasó 1/1 con grid de
+  cuatro columnas a 1440 px, evaluación real, nota 28,33 %, nueva ruta de
+  calificaciones, retorno sin mezcla, responsive, axe y cleanup.
+- No se añadieron dependencias, migraciones, endpoints, persistencia paralela ni
+  datos ficticios. Codex no ejecutó add, commit, push ni operaciones destructivas
+  de Git.
 
 ## Phase 13 — Banco de preguntas y evaluaciones
 

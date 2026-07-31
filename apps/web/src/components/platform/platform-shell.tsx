@@ -1,6 +1,8 @@
 'use client';
 
 import {
+  Award,
+  BarChart3,
   BookOpenCheck,
   Building2,
   ChevronDown,
@@ -13,7 +15,9 @@ import {
   ListTree,
   NotebookTabs,
   Plus,
+  RefreshCcw,
   Send,
+  SquarePen,
   Tags,
   Target,
   Users,
@@ -93,6 +97,18 @@ export function PlatformShell({
     organizations.find((organization) =>
       pathname.startsWith(`/organizaciones/${organization.slug}`),
     ) ?? organizations[0];
+  const organizationBase = activeOrganization
+    ? `/organizaciones/${activeOrganization.slug}`
+    : undefined;
+  const learningPlayerActive =
+    organizationBase !== undefined &&
+    new RegExp(
+      `^${escapeRegExp(organizationBase)}/aprender/[^/]+/unidades/[^/]+/?$`,
+    ).test(pathname);
+
+  if (learningPlayerActive) {
+    return <div className="learning-player-frame">{children}</div>;
+  }
 
   return (
     <SidebarProvider>
@@ -139,6 +155,9 @@ function PlatformSidebar({
   const organizationBase = activeOrganization
     ? `/organizaciones/${activeOrganization.slug}`
     : undefined;
+  const assessmentWorkspaceActive =
+    organizationBase !== undefined &&
+    pathname.startsWith(`${organizationBase}/evaluaciones`);
   const generalNavigation: NavigationItem[] = [
     {
       href: '/estudiar',
@@ -243,7 +262,17 @@ function PlatformSidebar({
           href: `${organizationBase}/evaluaciones/asignadas`,
           icon: ClipboardCheck,
           label: 'Mis evaluaciones',
-          visible: capabilities.has('assessment.attempt'),
+          visible:
+            !assessmentWorkspaceActive &&
+            capabilities.has('assessment.attempt'),
+        },
+        {
+          href: `${organizationBase}/evaluaciones/calificaciones`,
+          icon: Award,
+          label: 'Mis calificaciones',
+          visible:
+            !assessmentWorkspaceActive &&
+            capabilities.has('assessment.attempt'),
         },
         {
           children: [
@@ -266,12 +295,88 @@ function PlatformSidebar({
           icon: ClipboardCheck,
           label: 'Autoría de evaluaciones',
           visible:
-            capabilities.has('assessment.authoring.view') ||
-            capabilities.has('assessment.bank.view') ||
-            capabilities.has('assessment.question.view'),
+            !assessmentWorkspaceActive &&
+            (capabilities.has('assessment.authoring.view') ||
+              capabilities.has('assessment.bank.view') ||
+              capabilities.has('assessment.question.view')),
         },
       ]
     : [];
+  const assessmentNavigation: NavigationItem[] =
+    organizationBase && assessmentWorkspaceActive
+      ? [
+          {
+            href: `${organizationBase}/evaluaciones`,
+            icon: ClipboardCheck,
+            label: 'Panel de evaluaciones',
+            exact: true,
+            visible: capabilities.has('assessment.authoring.view'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/nueva`,
+            icon: Plus,
+            label: 'Nueva evaluación',
+            exact: true,
+            visible: capabilities.has('assessment.authoring.manage'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/bancos`,
+            icon: NotebookTabs,
+            label: 'Bancos de preguntas',
+            visible:
+              capabilities.has('assessment.bank.view') ||
+              capabilities.has('assessment.question.view'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/entregas`,
+            icon: Send,
+            label: 'Entregas',
+            visible: capabilities.has('assessment.delivery.view'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/resultados`,
+            icon: FileCheck2,
+            label: 'Resultados',
+            visible: capabilities.has('assessment.results.view'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/calificacion-manual`,
+            icon: SquarePen,
+            label: 'Calificación manual',
+            visible: capabilities.has('assessment.grading.manage'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/regrading`,
+            icon: RefreshCcw,
+            label: 'Recalificación',
+            visible: capabilities.has('assessment.regrading.view'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/gradebooks`,
+            icon: BookOpenCheck,
+            label: 'Libros de calificaciones',
+            visible: capabilities.has('assessment.gradebook.view'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/analitica`,
+            icon: BarChart3,
+            label: 'Analítica de ítems',
+            visible: capabilities.has('assessment.analytics.view'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/asignadas`,
+            icon: GraduationCap,
+            label: 'Mis evaluaciones',
+            visible: capabilities.has('assessment.attempt'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/calificaciones`,
+            icon: Award,
+            label: 'Mis calificaciones',
+            visible: capabilities.has('assessment.attempt'),
+          },
+        ]
+      : [];
   const administrationNavigation: NavigationItem[] = organizationBase
     ? [
         {
@@ -318,14 +423,33 @@ function PlatformSidebar({
               label: 'Calificación manual',
               visible: capabilities.has('assessment.grading.manage'),
             },
+            {
+              href: `${organizationBase}/evaluaciones/regrading`,
+              label: 'Recalificación',
+              visible: capabilities.has('assessment.regrading.view'),
+            },
+            {
+              href: `${organizationBase}/evaluaciones/gradebooks`,
+              label: 'Libros de calificaciones',
+              visible: capabilities.has('assessment.gradebook.view'),
+            },
+            {
+              href: `${organizationBase}/evaluaciones/analitica`,
+              label: 'Analítica',
+              visible: capabilities.has('assessment.analytics.view'),
+            },
           ],
           href: `${organizationBase}/evaluaciones/entregas`,
           icon: ClipboardCheck,
           label: 'Gestión de evaluaciones',
           visible:
-            capabilities.has('assessment.delivery.view') ||
-            capabilities.has('assessment.results.view') ||
-            capabilities.has('assessment.grading.manage'),
+            !assessmentWorkspaceActive &&
+            (capabilities.has('assessment.delivery.view') ||
+              capabilities.has('assessment.results.view') ||
+              capabilities.has('assessment.grading.manage') ||
+              capabilities.has('assessment.regrading.view') ||
+              capabilities.has('assessment.gradebook.view') ||
+              capabilities.has('assessment.analytics.view')),
         },
       ]
     : [];
@@ -462,6 +586,18 @@ function PlatformSidebar({
               </SidebarMenu>
               <NavigationList
                 items={organizationNavigation}
+                pathname={pathname}
+              />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
+
+        {assessmentNavigation.some((item) => item.visible !== false) ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Flujo de evaluaciones</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavigationList
+                items={assessmentNavigation}
                 pathname={pathname}
               />
             </SidebarGroupContent>
@@ -679,4 +815,8 @@ function initials(email: string) {
     .join('')
     .slice(0, 2)
     .toUpperCase();
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

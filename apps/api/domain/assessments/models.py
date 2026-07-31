@@ -18,13 +18,24 @@ from domain.publishing.models import CourseRelease
 
 from .choices import (
     AssignmentStatus,
+    AttemptAggregation,
     AttemptEventType,
     AttemptStatus,
     AuthoringStatus,
     DeliveryStatus,
     FeedbackMode,
+    GradebookColumnStatus,
+    GradebookEntryStatus,
+    GradebookStatus,
+    GradebookSummaryStatus,
+    GradeSource,
+    GradingRevisionSource,
+    GradingStatus,
+    JobStatus,
     LifecycleStatus,
+    PoolSelectionStrategy,
     QuestionType,
+    RegradeAttemptStatus,
     ResponseStatus,
 )
 
@@ -1188,6 +1199,14 @@ class Attempt(NoPhysicalDeleteModel):
     maximum_score = models.DecimalField(max_digits=12, decimal_places=3)
     basis_points = models.PositiveIntegerField(null=True, blank=True)
     passed = models.BooleanField(null=True, blank=True)
+    current_grade = models.OneToOneField(
+        "AttemptGradeVersion",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="current_for_attempt",
+        editable=False,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1251,6 +1270,17 @@ class AttemptItem(ImmutableModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     attempt = models.ForeignKey(Attempt, on_delete=models.PROTECT, related_name="items")
     assessment_item_id = models.UUIDField(editable=False)
+    pool = models.ForeignKey(
+        "AssessmentItemPool",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="attempt_items",
+        editable=False,
+    )
+    candidate_position = models.PositiveIntegerField(
+        null=True, blank=True, editable=False
+    )
     question_version = models.ForeignKey(
         QuestionVersion, on_delete=models.PROTECT, related_name="attempt_items"
     )
@@ -1282,6 +1312,13 @@ class AttemptItem(ImmutableModel):
             models.CheckConstraint(
                 condition=Q(snapshot_digest__regex=r"^[0-9a-f]{64}$"),
                 name="assess_attemptitem_digest_sha256",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(pool__isnull=True, candidate_position__isnull=True)
+                    | Q(pool__isnull=False, candidate_position__gt=0)
+                ),
+                name="assess_attitem_pool_candidate_state",
             ),
         ]
         ordering = ("display_position",)
@@ -1388,3 +1425,988 @@ class AttemptEvent(ImmutableModel):
 
     def __str__(self) -> str:
         return f"{self.attempt}:{self.event_type}"
+
+
+class AssessmentItemPool(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    revision = models.ForeignKey(
+        AssessmentRevision, on_delete=models.PROTECT, related_name="item_pools"
+    )
+    title = models.CharField(max_length=200)
+    instructions = models.TextField(max_length=5_000, blank=True)
+    position = models.PositiveIntegerField()
+    selection_count = models.PositiveIntegerField()
+    points_per_item = models.DecimalField(max_digits=12, decimal_places=3)
+    selection_strategy = models.CharField(
+        max_length=32,
+        choices=PoolSelectionStrategy.choices,
+        default=PoolSelectionStrategy.RANDOM_WITHOUT_REPLACEMENT,
+    )
+    shuffle_selected = models.BooleanField(default=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="assessment_item_pools_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="assessment_item_pools_updated",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["revision", "position"],
+                name="assess_pool_revision_position_unique",
+                deferrable=models.Deferrable.DEFERRED,
+            ),
+            models.CheckConstraint(
+                condition=Q(position__gt=0),
+                name="assess_pool_position_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(selection_count__gt=0),
+                name="assess_pool_selection_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(points_per_item__gt=Decimal("0")),
+                name="assess_pool_points_positive",
+            ),
+        ]
+        ordering = ("position", "id")
+
+    def __str__(self) -> str:
+        return f"{self.revision}:pool-{self.position}"
+
+    def clean(self) -> None:
+        super().clean()
+        self.title = self.title.strip()
+        self.instructions = self.instructions.strip()
+
+
+class AssessmentPoolCandidate(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    pool = models.ForeignKey(
+        AssessmentItemPool, on_delete=models.PROTECT, related_name="candidates"
+    )
+    question_version = models.ForeignKey(
+        QuestionVersion, on_delete=models.PROTECT, related_name="pool_candidates"
+    )
+    position = models.PositiveIntegerField()
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="assessment_pool_candidates_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["pool", "question_version"],
+                name="assess_pool_candidate_version_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["pool", "position"],
+                name="assess_pool_candidate_position_unique",
+                deferrable=models.Deferrable.DEFERRED,
+            ),
+            models.CheckConstraint(
+                condition=Q(position__gt=0),
+                name="assess_pool_candidate_position_positive",
+            ),
+        ]
+        ordering = ("position", "id")
+
+    def __str__(self) -> str:
+        return f"{self.pool}:candidate-{self.position}"
+
+    def clean(self) -> None:
+        super().clean()
+        if (
+            self.pool_id
+            and self.question_version_id
+            and self.question_version.question.organization.id
+            != self.pool.revision.organization.id
+        ):
+            raise ValidationError(
+                {"question_version": "La pregunta pertenece a otra organización."}
+            )
+
+
+class AssessmentGradingPolicy(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    assessment_version = models.OneToOneField(
+        AssessmentVersion,
+        on_delete=models.PROTECT,
+        related_name="grading_policy",
+    )
+    current_revision = models.OneToOneField(
+        "AssessmentGradingRevision",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="current_for_policy",
+    )
+    lock_version = models.PositiveIntegerField(default=1, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(lock_version__gt=0),
+                name="assess_gpolicy_lock_positive",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.assessment_version}:grading-policy"
+
+
+class AssessmentGradingRevision(ImmutableModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    policy = models.ForeignKey(
+        AssessmentGradingPolicy,
+        on_delete=models.PROTECT,
+        related_name="revisions",
+    )
+    number = models.PositiveIntegerField()
+    previous_revision = models.OneToOneField(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="next_revision",
+    )
+    source = models.CharField(max_length=16, choices=GradingRevisionSource.choices)
+    reason = models.TextField(max_length=2_000, blank=True)
+    grading_snapshot = models.JSONField(editable=False)
+    snapshot_digest = models.CharField(max_length=64, editable=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="assessment_grading_revisions_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["policy", "number"],
+                name="assess_grevision_policy_number_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(number__gt=0),
+                name="assess_grevision_number_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(snapshot_digest__regex=r"^[0-9a-f]{64}$"),
+                name="assess_grevision_digest_sha256",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(source=GradingRevisionSource.ORIGINAL, reason="")
+                    | (Q(source=GradingRevisionSource.CORRECTION) & ~Q(reason=""))
+                ),
+                name="assess_grevision_reason_state",
+            ),
+            models.CheckConstraint(
+                condition=Q(previous_revision__isnull=True)
+                | ~Q(previous_revision=F("id")),
+                name="assess_grevision_not_self",
+            ),
+        ]
+        ordering = ("number",)
+
+    def __str__(self) -> str:
+        return f"{self.policy}:revision-{self.number}"
+
+
+class AttemptGradeVersion(ImmutableModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    attempt = models.ForeignKey(
+        Attempt, on_delete=models.PROTECT, related_name="grade_versions"
+    )
+    number = models.PositiveIntegerField()
+    previous_grade = models.OneToOneField(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="next_grade",
+    )
+    grading_revision = models.ForeignKey(
+        AssessmentGradingRevision,
+        on_delete=models.PROTECT,
+        related_name="attempt_grades",
+    )
+    source = models.CharField(max_length=16, choices=GradeSource.choices)
+    scoring_engine_version = models.PositiveIntegerField(editable=False)
+    automatic_score = models.DecimalField(
+        max_digits=12, decimal_places=3, editable=False
+    )
+    manual_score = models.DecimalField(max_digits=12, decimal_places=3, editable=False)
+    final_score = models.DecimalField(max_digits=12, decimal_places=3, editable=False)
+    maximum_score = models.DecimalField(max_digits=12, decimal_places=3, editable=False)
+    percent_basis_points = models.PositiveIntegerField(
+        null=True, blank=True, editable=False
+    )
+    passed = models.BooleanField(null=True, blank=True, editable=False)
+    grading_status = models.CharField(
+        max_length=24, choices=GradingStatus.choices, editable=False
+    )
+    digest = models.CharField(max_length=64, editable=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="assessment_grade_versions_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["attempt", "number"],
+                name="assess_grade_attempt_number_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["attempt", "grading_revision"],
+                condition=Q(source__in=[GradeSource.INITIAL, GradeSource.REGRADE]),
+                name="assess_grade_attempt_revision_auto_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(number__gt=0),
+                name="assess_grade_number_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(scoring_engine_version__gt=0),
+                name="assess_grade_engine_positive",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(automatic_score__gte=Decimal("0"))
+                    & Q(manual_score__gte=Decimal("0"))
+                    & Q(final_score__gte=Decimal("0"))
+                    & Q(final_score__lte=F("maximum_score"))
+                    & Q(maximum_score__gt=Decimal("0"))
+                ),
+                name="assess_grade_scores_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(percent_basis_points__isnull=True)
+                | (
+                    Q(percent_basis_points__gte=0) & Q(percent_basis_points__lte=10_000)
+                ),
+                name="assess_grade_percent_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(digest__regex=r"^[0-9a-f]{64}$"),
+                name="assess_grade_digest_sha256",
+            ),
+            models.CheckConstraint(
+                condition=Q(previous_grade__isnull=True) | ~Q(previous_grade=F("id")),
+                name="assess_grade_not_self",
+            ),
+        ]
+        ordering = ("number",)
+
+    def __str__(self) -> str:
+        return f"{self.attempt}:grade-{self.number}"
+
+
+class AttemptItemGradeVersion(ImmutableModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    attempt_grade = models.ForeignKey(
+        AttemptGradeVersion, on_delete=models.PROTECT, related_name="item_grades"
+    )
+    attempt_item = models.ForeignKey(
+        AttemptItem, on_delete=models.PROTECT, related_name="grade_versions"
+    )
+    response = models.ForeignKey(
+        Response,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="item_grade_versions",
+    )
+    credit_basis_points = models.PositiveIntegerField(editable=False)
+    score = models.DecimalField(max_digits=12, decimal_places=3, editable=False)
+    maximum_score = models.DecimalField(max_digits=12, decimal_places=3, editable=False)
+    grading_status = models.CharField(
+        max_length=24, choices=GradingStatus.choices, editable=False
+    )
+    is_correct = models.BooleanField(null=True, blank=True, editable=False)
+    feedback_key = models.CharField(max_length=64, blank=True, editable=False)
+    manual_review_reason = models.CharField(max_length=64, blank=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["attempt_grade", "attempt_item"],
+                name="assess_itemgrade_grade_item_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(credit_basis_points__gte=0)
+                & Q(credit_basis_points__lte=10_000),
+                name="assess_itemgrade_credit_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(score__gte=Decimal("0"))
+                & Q(score__lte=F("maximum_score"))
+                & Q(maximum_score__gt=Decimal("0")),
+                name="assess_itemgrade_score_range",
+            ),
+        ]
+        ordering = ("attempt_item__display_position",)
+
+    def __str__(self) -> str:
+        return f"{self.attempt_grade}:{self.attempt_item_id}"
+
+
+class AttemptGradingJob(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    attempt = models.ForeignKey(
+        Attempt, on_delete=models.PROTECT, related_name="grading_jobs"
+    )
+    grading_revision = models.ForeignKey(
+        AssessmentGradingRevision,
+        on_delete=models.PROTECT,
+        related_name="grading_jobs",
+    )
+    status = models.CharField(
+        max_length=24, choices=JobStatus.choices, default=JobStatus.QUEUED
+    )
+    task_id = models.UUIDField(unique=True, editable=False)
+    attempts = models.PositiveIntegerField(default=0)
+    last_error_code = models.CharField(max_length=64, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["attempt", "grading_revision"],
+                condition=Q(status__in=[JobStatus.QUEUED, JobStatus.RUNNING]),
+                name="assess_gjob_one_active",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["status", "created_at"], name="assess_gjob_state_ix")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.attempt}:grading-job-{self.id}"
+
+
+class RegradeJob(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, related_name="assessment_regrade_jobs"
+    )
+    assessment_version = models.ForeignKey(
+        AssessmentVersion, on_delete=models.PROTECT, related_name="regrade_jobs"
+    )
+    grading_revision = models.ForeignKey(
+        AssessmentGradingRevision,
+        on_delete=models.PROTECT,
+        related_name="regrade_jobs",
+    )
+    delivery = models.ForeignKey(
+        AssessmentDelivery,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="regrade_jobs",
+    )
+    status = models.CharField(
+        max_length=24, choices=JobStatus.choices, default=JobStatus.QUEUED
+    )
+    reason = models.TextField(max_length=2_000)
+    total_attempts = models.PositiveIntegerField(default=0)
+    processed_attempts = models.PositiveIntegerField(default=0)
+    succeeded_attempts = models.PositiveIntegerField(default=0)
+    failed_attempts = models.PositiveIntegerField(default=0)
+    lock_version = models.PositiveIntegerField(default=1, editable=False)
+    task_id = models.UUIDField(unique=True, editable=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="assessment_regrade_jobs_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "organization",
+                    "assessment_version",
+                    "grading_revision",
+                    "delivery",
+                ],
+                condition=Q(
+                    status__in=[JobStatus.QUEUED, JobStatus.RUNNING],
+                    delivery__isnull=False,
+                ),
+                name="assess_regrade_delivery_active",
+            ),
+            models.UniqueConstraint(
+                fields=["organization", "assessment_version", "grading_revision"],
+                condition=Q(
+                    status__in=[JobStatus.QUEUED, JobStatus.RUNNING],
+                    delivery__isnull=True,
+                ),
+                name="assess_regrade_global_active",
+            ),
+            models.CheckConstraint(
+                condition=~Q(reason=""),
+                name="assess_regrade_reason_required",
+            ),
+            models.CheckConstraint(
+                condition=Q(lock_version__gt=0),
+                name="assess_regrade_lock_positive",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(processed_attempts__lte=F("total_attempts"))
+                    & Q(succeeded_attempts__lte=F("processed_attempts"))
+                    & Q(failed_attempts__lte=F("processed_attempts"))
+                ),
+                name="assess_regrade_counts_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["organization", "status"], name="assess_regrade_org_state_ix"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.assessment_version}:regrade-{self.id}"
+
+
+class RegradeJobAttempt(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    job = models.ForeignKey(
+        RegradeJob, on_delete=models.PROTECT, related_name="attempt_items"
+    )
+    attempt = models.ForeignKey(
+        Attempt, on_delete=models.PROTECT, related_name="regrade_job_items"
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=RegradeAttemptStatus.choices,
+        default=RegradeAttemptStatus.PENDING,
+    )
+    previous_grade = models.ForeignKey(
+        AttemptGradeVersion,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="regrade_items_as_previous",
+    )
+    new_grade = models.ForeignKey(
+        AttemptGradeVersion,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="regrade_items_as_new",
+    )
+    error_code = models.CharField(max_length=64, blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["job", "attempt"],
+                name="assess_regrade_item_unique",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["job", "status"], name="assess_regrade_item_state_ix")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.job}:{self.attempt}"
+
+
+class CourseGradebook(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, related_name="course_gradebooks"
+    )
+    course_release = models.OneToOneField(
+        CourseRelease, on_delete=models.PROTECT, related_name="gradebook"
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=GradebookStatus.choices,
+        default=GradebookStatus.DRAFT,
+    )
+    lock_version = models.PositiveIntegerField(default=1, editable=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="course_gradebooks_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="course_gradebooks_updated",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+    activated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="course_gradebooks_activated",
+    )
+    activated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(lock_version__gt=0),
+                name="assess_gradebook_lock_positive",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        status=GradebookStatus.DRAFT,
+                        activated_by__isnull=True,
+                        activated_at__isnull=True,
+                    )
+                    | Q(
+                        status=GradebookStatus.ACTIVE,
+                        activated_by__isnull=False,
+                        activated_at__isnull=False,
+                    )
+                ),
+                name="assess_gradebook_activation_state",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.course_release}:gradebook"
+
+
+class GradebookColumn(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    gradebook = models.ForeignKey(
+        CourseGradebook, on_delete=models.PROTECT, related_name="columns"
+    )
+    delivery = models.ForeignKey(
+        AssessmentDelivery,
+        on_delete=models.PROTECT,
+        related_name="gradebook_columns",
+    )
+    title = models.CharField(max_length=200)
+    position = models.PositiveIntegerField()
+    weight_basis_points = models.PositiveIntegerField()
+    required = models.BooleanField(default=True)
+    attempt_aggregation = models.CharField(
+        max_length=16,
+        choices=AttemptAggregation.choices,
+        default=AttemptAggregation.HIGHEST,
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=GradebookColumnStatus.choices,
+        default=GradebookColumnStatus.ACTIVE,
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="gradebook_columns_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="gradebook_columns_updated",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["gradebook", "position"],
+                name="assess_gcolumn_position_unique",
+                deferrable=models.Deferrable.DEFERRED,
+            ),
+            models.UniqueConstraint(
+                fields=["gradebook", "delivery"],
+                name="assess_gcolumn_delivery_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(position__gt=0),
+                name="assess_gcolumn_position_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(weight_basis_points__gte=1)
+                & Q(weight_basis_points__lte=10_000),
+                name="assess_gcolumn_weight_range",
+            ),
+        ]
+        ordering = ("position", "id")
+
+    def __str__(self) -> str:
+        return f"{self.gradebook}:column-{self.position}"
+
+    def clean(self) -> None:
+        super().clean()
+        self.title = self.title.strip()
+        if self.gradebook_id and self.delivery_id:
+            if self.delivery.organization_id != self.gradebook.organization_id:
+                raise ValidationError(
+                    {"delivery": "La entrega pertenece a otra organización."}
+                )
+            if self.delivery.course_release_id != self.gradebook.course_release_id:
+                raise ValidationError(
+                    {"delivery": "La entrega pertenece a otro release."}
+                )
+
+
+class GradebookEntry(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    column = models.ForeignKey(
+        GradebookColumn, on_delete=models.PROTECT, related_name="entries"
+    )
+    release_assignment = models.ForeignKey(
+        EnrollmentReleaseAssignment,
+        on_delete=models.PROTECT,
+        related_name="gradebook_entries",
+    )
+    attempt = models.ForeignKey(
+        Attempt,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="gradebook_entries",
+    )
+    attempt_grade = models.ForeignKey(
+        AttemptGradeVersion,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="gradebook_entries",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=GradebookEntryStatus.choices,
+        default=GradebookEntryStatus.MISSING,
+    )
+    score = models.DecimalField(max_digits=12, decimal_places=3, default=Decimal("0"))
+    maximum_score = models.DecimalField(
+        max_digits=12, decimal_places=3, default=Decimal("0")
+    )
+    percent_basis_points = models.PositiveIntegerField(null=True, blank=True)
+    passed = models.BooleanField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["column", "release_assignment"],
+                name="assess_gentry_column_assignment_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(score__gte=Decimal("0"))
+                & Q(maximum_score__gte=Decimal("0"))
+                & Q(score__lte=F("maximum_score")),
+                name="assess_gentry_score_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(percent_basis_points__isnull=True)
+                | (
+                    Q(percent_basis_points__gte=0) & Q(percent_basis_points__lte=10_000)
+                ),
+                name="assess_gentry_percent_range",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.column}:{self.release_assignment}"
+
+
+class GradebookSummary(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    gradebook = models.ForeignKey(
+        CourseGradebook, on_delete=models.PROTECT, related_name="summaries"
+    )
+    release_assignment = models.ForeignKey(
+        EnrollmentReleaseAssignment,
+        on_delete=models.PROTECT,
+        related_name="gradebook_summaries",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=GradebookSummaryStatus.choices,
+        default=GradebookSummaryStatus.INCOMPLETE,
+    )
+    completed_columns = models.PositiveIntegerField(default=0)
+    total_columns = models.PositiveIntegerField(default=0)
+    weighted_percent_basis_points = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["gradebook", "release_assignment"],
+                name="assess_gsummary_book_assignment_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(completed_columns__lte=F("total_columns")),
+                name="assess_gsummary_columns_valid",
+            ),
+            models.CheckConstraint(
+                condition=Q(weighted_percent_basis_points__gte=0)
+                & Q(weighted_percent_basis_points__lte=10_000),
+                name="assess_gsummary_percent_range",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.gradebook}:{self.release_assignment}"
+
+
+class AssessmentAnalyticsSnapshot(ImmutableModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    assessment_version = models.ForeignKey(
+        AssessmentVersion,
+        on_delete=models.PROTECT,
+        related_name="analytics_snapshots",
+    )
+    grading_revision = models.ForeignKey(
+        AssessmentGradingRevision,
+        on_delete=models.PROTECT,
+        related_name="analytics_snapshots",
+    )
+    delivery = models.ForeignKey(
+        AssessmentDelivery,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="analytics_snapshots",
+    )
+    sample_size = models.PositiveIntegerField()
+    mean_percent_basis_points = models.PositiveIntegerField(null=True, blank=True)
+    median_percent_basis_points = models.PositiveIntegerField(null=True, blank=True)
+    p25_percent_basis_points = models.PositiveIntegerField(null=True, blank=True)
+    p75_percent_basis_points = models.PositiveIntegerField(null=True, blank=True)
+    pass_rate_basis_points = models.PositiveIntegerField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="assessment_analytics_snapshots_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    (
+                        Q(mean_percent_basis_points__isnull=True)
+                        | Q(
+                            mean_percent_basis_points__gte=0,
+                            mean_percent_basis_points__lte=10_000,
+                        )
+                    )
+                    & (
+                        Q(median_percent_basis_points__isnull=True)
+                        | Q(
+                            median_percent_basis_points__gte=0,
+                            median_percent_basis_points__lte=10_000,
+                        )
+                    )
+                    & (
+                        Q(p25_percent_basis_points__isnull=True)
+                        | Q(
+                            p25_percent_basis_points__gte=0,
+                            p25_percent_basis_points__lte=10_000,
+                        )
+                    )
+                    & (
+                        Q(p75_percent_basis_points__isnull=True)
+                        | Q(
+                            p75_percent_basis_points__gte=0,
+                            p75_percent_basis_points__lte=10_000,
+                        )
+                    )
+                    & (
+                        Q(pass_rate_basis_points__isnull=True)
+                        | Q(
+                            pass_rate_basis_points__gte=0,
+                            pass_rate_basis_points__lte=10_000,
+                        )
+                    )
+                ),
+                name="assess_analytics_percent_ranges",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=["assessment_version", "created_at"],
+                name="assess_analytics_version_ix",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.assessment_version}:analytics-{self.id}"
+
+
+class ItemAnalyticsSnapshot(ImmutableModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    assessment_snapshot = models.ForeignKey(
+        AssessmentAnalyticsSnapshot,
+        on_delete=models.PROTECT,
+        related_name="items",
+    )
+    assessment_item_id = models.UUIDField(editable=False)
+    question_version = models.ForeignKey(
+        QuestionVersion,
+        on_delete=models.PROTECT,
+        related_name="item_analytics_snapshots",
+    )
+    question_type = models.CharField(
+        max_length=24, choices=QuestionType.choices, editable=False
+    )
+    presented_count = models.PositiveIntegerField()
+    answered_count = models.PositiveIntegerField()
+    omitted_count = models.PositiveIntegerField()
+    mean_credit_basis_points = models.PositiveIntegerField()
+    difficulty_basis_points = models.PositiveIntegerField()
+    discrimination = models.DecimalField(
+        max_digits=8, decimal_places=6, null=True, blank=True
+    )
+    discrimination_sample_size = models.PositiveIntegerField()
+    discrimination_suppressed = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assessment_snapshot", "assessment_item_id"],
+                name="assess_itemanalytics_snapshot_item_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(answered_count__lte=F("presented_count"))
+                & Q(omitted_count__lte=F("presented_count"))
+                & Q(answered_count=F("presented_count") - F("omitted_count")),
+                name="assess_itemanalytics_counts_valid",
+            ),
+            models.CheckConstraint(
+                condition=Q(mean_credit_basis_points__gte=0)
+                & Q(mean_credit_basis_points__lte=10_000)
+                & Q(difficulty_basis_points__gte=0)
+                & Q(difficulty_basis_points__lte=10_000),
+                name="assess_itemanalytics_bps_range",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(discrimination_suppressed=True, discrimination__isnull=True)
+                    | Q(discrimination_suppressed=False, discrimination__isnull=False)
+                ),
+                name="assess_itemanalytics_discrimination_state",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.assessment_snapshot}:{self.assessment_item_id}"
+
+
+class OptionAnalyticsSnapshot(ImmutableModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    item_analytics = models.ForeignKey(
+        ItemAnalyticsSnapshot,
+        on_delete=models.PROTECT,
+        related_name="options",
+    )
+    option_id = models.CharField(max_length=64, editable=False)
+    selected_count = models.PositiveIntegerField()
+    selected_rate_basis_points = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["item_analytics", "option_id"],
+                name="assess_optionanalytics_item_option_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(selected_rate_basis_points__gte=0)
+                & Q(selected_rate_basis_points__lte=10_000),
+                name="assess_optionanalytics_rate_range",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.item_analytics}:{self.option_id}"
+
+
+class AnalyticsRefreshJob(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.PROTECT,
+        related_name="assessment_analytics_jobs",
+    )
+    assessment_version = models.ForeignKey(
+        AssessmentVersion,
+        on_delete=models.PROTECT,
+        related_name="analytics_jobs",
+    )
+    grading_revision = models.ForeignKey(
+        AssessmentGradingRevision,
+        on_delete=models.PROTECT,
+        related_name="analytics_jobs",
+    )
+    delivery = models.ForeignKey(
+        AssessmentDelivery,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="analytics_jobs",
+    )
+    status = models.CharField(
+        max_length=24, choices=JobStatus.choices, default=JobStatus.QUEUED
+    )
+    task_id = models.UUIDField(unique=True, editable=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="assessment_analytics_jobs_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    error_code = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["organization", "status"],
+                name="assess_analytics_job_state_ix",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.assessment_version}:analytics-job-{self.id}"

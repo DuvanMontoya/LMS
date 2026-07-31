@@ -82,3 +82,20 @@ schema drift, lint, tipos, pruebas, build y Playwright al cambiar cualquier pin.
 | DRF 3.17.1 ↔ drf-spectacular 0.30.0 ↔ django-filter 26.1 | Compatible | OpenAPI sin warnings, filtros/paginación y cliente sin drift. |
 | Next 16.2.12 ↔ React 19.2.8 ↔ Query 5.101.4 ↔ RHF 7.83.0 ↔ Zod 4.4.3 | Compatible | TypeScript, ESLint, Vitest, Server/Client boundaries y build. |
 | Playwright 1.62.0 ↔ Chromium ↔ axe 4.12.1 | Compatible | Learning E2E, 390 px y WCAG A/AA sin violaciones. |
+
+## Advanced assessments — verificación 2026-07-30
+
+| Integración exacta | Estado | Evidencia |
+| --- | --- | --- |
+| Python 3.13.13 ↔ SymPy 1.14.0 | Compatible | PyPI, imports, constructores y suite matemática. |
+| Python 3.13.13 ↔ Celery 5.6.3 | Compatible en Linux | Worker Compose prefork real; Windows permanece excluido. |
+| Celery 5.6.3 ↔ redis-py 6.4.0 ↔ Redis 8.8.1 | Compatible | Broker DB 2, JSON, health y domain smoke. |
+| Django 6.0.7 ↔ Celery 5.6.3 | Compatible | Config oficial, `on_commit` y tasks idempotentes. |
+| Django 6.0.7 ↔ PostgreSQL 18.4 | Compatible | Migraciones/triggers, locks, corr y percentiles reales. |
+| Compute Engine 0.99.0 ↔ TypeScript 6.0.2 ↔ Node 24 | Compatible | Frozen install, types, Vitest, Next build y Chromium. |
+| MathLive 0.110.0 ↔ React 19.2.8 | Compatible | Editor/response reales, teclado y axe. |
+| Scoring schemas ↔ jsonschema 4.26.0 ↔ Ajv 8.20.0 | Compatible | Corpus, generación y drift checks. |
+
+Compute Engine es adaptador de entrada, no autoridad de nota; SymPy sólo corre
+en el worker. La compatibilidad exige repetir build/worker/E2E ante cualquier
+cambio de pin.

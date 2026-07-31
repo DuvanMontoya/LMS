@@ -11,13 +11,24 @@ param(
         'CheckClient',
         'Test',
         'TestScoring',
+        'TestPartialCredit',
+        'TestMath',
+        'TestPools',
+        'TestGradeVersions',
+        'TestRegrading',
+        'TestGradebook',
+        'TestAnalytics',
+        'TestWorker',
         'TestConcurrency',
         'TestSecurity',
         'TestApi',
         'BootstrapDemo',
+        'BootstrapAdvancedDemo',
         'Smoke',
         'E2E',
-        'Visual'
+        'AdvancedE2E',
+        'Visual',
+        'AdvancedVisual'
     )]
     [string]$Action
 )
@@ -84,6 +95,9 @@ switch ($Action) {
         Invoke-Django @('sqlmigrate', 'assessments', '0003')
         Invoke-Django @('sqlmigrate', 'assessments', '0004')
         Invoke-Django @('sqlmigrate', 'assessments', '0005')
+        Invoke-Django @('sqlmigrate', 'assessments', '0006')
+        Invoke-Django @('sqlmigrate', 'assessments', '0007')
+        Invoke-Django @('sqlmigrate', 'assessments', '0008')
         Invoke-Django @('makemigrations', '--check', '--dry-run')
     }
     'Schema' { Invoke-Django @('spectacular', '--validate', '--fail-on-warn') }
@@ -99,21 +113,102 @@ switch ($Action) {
     'CheckClient' { & $PSScriptRoot/web-auth.ps1 -Action CheckPlatformClient }
     'Test' { Invoke-AssessmentTests @('domain/assessments/tests') }
     'TestScoring' { Invoke-AssessmentTests @('domain/assessments/tests/test_scoring.py') }
+    'TestPartialCredit' {
+        Invoke-AssessmentTests @(
+            'domain/assessments/tests/test_scoring.py',
+            '-k',
+            'partial or proportional or ordering or matching or banded or quantized'
+        )
+    }
+    'TestMath' {
+        Invoke-AssessmentTests @(
+            'domain/assessments/tests/test_math.py',
+            'domain/assessments/tests/test_security_static.py'
+        )
+    }
+    'TestPools' {
+        Invoke-AssessmentTests @(
+            'domain/assessments/tests/test_advanced_workflows.py',
+            '-k',
+            'pool'
+        )
+    }
+    'TestGradeVersions' {
+        Invoke-AssessmentTests @(
+            'domain/assessments/tests/test_advanced_workflows.py',
+            '-k',
+            'grade'
+        )
+    }
+    'TestRegrading' {
+        Invoke-AssessmentTests @(
+            'domain/assessments/tests/test_advanced_workflows.py',
+            '-k',
+            'regrade'
+        )
+    }
+    'TestGradebook' {
+        Invoke-AssessmentTests @(
+            'domain/assessments/tests/test_advanced_workflows.py',
+            '-k',
+            'gradebook'
+        )
+    }
+    'TestAnalytics' {
+        Invoke-AssessmentTests @(
+            'domain/assessments/tests/test_advanced_workflows.py',
+            '-k',
+            'analytics'
+        )
+    }
+    'TestWorker' {
+        Invoke-AssessmentTests @(
+            'domain/assessments/tests/test_advanced_workflows.py',
+            'domain/assessments/tests/test_math.py',
+            '-k',
+            'worker or timeout or grading_job or inconclusive or idempotent'
+        )
+    }
     'TestConcurrency' { Invoke-AssessmentTests @('domain/assessments/tests/test_concurrency.py') }
-    'TestSecurity' { Invoke-AssessmentTests @('domain/assessments/tests/test_api.py', 'domain/assessments/tests/test_schemas.py') }
+    'TestSecurity' {
+        Invoke-AssessmentTests @(
+            'domain/assessments/tests/test_api.py',
+            'domain/assessments/tests/test_schemas.py',
+            'domain/assessments/tests/test_math.py',
+            'domain/assessments/tests/test_security_static.py'
+        )
+    }
     'TestApi' { Invoke-AssessmentTests @('domain/assessments/tests/test_api.py') }
     'BootstrapDemo' {
         & $PSScriptRoot/learning.ps1 -Action BootstrapDemo
         Invoke-Django @('bootstrap_demo_assessments')
     }
+    'BootstrapAdvancedDemo' {
+        & $PSScriptRoot/learning.ps1 -Action BootstrapDemo
+        Invoke-Django @('bootstrap_demo_assessments')
+    }
     'Smoke' { Invoke-AssessmentTests @('domain/assessments/tests/test_api.py') }
     'E2E' { & $PSScriptRoot/web-auth.ps1 -Action E2E -Grep 'assessment phase 13' }
+    'AdvancedE2E' {
+        & $PSScriptRoot/web-auth.ps1 -Action E2E -Grep 'assessment phase 14'
+    }
     'Visual' {
         & $PSScriptRoot/infrastructure.ps1 -Action Status
         & $PSScriptRoot/assessments.ps1 -Action BootstrapDemo
         Write-Host 'Authoring URL: http://127.0.0.1:3000/organizaciones/organizacion-demo/evaluaciones'
         Write-Host 'Learner URL: http://127.0.0.1:3000/organizaciones/organizacion-demo/evaluaciones/asignadas'
         Write-Host 'Delivery URL: http://127.0.0.1:3000/organizaciones/organizacion-demo/evaluaciones/entregas'
+        Write-Host 'Use pnpm dev:start and inspect these routes in Chromium at desktop and 390 px.'
+    }
+    'AdvancedVisual' {
+        & $PSScriptRoot/infrastructure.ps1 -Action Status
+        & $PSScriptRoot/async.ps1 -Action Status
+        & $PSScriptRoot/assessments.ps1 -Action BootstrapAdvancedDemo
+        Write-Host 'Authoring URL: http://127.0.0.1:3000/organizaciones/organizacion-demo/evaluaciones'
+        Write-Host 'Regrading URL: http://127.0.0.1:3000/organizaciones/organizacion-demo/evaluaciones/regrading'
+        Write-Host 'Gradebooks URL: http://127.0.0.1:3000/organizaciones/organizacion-demo/evaluaciones/gradebooks'
+        Write-Host 'Analytics URL: http://127.0.0.1:3000/organizaciones/organizacion-demo/evaluaciones/analitica'
+        Write-Host 'Learner URL: http://127.0.0.1:3000/organizaciones/organizacion-demo/evaluaciones/asignadas'
         Write-Host 'Use pnpm dev:start and inspect these routes in Chromium at desktop and 390 px.'
     }
 }

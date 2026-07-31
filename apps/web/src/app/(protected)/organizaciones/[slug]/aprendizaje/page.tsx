@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/platform/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { accessStateLabel } from '@/lib/learning/labels';
-import { getMyAssessmentDeliveries } from '@/lib/assessments/server';
+import { getMyDeliveries } from '@/lib/assessments/server';
 import { getMyLearning } from '@/lib/learning/server';
 
 export default async function MyLearningPage({
@@ -21,7 +21,7 @@ export default async function MyLearningPage({
   const { slug } = await params;
   const [data, assessmentData] = await Promise.all([
     getMyLearning(slug),
-    getMyAssessmentDeliveries(slug),
+    getMyDeliveries(slug),
   ]);
   const pendingAssessments = assessmentData.deliveries.filter(
     (assignment) =>
@@ -92,7 +92,7 @@ export default async function MyLearningPage({
                         {accessStateLabel(enrollment.access_state)}
                       </Badge>
                     </div>
-                    <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">
+                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
                       {enrollment.course.summary}
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
@@ -101,11 +101,15 @@ export default async function MyLearningPage({
                     </p>
                   </div>
                 </div>
-                <div className="mt-5 border-y py-4">
+                <div className="learning-course-card__progress">
                   <LearningProgress progress={enrollment.progress} />
                 </div>
                 {available && enrollment.resume.href ? (
-                  <Button asChild className="mt-4" size="sm">
+                  <Button
+                    asChild
+                    className="mt-4 w-full justify-between"
+                    size="sm"
+                  >
                     <Link href={enrollment.resume.href}>
                       {enrollment.progress.status === 'not_started'
                         ? 'Comenzar'

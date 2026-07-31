@@ -35,6 +35,21 @@ export interface paths {
     get: operations['assessments_list'];
     post: operations['assessments_create'];
   };
+  '/api/v1/organizations/{slug}/assessments/analytics/assessments/{version_id}/': {
+    get: operations['assessment_analytics_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/analytics/assessments/{version_id}/items/': {
+    get: operations['assessment_analytics_items_list'];
+  };
+  '/api/v1/organizations/{slug}/assessments/analytics/assessments/{version_id}/items/{assessment_item_id}/': {
+    get: operations['assessment_analytics_item_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/analytics/jobs/{job_id}/': {
+    get: operations['assessment_analytics_job_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/analytics/refresh/': {
+    post: operations['organizations_assessments_analytics_refresh_create'];
+  };
   '/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/': {
     get: operations['assessment_attempt_retrieve'];
   };
@@ -70,11 +85,49 @@ export interface paths {
   '/api/v1/organizations/{slug}/assessments/deliveries/{delivery_id}/withdraw/': {
     post: operations['assessment_delivery_withdraw'];
   };
+  '/api/v1/organizations/{slug}/assessments/gradebooks/': {
+    get: operations['organizations_assessments_gradebooks_list'];
+    post: operations['organizations_assessments_gradebooks_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/': {
+    get: operations['assessment_gradebook_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/activate/': {
+    post: operations['organizations_assessments_gradebooks_activate_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/columns/': {
+    get: operations['assessment_gradebook_columns_list'];
+    post: operations['organizations_assessments_gradebooks_columns_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/columns/order/': {
+    put: operations['organizations_assessments_gradebooks_columns_order_update'];
+  };
+  '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/columns/{column_id}/': {
+    patch: operations['organizations_assessments_gradebooks_columns_partial_update'];
+  };
+  '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/columns/{column_id}/archive/': {
+    post: operations['organizations_assessments_gradebooks_columns_archive_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/entries/': {
+    get: operations['assessment_gradebook_entries_list'];
+  };
+  '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/students/{release_assignment_id}/': {
+    get: operations['assessment_gradebook_student_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/summaries/': {
+    get: operations['assessment_gradebook_summaries_list'];
+  };
   '/api/v1/organizations/{slug}/assessments/manual-grading/': {
     get: operations['assessment_manual_grading_list'];
   };
   '/api/v1/organizations/{slug}/assessments/manual-grading/{response_id}/': {
     post: operations['assessment_manual_grading_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/me/gradebooks/': {
+    get: operations['assessment_my_gradebooks_list'];
+  };
+  '/api/v1/organizations/{slug}/assessments/me/gradebooks/{gradebook_id}/': {
+    get: operations['assessment_my_gradebook_retrieve'];
   };
   '/api/v1/organizations/{slug}/assessments/my-deliveries/': {
     get: operations['assessment_my_deliveries_list'];
@@ -84,6 +137,13 @@ export interface paths {
   };
   '/api/v1/organizations/{slug}/assessments/my-deliveries/{assignment_id}/attempts/start/': {
     post: operations['assessment_attempts_start'];
+  };
+  '/api/v1/organizations/{slug}/assessments/pools/{pool_id}/': {
+    get: operations['organizations_assessments_pools_retrieve'];
+    patch: operations['organizations_assessments_pools_partial_update'];
+  };
+  '/api/v1/organizations/{slug}/assessments/pools/{pool_id}/candidates/': {
+    put: operations['organizations_assessments_pools_candidates_update'];
   };
   '/api/v1/organizations/{slug}/assessments/question-banks/': {
     get: operations['assessment_question_banks_list'];
@@ -136,8 +196,30 @@ export interface paths {
   '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/versions/{version_number}/': {
     get: operations['assessment_question_bank_version_retrieve'];
   };
+  '/api/v1/organizations/{slug}/assessments/regrade-jobs/': {
+    get: operations['organizations_assessments_regrade_jobs_list'];
+    post: operations['organizations_assessments_regrade_jobs_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/regrade-jobs/{job_id}/': {
+    get: operations['assessment_regrade_job_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/regrade-jobs/{job_id}/attempts/': {
+    get: operations['assessment_regrade_job_attempts_list'];
+  };
+  '/api/v1/organizations/{slug}/assessments/regrade-jobs/{job_id}/retry-failed/': {
+    post: operations['organizations_assessments_regrade_jobs_retry_failed_create'];
+  };
   '/api/v1/organizations/{slug}/assessments/results/': {
     get: operations['assessment_results_list'];
+  };
+  '/api/v1/organizations/{slug}/assessments/scoring-policies/{version_id}/': {
+    get: operations['organizations_assessments_scoring_policies_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/scoring-policies/{version_id}/corrections/': {
+    post: operations['organizations_assessments_scoring_policies_corrections_create'];
+  };
+  '/api/v1/organizations/{slug}/assessments/scoring-policies/{version_id}/revisions/': {
+    get: operations['assessment_scoring_policy_revisions_list'];
   };
   '/api/v1/organizations/{slug}/assessments/{assessment_slug}/': {
     get: operations['assessments_retrieve'];
@@ -154,6 +236,10 @@ export interface paths {
   };
   '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/outline/': {
     get: operations['assessment_revision_outline'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/pools/': {
+    get: operations['organizations_assessments_revisions_pools_list'];
+    post: operations['organizations_assessments_revisions_pools_create'];
   };
   '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/readiness/': {
     get: operations['assessment_revision_readiness'];
@@ -181,6 +267,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/sections/{section_id}/items/{item_id}/': {
     get: operations['assessment_item_retrieve'];
     patch: operations['assessment_item_update'];
+  };
+  '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/structure/order/': {
+    put: operations['organizations_assessments_revisions_structure_order_update'];
   };
   '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/submit-review/': {
     post: operations['assessment_revision_submit'];
@@ -566,6 +655,52 @@ export interface components {
       email: string;
       roles: components['schemas']['OrganizationRole'][];
     };
+    AnalyticsJob: {
+      /** Format: uuid */
+      assessment_version_id: string;
+      /** Format: date-time */
+      completed_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      delivery_id: string | null;
+      error_code: string;
+      /** Format: uuid */
+      grading_revision_id: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      started_at: string | null;
+      status: components['schemas']['AssessmentJobStatus'];
+    };
+    AnalyticsRefresh: {
+      /** Format: uuid */
+      assessment_version_id: string;
+      /** Format: uuid */
+      delivery_id?: string | null;
+      /** Format: uuid */
+      grading_revision_id: string;
+    };
+    AnalyticsSnapshot: {
+      /** Format: uuid */
+      assessment_version_id: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      delivery_id: string | null;
+      /** Format: uuid */
+      grading_revision_id: string;
+      /** Format: uuid */
+      id: string;
+      insufficient_sample: boolean;
+      items: readonly components['schemas']['ItemAnalytics'][];
+      mean_percent_basis_points: number | null;
+      median_percent_basis_points: number | null;
+      p25_percent_basis_points: number | null;
+      p75_percent_basis_points: number | null;
+      pass_rate_basis_points: number | null;
+      sample_size: number;
+    };
     Area: {
       description?: string;
       /** Format: uuid */
@@ -596,12 +731,25 @@ export interface components {
      */
     AssessmentAssignmentStatus: 'active' | 'revoked';
     /**
-     * @description * `in_progress` - En curso
-     * * `pending_manual` - Pendiente de calificación manual
-     * * `graded` - Calificado
+     * @description * `highest` - Mejor intento
+     * * `latest` - Último intento
      * @enum {string}
      */
-    AssessmentAttemptStatus: 'in_progress' | 'pending_manual' | 'graded';
+    AssessmentAttemptAggregation: 'highest' | 'latest';
+    /**
+     * @description * `in_progress` - En curso
+     * * `grading_pending` - Calificación automática pendiente
+     * * `pending_manual` - Pendiente de calificación manual
+     * * `graded` - Calificado
+     * * `grading_failed` - Falló la calificación
+     * @enum {string}
+     */
+    AssessmentAttemptStatus:
+      | 'in_progress'
+      | 'grading_pending'
+      | 'pending_manual'
+      | 'graded'
+      | 'grading_failed';
     /**
      * @description * `draft` - Borrador
      * * `in_review` - En revisión
@@ -644,6 +792,47 @@ export interface components {
      * @enum {string}
      */
     AssessmentFeedbackMode: 'none' | 'score_only' | 'full_after_grading';
+    /**
+     * @description * `active` - Activa
+     * * `archived` - Archivada
+     * @enum {string}
+     */
+    AssessmentGradebookColumnStatus: 'active' | 'archived';
+    /**
+     * @description * `missing` - Sin entrega
+     * * `pending` - Pendiente
+     * * `graded` - Calificada
+     * @enum {string}
+     */
+    AssessmentGradebookEntryStatus: 'missing' | 'pending' | 'graded';
+    /**
+     * @description * `draft` - Borrador
+     * * `active` - Activo
+     * @enum {string}
+     */
+    AssessmentGradebookStatus: 'draft' | 'active';
+    /**
+     * @description * `incomplete` - Incompleto
+     * * `complete` - Completo
+     * @enum {string}
+     */
+    AssessmentGradebookSummaryStatus: 'incomplete' | 'complete';
+    /**
+     * @description * `original` - Original
+     * * `correction` - Corrección
+     * @enum {string}
+     */
+    AssessmentGradingRevisionSource: 'original' | 'correction';
+    /**
+     * @description * `queued` - En cola
+     * * `running` - En ejecución
+     * * `completed` - Completado
+     * * `completed_with_errors` - Completado con errores
+     * * `failed` - Falló
+     * @enum {string}
+     */
+    AssessmentJobStatus:
+      'queued' | 'running' | 'completed' | 'completed_with_errors' | 'failed';
     AssessmentOutline: {
       objective_ids: string[];
       revision: components['schemas']['AssessmentRevision'];
@@ -657,6 +846,39 @@ export interface components {
       previous: string | null;
       results: components['schemas']['Assessment'][];
     };
+    AssessmentPool: {
+      candidates: readonly components['schemas']['AssessmentPoolCandidate'][];
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      instructions: string;
+      /** Format: decimal */
+      points_per_item: string;
+      position: number;
+      /** Format: uuid */
+      revision_id: string;
+      selection_count: number;
+      selection_strategy: components['schemas']['AssessmentPoolSelectionStrategy'];
+      shuffle_selected: boolean;
+      title: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    AssessmentPoolCandidate: {
+      /** Format: uuid */
+      id: string;
+      position: number;
+      public: unknown;
+      /** Format: uuid */
+      question_version_id: string;
+      type: string;
+    };
+    /**
+     * @description * `random_without_replacement` - Aleatoria sin reemplazo
+     * @enum {string}
+     */
+    AssessmentPoolSelectionStrategy: 'random_without_replacement';
     /**
      * @description * `single_choice` - Selección única
      * * `multiple_choice` - Selección múltiple
@@ -666,6 +888,7 @@ export interface components {
      * * `long_text` - Texto largo
      * * `ordering` - Ordenamiento
      * * `matching` - Emparejamiento
+     * * `mathematical_expression` - Expresión matemática
      * @enum {string}
      */
     AssessmentQuestionType:
@@ -676,11 +899,22 @@ export interface components {
       | 'short_text'
       | 'long_text'
       | 'ordering'
-      | 'matching';
+      | 'matching'
+      | 'mathematical_expression';
     AssessmentReadiness: {
       issues: string[];
       ready: boolean;
     };
+    /**
+     * @description * `pending` - Pendiente
+     * * `processing` - Procesando
+     * * `completed` - Completado
+     * * `failed` - Falló
+     * * `skipped` - Omitido
+     * @enum {string}
+     */
+    AssessmentRegradeAttemptStatus:
+      'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
     /**
      * @description * `unanswered` - Sin respuesta
      * * `saved` - Guardada
@@ -889,16 +1123,10 @@ export interface components {
       name: string;
       release_number: number;
       slug: string;
-      status?: components['schemas']['CohortReadStatusEnum'];
+      status?: components['schemas']['AssessmentGradebookColumnStatus'];
       /** Format: date-time */
       updated_at: string;
     };
-    /**
-     * @description * `active` - Activa
-     * * `archived` - Archivada
-     * @enum {string}
-     */
-    CohortReadStatusEnum: 'active' | 'archived';
     CohortSummary: {
       /** Format: uuid */
       id: string;
@@ -1119,10 +1347,13 @@ export interface components {
       assessment_title: string;
       /** Format: uuid */
       assessment_version_id: string;
+      assessment_version_number: number;
       /** Format: date-time */
       closes_at: string | null;
       /** Format: uuid */
       course_release_id: string | null;
+      course_release_number: number | null;
+      course_release_title: string | null;
       /** Format: date-time */
       created_at: string;
       /** Format: uuid */
@@ -1261,6 +1492,140 @@ export interface components {
     ExpectedVersion: {
       expected_version: number;
     };
+    Gradebook: {
+      /** Format: date-time */
+      activated_at: string | null;
+      columns: readonly components['schemas']['GradebookColumn'][];
+      /** Format: uuid */
+      course_release_id: string;
+      course_title: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      lock_version: number;
+      release_number: number;
+      status: components['schemas']['AssessmentGradebookStatus'];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    GradebookColumn: {
+      attempt_aggregation: components['schemas']['AssessmentAttemptAggregation'];
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      delivery_id: string;
+      /** Format: uuid */
+      id: string;
+      position: number;
+      required: boolean;
+      status: components['schemas']['AssessmentGradebookColumnStatus'];
+      title: string;
+      /** Format: date-time */
+      updated_at: string;
+      weight_basis_points: number;
+    };
+    GradebookColumnCreate: {
+      /** @default highest */
+      attempt_aggregation?: components['schemas']['AssessmentAttemptAggregation'];
+      /** Format: uuid */
+      delivery_id: string;
+      expected_version: number;
+      /** @default true */
+      required?: boolean;
+      title: string;
+      weight_basis_points: number;
+    };
+    GradebookColumnOrder: {
+      column_ids: string[];
+      expected_version: number;
+    };
+    GradebookColumnUpdate: {
+      attempt_aggregation: components['schemas']['AssessmentAttemptAggregation'];
+      expected_version: number;
+      required: boolean;
+      title: string;
+      weight_basis_points: number;
+    };
+    GradebookCreate: {
+      /** Format: uuid */
+      course_release_id: string;
+    };
+    GradebookEntry: {
+      /** Format: uuid */
+      attempt_grade_id: string | null;
+      /** Format: uuid */
+      attempt_id: string | null;
+      /** Format: uuid */
+      cohort_id: string;
+      cohort_name: string | null;
+      /** Format: uuid */
+      column_id: string;
+      /** Format: uuid */
+      id: string;
+      learner_name: string;
+      /** Format: decimal */
+      maximum_score: string;
+      passed: boolean | null;
+      percent_basis_points: number | null;
+      /** Format: uuid */
+      release_assignment_id: string;
+      /** Format: decimal */
+      score: string;
+      status: components['schemas']['AssessmentGradebookEntryStatus'];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    GradebookStudentPayload: {
+      entries: components['schemas']['GradebookEntry'][];
+      gradebook: components['schemas']['Gradebook'];
+      summary: components['schemas']['GradebookSummary'];
+    };
+    GradebookSummary: {
+      /** Format: uuid */
+      cohort_id: string;
+      cohort_name: string | null;
+      completed_columns: number;
+      /** Format: uuid */
+      id: string;
+      learner_name: string;
+      /** Format: uuid */
+      release_assignment_id: string;
+      status: components['schemas']['AssessmentGradebookSummaryStatus'];
+      total_columns: number;
+      /** Format: date-time */
+      updated_at: string;
+      weighted_percent_basis_points: number;
+    };
+    GradingPolicy: {
+      /** Format: uuid */
+      assessment_version_id: string;
+      /** Format: date-time */
+      created_at: string;
+      current_revision: components['schemas']['GradingRevision'];
+      /** Format: uuid */
+      id: string;
+      lock_version: number;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    GradingRevision: {
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      created_by_id: string | null;
+      grading_snapshot: unknown;
+      /** Format: uuid */
+      id: string;
+      number: number;
+      /** @default true */
+      preserve_manual_grades: boolean;
+      /** Format: uuid */
+      previous_revision_id: string | null;
+      reason: string;
+      snapshot_digest: string;
+      source: components['schemas']['AssessmentGradingRevisionSource'];
+    };
     Item: {
       /** Format: date-time */
       created_at: string;
@@ -1280,6 +1645,27 @@ export interface components {
       section_id: string;
       /** Format: date-time */
       updated_at: string;
+    };
+    ItemAnalytics: {
+      answered_count: number;
+      /** Format: uuid */
+      assessment_item_id: string;
+      /** Format: date-time */
+      created_at: string;
+      difficulty_basis_points: number;
+      /** Format: decimal */
+      discrimination: string | null;
+      discrimination_sample_size: number;
+      discrimination_suppressed: boolean;
+      /** Format: uuid */
+      id: string;
+      mean_credit_basis_points: number;
+      omitted_count: number;
+      options: readonly components['schemas']['OptionAnalytics'][];
+      presented_count: number;
+      question_type: string;
+      /** Format: uuid */
+      question_version_id: string;
     };
     ItemCreate: {
       expected_version: number;
@@ -1547,6 +1933,11 @@ export interface components {
       /** Format: uuid */
       subject_id: string;
     };
+    OptionAnalytics: {
+      option_id: string;
+      selected_count: number;
+      selected_rate_basis_points: number;
+    };
     OrderedIds: {
       expected_version: number;
       ids: string[];
@@ -1701,6 +2092,30 @@ export interface components {
       /** Format: uuid */
       response_id: string;
       response_status: components['schemas']['AssessmentResponseStatus'];
+    };
+    PoolCandidates: {
+      expected_version: number;
+      question_version_ids: string[];
+    };
+    PoolCreate: {
+      expected_version: number;
+      instructions?: string;
+      /** Format: decimal */
+      points_per_item: string;
+      question_version_ids: string[];
+      selection_count: number;
+      /** @default false */
+      shuffle_selected?: boolean;
+      title: string;
+    };
+    PoolUpdate: {
+      expected_version: number;
+      instructions: string;
+      /** Format: decimal */
+      points_per_item: string;
+      selection_count: number;
+      shuffle_selected: boolean;
+      title: string;
     };
     Position: {
       /** Format: uuid */
@@ -1929,6 +2344,65 @@ export interface components {
       message: string;
       path: string;
     };
+    RegradeJob: {
+      assessment_title: string;
+      /** Format: uuid */
+      assessment_version_id: string;
+      assessment_version_number: number;
+      /** Format: date-time */
+      completed_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      created_by_id: string;
+      /** Format: uuid */
+      delivery_id: string | null;
+      delivery_name: string | null;
+      failed_attempts: number;
+      /** Format: uuid */
+      grading_revision_id: string;
+      grading_revision_number: number;
+      /** Format: uuid */
+      id: string;
+      lock_version: number;
+      /** @default true */
+      preserve_manual_grades: boolean;
+      processed_attempts: number;
+      reason: string;
+      /** Format: date-time */
+      started_at: string | null;
+      status: components['schemas']['AssessmentJobStatus'];
+      succeeded_attempts: number;
+      total_attempts: number;
+    };
+    RegradeJobAttempt: {
+      /** Format: uuid */
+      attempt_id: string;
+      error_code: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      new_grade_id: string | null;
+      /** Format: uuid */
+      previous_grade_id: string | null;
+      /** Format: date-time */
+      processed_at: string | null;
+      status: components['schemas']['AssessmentRegradeAttemptStatus'];
+    };
+    RegradeJobCreate: {
+      /** Format: uuid */
+      assessment_version_id: string;
+      /** Format: uuid */
+      delivery_id?: string | null;
+      /** Format: uuid */
+      grading_revision_id: string;
+      /** @default true */
+      preserve_manual_grades?: boolean;
+      reason: string;
+    };
+    RegradeRetry: {
+      expected_version: number;
+    };
     ReleaseDetail: {
       course: unknown;
       /** Format: date-time */
@@ -2068,6 +2542,13 @@ export interface components {
       position: number;
       subject: components['schemas']['SubjectSummary'];
     };
+    ScoringCorrection: {
+      expected_version: number;
+      item_overrides: {
+        [key: string]: unknown;
+      };
+      reason: string;
+    };
     Section: {
       /** Format: date-time */
       created_at: string;
@@ -2090,6 +2571,11 @@ export interface components {
       expected_version: number;
       instructions: string;
       title: string;
+    };
+    StructureOrder: {
+      expected_version: number;
+      pool_ids: string[];
+      section_ids: string[];
     };
     Subject: {
       description?: string;
@@ -2570,6 +3056,88 @@ export interface operations {
       };
     };
   };
+  assessment_analytics_retrieve: {
+    parameters: {
+      path: {
+        slug: string;
+        version_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AnalyticsSnapshot'];
+        };
+      };
+    };
+  };
+  assessment_analytics_items_list: {
+    parameters: {
+      path: {
+        slug: string;
+        version_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ItemAnalytics'][];
+        };
+      };
+    };
+  };
+  assessment_analytics_item_retrieve: {
+    parameters: {
+      path: {
+        assessment_item_id: string;
+        slug: string;
+        version_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ItemAnalytics'];
+        };
+      };
+    };
+  };
+  assessment_analytics_job_retrieve: {
+    parameters: {
+      path: {
+        job_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AnalyticsJob'];
+        };
+      };
+    };
+  };
+  organizations_assessments_analytics_refresh_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AnalyticsRefresh'];
+        'application/x-www-form-urlencoded': components['schemas']['AnalyticsRefresh'];
+        'multipart/form-data': components['schemas']['AnalyticsRefresh'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AnalyticsJob'];
+        };
+      };
+    };
+  };
   assessment_attempt_retrieve: {
     parameters: {
       path: {
@@ -2814,6 +3382,229 @@ export interface operations {
       };
     };
   };
+  organizations_assessments_gradebooks_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Gradebook'][];
+        };
+      };
+    };
+  };
+  organizations_assessments_gradebooks_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GradebookCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['GradebookCreate'];
+        'multipart/form-data': components['schemas']['GradebookCreate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Gradebook'];
+        };
+      };
+    };
+  };
+  assessment_gradebook_retrieve: {
+    parameters: {
+      path: {
+        gradebook_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Gradebook'];
+        };
+      };
+    };
+  };
+  organizations_assessments_gradebooks_activate_create: {
+    parameters: {
+      path: {
+        gradebook_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentExpectedVersion'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentExpectedVersion'];
+        'multipart/form-data': components['schemas']['AssessmentExpectedVersion'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Gradebook'];
+        };
+      };
+    };
+  };
+  assessment_gradebook_columns_list: {
+    parameters: {
+      path: {
+        gradebook_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GradebookColumn'][];
+        };
+      };
+    };
+  };
+  organizations_assessments_gradebooks_columns_create: {
+    parameters: {
+      path: {
+        gradebook_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GradebookColumnCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['GradebookColumnCreate'];
+        'multipart/form-data': components['schemas']['GradebookColumnCreate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GradebookColumn'];
+        };
+      };
+    };
+  };
+  organizations_assessments_gradebooks_columns_order_update: {
+    parameters: {
+      path: {
+        gradebook_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GradebookColumnOrder'];
+        'application/x-www-form-urlencoded': components['schemas']['GradebookColumnOrder'];
+        'multipart/form-data': components['schemas']['GradebookColumnOrder'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Gradebook'];
+        };
+      };
+    };
+  };
+  organizations_assessments_gradebooks_columns_partial_update: {
+    parameters: {
+      path: {
+        column_id: string;
+        gradebook_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GradebookColumnUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['GradebookColumnUpdate'];
+        'multipart/form-data': components['schemas']['GradebookColumnUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GradebookColumn'];
+        };
+      };
+    };
+  };
+  organizations_assessments_gradebooks_columns_archive_create: {
+    parameters: {
+      path: {
+        column_id: string;
+        gradebook_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentExpectedVersion'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentExpectedVersion'];
+        'multipart/form-data': components['schemas']['AssessmentExpectedVersion'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GradebookColumn'];
+        };
+      };
+    };
+  };
+  assessment_gradebook_entries_list: {
+    parameters: {
+      path: {
+        gradebook_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GradebookEntry'][];
+        };
+      };
+    };
+  };
+  assessment_gradebook_student_retrieve: {
+    parameters: {
+      path: {
+        gradebook_id: string;
+        release_assignment_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GradebookStudentPayload'];
+        };
+      };
+    };
+  };
+  assessment_gradebook_summaries_list: {
+    parameters: {
+      path: {
+        gradebook_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GradebookSummary'][];
+        };
+      };
+    };
+  };
   assessment_manual_grading_list: {
     parameters: {
       path: {
@@ -2846,6 +3637,35 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['ManualGradeDecision'];
+        };
+      };
+    };
+  };
+  assessment_my_gradebooks_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Gradebook'][];
+        };
+      };
+    };
+  };
+  assessment_my_gradebook_retrieve: {
+    parameters: {
+      path: {
+        gradebook_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GradebookStudentPayload'];
         };
       };
     };
@@ -2890,6 +3710,65 @@ export interface operations {
       201: {
         content: {
           'application/json': components['schemas']['Attempt'];
+        };
+      };
+    };
+  };
+  organizations_assessments_pools_retrieve: {
+    parameters: {
+      path: {
+        pool_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentPool'];
+        };
+      };
+    };
+  };
+  organizations_assessments_pools_partial_update: {
+    parameters: {
+      path: {
+        pool_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PoolUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['PoolUpdate'];
+        'multipart/form-data': components['schemas']['PoolUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentPool'];
+        };
+      };
+    };
+  };
+  organizations_assessments_pools_candidates_update: {
+    parameters: {
+      path: {
+        pool_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PoolCandidates'];
+        'application/x-www-form-urlencoded': components['schemas']['PoolCandidates'];
+        'multipart/form-data': components['schemas']['PoolCandidates'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentPool'];
         };
       };
     };
@@ -2990,6 +3869,10 @@ export interface operations {
   };
   assessment_questions_list: {
     parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
       path: {
         bank_id: string;
         slug: string;
@@ -3297,6 +4180,93 @@ export interface operations {
       };
     };
   };
+  organizations_assessments_regrade_jobs_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['RegradeJob'][];
+        };
+      };
+    };
+  };
+  organizations_assessments_regrade_jobs_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegradeJobCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['RegradeJobCreate'];
+        'multipart/form-data': components['schemas']['RegradeJobCreate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['RegradeJob'];
+        };
+      };
+    };
+  };
+  assessment_regrade_job_retrieve: {
+    parameters: {
+      path: {
+        job_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['RegradeJob'];
+        };
+      };
+    };
+  };
+  assessment_regrade_job_attempts_list: {
+    parameters: {
+      path: {
+        job_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['RegradeJobAttempt'][];
+        };
+      };
+    };
+  };
+  organizations_assessments_regrade_jobs_retry_failed_create: {
+    parameters: {
+      path: {
+        job_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegradeRetry'];
+        'application/x-www-form-urlencoded': components['schemas']['RegradeRetry'];
+        'multipart/form-data': components['schemas']['RegradeRetry'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['RegradeJob'];
+        };
+      };
+    };
+  };
   assessment_results_list: {
     parameters: {
       path: {
@@ -3307,6 +4277,58 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['AttemptResultPage'];
+        };
+      };
+    };
+  };
+  organizations_assessments_scoring_policies_retrieve: {
+    parameters: {
+      path: {
+        slug: string;
+        version_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GradingPolicy'];
+        };
+      };
+    };
+  };
+  organizations_assessments_scoring_policies_corrections_create: {
+    parameters: {
+      path: {
+        slug: string;
+        version_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ScoringCorrection'];
+        'application/x-www-form-urlencoded': components['schemas']['ScoringCorrection'];
+        'multipart/form-data': components['schemas']['ScoringCorrection'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GradingRevision'];
+        };
+      };
+    };
+  };
+  assessment_scoring_policy_revisions_list: {
+    parameters: {
+      path: {
+        slug: string;
+        version_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GradingRevision'][];
         };
       };
     };
@@ -3423,6 +4445,45 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['AssessmentOutline'];
+        };
+      };
+    };
+  };
+  organizations_assessments_revisions_pools_list: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentPool'][];
+        };
+      };
+    };
+  };
+  organizations_assessments_revisions_pools_create: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PoolCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['PoolCreate'];
+        'multipart/form-data': components['schemas']['PoolCreate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentPool'];
         };
       };
     };
@@ -3656,6 +4717,29 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['Item'];
+        };
+      };
+    };
+  };
+  organizations_assessments_revisions_structure_order_update: {
+    parameters: {
+      path: {
+        assessment_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['StructureOrder'];
+        'application/x-www-form-urlencoded': components['schemas']['StructureOrder'];
+        'multipart/form-data': components['schemas']['StructureOrder'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentExpectedVersion'];
         };
       };
     };

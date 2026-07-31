@@ -116,6 +116,8 @@ function Invoke-E2E([string]$Grep) {
 
     $databaseName = "lms_e2e_$([Guid]::NewGuid().ToString('N'))"
     $redisPrefix = "lms-e2e-$([Guid]::NewGuid().ToString('N'))"
+    $workerName = "$redisPrefix-worker"
+    $queuePrefix = "$redisPrefix-"
     $apiPort = Get-FreeLocalPort
     $webPort = Get-FreeLocalPort
     while ($webPort -eq $apiPort) { $webPort = Get-FreeLocalPort }
@@ -126,7 +128,7 @@ function Invoke-E2E([string]$Grep) {
     $createDatabase = 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE {0}"' -f $databaseName
     $dropDatabase = 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS {0}"' -f $databaseName
     $savedEnvironment = @{}
-    foreach ($name in @('POSTGRES_DB', 'DJANGO_SETTINGS_MODULE', 'E2E_REDIS_PREFIX', 'E2E_MAIL_PATH', 'E2E_ORGANIZATIONS_PASSWORD', 'E2E_API_PORT', 'E2E_WEB_PORT', 'DJANGO_INTERNAL_ORIGIN', 'FRONTEND_ORIGIN', 'NEXT_DIST_DIR')) {
+    foreach ($name in @('POSTGRES_DB', 'DJANGO_SETTINGS_MODULE', 'E2E_REDIS_PREFIX', 'E2E_MAIL_PATH', 'E2E_ORGANIZATIONS_PASSWORD', 'E2E_API_PORT', 'E2E_WEB_PORT', 'DJANGO_INTERNAL_ORIGIN', 'FRONTEND_ORIGIN', 'NEXT_DIST_DIR', 'ASSESSMENT_TASK_QUEUE_PREFIX', 'ASSESSMENT_TASK_COUNTDOWN_SECONDS')) {
         $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
     }
 
@@ -138,6 +140,8 @@ function Invoke-E2E([string]$Grep) {
         [Environment]::SetEnvironmentVariable('POSTGRES_DB', $databaseName, 'Process')
         [Environment]::SetEnvironmentVariable('DJANGO_SETTINGS_MODULE', 'config.settings.e2e', 'Process')
         [Environment]::SetEnvironmentVariable('E2E_REDIS_PREFIX', $redisPrefix, 'Process')
+        [Environment]::SetEnvironmentVariable('ASSESSMENT_TASK_QUEUE_PREFIX', $queuePrefix, 'Process')
+        [Environment]::SetEnvironmentVariable('ASSESSMENT_TASK_COUNTDOWN_SECONDS', '2', 'Process')
         [Environment]::SetEnvironmentVariable('E2E_MAIL_PATH', $e2eMailDirectory, 'Process')
         [Environment]::SetEnvironmentVariable('E2E_ORGANIZATIONS_PASSWORD', "E2E!$([Guid]::NewGuid().ToString('N'))aA", 'Process')
         [Environment]::SetEnvironmentVariable('E2E_API_PORT', [string]$apiPort, 'Process')
@@ -151,13 +155,38 @@ function Invoke-E2E([string]$Grep) {
         Assert-LastExitCode 'E2E organization fixture creation'
         & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_publication
         Assert-LastExitCode 'E2E publication source fixture creation'
-        if ($Grep -match 'learning delivery|assessment phase 13') {
+        if ($Grep -match 'learning delivery|assessment phase 1[34]') {
             & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_learning
             Assert-LastExitCode 'E2E learning fixture creation'
         }
-        if ($Grep -match 'assessment phase 13') {
+        if ($Grep -match 'assessment phase 1[34]') {
             & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_assessments
             Assert-LastExitCode 'E2E assessments fixture creation'
+        }
+        if ($Grep -match 'assessment phase 14') {
+            & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_assessments_advanced
+            Assert-LastExitCode 'advanced E2E assessments fixture creation'
+            & docker compose @composeArguments build assessment-worker
+            Assert-LastExitCode 'E2E assessment worker build'
+            $workerQueues = "$queuePrefix" + "grading,$queuePrefix" + "regrading,$queuePrefix" + "analytics"
+            & docker compose @composeArguments run -d --no-deps --name $workerName `
+                -e "DJANGO_SETTINGS_MODULE=config.settings.e2e" `
+                -e "POSTGRES_DB=$databaseName" `
+                -e "E2E_REDIS_PREFIX=$redisPrefix" `
+                -e "E2E_MAIL_PATH=/workspace/apps/api/.local/e2e-mail" `
+                -e "FRONTEND_ORIGIN=http://127.0.0.1:$webPort" `
+                -e "ASSESSMENT_TASK_QUEUE_PREFIX=$queuePrefix" `
+                -e "ASSESSMENT_TASK_COUNTDOWN_SECONDS=2" `
+                assessment-worker celery -A config worker --loglevel=INFO `
+                --pool=prefork --concurrency=2 --prefetch-multiplier=1 `
+                --max-tasks-per-child=100 --queues=$workerQueues --hostname=$workerName
+            Assert-LastExitCode 'isolated E2E assessment worker startup'
+            $workerDeadline = (Get-Date).AddSeconds(30)
+            do {
+                Start-Sleep -Milliseconds 500
+                $workerRunning = (& docker inspect --format '{{.State.Running}}' $workerName 2>$null) -eq 'true'
+            } while (-not $workerRunning -and (Get-Date) -lt $workerDeadline)
+            if (-not $workerRunning) { throw 'The isolated E2E assessment worker did not start.' }
         }
         $playwrightArguments = @('test')
         if (-not [string]::IsNullOrWhiteSpace($Grep)) {
@@ -167,8 +196,11 @@ function Invoke-E2E([string]$Grep) {
         Assert-LastExitCode 'isolated Playwright suite'
     }
     finally {
+        if ($workerName -and $workerName.StartsWith('lms-e2e-')) {
+            & docker rm -f $workerName 2>$null | Out-Null
+        }
         if ($redisPrefix) {
-            & $pythonExecutable -c "import os; from redis import Redis; client=Redis(host=os.environ['REDIS_HOST'], port=int(os.environ['REDIS_PORT']), password=os.environ['REDIS_PASSWORD'], db=int(os.environ['REDIS_CACHE_DB'])); keys=list(client.scan_iter(match=os.environ['E2E_REDIS_PREFIX'] + ':*')); client.delete(*keys) if keys else None" 2>$null
+            & $pythonExecutable -c "import os; from redis import Redis; prefix=os.environ['E2E_REDIS_PREFIX']; databases={int(os.environ['REDIS_CACHE_DB']), int(os.environ['CELERY_BROKER_DB'])}; [(lambda client: (lambda keys: client.delete(*keys) if keys else None)(list(client.scan_iter(match=prefix + '*'))))(Redis(host=os.environ['REDIS_HOST'], port=int(os.environ['REDIS_PORT']), password=os.environ['REDIS_PASSWORD'], db=db)) for db in databases]" 2>$null
         }
         foreach ($name in $savedEnvironment.Keys) {
             [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name], 'Process')
@@ -177,7 +209,6 @@ function Invoke-E2E([string]$Grep) {
         $mailCount = if (Test-Path -LiteralPath $e2eMailDirectory) { @(Get-ChildItem -LiteralPath $e2eMailDirectory -File).Count } else { 0 }
         Write-Host "E2E mail files before cleanup: $mailCount"
         Clear-E2EMail
-        Clear-E2EResults
         $resolvedWeb = [IO.Path]::GetFullPath($webDirectory)
         $resolvedNextDist = [IO.Path]::GetFullPath($nextDistDirectory)
         if (-not $resolvedNextDist.StartsWith($resolvedWeb + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {

@@ -69,6 +69,148 @@
         "required": ["email", "roles"],
         "type": "object"
       },
+      "AnalyticsJob": {
+        "properties": {
+          "assessment_version_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "completed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "delivery_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "error_code": { "readOnly": true, "type": "string" },
+          "grading_revision_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "started_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/AssessmentJobStatus" }],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "assessment_version_id",
+          "completed_at",
+          "created_at",
+          "delivery_id",
+          "error_code",
+          "grading_revision_id",
+          "id",
+          "started_at",
+          "status"
+        ],
+        "type": "object"
+      },
+      "AnalyticsRefresh": {
+        "properties": {
+          "assessment_version_id": { "format": "uuid", "type": "string" },
+          "delivery_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "grading_revision_id": { "format": "uuid", "type": "string" }
+        },
+        "required": ["assessment_version_id", "grading_revision_id"],
+        "type": "object"
+      },
+      "AnalyticsSnapshot": {
+        "properties": {
+          "assessment_version_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "delivery_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "grading_revision_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "insufficient_sample": { "readOnly": true, "type": "boolean" },
+          "items": {
+            "items": { "$ref": "#/components/schemas/ItemAnalytics" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "mean_percent_basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "median_percent_basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "p25_percent_basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "p75_percent_basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "pass_rate_basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "sample_size": { "readOnly": true, "type": "integer" }
+        },
+        "required": [
+          "assessment_version_id",
+          "created_at",
+          "delivery_id",
+          "grading_revision_id",
+          "id",
+          "insufficient_sample",
+          "items",
+          "mean_percent_basis_points",
+          "median_percent_basis_points",
+          "p25_percent_basis_points",
+          "p75_percent_basis_points",
+          "pass_rate_basis_points",
+          "sample_size"
+        ],
+        "type": "object"
+      },
       "Area": {
         "properties": {
           "description": { "maxLength": 2000, "type": "string" },
@@ -144,9 +286,20 @@
         "enum": ["active", "revoked"],
         "type": "string"
       },
+      "AssessmentAttemptAggregation": {
+        "description": "* `highest` - Mejor intento\n* `latest` - Último intento",
+        "enum": ["highest", "latest"],
+        "type": "string"
+      },
       "AssessmentAttemptStatus": {
-        "description": "* `in_progress` - En curso\n* `pending_manual` - Pendiente de calificación manual\n* `graded` - Calificado",
-        "enum": ["in_progress", "pending_manual", "graded"],
+        "description": "* `in_progress` - En curso\n* `grading_pending` - Calificación automática pendiente\n* `pending_manual` - Pendiente de calificación manual\n* `graded` - Calificado\n* `grading_failed` - Falló la calificación",
+        "enum": [
+          "in_progress",
+          "grading_pending",
+          "pending_manual",
+          "graded",
+          "grading_failed"
+        ],
         "type": "string"
       },
       "AssessmentAuthoringStatus": {
@@ -211,6 +364,42 @@
         "enum": ["none", "score_only", "full_after_grading"],
         "type": "string"
       },
+      "AssessmentGradebookColumnStatus": {
+        "description": "* `active` - Activa\n* `archived` - Archivada",
+        "enum": ["active", "archived"],
+        "type": "string"
+      },
+      "AssessmentGradebookEntryStatus": {
+        "description": "* `missing` - Sin entrega\n* `pending` - Pendiente\n* `graded` - Calificada",
+        "enum": ["missing", "pending", "graded"],
+        "type": "string"
+      },
+      "AssessmentGradebookStatus": {
+        "description": "* `draft` - Borrador\n* `active` - Activo",
+        "enum": ["draft", "active"],
+        "type": "string"
+      },
+      "AssessmentGradebookSummaryStatus": {
+        "description": "* `incomplete` - Incompleto\n* `complete` - Completo",
+        "enum": ["incomplete", "complete"],
+        "type": "string"
+      },
+      "AssessmentGradingRevisionSource": {
+        "description": "* `original` - Original\n* `correction` - Corrección",
+        "enum": ["original", "correction"],
+        "type": "string"
+      },
+      "AssessmentJobStatus": {
+        "description": "* `queued` - En cola\n* `running` - En ejecución\n* `completed` - Completado\n* `completed_with_errors` - Completado con errores\n* `failed` - Falló",
+        "enum": [
+          "queued",
+          "running",
+          "completed",
+          "completed_with_errors",
+          "failed"
+        ],
+        "type": "string"
+      },
       "AssessmentOutline": {
         "properties": {
           "objective_ids": {
@@ -236,8 +425,85 @@
         "required": ["count", "next", "previous", "results"],
         "type": "object"
       },
+      "AssessmentPool": {
+        "properties": {
+          "candidates": {
+            "items": { "$ref": "#/components/schemas/AssessmentPoolCandidate" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "instructions": { "readOnly": true, "type": "string" },
+          "points_per_item": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "position": { "readOnly": true, "type": "integer" },
+          "revision_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "selection_count": { "readOnly": true, "type": "integer" },
+          "selection_strategy": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentPoolSelectionStrategy" }
+            ],
+            "readOnly": true
+          },
+          "shuffle_selected": { "readOnly": true, "type": "boolean" },
+          "title": { "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidates",
+          "created_at",
+          "id",
+          "instructions",
+          "points_per_item",
+          "position",
+          "revision_id",
+          "selection_count",
+          "selection_strategy",
+          "shuffle_selected",
+          "title",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "AssessmentPoolCandidate": {
+        "properties": {
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "position": { "readOnly": true, "type": "integer" },
+          "public": { "readOnly": true },
+          "question_version_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "type": { "readOnly": true, "type": "string" }
+        },
+        "required": ["id", "position", "public", "question_version_id", "type"],
+        "type": "object"
+      },
+      "AssessmentPoolSelectionStrategy": {
+        "description": "* `random_without_replacement` - Aleatoria sin reemplazo",
+        "enum": ["random_without_replacement"],
+        "type": "string"
+      },
       "AssessmentQuestionType": {
-        "description": "* `single_choice` - Selección única\n* `multiple_choice` - Selección múltiple\n* `true_false` - Verdadero o falso\n* `numeric` - Numérica\n* `short_text` - Texto corto\n* `long_text` - Texto largo\n* `ordering` - Ordenamiento\n* `matching` - Emparejamiento",
+        "description": "* `single_choice` - Selección única\n* `multiple_choice` - Selección múltiple\n* `true_false` - Verdadero o falso\n* `numeric` - Numérica\n* `short_text` - Texto corto\n* `long_text` - Texto largo\n* `ordering` - Ordenamiento\n* `matching` - Emparejamiento\n* `mathematical_expression` - Expresión matemática",
         "enum": [
           "single_choice",
           "multiple_choice",
@@ -246,7 +512,8 @@
           "short_text",
           "long_text",
           "ordering",
-          "matching"
+          "matching",
+          "mathematical_expression"
         ],
         "type": "string"
       },
@@ -257,6 +524,11 @@
         },
         "required": ["issues", "ready"],
         "type": "object"
+      },
+      "AssessmentRegradeAttemptStatus": {
+        "description": "* `pending` - Pendiente\n* `processing` - Procesando\n* `completed` - Completado\n* `failed` - Falló\n* `skipped` - Omitido",
+        "enum": ["pending", "processing", "completed", "failed", "skipped"],
+        "type": "string"
       },
       "AssessmentResponseStatus": {
         "description": "* `unanswered` - Sin respuesta\n* `saved` - Guardada\n* `auto_graded` - Calificada automáticamente\n* `pending_manual` - Pendiente de calificación manual\n* `manually_graded` - Calificada manualmente",
@@ -768,7 +1040,9 @@
             "pattern": "^[-a-zA-Z0-9_]+$",
             "type": "string"
           },
-          "status": { "$ref": "#/components/schemas/CohortReadStatusEnum" },
+          "status": {
+            "$ref": "#/components/schemas/AssessmentGradebookColumnStatus"
+          },
           "updated_at": {
             "format": "date-time",
             "readOnly": true,
@@ -787,11 +1061,6 @@
           "updated_at"
         ],
         "type": "object"
-      },
-      "CohortReadStatusEnum": {
-        "description": "* `active` - Activa\n* `archived` - Archivada",
-        "enum": ["active", "archived"],
-        "type": "string"
       },
       "CohortSummary": {
         "properties": {
@@ -1248,6 +1517,7 @@
             "readOnly": true,
             "type": "string"
           },
+          "assessment_version_number": { "readOnly": true, "type": "integer" },
           "closes_at": {
             "format": "date-time",
             "nullable": true,
@@ -1256,6 +1526,16 @@
           },
           "course_release_id": {
             "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "course_release_number": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "course_release_title": {
             "nullable": true,
             "readOnly": true,
             "type": "string"
@@ -1302,8 +1582,11 @@
         "required": [
           "assessment_title",
           "assessment_version_id",
+          "assessment_version_number",
           "closes_at",
           "course_release_id",
+          "course_release_number",
+          "course_release_title",
           "created_at",
           "id",
           "lock_version",
@@ -1556,6 +1839,397 @@
         "required": ["expected_version"],
         "type": "object"
       },
+      "Gradebook": {
+        "properties": {
+          "activated_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "columns": {
+            "items": { "$ref": "#/components/schemas/GradebookColumn" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "course_release_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "course_title": { "readOnly": true, "type": "string" },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "release_number": { "readOnly": true, "type": "integer" },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentGradebookStatus" }
+            ],
+            "readOnly": true
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "activated_at",
+          "columns",
+          "course_release_id",
+          "course_title",
+          "created_at",
+          "id",
+          "lock_version",
+          "release_number",
+          "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "GradebookColumn": {
+        "properties": {
+          "attempt_aggregation": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentAttemptAggregation" }
+            ],
+            "readOnly": true
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "delivery_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "position": { "readOnly": true, "type": "integer" },
+          "required": { "readOnly": true, "type": "boolean" },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentGradebookColumnStatus" }
+            ],
+            "readOnly": true
+          },
+          "title": { "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "weight_basis_points": { "readOnly": true, "type": "integer" }
+        },
+        "required": [
+          "attempt_aggregation",
+          "created_at",
+          "delivery_id",
+          "id",
+          "position",
+          "required",
+          "status",
+          "title",
+          "updated_at",
+          "weight_basis_points"
+        ],
+        "type": "object"
+      },
+      "GradebookColumnCreate": {
+        "properties": {
+          "attempt_aggregation": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentAttemptAggregation" }
+            ],
+            "default": "highest"
+          },
+          "delivery_id": { "format": "uuid", "type": "string" },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "required": { "default": true, "type": "boolean" },
+          "title": { "maxLength": 200, "type": "string" },
+          "weight_basis_points": {
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "delivery_id",
+          "expected_version",
+          "title",
+          "weight_basis_points"
+        ],
+        "type": "object"
+      },
+      "GradebookColumnOrder": {
+        "properties": {
+          "column_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "minItems": 1,
+            "type": "array"
+          },
+          "expected_version": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["column_ids", "expected_version"],
+        "type": "object"
+      },
+      "GradebookColumnUpdate": {
+        "properties": {
+          "attempt_aggregation": {
+            "$ref": "#/components/schemas/AssessmentAttemptAggregation"
+          },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "required": { "type": "boolean" },
+          "title": { "maxLength": 200, "type": "string" },
+          "weight_basis_points": {
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "attempt_aggregation",
+          "expected_version",
+          "required",
+          "title",
+          "weight_basis_points"
+        ],
+        "type": "object"
+      },
+      "GradebookCreate": {
+        "properties": {
+          "course_release_id": { "format": "uuid", "type": "string" }
+        },
+        "required": ["course_release_id"],
+        "type": "object"
+      },
+      "GradebookEntry": {
+        "properties": {
+          "attempt_grade_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "attempt_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "cohort_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "cohort_name": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "column_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "learner_name": { "readOnly": true, "type": "string" },
+          "maximum_score": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "passed": { "nullable": true, "readOnly": true, "type": "boolean" },
+          "percent_basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "release_assignment_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "score": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentGradebookEntryStatus" }
+            ],
+            "readOnly": true
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempt_grade_id",
+          "attempt_id",
+          "cohort_id",
+          "cohort_name",
+          "column_id",
+          "id",
+          "learner_name",
+          "maximum_score",
+          "passed",
+          "percent_basis_points",
+          "release_assignment_id",
+          "score",
+          "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "GradebookStudentPayload": {
+        "properties": {
+          "entries": {
+            "items": { "$ref": "#/components/schemas/GradebookEntry" },
+            "type": "array"
+          },
+          "gradebook": { "$ref": "#/components/schemas/Gradebook" },
+          "summary": { "$ref": "#/components/schemas/GradebookSummary" }
+        },
+        "required": ["entries", "gradebook", "summary"],
+        "type": "object"
+      },
+      "GradebookSummary": {
+        "properties": {
+          "cohort_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "cohort_name": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "completed_columns": { "readOnly": true, "type": "integer" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "learner_name": { "readOnly": true, "type": "string" },
+          "release_assignment_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentGradebookSummaryStatus"
+              }
+            ],
+            "readOnly": true
+          },
+          "total_columns": { "readOnly": true, "type": "integer" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "weighted_percent_basis_points": {
+            "readOnly": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cohort_id",
+          "cohort_name",
+          "completed_columns",
+          "id",
+          "learner_name",
+          "release_assignment_id",
+          "status",
+          "total_columns",
+          "updated_at",
+          "weighted_percent_basis_points"
+        ],
+        "type": "object"
+      },
+      "GradingPolicy": {
+        "properties": {
+          "assessment_version_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "current_revision": {
+            "allOf": [{ "$ref": "#/components/schemas/GradingRevision" }],
+            "readOnly": true
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "assessment_version_id",
+          "created_at",
+          "current_revision",
+          "id",
+          "lock_version",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "GradingRevision": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_by_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "grading_snapshot": { "readOnly": true },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "number": { "readOnly": true, "type": "integer" },
+          "preserve_manual_grades": {
+            "default": true,
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "previous_revision_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "reason": { "readOnly": true, "type": "string" },
+          "snapshot_digest": { "readOnly": true, "type": "string" },
+          "source": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentGradingRevisionSource" }
+            ],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "created_at",
+          "created_by_id",
+          "grading_snapshot",
+          "id",
+          "number",
+          "preserve_manual_grades",
+          "previous_revision_id",
+          "reason",
+          "snapshot_digest",
+          "source"
+        ],
+        "type": "object"
+      },
       "Item": {
         "properties": {
           "created_at": {
@@ -1609,6 +2283,63 @@
           "required",
           "section_id",
           "updated_at"
+        ],
+        "type": "object"
+      },
+      "ItemAnalytics": {
+        "properties": {
+          "answered_count": { "readOnly": true, "type": "integer" },
+          "assessment_item_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "difficulty_basis_points": { "readOnly": true, "type": "integer" },
+          "discrimination": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,2}(?:\\.\\d{0,6})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "discrimination_sample_size": { "readOnly": true, "type": "integer" },
+          "discrimination_suppressed": { "readOnly": true, "type": "boolean" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "mean_credit_basis_points": { "readOnly": true, "type": "integer" },
+          "omitted_count": { "readOnly": true, "type": "integer" },
+          "options": {
+            "items": { "$ref": "#/components/schemas/OptionAnalytics" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "presented_count": { "readOnly": true, "type": "integer" },
+          "question_type": { "readOnly": true, "type": "string" },
+          "question_version_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "answered_count",
+          "assessment_item_id",
+          "created_at",
+          "difficulty_basis_points",
+          "discrimination",
+          "discrimination_sample_size",
+          "discrimination_suppressed",
+          "id",
+          "mean_credit_basis_points",
+          "omitted_count",
+          "options",
+          "presented_count",
+          "question_type",
+          "question_version_id"
         ],
         "type": "object"
       },
@@ -2181,6 +2912,19 @@
         "required": ["code", "id", "statement", "status", "subject_id"],
         "type": "object"
       },
+      "OptionAnalytics": {
+        "properties": {
+          "option_id": { "readOnly": true, "type": "string" },
+          "selected_count": { "readOnly": true, "type": "integer" },
+          "selected_rate_basis_points": { "readOnly": true, "type": "integer" }
+        },
+        "required": [
+          "option_id",
+          "selected_count",
+          "selected_rate_basis_points"
+        ],
+        "type": "object"
+      },
       "OrderedIds": {
         "properties": {
           "expected_version": { "minimum": 1, "type": "integer" },
@@ -2508,6 +3252,78 @@
           "points",
           "response_id",
           "response_status"
+        ],
+        "type": "object"
+      },
+      "PoolCandidates": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "question_version_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 200,
+            "minItems": 2,
+            "type": "array"
+          }
+        },
+        "required": ["expected_version", "question_version_ids"],
+        "type": "object"
+      },
+      "PoolCreate": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "instructions": { "maxLength": 5000, "type": "string" },
+          "points_per_item": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "type": "string"
+          },
+          "question_version_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 200,
+            "minItems": 2,
+            "type": "array"
+          },
+          "selection_count": {
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "shuffle_selected": { "default": false, "type": "boolean" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": [
+          "expected_version",
+          "points_per_item",
+          "question_version_ids",
+          "selection_count",
+          "title"
+        ],
+        "type": "object"
+      },
+      "PoolUpdate": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "instructions": { "maxLength": 5000, "type": "string" },
+          "points_per_item": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "type": "string"
+          },
+          "selection_count": {
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "shuffle_selected": { "type": "boolean" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": [
+          "expected_version",
+          "instructions",
+          "points_per_item",
+          "selection_count",
+          "shuffle_selected",
+          "title"
         ],
         "type": "object"
       },
@@ -3033,6 +3849,162 @@
         "required": ["code", "message", "path"],
         "type": "object"
       },
+      "RegradeJob": {
+        "properties": {
+          "assessment_title": { "readOnly": true, "type": "string" },
+          "assessment_version_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "assessment_version_number": { "readOnly": true, "type": "integer" },
+          "completed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_by_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "delivery_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "delivery_name": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "failed_attempts": { "readOnly": true, "type": "integer" },
+          "grading_revision_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "grading_revision_number": { "readOnly": true, "type": "integer" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "preserve_manual_grades": {
+            "default": true,
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "processed_attempts": { "readOnly": true, "type": "integer" },
+          "reason": { "readOnly": true, "type": "string" },
+          "started_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/AssessmentJobStatus" }],
+            "readOnly": true
+          },
+          "succeeded_attempts": { "readOnly": true, "type": "integer" },
+          "total_attempts": { "readOnly": true, "type": "integer" }
+        },
+        "required": [
+          "assessment_title",
+          "assessment_version_id",
+          "assessment_version_number",
+          "completed_at",
+          "created_at",
+          "created_by_id",
+          "delivery_id",
+          "delivery_name",
+          "failed_attempts",
+          "grading_revision_id",
+          "grading_revision_number",
+          "id",
+          "lock_version",
+          "preserve_manual_grades",
+          "processed_attempts",
+          "reason",
+          "started_at",
+          "status",
+          "succeeded_attempts",
+          "total_attempts"
+        ],
+        "type": "object"
+      },
+      "RegradeJobAttempt": {
+        "properties": {
+          "attempt_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "error_code": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "new_grade_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "previous_grade_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "processed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/AssessmentRegradeAttemptStatus" }
+            ],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "attempt_id",
+          "error_code",
+          "id",
+          "new_grade_id",
+          "previous_grade_id",
+          "processed_at",
+          "status"
+        ],
+        "type": "object"
+      },
+      "RegradeJobCreate": {
+        "properties": {
+          "assessment_version_id": { "format": "uuid", "type": "string" },
+          "delivery_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "grading_revision_id": { "format": "uuid", "type": "string" },
+          "preserve_manual_grades": { "default": true, "type": "boolean" },
+          "reason": { "maxLength": 2000, "type": "string" }
+        },
+        "required": ["assessment_version_id", "grading_revision_id", "reason"],
+        "type": "object"
+      },
+      "RegradeRetry": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["expected_version"],
+        "type": "object"
+      },
       "ReleaseDetail": {
         "properties": {
           "course": {},
@@ -3369,6 +4341,15 @@
         "required": ["alignment_type", "id", "position", "subject"],
         "type": "object"
       },
+      "ScoringCorrection": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "item_overrides": { "additionalProperties": {}, "type": "object" },
+          "reason": { "maxLength": 2000, "type": "string" }
+        },
+        "required": ["expected_version", "item_overrides", "reason"],
+        "type": "object"
+      },
       "Section": {
         "properties": {
           "created_at": {
@@ -3418,6 +4399,21 @@
           "title": { "maxLength": 200, "type": "string" }
         },
         "required": ["expected_version", "instructions", "title"],
+        "type": "object"
+      },
+      "StructureOrder": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "pool_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "type": "array"
+          },
+          "section_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "type": "array"
+          }
+        },
+        "required": ["expected_version", "pool_ids", "section_ids"],
         "type": "object"
       },
       "Subject": {
@@ -4411,6 +5407,178 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/assessments/analytics/assessments/{version_id}/": {
+      "get": {
+        "operationId": "assessment_analytics_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AnalyticsSnapshot" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/analytics/assessments/{version_id}/items/": {
+      "get": {
+        "operationId": "assessment_analytics_items_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/ItemAnalytics" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/analytics/assessments/{version_id}/items/{assessment_item_id}/": {
+      "get": {
+        "operationId": "assessment_analytics_item_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_item_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ItemAnalytics" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/analytics/jobs/{job_id}/": {
+      "get": {
+        "operationId": "assessment_analytics_job_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AnalyticsJob" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/analytics/refresh/": {
+      "post": {
+        "operationId": "organizations_assessments_analytics_refresh_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AnalyticsRefresh" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/AnalyticsRefresh" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/AnalyticsRefresh" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AnalyticsJob" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/": {
       "get": {
         "operationId": "assessment_attempt_retrieve",
@@ -4935,6 +6103,490 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/assessments/gradebooks/": {
+      "get": {
+        "operationId": "organizations_assessments_gradebooks_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Gradebook" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_assessments_gradebooks_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GradebookCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/GradebookCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/GradebookCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Gradebook" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/": {
+      "get": {
+        "operationId": "assessment_gradebook_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gradebook_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Gradebook" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/activate/": {
+      "post": {
+        "operationId": "organizations_assessments_gradebooks_activate_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gradebook_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Gradebook" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/columns/": {
+      "get": {
+        "operationId": "assessment_gradebook_columns_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gradebook_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/GradebookColumn" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_assessments_gradebooks_columns_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gradebook_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GradebookColumnCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/GradebookColumnCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/GradebookColumnCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GradebookColumn" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/columns/order/": {
+      "put": {
+        "operationId": "organizations_assessments_gradebooks_columns_order_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gradebook_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GradebookColumnOrder" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/GradebookColumnOrder" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/GradebookColumnOrder" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Gradebook" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/columns/{column_id}/": {
+      "patch": {
+        "operationId": "organizations_assessments_gradebooks_columns_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "column_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "gradebook_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GradebookColumnUpdate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/GradebookColumnUpdate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/GradebookColumnUpdate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GradebookColumn" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/columns/{column_id}/archive/": {
+      "post": {
+        "operationId": "organizations_assessments_gradebooks_columns_archive_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "column_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "gradebook_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentExpectedVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GradebookColumn" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/entries/": {
+      "get": {
+        "operationId": "assessment_gradebook_entries_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gradebook_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/GradebookEntry" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/students/{release_assignment_id}/": {
+      "get": {
+        "operationId": "assessment_gradebook_student_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gradebook_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "release_assignment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradebookStudentPayload"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/summaries/": {
+      "get": {
+        "operationId": "assessment_gradebook_summaries_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gradebook_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/GradebookSummary" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/assessments/manual-grading/": {
       "get": {
         "operationId": "assessment_manual_grading_list",
@@ -4999,6 +6651,67 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ManualGradeDecision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/me/gradebooks/": {
+      "get": {
+        "operationId": "assessment_my_gradebooks_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Gradebook" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/me/gradebooks/{gradebook_id}/": {
+      "get": {
+        "operationId": "assessment_my_gradebook_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gradebook_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradebookStudentPayload"
+                }
               }
             },
             "description": ""
@@ -5089,6 +6802,125 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Attempt" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/pools/{pool_id}/": {
+      "get": {
+        "operationId": "organizations_assessments_pools_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pool_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentPool" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "organizations_assessments_pools_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pool_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PoolUpdate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/PoolUpdate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/PoolUpdate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentPool" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/pools/{pool_id}/candidates/": {
+      "put": {
+        "operationId": "organizations_assessments_pools_candidates_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pool_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PoolCandidates" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/PoolCandidates" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/PoolCandidates" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentPool" }
               }
             },
             "description": ""
@@ -5294,6 +7126,12 @@
             "name": "bank_id",
             "required": true,
             "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "page", "schema": { "type": "integer" } },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": { "type": "integer" }
           },
           {
             "in": "path",
@@ -6029,6 +7867,181 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/assessments/regrade-jobs/": {
+      "get": {
+        "operationId": "organizations_assessments_regrade_jobs_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/RegradeJob" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_assessments_regrade_jobs_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegradeJobCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/RegradeJobCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/RegradeJobCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RegradeJob" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/regrade-jobs/{job_id}/": {
+      "get": {
+        "operationId": "assessment_regrade_job_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RegradeJob" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/regrade-jobs/{job_id}/attempts/": {
+      "get": {
+        "operationId": "assessment_regrade_job_attempts_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/RegradeJobAttempt" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/regrade-jobs/{job_id}/retry-failed/": {
+      "post": {
+        "operationId": "organizations_assessments_regrade_jobs_retry_failed_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegradeRetry" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/RegradeRetry" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/RegradeRetry" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RegradeJob" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/assessments/results/": {
       "get": {
         "operationId": "assessment_results_list",
@@ -6045,6 +8058,116 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/AttemptResultPage" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/scoring-policies/{version_id}/": {
+      "get": {
+        "operationId": "organizations_assessments_scoring_policies_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GradingPolicy" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/scoring-policies/{version_id}/corrections/": {
+      "post": {
+        "operationId": "organizations_assessments_scoring_policies_corrections_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ScoringCorrection" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ScoringCorrection" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ScoringCorrection" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GradingRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/scoring-policies/{version_id}/revisions/": {
+      "get": {
+        "operationId": "assessment_scoring_policy_revisions_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/GradingRevision" },
+                  "type": "array"
+                }
               }
             },
             "description": ""
@@ -6313,6 +8436,95 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/AssessmentOutline" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/pools/": {
+      "get": {
+        "operationId": "organizations_assessments_revisions_pools_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/AssessmentPool" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_assessments_revisions_pools_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PoolCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/PoolCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/PoolCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentPool" }
               }
             },
             "description": ""
@@ -6869,6 +9081,59 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Item" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/structure/order/": {
+      "put": {
+        "operationId": "organizations_assessments_revisions_structure_order_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StructureOrder" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/StructureOrder" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/StructureOrder" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentExpectedVersion"
+                }
               }
             },
             "description": ""

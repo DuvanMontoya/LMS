@@ -82,3 +82,9 @@ entrega, intento, respuesta y grading inicial. Puede validar referencias de
 organizations/catalog/publishing/learning, pero esos módulos no lo importan.
 El navegador recibe sólo snapshots públicos. Véanse `ASSESSMENTS.md` y ADR
 0023.
+
+Prompt 14 amplía esta misma frontera con políticas de scoring, MathJSON seguro,
+pools, jobs, grade versions, regrading, gradebook y analítica. Celery sólo llama
+servicios de assessments; no introduce un dominio ni persistencia alterna.
+Redis no contiene grades. `courses`, `content`, `publishing` y `learning`
+continúan sin importar assessments; el gradebook no modifica `CourseProgress`.

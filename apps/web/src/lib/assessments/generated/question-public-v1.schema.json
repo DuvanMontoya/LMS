@@ -15,7 +15,8 @@
         "short_text",
         "long_text",
         "ordering",
-        "matching"
+        "matching",
+        "mathematical_expression"
       ]
     },
     "prompt": { "$ref": "urn:lms:content:unit-document:1" },
@@ -40,7 +41,26 @@
     "true_label": { "type": "string", "minLength": 1, "maxLength": 120 },
     "false_label": { "type": "string", "minLength": 1, "maxLength": 120 },
     "response_placeholder": { "type": "string", "maxLength": 240 },
-    "unit": { "type": "string", "maxLength": 80 }
+    "unit": { "type": "string", "maxLength": 80 },
+    "allowed_symbols": {
+      "type": "array",
+      "maxItems": 10,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+      }
+    },
+    "allowed_functions": {
+      "type": "array",
+      "maxItems": 7,
+      "uniqueItems": true,
+      "items": { "enum": ["Sin", "Cos", "Tan", "Exp", "Ln", "Log", "Abs"] }
+    },
+    "response_guidance": { "type": "string", "maxLength": 1000 },
+    "maximum_latex_length": { "type": "integer", "minimum": 1, "maximum": 4096 }
   },
   "allOf": [
     {
@@ -86,6 +106,28 @@
       },
       "then": {},
       "else": { "not": { "required": ["unit"] } }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "mathematical_expression" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": [
+          "allowed_symbols",
+          "allowed_functions",
+          "response_guidance",
+          "maximum_latex_length"
+        ]
+      },
+      "else": {
+        "allOf": [
+          { "not": { "required": ["allowed_symbols"] } },
+          { "not": { "required": ["allowed_functions"] } },
+          { "not": { "required": ["response_guidance"] } },
+          { "not": { "required": ["maximum_latex_length"] } }
+        ]
+      }
     }
   ],
   "$defs": {

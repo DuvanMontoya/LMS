@@ -22,6 +22,7 @@ class QuestionType(models.TextChoices):
     LONG_TEXT = "long_text", "Texto largo"
     ORDERING = "ordering", "Ordenamiento"
     MATCHING = "matching", "Emparejamiento"
+    MATHEMATICAL_EXPRESSION = "mathematical_expression", "Expresión matemática"
 
 
 class FeedbackMode(models.TextChoices):
@@ -46,8 +47,10 @@ class AssignmentStatus(models.TextChoices):
 
 class AttemptStatus(models.TextChoices):
     IN_PROGRESS = "in_progress", "En curso"
+    GRADING_PENDING = "grading_pending", "Calificación automática pendiente"
     PENDING_MANUAL = "pending_manual", "Pendiente de calificación manual"
     GRADED = "graded", "Calificado"
+    GRADING_FAILED = "grading_failed", "Falló la calificación"
 
 
 class ResponseStatus(models.TextChoices):
@@ -65,3 +68,70 @@ class AttemptEventType(models.TextChoices):
     AUTO_GRADED = "auto_graded", "Calificado automáticamente"
     MANUAL_GRADED = "manual_graded", "Calificado manualmente"
     COMPLETED = "completed", "Completado"
+
+
+class PoolSelectionStrategy(models.TextChoices):
+    RANDOM_WITHOUT_REPLACEMENT = (
+        "random_without_replacement",
+        "Aleatoria sin reemplazo",
+    )
+
+
+class GradingRevisionSource(models.TextChoices):
+    ORIGINAL = "original", "Original"
+    CORRECTION = "correction", "Corrección"
+
+
+class GradeSource(models.TextChoices):
+    INITIAL = "initial", "Inicial"
+    MANUAL_GRADE = "manual_grade", "Calificación manual"
+    REGRADE = "regrade", "Recalificación"
+
+
+class GradingStatus(models.TextChoices):
+    PENDING = "pending", "Pendiente"
+    PENDING_MANUAL = "pending_manual", "Pendiente de revisión manual"
+    GRADED = "graded", "Calificado"
+    FAILED = "failed", "Falló"
+
+
+class JobStatus(models.TextChoices):
+    QUEUED = "queued", "En cola"
+    RUNNING = "running", "En ejecución"
+    COMPLETED = "completed", "Completado"
+    COMPLETED_WITH_ERRORS = "completed_with_errors", "Completado con errores"
+    FAILED = "failed", "Falló"
+
+
+class RegradeAttemptStatus(models.TextChoices):
+    PENDING = "pending", "Pendiente"
+    PROCESSING = "processing", "Procesando"
+    COMPLETED = "completed", "Completado"
+    FAILED = "failed", "Falló"
+    SKIPPED = "skipped", "Omitido"
+
+
+class GradebookStatus(models.TextChoices):
+    DRAFT = "draft", "Borrador"
+    ACTIVE = "active", "Activo"
+
+
+class GradebookColumnStatus(models.TextChoices):
+    ACTIVE = "active", "Activa"
+    ARCHIVED = "archived", "Archivada"
+
+
+class AttemptAggregation(models.TextChoices):
+    HIGHEST = "highest", "Mejor intento"
+    LATEST = "latest", "Último intento"
+
+
+class GradebookEntryStatus(models.TextChoices):
+    MISSING = "missing", "Sin entrega"
+    PENDING = "pending", "Pendiente"
+    GRADED = "graded", "Calificada"
+
+
+class GradebookSummaryStatus(models.TextChoices):
+    INCOMPLETE = "incomplete", "Incompleto"
+    COMPLETE = "complete", "Completo"

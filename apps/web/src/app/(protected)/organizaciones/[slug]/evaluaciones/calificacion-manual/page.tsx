@@ -18,8 +18,8 @@ export default async function ManualGradingPage({
           },
           { label: 'Calificación manual' },
         ]}
-        description="Registra decisiones append-only sobre respuestas abiertas y recalcula el resultado."
-        eyebrow="Manual grading"
+        description="Registra decisiones históricas sobre respuestas abiertas y recalcula el resultado sin sobrescribir el pasado."
+        eyebrow="Calificación humana"
         title="Calificación manual"
       />
       <ManualGradingQueue responses={data.responses} slug={slug} />

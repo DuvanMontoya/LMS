@@ -1,7 +1,24 @@
-import { ArrowRight, BookOpen, Clock3, Languages, Target } from 'lucide-react';
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  ChevronDown,
+  Clock3,
+  Languages,
+  Layers3,
+  Play,
+  Target,
+} from 'lucide-react';
 import Link from 'next/link';
 
-import { PageHeader } from '@/components/platform/page-header';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDuration, languageLabel } from '@/lib/publishing/labels';
@@ -13,134 +30,199 @@ export default async function LibraryCoursePage({
   const { courseSlug, slug } = await params;
   const data = await getLibraryCourse(slug, courseSlug);
   const firstUnit = data.course.outline[0]?.units[0];
+  const firstUnitHref = firstUnit
+    ? `/organizaciones/${slug}/biblioteca/${courseSlug}/unidades/${firstUnit.id}`
+    : undefined;
+
   return (
-    <main className="academic-page">
-      <PageHeader
-        actions={
-          firstUnit ? (
-            <Button asChild size="sm">
-              <Link
-                href={`/organizaciones/${slug}/biblioteca/${courseSlug}/unidades/${firstUnit.id}`}
-              >
-                Comenzar lectura
-                <ArrowRight data-icon="inline-end" />
+    <main
+      className="academic-page library-course-detail"
+      id="contenido-principal"
+    >
+      <Breadcrumb className="mb-4 min-w-0 overflow-hidden">
+        <BreadcrumbList className="min-w-0">
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/organizaciones/${slug}/biblioteca`}>
+                Biblioteca
               </Link>
-            </Button>
-          ) : null
-        }
-        breadcrumbs={[
-          { href: `/organizaciones/${slug}`, label: data.organization.name },
-          { href: `/organizaciones/${slug}/biblioteca`, label: 'Biblioteca' },
-          { label: data.course.title },
-        ]}
-        description={data.course.summary}
-        eyebrow="Curso publicado"
-        title={data.course.title}
-      />
-      <p className="mt-4 max-w-4xl text-sm leading-6 text-foreground/80">
-        {data.course.description}
-      </p>
-      <dl className="mt-5 grid border sm:grid-cols-2 lg:grid-cols-4">
-        <CourseFact
-          icon={<Clock3 />}
-          label="Duración"
-          value={formatDuration(data.course.estimated_duration_minutes)}
-        />
-        <CourseFact
-          icon={<BookOpen />}
-          label="Estructura"
-          value={`${data.course.module_count} módulos · ${data.course.unit_count} unidades`}
-        />
-        <CourseFact
-          icon={<Languages />}
-          label="Idioma"
-          value={languageLabel(data.course.language_code)}
-        />
-        <CourseFact
-          icon={<Target />}
-          label="Objetivos"
-          value={`${data.objectives.length} declarados`}
-        />
-      </dl>
-      <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <section className="border">
-          <header className="border-b px-5 py-4">
-            <h2 className="font-semibold">Tabla de contenidos</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Orden estable del release {data.course.release_number}.
-            </p>
-          </header>
-          <ol className="divide-y">
-            {data.course.outline.map((module) => (
-              <li
-                className="grid lg:grid-cols-[16rem_minmax(0,1fr)]"
-                key={module.id}
-              >
-                <div className="border-b bg-muted/15 px-5 py-4 lg:border-r lg:border-b-0">
-                  <span className="text-xs text-muted-foreground">
-                    Módulo {module.position}
-                  </span>
-                  <h3 className="mt-1 text-sm font-semibold">{module.title}</h3>
-                  {module.description ? (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {module.description}
-                    </p>
-                  ) : null}
-                </div>
-                <ol className="divide-y">
-                  {module.units.map((unit) => (
-                    <li key={unit.id}>
-                      <Link
-                        className="flex min-h-12 items-center gap-3 px-5 py-3 text-sm hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
-                        href={`/organizaciones/${slug}/biblioteca/${courseSlug}/unidades/${unit.id}`}
-                      >
-                        <span className="text-muted-foreground">
-                          {module.position}.{unit.position}
-                        </span>
-                        <span className="min-w-0 flex-1 font-medium">
-                          {unit.title}
-                        </span>
-                        <ArrowRight className="size-4" aria-hidden="true" />
-                      </Link>
-                    </li>
-                  ))}
-                </ol>
-              </li>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem className="min-w-0">
+            <BreadcrumbPage className="truncate">
+              {data.course.title}
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <section className="library-course-hero">
+        <div className="library-course-hero__content">
+          <p className="academic-kicker">Curso publicado</p>
+          <div className="library-course-hero__subjects">
+            {data.subjects.map((subject) => (
+              <Badge key={subject.id} variant="outline">
+                {subject.name}
+              </Badge>
             ))}
-          </ol>
-        </section>
-        <aside className="grid content-start gap-5">
-          <section className="border p-5">
-            <h2 className="font-semibold">Asignaturas</h2>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {data.subjects.map((subject) => (
-                <Badge key={subject.id} variant="outline">
-                  {subject.name}
-                </Badge>
+          </div>
+          <h1>{data.course.title}</h1>
+          <p>{data.course.summary}</p>
+          <div className="library-course-hero__actions">
+            {firstUnitHref ? (
+              <Button asChild size="lg">
+                <Link href={firstUnitHref}>
+                  <Play />
+                  Comenzar curso
+                </Link>
+              </Button>
+            ) : null}
+            <Button asChild size="lg" variant="outline">
+              <Link href="#contenido-del-curso">Explorar contenido</Link>
+            </Button>
+          </div>
+        </div>
+        <div aria-hidden="true" className="library-course-hero__visual">
+          <div>
+            <BookOpen />
+            <span>{String(data.course.module_count).padStart(2, '0')}</span>
+            <small>Módulos</small>
+          </div>
+          <span />
+          <span />
+        </div>
+      </section>
+
+      <div className="library-course-layout">
+        <div className="library-course-main">
+          {data.course.description ? (
+            <section className="library-course-about">
+              <p className="academic-kicker">Presentación</p>
+              <h2>Acerca de este curso</h2>
+              <p>{data.course.description}</p>
+            </section>
+          ) : null}
+
+          {data.objectives.length ? (
+            <section className="library-course-objectives">
+              <header>
+                <Target />
+                <div>
+                  <p className="academic-kicker">Resultados esperados</p>
+                  <h2>Lo que aprenderás</h2>
+                </div>
+              </header>
+              <ul>
+                {data.objectives.map((objective) => (
+                  <li key={objective.id}>
+                    <CheckCircle2 />
+                    <span>
+                      <strong>{objective.code}</strong>
+                      {objective.statement}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <section
+            className="library-course-curriculum"
+            id="contenido-del-curso"
+          >
+            <header>
+              <div>
+                <p className="academic-kicker">Plan de estudios</p>
+                <h2>Contenido del curso</h2>
+                <p>
+                  {data.course.module_count} módulos · {data.course.unit_count}{' '}
+                  lecciones en el release {data.course.release_number}
+                </p>
+              </div>
+            </header>
+            <div>
+              {data.course.outline.map((module, index) => (
+                <details key={module.id} open={index === 0}>
+                  <summary>
+                    <span>{String(module.position).padStart(2, '0')}</span>
+                    <span>
+                      <strong>{module.title}</strong>
+                      <small>
+                        {module.units.length}{' '}
+                        {module.units.length === 1 ? 'lección' : 'lecciones'}
+                      </small>
+                    </span>
+                    <ChevronDown />
+                  </summary>
+                  {module.description ? <p>{module.description}</p> : null}
+                  <ol>
+                    {module.units.map((unit) => (
+                      <li key={unit.id}>
+                        <Link
+                          href={`/organizaciones/${slug}/biblioteca/${courseSlug}/unidades/${unit.id}`}
+                        >
+                          <span>
+                            {module.position}.{unit.position}
+                          </span>
+                          <span>{unit.title}</span>
+                          <ArrowRight />
+                        </Link>
+                      </li>
+                    ))}
+                  </ol>
+                </details>
               ))}
             </div>
           </section>
-          <section className="border p-5">
-            <h2 className="font-semibold">Objetivos de aprendizaje</h2>
-            <ol className="mt-3 space-y-3 text-sm">
-              {data.objectives.map((objective) => (
-                <li
-                  className="border-l-2 border-primary pl-3"
-                  key={objective.id}
-                >
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    {objective.code}
-                  </span>
-                  <p>{objective.statement}</p>
-                </li>
-              ))}
-            </ol>
-          </section>
+        </div>
+
+        <aside className="library-course-card-sticky">
+          <div className="library-course-card-sticky__cover">
+            <Layers3 />
+            <span>Ruta académica</span>
+            <small>Release {data.course.release_number}</small>
+          </div>
+          <div className="library-course-card-sticky__body">
+            {firstUnitHref ? (
+              <Button asChild className="w-full" size="lg">
+                <Link href={firstUnitHref}>
+                  Comenzar ahora
+                  <ArrowRight data-icon="inline-end" />
+                </Link>
+              </Button>
+            ) : null}
+            <p>Este curso incluye</p>
+            <dl>
+              <CourseFact
+                icon={<Clock3 />}
+                label="Duración estimada"
+                value={formatDuration(data.course.estimated_duration_minutes)}
+              />
+              <CourseFact
+                icon={<Layers3 />}
+                label="Módulos"
+                value={String(data.course.module_count)}
+              />
+              <CourseFact
+                icon={<BookOpen />}
+                label="Lecciones"
+                value={String(data.course.unit_count)}
+              />
+              <CourseFact
+                icon={<Languages />}
+                label="Idioma"
+                value={languageLabel(data.course.language_code)}
+              />
+              <CourseFact
+                icon={<Target />}
+                label="Objetivos"
+                value={String(data.objectives.length)}
+              />
+            </dl>
+          </div>
         </aside>
       </div>
-      <p className="mt-5 text-xs text-muted-foreground">
-        “Comenzar lectura” abre la primera unidad; esta fase no guarda avance.
-      </p>
     </main>
   );
 }
@@ -151,12 +233,12 @@ function CourseFact({
   value,
 }: Readonly<{ icon: React.ReactNode; label: string; value: string }>) {
   return (
-    <div className="border-b px-5 py-4 lg:border-r lg:border-b-0">
-      <dt className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span className="text-primary [&_svg]:size-4">{icon}</span>
+    <div>
+      <dt>
+        {icon}
         {label}
       </dt>
-      <dd className="mt-1 text-sm font-medium">{value}</dd>
+      <dd>{value}</dd>
     </div>
   );
 }

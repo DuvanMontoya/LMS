@@ -15,7 +15,7 @@ export default async function AssessmentDeliveriesPage({
           { label: 'Entregas de evaluaciones' },
         ]}
         description="Fija una versión aprobada, define la ventana y asigna únicamente matrículas con release efectivo."
-        eyebrow="Assessment delivery"
+        eyebrow="Entrega de evaluaciones"
         title="Entregas de evaluaciones"
       />
       <DeliveryManager

@@ -33,7 +33,7 @@ export default async function AssessmentResultsPage({
           { label: 'Resultados' },
         ]}
         description="Vista institucional de intentos y estados de calificación."
-        eyebrow="Assessment results"
+        eyebrow="Resultados de evaluaciones"
         title="Resultados de evaluaciones"
       />
       <section className="assessment-results-summary">
@@ -58,16 +58,21 @@ export default async function AssessmentResultsPage({
             <p className="assessment-rail-kicker">Registro auditable</p>
             <h2>Libro de resultados</h2>
           </div>
-          <span>{results.length} registros</span>
+          <span>
+            {results.length} {results.length === 1 ? 'registro' : 'registros'}
+          </span>
         </header>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full min-w-3xl text-left text-sm">
+            <caption className="sr-only">
+              Resultados de evaluación por intento
+            </caption>
             <thead>
               <tr>
                 <th className="px-4 py-3">Intento</th>
                 <th className="px-4 py-3">Estado</th>
                 <th className="px-4 py-3">Puntaje</th>
-                <th className="px-4 py-3">Basis points</th>
+                <th className="px-4 py-3">Resultado porcentual</th>
                 <th className="px-4 py-3">Aprobación</th>
               </tr>
             </thead>
@@ -80,7 +85,9 @@ export default async function AssessmentResultsPage({
                     </span>
                   </td>
                   <td className="px-4 py-4">
-                    <Badge variant="outline">{result.status}</Badge>
+                    <Badge variant="outline">
+                      {resultStatusLabel(result.status)}
+                    </Badge>
                   </td>
                   <td className="px-4 py-4 font-semibold">
                     {result.total_score} / {result.maximum_score}
@@ -104,8 +111,8 @@ export default async function AssessmentResultsPage({
                   <td className="px-4 py-12 text-center" colSpan={5}>
                     <strong>Aún no hay intentos registrados.</strong>
                     <p className="mt-1 text-muted-foreground">
-                      Los resultados aparecerán aquí cuando los learners envíen
-                      sus evaluaciones.
+                      Los resultados aparecerán aquí cuando los estudiantes
+                      envíen sus evaluaciones.
                     </p>
                   </td>
                 </tr>
@@ -115,6 +122,17 @@ export default async function AssessmentResultsPage({
         </div>
       </section>
     </main>
+  );
+}
+
+function resultStatusLabel(status: string) {
+  return (
+    {
+      graded: 'Calificado',
+      in_progress: 'En curso',
+      pending_manual: 'Revisión manual',
+      submitted: 'Enviado',
+    }[status] ?? status
   );
 }
 

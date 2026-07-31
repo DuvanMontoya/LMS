@@ -54,6 +54,12 @@ class Capability(StrEnum):
     ASSESSMENT_GRADING_MANAGE = "assessment.grading.manage"
     ASSESSMENT_RESULTS_VIEW = "assessment.results.view"
     ASSESSMENT_ATTEMPT = "assessment.attempt"
+    ASSESSMENT_REGRADING_VIEW = "assessment.regrading.view"
+    ASSESSMENT_REGRADING_MANAGE = "assessment.regrading.manage"
+    ASSESSMENT_GRADEBOOK_VIEW = "assessment.gradebook.view"
+    ASSESSMENT_GRADEBOOK_MANAGE = "assessment.gradebook.manage"
+    ASSESSMENT_ANALYTICS_VIEW = "assessment.analytics.view"
+    ASSESSMENT_ANALYTICS_REFRESH = "assessment.analytics.refresh"
 
 
 _ALL_CAPABILITIES = frozenset(Capability)
@@ -93,6 +99,9 @@ _COURSE_AUTHOR_CAPABILITIES = frozenset(
         Capability.ASSESSMENT_AUTHORING_SUBMIT,
         Capability.ASSESSMENT_DELIVERY_VIEW,
         Capability.ASSESSMENT_RESULTS_VIEW,
+        Capability.ASSESSMENT_REGRADING_VIEW,
+        Capability.ASSESSMENT_GRADEBOOK_VIEW,
+        Capability.ASSESSMENT_ANALYTICS_VIEW,
     }
 )
 
@@ -121,6 +130,8 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.ASSESSMENT_AUTHORING_REVIEW,
                 Capability.ASSESSMENT_DELIVERY_VIEW,
                 Capability.ASSESSMENT_RESULTS_VIEW,
+                Capability.ASSESSMENT_REGRADING_VIEW,
+                Capability.ASSESSMENT_ANALYTICS_VIEW,
             }
         ),
         RoleCode.INSTRUCTOR: _MEMBER_READ_CAPABILITIES
@@ -139,6 +150,12 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.ASSESSMENT_DELIVERY_MANAGE,
                 Capability.ASSESSMENT_GRADING_MANAGE,
                 Capability.ASSESSMENT_RESULTS_VIEW,
+                Capability.ASSESSMENT_REGRADING_VIEW,
+                Capability.ASSESSMENT_REGRADING_MANAGE,
+                Capability.ASSESSMENT_GRADEBOOK_VIEW,
+                Capability.ASSESSMENT_GRADEBOOK_MANAGE,
+                Capability.ASSESSMENT_ANALYTICS_VIEW,
+                Capability.ASSESSMENT_ANALYTICS_REFRESH,
             }
         ),
         RoleCode.LEARNER: _MEMBER_READ_CAPABILITIES

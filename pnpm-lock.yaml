@@ -42,6 +42,9 @@ importers:
       '@codemirror/view':
         specifier: 6.43.7
         version: 6.43.7
+      '@cortex-js/compute-engine':
+        specifier: 0.99.0
+        version: 0.99.0
       '@hookform/resolvers':
         specifier: 5.5.7
         version: 5.5.7(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.83.0(react@19.2.8))(zod@4.4.3)
@@ -313,6 +316,11 @@ packages:
   '@cortex-js/compute-engine@0.58.0':
     resolution: {integrity: sha512-N0+vXjVZfKwJS7ZIGvq41mojI55m5TrdDXveAXzNjzjZ9iNiNrdEzXL2EmrcP+9GCWCwTonrEeZWAIG78f3INg==}
     engines: {node: '>=21.7.3', npm: '>=10.5.0'}
+
+  '@cortex-js/compute-engine@0.99.0':
+    resolution: {integrity: sha512-kHM59J3S30l41J8kVkbdN6hwbjH+ipsEO/AoTet/BtJAIxfofmDbSQWG90DzOb8uOxYn2Ub+BGTN11swCxUpPA==}
+    engines: {node: '>=21.7.3', npm: '>=10.5.0'}
+    hasBin: true
 
   '@csstools/color-helpers@6.1.0':
     resolution: {integrity: sha512-064IFJdjTfUqnjpCVpMOdbr8FLQBhinbZj6yRv2An2E41O/pLEXqfFRWqGq/SxlE5PEUYTlvWsG2r8MswAVvkg==}
@@ -4206,6 +4214,11 @@ snapshots:
       '@arnog/colors': 0.5.0
       complex-esm: 2.1.1-esm1
       decimal.js: 10.6.0
+
+  '@cortex-js/compute-engine@0.99.0':
+    dependencies:
+      '@arnog/colors': 0.5.0
+      complex-esm: 2.1.1-esm1
 
   '@csstools/color-helpers@6.1.0': {}
 

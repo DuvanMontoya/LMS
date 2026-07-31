@@ -48,6 +48,10 @@ jobs:
           pnpm run api:migrations:plan
           pnpm run api:migrate
           pnpm run api:test:migrations
+          pnpm run async:build
+          pnpm run async:up
+          pnpm run async:status
+          pnpm run async:smoke
           pnpm run organizations:check
           pnpm run organizations:test:policies
           pnpm run organizations:test:concurrency
@@ -87,6 +91,14 @@ jobs:
           pnpm run learning:test:security
           pnpm run assessments:check
           pnpm run assessments:migrations
+          pnpm run assessments:test:partial-credit
+          pnpm run assessments:test:math
+          pnpm run assessments:test:pools
+          pnpm run assessments:test:grade-versions
+          pnpm run assessments:test:regrading
+          pnpm run assessments:test:gradebook
+          pnpm run assessments:test:analytics
+          pnpm run assessments:test:worker
           pnpm run assessments:test
           pnpm run assessments:test:concurrency
           pnpm run assessments:test:security
@@ -130,6 +142,10 @@ jobs:
           pnpm run publishing:e2e
           pnpm run learning:e2e
           pnpm run assessments:e2e
+          pnpm run assessments:advanced-e2e
+      - name: Stop the asynchronous assessment worker
+        if: always()
+        run: pnpm run async:down
       - name: Remove schema-test infrastructure resources
         if: always()
         run: pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Reset -ConfirmReset

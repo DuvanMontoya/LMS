@@ -94,3 +94,14 @@ management commands; en web agrega rutas `aprendizaje`/`aprender`,
 `components/learning`, `lib/learning` y `learning.spec.ts`. Los contratos
 generados permanecen en el único cliente `platform.ts`; no existe un segundo
 backend, base, store o sistema de permisos.
+
+Prompt 14 adapta la estructura real sin crear apps paralelas:
+
+- `domain/assessments/math/`: AST, límites, constructores y equivalencia.
+- `grading.py`, `jobs.py`, `regrading.py`, `gradebooks.py`, `analytics.py`:
+  servicios cohesionados del mismo dominio.
+- `tasks.py`, `queues.py`, `config/celery.py` y `Dockerfile.worker`: adaptador
+  asíncrono.
+- `schemas/assessment/`: MathJSON, response, scoring y grading revision.
+- `evaluaciones/regrading`, `gradebooks`, `analitica`: rutas Next protegidas.
+- `scripts/async.ps1`: ciclo de vida reproducible del worker.

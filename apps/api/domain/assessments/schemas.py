@@ -13,6 +13,7 @@ from referencing import Registry, Resource
 from .canonical import canonical_json_bytes, deep_json_copy
 from .exceptions import AssessmentInvalid
 from .limits import MAX_QUESTION_DEFINITION_BYTES, MAX_RESPONSE_BYTES
+from .math import validate_mathjson
 from .scoring import normalize_short_text, parse_decimal_text
 
 CURRENT_ASSESSMENT_SCHEMA_VERSION = 1
@@ -23,6 +24,10 @@ QUESTION_PUBLIC_SCHEMA_ID = "urn:lms:assessment:question-public:1"
 QUESTION_DEFINITION_SCHEMA_ID = "urn:lms:assessment:question-definition:1"
 RESPONSE_SCHEMA_ID = "urn:lms:assessment:response:1"
 ASSESSMENT_VERSION_SCHEMA_ID = "urn:lms:assessment:assessment-version:1"
+MATH_EXPRESSION_SCHEMA_ID = "urn:lms:assessment:math-expression:1"
+MATH_EXPRESSION_RESPONSE_SCHEMA_ID = "urn:lms:assessment:math-expression-response:1"
+SCORING_POLICY_SCHEMA_ID = "urn:lms:assessment:scoring-policy:2"
+GRADING_REVISION_SCHEMA_ID = "urn:lms:assessment:grading-revision:1"
 
 SCHEMA_PATHS = {
     CONTENT_SCHEMA_ID: SCHEMA_ROOT / "content" / "unit-document-v1.schema.json",
@@ -35,6 +40,18 @@ SCHEMA_PATHS = {
     RESPONSE_SCHEMA_ID: SCHEMA_ROOT / "assessment" / "response-v1.schema.json",
     ASSESSMENT_VERSION_SCHEMA_ID: (
         SCHEMA_ROOT / "assessment" / "assessment-version-v1.schema.json"
+    ),
+    MATH_EXPRESSION_SCHEMA_ID: (
+        SCHEMA_ROOT / "assessment" / "math-expression-v1.schema.json"
+    ),
+    MATH_EXPRESSION_RESPONSE_SCHEMA_ID: (
+        SCHEMA_ROOT / "assessment" / "math-expression-response-v1.schema.json"
+    ),
+    SCORING_POLICY_SCHEMA_ID: (
+        SCHEMA_ROOT / "assessment" / "scoring-policy-v2.schema.json"
+    ),
+    GRADING_REVISION_SCHEMA_ID: (
+        SCHEMA_ROOT / "assessment" / "grading-revision-v1.schema.json"
     ),
 }
 
@@ -210,6 +227,34 @@ def _validate_definition_semantics(definition: dict[str, Any]) -> None:
                 path="definition.grading.accepted_answers",
             )
 
+    if question_type == "mathematical_expression":
+        public_symbols = public["allowed_symbols"]
+        grading_symbols = grading["allowed_symbols"]
+        public_functions = public["allowed_functions"]
+        grading_functions = grading["allowed_functions"]
+        if public_symbols != grading_symbols or public_functions != grading_functions:
+            raise AssessmentInvalid(
+                "Los símbolos y funciones públicos deben coincidir con grading.",
+                path="definition.grading",
+            )
+        assumptions = grading["symbol_assumptions"]
+        if not set(assumptions).issubset(set(grading_symbols)):
+            raise AssessmentInvalid(
+                "Las assumptions usan un símbolo no autorizado.",
+                path="definition.grading.symbol_assumptions",
+            )
+        for symbol, declared in assumptions.items():
+            if "positive" in declared and "nonnegative" in declared:
+                raise AssessmentInvalid(
+                    "Positive ya implica nonnegative; declare sólo la más específica.",
+                    path=f"definition.grading.symbol_assumptions.{symbol}",
+                )
+        validate_mathjson(
+            grading["expected_mathjson"],
+            allowed_symbols=grading_symbols,
+            allowed_functions=grading_functions,
+        )
+
 
 def validate_question_definition(payload: object) -> dict[str, Any]:
     if len(canonical_json_bytes(payload)) > MAX_QUESTION_DEFINITION_BYTES:
@@ -237,6 +282,14 @@ def validate_response(payload: object, *, expected_type: str) -> dict[str, Any]:
 
 def validate_assessment_snapshot(payload: object) -> dict[str, Any]:
     return _validate(payload, ASSESSMENT_VERSION_SCHEMA_ID, field="public_snapshot")
+
+
+def validate_scoring_policy(payload: object) -> dict[str, Any]:
+    return _validate(payload, SCORING_POLICY_SCHEMA_ID, field="scoring_policy")
+
+
+def validate_grading_revision_snapshot(payload: object) -> dict[str, Any]:
+    return _validate(payload, GRADING_REVISION_SCHEMA_ID, field="grading_snapshot")
 
 
 def validate_schema_contracts() -> None:

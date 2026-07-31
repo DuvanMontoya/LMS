@@ -20,17 +20,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { MutationError } from '@/components/assessments/authoring-forms';
 import {
   addAssessmentItem,
+  createAssessmentPool,
   addAssessmentSection,
   replaceAssessmentObjectives,
   reorderAssessmentItems,
   reorderAssessmentSections,
+  replaceAssessmentPoolCandidates,
   transitionAssessmentRevision,
+  updateAssessmentPool,
   updateAssessmentItem,
   updateAssessmentRevision,
   useAssessmentMutation,
 } from '@/lib/assessments/hooks';
 import type {
   AssessmentOutline,
+  AssessmentPool,
   AssessmentReadiness,
   LearningObjective,
   QuestionVersion,
@@ -69,6 +73,7 @@ export function AssessmentComposer({
   canSubmit,
   objectives,
   outline,
+  pools,
   questions,
   readiness,
   slug,
@@ -80,6 +85,7 @@ export function AssessmentComposer({
   canSubmit: boolean;
   objectives: LearningObjective[];
   outline: AssessmentOutline;
+  pools: AssessmentPool[];
   questions: QuestionOption[];
   readiness: AssessmentReadiness;
   slug: string;
@@ -103,8 +109,8 @@ export function AssessmentComposer({
   const [attemptLimit, setAttemptLimit] = useState(
     revision.attempt_limit?.toString() ?? '',
   );
-  const [passBasisPoints, setPassBasisPoints] = useState(
-    revision.pass_basis_points.toString(),
+  const [passPercent, setPassPercent] = useState(
+    (revision.pass_basis_points / 100).toString(),
   );
   const [shuffleSections, setShuffleSections] = useState(
     revision.shuffle_sections,
@@ -123,7 +129,7 @@ export function AssessmentComposer({
       feedback_mode: feedbackMode,
       instructions,
       attempt_limit: attemptLimit ? Number(attemptLimit) : null,
-      pass_basis_points: Number(passBasisPoints),
+      pass_basis_points: Math.round(Number(passPercent) * 100),
       shuffle_items: shuffleItems,
       shuffle_sections: shuffleSections,
       time_limit_minutes: timeLimit ? Number(timeLimit) : null,
@@ -169,9 +175,19 @@ export function AssessmentComposer({
     (count, section) => count + section.items.length,
     0,
   );
-  const maximumScore = sections
-    .flatMap((section) => section.items)
-    .reduce((total, item) => total + Number(item.points), 0);
+  const selectedPoolItemCount = pools.reduce(
+    (count, pool) => count + pool.selection_count,
+    0,
+  );
+  const maximumScore =
+    sections
+      .flatMap((section) => section.items)
+      .reduce((total, item) => total + Number(item.points), 0) +
+    pools.reduce(
+      (total, pool) =>
+        total + pool.selection_count * Number(pool.points_per_item),
+      0,
+    );
   return (
     <>
       <section className="assessment-composer-summary">
@@ -190,7 +206,7 @@ export function AssessmentComposer({
           </div>
           <div>
             <dt>Preguntas</dt>
-            <dd>{itemCount}</dd>
+            <dd>{itemCount + selectedPoolItemCount}</dd>
           </div>
           <div>
             <dt>Puntaje</dt>
@@ -276,17 +292,21 @@ export function AssessmentComposer({
                 </div>
                 <div>
                   <Label htmlFor="assessment-editor-pass">
-                    Umbral (puntos base)
+                    Umbral de aprobación
                   </Label>
                   <Input
                     disabled={!editable}
                     id="assessment-editor-pass"
-                    max="10000"
+                    max="100"
                     min="0"
-                    onChange={(event) => setPassBasisPoints(event.target.value)}
+                    onChange={(event) => setPassPercent(event.target.value)}
+                    step="0.01"
                     type="number"
-                    value={passBasisPoints}
+                    value={passPercent}
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Porcentaje mínimo para aprobar.
+                  </p>
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -361,7 +381,10 @@ export function AssessmentComposer({
                 </div>
               </div>
               <span className="assessment-composer-card__count">
-                {selectedObjectives.length} seleccionados
+                {selectedObjectives.length}{' '}
+                {selectedObjectives.length === 1
+                  ? 'seleccionado'
+                  : 'seleccionados'}
               </span>
             </div>
             <div className="assessment-composer-card__body">
@@ -417,8 +440,11 @@ export function AssessmentComposer({
                 <div>
                   <h2>Mapa de composición</h2>
                   <p>
-                    {sections.length} secciones · {itemCount} preguntas · orden
-                    explícito
+                    {sections.length}{' '}
+                    {sections.length === 1 ? 'sección' : 'secciones'} ·{' '}
+                    {itemCount}{' '}
+                    {itemCount === 1 ? 'pregunta fija' : 'preguntas fijas'} ·{' '}
+                    {pools.length} {pools.length === 1 ? 'pool' : 'pools'}
                   </p>
                 </div>
               </div>
@@ -512,6 +538,13 @@ export function AssessmentComposer({
               />
             </div>
           </section>
+          <AssessmentPoolComposer
+            editable={editable}
+            lockVersion={revision.lock_version}
+            path={path}
+            pools={pools}
+            questions={questions}
+          />
         </div>
 
         <aside className="assessment-governance-rail">
@@ -590,6 +623,353 @@ export function AssessmentComposer({
         </aside>
       </div>
     </>
+  );
+}
+
+function AssessmentPoolComposer({
+  editable,
+  lockVersion,
+  path,
+  pools,
+  questions,
+}: Readonly<{
+  editable: boolean;
+  lockVersion: number;
+  path: {
+    assessmentSlug: string;
+    revisionId: string;
+    slug: string;
+  };
+  pools: AssessmentPool[];
+  questions: QuestionOption[];
+}>) {
+  const router = useRouter();
+  const [title, setTitle] = useState('');
+  const [points, setPoints] = useState('1.000');
+  const [selectionCount, setSelectionCount] = useState(1);
+  const [candidateIds, setCandidateIds] = useState<string[]>([]);
+  const createMutation = useAssessmentMutation(() =>
+    createAssessmentPool(path, {
+      expected_version: lockVersion,
+      points_per_item: points,
+      question_version_ids: candidateIds,
+      selection_count: selectionCount,
+      shuffle_selected: true,
+      title,
+    }),
+  );
+  return (
+    <section className="assessment-composer-card">
+      <header className="assessment-composer-card__header">
+        <div>
+          <span className="assessment-icon-box">
+            <ListChecks />
+          </span>
+          <div>
+            <h2>Pools aleatorios</h2>
+            <p>
+              Selección determinista sin reemplazo a partir de versiones
+              aprobadas.
+            </p>
+          </div>
+        </div>
+        <span className="assessment-composer-card__count">
+          {pools.length} {pools.length === 1 ? 'pool' : 'pools'}
+        </span>
+      </header>
+      <div className="assessment-composer-card__body space-y-5">
+        {pools.map((pool) => (
+          <AssessmentPoolEditor
+            editable={editable}
+            key={pool.id}
+            lockVersion={lockVersion}
+            pool={pool}
+            questions={questions}
+            slug={path.slug}
+          />
+        ))}
+        {!pools.length ? (
+          <p className="text-sm text-muted-foreground">
+            No hay pools configurados. Las preguntas fijas continúan funcionando
+            sin cambios.
+          </p>
+        ) : null}
+        {editable ? (
+          <div className="space-y-4 border-t pt-5">
+            <h3 className="font-semibold">Crear pool</h3>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <label className="space-y-1.5 sm:col-span-3">
+                <span className="text-sm font-medium">Título</span>
+                <Input
+                  maxLength={200}
+                  onChange={(event) => setTitle(event.target.value)}
+                  value={title}
+                />
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-sm font-medium">Preguntas a elegir</span>
+                <Input
+                  max={Math.max(1, candidateIds.length)}
+                  min="1"
+                  onChange={(event) =>
+                    setSelectionCount(Number(event.target.value))
+                  }
+                  type="number"
+                  value={selectionCount}
+                />
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-sm font-medium">Puntos por pregunta</span>
+                <Input
+                  min="0.001"
+                  onChange={(event) => setPoints(event.target.value)}
+                  step="0.001"
+                  type="number"
+                  value={points}
+                />
+              </label>
+              <div className="flex items-end text-sm text-muted-foreground">
+                Estrategia: random_without_replacement
+              </div>
+            </div>
+            <QuestionCandidatePicker
+              candidateIds={candidateIds}
+              onChange={setCandidateIds}
+              questions={questions}
+            />
+            <Button
+              disabled={
+                createMutation.isPending ||
+                !title.trim() ||
+                candidateIds.length < 2 ||
+                selectionCount < 1 ||
+                selectionCount > candidateIds.length
+              }
+              onClick={async () => {
+                try {
+                  await createMutation.mutateAsync(undefined);
+                  setTitle('');
+                  setCandidateIds([]);
+                  setSelectionCount(1);
+                  router.refresh();
+                } catch {
+                  // React Query conserva el error para presentación local.
+                }
+              }}
+              type="button"
+            >
+              Crear pool
+            </Button>
+            <MutationError error={createMutation.error} />
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function AssessmentPoolEditor({
+  editable,
+  lockVersion,
+  pool,
+  questions,
+  slug,
+}: Readonly<{
+  editable: boolean;
+  lockVersion: number;
+  pool: AssessmentPool;
+  questions: QuestionOption[];
+  slug: string;
+}>) {
+  const router = useRouter();
+  const [title, setTitle] = useState(pool.title);
+  const [instructions, setInstructions] = useState(pool.instructions);
+  const [points, setPoints] = useState(pool.points_per_item);
+  const [selectionCount, setSelectionCount] = useState(pool.selection_count);
+  const [shuffleSelected, setShuffleSelected] = useState(pool.shuffle_selected);
+  const [candidateIds, setCandidateIds] = useState(
+    pool.candidates.map((candidate) => candidate.question_version_id),
+  );
+  const updateMutation = useAssessmentMutation(() =>
+    updateAssessmentPool(slug, pool.id, {
+      expected_version: lockVersion,
+      instructions,
+      points_per_item: points,
+      selection_count: selectionCount,
+      shuffle_selected: shuffleSelected,
+      title,
+    }),
+  );
+  const candidateMutation = useAssessmentMutation(() =>
+    replaceAssessmentPoolCandidates(slug, pool.id, {
+      expected_version: lockVersion,
+      question_version_ids: candidateIds,
+    }),
+  );
+  return (
+    <article className="space-y-4 border p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold">
+            {pool.position}. {pool.title}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Elige {pool.selection_count} de {pool.candidates.length} preguntas ·{' '}
+            {pool.points_per_item} puntos cada una
+          </p>
+        </div>
+        <Badge variant="outline">Sin reemplazo</Badge>
+      </div>
+      {editable ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium">Título</span>
+              <Input
+                onChange={(event) => setTitle(event.target.value)}
+                value={title}
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium">Instrucciones</span>
+              <Input
+                onChange={(event) => setInstructions(event.target.value)}
+                value={instructions}
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium">Selección</span>
+              <Input
+                max={candidateIds.length}
+                min="1"
+                onChange={(event) =>
+                  setSelectionCount(Number(event.target.value))
+                }
+                type="number"
+                value={selectionCount}
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium">Puntos por pregunta</span>
+              <Input
+                min="0.001"
+                onChange={(event) => setPoints(event.target.value)}
+                step="0.001"
+                type="number"
+                value={points}
+              />
+            </label>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              checked={shuffleSelected}
+              onChange={(event) => setShuffleSelected(event.target.checked)}
+              type="checkbox"
+            />
+            Barajar las preguntas elegidas
+          </label>
+          <QuestionCandidatePicker
+            candidateIds={candidateIds}
+            lockedIds={pool.candidates.map(
+              (candidate) => candidate.question_version_id,
+            )}
+            onChange={setCandidateIds}
+            questions={questions}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              disabled={
+                updateMutation.isPending ||
+                selectionCount < 1 ||
+                selectionCount > candidateIds.length
+              }
+              onClick={() =>
+                void updateMutation
+                  .mutateAsync(undefined)
+                  .then(() => router.refresh())
+              }
+              type="button"
+              variant="outline"
+            >
+              Guardar configuración
+            </Button>
+            <Button
+              disabled={
+                candidateMutation.isPending ||
+                candidateIds.length < 2 ||
+                selectionCount > candidateIds.length
+              }
+              onClick={() =>
+                void candidateMutation
+                  .mutateAsync(undefined)
+                  .then(() => router.refresh())
+              }
+              type="button"
+              variant="outline"
+            >
+              Guardar candidatos
+            </Button>
+          </div>
+          <MutationError
+            error={updateMutation.error ?? candidateMutation.error}
+          />
+        </>
+      ) : (
+        <ul className="space-y-1 text-sm">
+          {pool.candidates.map((candidate) => (
+            <li key={candidate.id}>
+              {questionTypeLabel(candidate.type)} · versión{' '}
+              {candidate.question_version_id.slice(0, 8)}
+            </li>
+          ))}
+        </ul>
+      )}
+    </article>
+  );
+}
+
+function QuestionCandidatePicker({
+  candidateIds,
+  lockedIds = [],
+  onChange,
+  questions,
+}: Readonly<{
+  candidateIds: string[];
+  lockedIds?: string[];
+  onChange: (ids: string[]) => void;
+  questions: QuestionOption[];
+}>) {
+  return (
+    <fieldset className="assessment-objective-grid">
+      <legend className="mb-2 text-sm font-medium">
+        Preguntas candidatas aprobadas
+      </legend>
+      {questions.map((question) => {
+        const checked = candidateIds.includes(question.id);
+        return (
+          <label data-selected={checked} key={question.id}>
+            <input
+              checked={checked}
+              disabled={lockedIds.includes(question.id)}
+              onChange={(event) =>
+                onChange(
+                  event.target.checked
+                    ? [...candidateIds, question.id]
+                    : candidateIds.filter((id) => id !== question.id),
+                )
+              }
+              type="checkbox"
+            />
+            <span className="min-w-0">
+              <strong>{question.code}</strong>
+              <span>
+                {question.bankName} · {question.type} · v{question.number}
+              </span>
+            </span>
+          </label>
+        );
+      })}
+    </fieldset>
   );
 }
 
@@ -781,7 +1161,7 @@ function AssessmentItemRow({
     <li className="py-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium">{item.question_code}</span>
-        <Badge variant="outline">{item.question_type}</Badge>
+        <Badge variant="outline">{questionTypeLabel(item.question_type)}</Badge>
         <span className="ml-auto">{item.points} puntos</span>
         {editable ? (
           <OrderButtons
@@ -912,6 +1292,22 @@ function OrderButtons({
         Bajar
       </Button>
     </span>
+  );
+}
+
+function questionTypeLabel(type: string) {
+  return (
+    {
+      long_text: 'Respuesta extensa',
+      matching: 'Emparejamiento',
+      mathematical_expression: 'Expresión matemática',
+      multiple_choice: 'Selección múltiple',
+      numeric: 'Respuesta numérica',
+      ordering: 'Ordenamiento',
+      short_text: 'Respuesta corta',
+      single_choice: 'Selección única',
+      true_false: 'Verdadero o falso',
+    }[type] ?? type
   );
 }
 

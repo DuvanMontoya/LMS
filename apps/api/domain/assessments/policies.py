@@ -76,3 +76,27 @@ def can_view_results(actor: User | None, organization: Organization) -> bool:
 
 def can_grade_manually(actor: User | None, organization: Organization) -> bool:
     return has_capability(actor, organization, Capability.ASSESSMENT_GRADING_MANAGE)
+
+
+def can_view_regrading(actor: User | None, organization: Organization) -> bool:
+    return has_capability(actor, organization, Capability.ASSESSMENT_REGRADING_VIEW)
+
+
+def can_manage_regrading(actor: User | None, organization: Organization) -> bool:
+    return has_capability(actor, organization, Capability.ASSESSMENT_REGRADING_MANAGE)
+
+
+def can_view_gradebook(actor: User | None, organization: Organization) -> bool:
+    return has_capability(actor, organization, Capability.ASSESSMENT_GRADEBOOK_VIEW)
+
+
+def can_manage_gradebook(actor: User | None, organization: Organization) -> bool:
+    return has_capability(actor, organization, Capability.ASSESSMENT_GRADEBOOK_MANAGE)
+
+
+def can_view_analytics(actor: User | None, organization: Organization) -> bool:
+    return has_capability(actor, organization, Capability.ASSESSMENT_ANALYTICS_VIEW)
+
+
+def can_refresh_analytics(actor: User | None, organization: Organization) -> bool:
+    return has_capability(actor, organization, Capability.ASSESSMENT_ANALYTICS_REFRESH)

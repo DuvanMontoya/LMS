@@ -31,18 +31,25 @@ export function PageHeader({
   return (
     <header className="academic-page-header">
       {breadcrumbs?.length ? (
-        <Breadcrumb className="sr-only">
-          <BreadcrumbList>
+        <Breadcrumb className="mb-4 min-w-0 overflow-hidden">
+          <BreadcrumbList className="min-w-0">
             {breadcrumbs.map((crumb, index) => (
               <Fragment key={`${crumb.label}-${index}`}>
                 {index ? <BreadcrumbSeparator /> : null}
-                <BreadcrumbItem>
+                <BreadcrumbItem className="min-w-0 max-w-full">
                   {crumb.href ? (
-                    <BreadcrumbLink asChild>
-                      <Link href={crumb.href}>{crumb.label}</Link>
+                    <BreadcrumbLink
+                      asChild
+                      className="max-w-40 truncate sm:max-w-none"
+                    >
+                      <Link href={crumb.href} title={crumb.label}>
+                        {crumb.label}
+                      </Link>
                     </BreadcrumbLink>
                   ) : (
-                    <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                    <BreadcrumbPage className="min-w-0 break-words">
+                      {crumb.label}
+                    </BreadcrumbPage>
                   )}
                 </BreadcrumbItem>
               </Fragment>

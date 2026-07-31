@@ -111,6 +111,27 @@ visual; la autenticación continúa siendo el contrato allauth del LMS.
 Versiones/avisos se contrastaron en PyPI, npm Registry y repositorios oficiales.
 No se usaron blogs, tutoriales o respuestas de terceros.
 
+## Prompt 14 consultation — 2026-07-30
+
+| Tema | Fuente oficial | Evidencia aplicada |
+| --- | --- | --- |
+| SymPy 1.14 | https://docs.sympy.org/latest/modules/core.html ; https://pypi.org/project/sympy/1.14.0/ | Constructores explícitos, álgebra exacta y soporte Python 3.13; sin parsers de texto. |
+| Celery 5.6 | https://docs.celeryq.dev/en/stable/django/first-steps-with-django.html ; https://docs.celeryq.dev/en/stable/userguide/workers.html | Integración Django, dispatch after commit, prefork, prefetch y time limits. |
+| Celery security/config | https://docs.celeryq.dev/en/stable/userguide/configuration.html | JSON-only, result backend deshabilitado, UTC y broker Redis. |
+| Redis | https://redis.io/docs/latest/develop/interact/pubsub/ ; https://redis.io/docs/latest/develop/clients/redis-py/ | Broker efímero; PostgreSQL conserva el estado durable. |
+| MathJSON/Compute Engine | https://mathjson.org/ ; https://cortexjs.io/compute-engine/ | AST estructurado, parse UX LaTeX y serialización MathJSON. |
+| MathLive | https://mathlive.io/mathfield/ | Entrada, teclado físico/virtual y eventos del math-field. |
+| Django locks/commit | https://docs.djangoproject.com/en/6.0/ref/models/querysets/#select-for-update ; https://docs.djangoproject.com/en/6.0/topics/db/transactions/ | Locks, `on_commit`, transacciones y prueba del outer join nullable. |
+| PostgreSQL aggregates | https://www.postgresql.org/docs/18/functions-aggregate.html | `avg`, `corr` y percentiles sin pandas/SciPy. |
+| DRF/OpenAPI | https://www.django-rest-framework.org/api-guide/serializers/ ; https://drf-spectacular.readthedocs.io/en/latest/customization.html | Inputs cerrados, responses y jobs 202. |
+| JSON Schema/Ajv | https://json-schema.org/draft/2020-12/ ; https://ajv.js.org/json-schema.html | Schemas locales estrictos y drift backend/frontend. |
+| Next/React | https://nextjs.org/docs/app ; https://react.dev/reference/react/useEffect | Server/Client boundaries y polling con cleanup. |
+| Playwright/axe | https://playwright.dev/docs/accessibility-testing ; https://playwright.dev/docs/test-assertions | E2E Chromium, teclado, axe y 390 px. |
+
+PyPI, npm Registry, repositorios oficiales y avisos de seguridad confirmaron
+pins estables no prerelease. No se usaron blogs, Stack Overflow ni parsers de
+terceros como autoridad.
+
 ## Revalidación de learning — 2026-07-30
 
 | Autoridad oficial | Fuente | Aplicación |

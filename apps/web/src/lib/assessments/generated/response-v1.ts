@@ -13,6 +13,7 @@ export type AssessmentResponseV1 = {
     | 'short_text'
     | 'long_text'
     | 'ordering'
-    | 'matching';
+    | 'matching'
+    | 'mathematical_expression';
   value: any;
 };

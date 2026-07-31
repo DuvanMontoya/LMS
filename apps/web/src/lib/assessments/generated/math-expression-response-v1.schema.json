@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lms:assessment:math-expression-response:1",
+  "title": "Mathematical expression response v1",
+  "type": "object",
+  "required": ["latex", "mathjson"],
+  "properties": {
+    "latex": { "type": "string", "minLength": 1, "maxLength": 4096 },
+    "mathjson": { "$ref": "#/$defs/mathjson" }
+  },
+  "$defs": {
+    "mathjson": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": -999999999999999,
+          "maximum": 999999999999999
+        },
+        { "type": "string", "minLength": 1, "maxLength": 102 },
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 51,
+          "prefixItems": [
+            {
+              "enum": [
+                "Rational",
+                "Add",
+                "Subtract",
+                "Negate",
+                "Multiply",
+                "Divide",
+                "Power",
+                "Sqrt",
+                "Root",
+                "Abs",
+                "Sin",
+                "Cos",
+                "Tan",
+                "Exp",
+                "Ln",
+                "Log"
+              ]
+            }
+          ],
+          "items": { "$ref": "#/$defs/mathjson" }
+        }
+      ]
+    }
+  },
+  "additionalProperties": false
+}

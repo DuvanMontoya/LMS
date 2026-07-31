@@ -15,7 +15,8 @@
         "short_text",
         "long_text",
         "ordering",
-        "matching"
+        "matching",
+        "mathematical_expression"
       ]
     },
     "public": { "$ref": "urn:lms:assessment:question-public:1" },
@@ -58,7 +59,34 @@
         },
         "correct_boolean": { "type": "boolean" },
         "manual_required": { "const": true },
-        "rubric": { "type": "string", "maxLength": 10000 }
+        "rubric": { "type": "string", "maxLength": 10000 },
+        "expected_mathjson": {},
+        "equivalence_strategy": {
+          "enum": ["structural", "symbolic_common_domain"]
+        },
+        "symbol_assumptions": {
+          "type": "object",
+          "maxProperties": 10
+        },
+        "allowed_symbols": {
+          "type": "array",
+          "maxItems": 10,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+          }
+        },
+        "allowed_functions": {
+          "type": "array",
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["Sin", "Cos", "Tan", "Exp", "Ln", "Log", "Abs"]
+          }
+        }
       },
       "additionalProperties": false
     },
@@ -150,6 +178,13 @@
       "then": {
         "properties": { "grading": { "required": ["correct_pairs"] } }
       }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "mathematical_expression" } },
+        "required": ["type"]
+      },
+      "then": { "$ref": "urn:lms:assessment:math-expression:1" }
     }
   ],
   "$defs": {

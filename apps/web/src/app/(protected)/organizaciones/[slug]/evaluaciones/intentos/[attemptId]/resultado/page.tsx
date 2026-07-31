@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { PageHeader } from '@/components/platform/page-header';
+import { AsyncResultStatus } from '@/components/assessments/async-result-status';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getAssessmentResult } from '@/lib/assessments/server';
@@ -25,11 +26,16 @@ export default async function AssessmentResultPage({
         description="Resultado sujeto a la política de feedback fijada en la versión de evaluación."
         eyebrow="Resultado del intento"
         title={
-          result.status === 'pending_manual'
-            ? 'Calificación manual pendiente'
-            : 'Intento calificado'
+          result.status === 'grading_pending'
+            ? 'Calificación matemática en proceso'
+            : result.status === 'pending_manual'
+              ? 'Calificación manual pendiente'
+              : 'Intento calificado'
         }
       />
+      {result.status === 'grading_pending' ? (
+        <AsyncResultStatus attemptId={attemptId} slug={slug} />
+      ) : null}
       <section className="assessment-result-hero">
         <div className="assessment-result-hero__heading">
           <Badge variant={result.status === 'graded' ? 'secondary' : 'outline'}>
@@ -37,16 +43,20 @@ export default async function AssessmentResultPage({
           </Badge>
           <p>Intento {result.attempt_number}</p>
           <h2>
-            {result.status === 'pending_manual'
-              ? 'Tu envío está en revisión'
-              : result.passed
-                ? 'Objetivo alcanzado'
-                : 'Resultado disponible'}
+            {result.status === 'grading_pending'
+              ? 'Procesamiento seguro en curso'
+              : result.status === 'pending_manual'
+                ? 'Tu envío está en revisión'
+                : result.passed
+                  ? 'Objetivo alcanzado'
+                  : 'Resultado disponible'}
           </h2>
           <p>
-            {result.status === 'pending_manual'
-              ? 'El equipo docente completará la rúbrica pendiente antes de publicar el resultado definitivo.'
-              : 'La información visible respeta la política de feedback fijada al momento de la entrega.'}
+            {result.status === 'grading_pending'
+              ? 'El worker matemático está validando la expresión. No vuelvas a enviar el intento.'
+              : result.status === 'pending_manual'
+                ? 'El equipo docente completará la rúbrica pendiente antes de publicar el resultado definitivo.'
+                : 'La información visible respeta la política de feedback fijada al momento de la entrega.'}
           </p>
         </div>
         <dl className="assessment-result-scorecard">

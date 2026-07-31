@@ -29,6 +29,10 @@ const contracts = [
   ['question-public-v1', 'QuestionPublicV1'],
   ['response-v1', 'AssessmentResponseV1'],
   ['assessment-version-v1', 'AssessmentVersionSnapshotV1'],
+  ['math-expression-v1', 'MathExpressionDefinitionV1'],
+  ['math-expression-response-v1', 'MathExpressionResponseV1'],
+  ['scoring-policy-v2', 'ScoringPolicyV2'],
+  ['grading-revision-v1', 'GradingRevisionSnapshotV1'],
 ];
 const checkOnly = process.argv.slice(2).includes('--check');
 
@@ -96,18 +100,27 @@ for (const [name, typeName] of contracts) {
       structuredClone(item.$defs ?? {}),
     ),
   );
-  const generatedType = await prettier.format(
-    await compile(typeSchema, typeName, {
-      bannerComment: `/* Generated from schemas/assessment/${name}.schema.json. Do not edit. */\n/* eslint-disable @typescript-eslint/no-explicit-any */`,
-      format: false,
-      unknownAny: false,
-    }),
-    {
-      parser: 'typescript',
-      singleQuote: true,
-      trailingComma: 'all',
-    },
-  );
+  const banner = `/* Generated from schemas/assessment/${name}.schema.json. Do not edit. */`;
+  let compiledType = await compile(typeSchema, typeName, {
+    bannerComment: banner,
+    format: false,
+    unknownAny: false,
+  });
+  if (
+    /\bany\b/.test(
+      compiledType.slice(compiledType.indexOf(banner) + banner.length),
+    )
+  ) {
+    compiledType = compiledType.replace(
+      banner,
+      `${banner}\n/* eslint-disable @typescript-eslint/no-explicit-any */`,
+    );
+  }
+  const generatedType = await prettier.format(compiledType, {
+    parser: 'typescript',
+    singleQuote: true,
+    trailingComma: 'all',
+  });
   const generatedSchema = await prettier.format(JSON.stringify(schema), {
     parser: 'json',
   });

@@ -21,11 +21,10 @@ export function ManualGradingQueue({
 }: Readonly<{ responses: PendingManual[]; slug: string }>) {
   if (!responses.length) {
     return (
-      <section className="mt-6 border border-dashed p-10 text-center">
-        <h2 className="font-semibold">Cola al día</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          No hay respuestas abiertas pendientes de decisión manual.
-        </p>
+      <section className="assessment-empty mt-6 rounded-xl border border-border bg-card shadow-[0_12px_35px_rgb(15_23_42_/_0.045)]">
+        <ClipboardCheck aria-hidden="true" />
+        <h2 className="mt-3 font-semibold">Cola al día</h2>
+        <p>No hay respuestas abiertas pendientes de decisión manual.</p>
       </section>
     );
   }

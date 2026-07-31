@@ -7,7 +7,11 @@ from uuid import UUID
 
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    extend_schema,
+    extend_schema_view,
+)
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.pagination import PageNumberPagination
@@ -306,6 +310,10 @@ class QuestionBankArchiveView(APIView):
 class QuestionListCreateView(APIView):
     @extend_schema(
         operation_id="assessment_questions_list",
+        parameters=[
+            OpenApiParameter("page", int, OpenApiParameter.QUERY),
+            OpenApiParameter("page_size", int, OpenApiParameter.QUERY),
+        ],
         responses=QuestionPageSerializer,
     )
     def get(self, request: Request, slug: str, bank_id: str) -> ApiResponse:

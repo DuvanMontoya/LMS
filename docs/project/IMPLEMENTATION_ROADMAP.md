@@ -56,3 +56,12 @@ corte la separación futura de las filas 16–19: sigue siendo un monolito modul
 en `domain.assessments`; una extracción exige ADR y migración. Partial credit,
 expresiones matemáticas, pools, regrading, gradebook, indicadores e import/export
 QTI permanecen posteriores.
+
+## Phase 14 completada — advanced grading and analytics
+
+`domain.assessments` incorpora scoring v2, crédito parcial, MathJSON/SymPy
+allowlisted, pools persistidos, grading y regrading durable con Celery,
+versiones append-only de grade, gradebook por release y snapshots analíticos.
+Las migraciones `0006`–`0008`, ADR 0024, OpenAPI, tipos generados, worker Linux,
+demo y Chromium mantienen las fronteras de Phase 13. El siguiente alcance es
+Prompt 15; media, archivos, S3, ejecución de código, QTI e IRT siguen excluidos.

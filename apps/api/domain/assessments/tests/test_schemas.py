@@ -19,6 +19,7 @@ QUESTION_TYPES = (
     "long_text",
     "ordering",
     "matching",
+    "mathematical_expression",
 )
 
 
@@ -26,7 +27,7 @@ class AssessmentSchemaTests(SimpleTestCase):
     def test_all_four_draft_2020_12_contracts_compile(self) -> None:
         validate_schema_contracts()
 
-    def test_exactly_eight_question_types_validate(self) -> None:
+    def test_exactly_nine_question_types_validate(self) -> None:
         for question_type in QUESTION_TYPES:
             with self.subTest(question_type=question_type):
                 validated = validate_question_definition(

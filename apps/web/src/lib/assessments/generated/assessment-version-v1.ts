@@ -9,6 +9,19 @@ export type QuestionPublicPayloadV1 = {
   [k: string]: any;
 } & {
   [k: string]: any;
+} & {
+  [k: string]: any;
+};
+export type QuestionPublicPayloadV11 = {
+  [k: string]: any;
+} & {
+  [k: string]: any;
+} & {
+  [k: string]: any;
+} & {
+  [k: string]: any;
+} & {
+  [k: string]: any;
 };
 
 export interface AssessmentVersionPublicSnapshotV1 {
@@ -32,83 +45,82 @@ export interface AssessmentVersionPublicSnapshotV1 {
    */
   objectives: Objective[];
   /**
-   * @minItems 1
+   * @minItems 0
    * @maxItems 100
    */
-  sections: [
-    {
-      id: string;
-      title: string;
-      instructions: string;
-      position: number;
-      /**
-       * @minItems 1
-       * @maxItems 500
-       */
-      items: [
-        {
-          id: string;
-          question_version_id: string;
-          position: number;
-          points: string;
-          required: boolean;
-          question: QuestionPublicPayloadV1;
-          /**
-           * @maxItems 100
-           */
-          objectives: Objective[];
-        },
-        ...{
-          id: string;
-          question_version_id: string;
-          position: number;
-          points: string;
-          required: boolean;
-          question: QuestionPublicPayloadV1;
-          /**
-           * @maxItems 100
-           */
-          objectives: Objective[];
-        }[],
-      ];
-    },
-    ...{
-      id: string;
-      title: string;
-      instructions: string;
-      position: number;
-      /**
-       * @minItems 1
-       * @maxItems 500
-       */
-      items: [
-        {
-          id: string;
-          question_version_id: string;
-          position: number;
-          points: string;
-          required: boolean;
-          question: QuestionPublicPayloadV1;
-          /**
-           * @maxItems 100
-           */
-          objectives: Objective[];
-        },
-        ...{
-          id: string;
-          question_version_id: string;
-          position: number;
-          points: string;
-          required: boolean;
-          question: QuestionPublicPayloadV1;
-          /**
-           * @maxItems 100
-           */
-          objectives: Objective[];
-        }[],
-      ];
-    }[],
-  ];
+  sections: {
+    id: string;
+    title: string;
+    instructions: string;
+    position: number;
+    /**
+     * @minItems 1
+     * @maxItems 500
+     */
+    items: [
+      {
+        id: string;
+        question_version_id: string;
+        position: number;
+        points: string;
+        required: boolean;
+        question: QuestionPublicPayloadV1;
+        /**
+         * @maxItems 100
+         */
+        objectives: Objective[];
+      },
+      ...{
+        id: string;
+        question_version_id: string;
+        position: number;
+        points: string;
+        required: boolean;
+        question: QuestionPublicPayloadV1;
+        /**
+         * @maxItems 100
+         */
+        objectives: Objective[];
+      }[],
+    ];
+  }[];
+  /**
+   * @maxItems 100
+   */
+  pools?: {
+    id: string;
+    title: string;
+    instructions: string;
+    position: number;
+    selection_count: number;
+    points_per_item: string;
+    selection_strategy: 'random_without_replacement';
+    shuffle_selected: boolean;
+    /**
+     * @minItems 2
+     * @maxItems 200
+     */
+    candidates: [
+      {
+        id: string;
+        question_version_id: string;
+        position: number;
+        question: QuestionPublicPayloadV11;
+      },
+      {
+        id: string;
+        question_version_id: string;
+        position: number;
+        question: QuestionPublicPayloadV11;
+      },
+      ...{
+        id: string;
+        question_version_id: string;
+        position: number;
+        question: QuestionPublicPayloadV11;
+      }[],
+    ];
+  }[];
 }
 export interface Objective {
   id: string;

@@ -39,6 +39,7 @@ def learner_assignments(
         )
         .select_related(
             "delivery__assessment_version",
+            "delivery__course_release",
             "release_assignment__enrollment__membership",
             "release_assignment__enrollment__current_release_assignment",
         )

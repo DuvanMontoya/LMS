@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import advanced_views, views
 
 BASE = "organizations/<slug:slug>/assessments/"
 BANK = BASE + "question-banks/<str:bank_id>/"
@@ -102,6 +102,11 @@ urlpatterns = [
     path(AREV + "readiness/", views.AssessmentReadinessView.as_view()),
     path(AREV + "sections/", views.SectionListCreateView.as_view()),
     path(AREV + "sections/order/", views.SectionOrderView.as_view()),
+    path(AREV + "pools/", advanced_views.PoolListCreateView.as_view()),
+    path(
+        AREV + "structure/order/",
+        advanced_views.StructureOrderView.as_view(),
+    ),
     path(
         AREV + "sections/<uuid:section_id>/",
         views.SectionDetailView.as_view(),
@@ -123,5 +128,109 @@ urlpatterns = [
     path(AREV + "request-changes/", views.RequestAssessmentChangesView.as_view()),
     path(AREV + "approve/", views.ApproveAssessmentRevisionView.as_view()),
     path(AREV, views.AssessmentRevisionDetailView.as_view()),
+    path(BASE + "pools/<uuid:pool_id>/", advanced_views.PoolDetailView.as_view()),
+    path(
+        BASE + "pools/<uuid:pool_id>/candidates/",
+        advanced_views.PoolCandidatesView.as_view(),
+    ),
+    path(
+        BASE + "scoring-policies/<uuid:version_id>/",
+        advanced_views.ScoringPolicyDetailView.as_view(),
+    ),
+    path(
+        BASE + "scoring-policies/<uuid:version_id>/revisions/",
+        advanced_views.ScoringPolicyRevisionListView.as_view(),
+    ),
+    path(
+        BASE + "scoring-policies/<uuid:version_id>/corrections/",
+        advanced_views.ScoringCorrectionView.as_view(),
+    ),
+    path(
+        BASE + "regrade-jobs/",
+        advanced_views.RegradeJobListCreateView.as_view(),
+    ),
+    path(
+        BASE + "regrade-jobs/<uuid:job_id>/",
+        advanced_views.RegradeJobDetailView.as_view(),
+    ),
+    path(
+        BASE + "regrade-jobs/<uuid:job_id>/attempts/",
+        advanced_views.RegradeJobAttemptListView.as_view(),
+    ),
+    path(
+        BASE + "regrade-jobs/<uuid:job_id>/retry-failed/",
+        advanced_views.RegradeJobRetryView.as_view(),
+    ),
+    path(
+        BASE + "gradebooks/",
+        advanced_views.GradebookListCreateView.as_view(),
+    ),
+    path(
+        BASE + "gradebooks/<uuid:gradebook_id>/",
+        advanced_views.GradebookDetailView.as_view(),
+    ),
+    path(
+        BASE + "gradebooks/<uuid:gradebook_id>/activate/",
+        advanced_views.GradebookActivateView.as_view(),
+    ),
+    path(
+        BASE + "gradebooks/<uuid:gradebook_id>/columns/",
+        advanced_views.GradebookColumnListCreateView.as_view(),
+    ),
+    path(
+        BASE + "gradebooks/<uuid:gradebook_id>/columns/order/",
+        advanced_views.GradebookColumnOrderView.as_view(),
+    ),
+    path(
+        BASE + "gradebooks/<uuid:gradebook_id>/columns/<uuid:column_id>/",
+        advanced_views.GradebookColumnDetailView.as_view(),
+    ),
+    path(
+        BASE + "gradebooks/<uuid:gradebook_id>/columns/<uuid:column_id>/archive/",
+        advanced_views.GradebookColumnArchiveView.as_view(),
+    ),
+    path(
+        BASE + "gradebooks/<uuid:gradebook_id>/entries/",
+        advanced_views.GradebookEntryListView.as_view(),
+    ),
+    path(
+        BASE + "gradebooks/<uuid:gradebook_id>/summaries/",
+        advanced_views.GradebookSummaryListView.as_view(),
+    ),
+    path(
+        BASE + "gradebooks/<uuid:gradebook_id>/students/<uuid:release_assignment_id>/",
+        advanced_views.GradebookStudentView.as_view(),
+    ),
+    path(
+        BASE + "me/gradebooks/",
+        advanced_views.MyGradebookListView.as_view(),
+    ),
+    path(
+        BASE + "me/gradebooks/<uuid:gradebook_id>/",
+        advanced_views.MyGradebookDetailView.as_view(),
+    ),
+    path(
+        BASE + "analytics/assessments/<uuid:version_id>/",
+        advanced_views.AnalyticsAssessmentView.as_view(),
+    ),
+    path(
+        BASE + "analytics/assessments/<uuid:version_id>/items/",
+        advanced_views.AnalyticsItemListView.as_view(),
+    ),
+    path(
+        BASE
+        + "analytics/assessments/<uuid:version_id>/items/<uuid:assessment_item_id>/",
+        advanced_views.AnalyticsItemDetailView.as_view(),
+    ),
+    path(
+        BASE + "analytics/refresh/",
+        advanced_views.AnalyticsRefreshView.as_view(),
+    ),
+    path(
+        BASE + "analytics/jobs/<uuid:job_id>/",
+        advanced_views.AnalyticsJobView.as_view(),
+    ),
+    # Keep the dynamic assessment slug route last so reserved workflow paths such
+    # as regrade-jobs and gradebooks cannot be shadowed by an assessment lookup.
     path(ASSESSMENT, views.AssessmentDetailView.as_view()),
 ]

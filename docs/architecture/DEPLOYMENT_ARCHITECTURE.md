@@ -66,3 +66,13 @@ Prompt 12 no añade servicio ni puerto. El despliegue aplica
 release de cohorte. Learning usa PostgreSQL como única autoridad y Redis sólo
 para throttle/cache existente; no persiste sesiones ni progreso allí. Un
 rollback no debe borrar historial de matrículas o eventos.
+
+## Worker de assessments
+
+Compose añade `assessment-worker` desde `apps/api/Dockerfile.worker`, imagen
+Python 3.13.13 slim-trixie fijada por digest, UID/GID 10001, sin puertos y con
+pool prefork/concurrency 2. PostgreSQL y Redis deben estar healthy antes de
+arrancar. Colas `grading`, `regrading` y `analytics` comparten broker Redis DB 2
+con prefetch 1; cache auth permanece en DB 1. No existe result backend, Beat ni
+Flower. El escalado futuro puede multiplicar workers conservando locks e
+idempotencia en PostgreSQL.

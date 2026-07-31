@@ -31,6 +31,7 @@ export default async function AssessmentWorkspacePage({
         canSubmit={capabilities.includes('assessment.authoring.submit')}
         objectives={data.objectives}
         outline={data.outline}
+        pools={data.pools}
         questions={data.questions}
         readiness={data.readiness}
         slug={slug}

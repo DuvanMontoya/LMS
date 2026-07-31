@@ -13,8 +13,8 @@ export default defineConfig({
   outputDir: '.local/e2e-results',
   use: {
     baseURL: webOrigin,
-    trace: 'off',
-    screenshot: 'off',
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
     video: 'off',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

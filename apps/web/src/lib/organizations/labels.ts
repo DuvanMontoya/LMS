@@ -50,6 +50,12 @@ const capabilityLabels: Record<string, string> = {
   'assessment.delivery.manage': 'Administrar entregas de evaluaciones',
   'assessment.grading.manage': 'Calificar evaluaciones',
   'assessment.results.view': 'Ver resultados de evaluaciones',
+  'assessment.regrading.view': 'Ver recalificaciones',
+  'assessment.regrading.manage': 'Administrar recalificaciones',
+  'assessment.gradebook.view': 'Ver libros de calificaciones',
+  'assessment.gradebook.manage': 'Administrar libros de calificaciones',
+  'assessment.analytics.view': 'Ver analítica de evaluaciones',
+  'assessment.analytics.refresh': 'Actualizar analítica de evaluaciones',
 };
 
 export function roleLabel(role: OrganizationRole): string {

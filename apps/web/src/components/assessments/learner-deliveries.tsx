@@ -8,7 +8,6 @@ import {
   RotateCcw,
   Timer,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -50,7 +49,6 @@ function DeliveryCard({
   assignment,
   slug,
 }: Readonly<{ assignment: LearnerDelivery; slug: string }>) {
-  const router = useRouter();
   const start = useAssessmentMutation(() =>
     startAssessmentAttempt(slug, assignment.id),
   );
@@ -98,66 +96,51 @@ function DeliveryCard({
           </dd>
         </div>
       </dl>
-      <div className="assessment-learner-card__progress">
-        <div>
-          <span
-            style={{
-              width: `${
-                assignment.attempt_limit
-                  ? Math.min(
-                      100,
-                      (assignment.attempts_used / assignment.attempt_limit) *
-                        100,
-                    )
-                  : 0
-              }%`,
-            }}
-          />
-        </div>
+      <div className="assessment-learner-card__footer">
         <p>
           {assignment.in_progress_attempt_id ? (
             <>
-              <Timer /> Hay un intento en curso listo para continuar.
+              <Timer /> Intento en curso
             </>
           ) : assignment.attempts_used ? (
             <>
-              <CheckCircle2 /> Intento anterior registrado.
+              <CheckCircle2 /> Intento registrado
             </>
           ) : (
             <>
-              <ClipboardCheck /> Aún no has iniciado esta evaluación.
+              <ClipboardCheck /> Sin iniciar
             </>
           )}
         </p>
-      </div>
-      <Button
-        className="mt-5 h-10 justify-between"
-        disabled={
-          assignment.status !== 'active' ||
-          (!remaining && !assignment.in_progress_attempt_id) ||
-          start.isPending
-        }
-        onClick={async () => {
-          try {
-            const attempt = await start.mutateAsync(undefined);
-            router.push(
-              `/organizaciones/${slug}/evaluaciones/intentos/${attempt.id}`,
-            );
-          } catch {
-            // React Query presenta el error debajo de la acción.
+        <Button
+          disabled={
+            assignment.status !== 'active' ||
+            (!remaining && !assignment.in_progress_attempt_id) ||
+            start.isPending
           }
-        }}
-        type="button"
-      >
-        {remaining
-          ? assignment.attempts_used
-            ? 'Continuar o iniciar intento'
-            : 'Comenzar'
-          : assignment.in_progress_attempt_id
-            ? 'Continuar intento en curso'
-            : 'Sin intentos disponibles'}
-        <ArrowRight data-icon="inline-end" />
-      </Button>
+          onClick={async () => {
+            try {
+              const attempt = await start.mutateAsync(undefined);
+              window.location.assign(
+                `/organizaciones/${slug}/evaluaciones/intentos/${attempt.id}`,
+              );
+            } catch {
+              // React Query presenta el error debajo de la acción.
+            }
+          }}
+          size="sm"
+          type="button"
+        >
+          {remaining
+            ? assignment.attempts_used
+              ? 'Continuar'
+              : 'Comenzar'
+            : assignment.in_progress_attempt_id
+              ? 'Continuar'
+              : 'Sin intentos'}
+          <ArrowRight data-icon="inline-end" />
+        </Button>
+      </div>
       <MutationError error={start.error} />
     </li>
   );

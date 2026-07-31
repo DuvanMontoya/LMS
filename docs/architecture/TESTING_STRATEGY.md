@@ -100,3 +100,14 @@ Playwright usa base PostgreSQL UUID, prefijo Redis y correo efímeros, migra des
 cero, crea el fixture assessments, recorre autoría/entrega, ocho controles,
 guardado explícito, 409, submit, grading manual, feedback, max attempts, IDOR,
 HTML sin claves, axe y 390 px. El `finally` elimina sólo esos recursos.
+
+# Assessments Prompt 14
+
+La pirámide añade tests de schemas, scoring v2, partial credit, ataques
+MathJSON, constructores/equivalencia SymPy, timeout, pools, migración/backfill,
+append-only grades, manual preservation, regrading concurrente, gradebook,
+analytics/suppression, API/IDOR/leakage y tareas idempotentes. Un smoke de
+dominio y el E2E usan el worker Linux real con PostgreSQL y Redis efímeros.
+Frontend cubre Compute Engine, MathLive, polling acotado, compositor de pools,
+consolas, tablas, axe, teclado, escritorio y 390 px. Checks de drift, build,
+auditorías y regresiones de fases previas siguen siendo obligatorios.

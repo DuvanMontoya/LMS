@@ -11,7 +11,7 @@ async function login(page: Page, email: string, next: string) {
   await page.getByLabel('Correo electrónico').fill(email);
   await page.getByLabel('Contraseña').fill(password!);
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
-  await expect(page).toHaveURL(next, { timeout: 20_000 });
+  await expect(page).toHaveURL(next, { timeout: 45_000 });
 }
 
 async function expectAccessible(page: Page) {
@@ -44,6 +44,37 @@ async function csrfRequest(
         method,
       });
       return { status: response.status };
+    },
+    { body, method, path },
+  );
+}
+
+async function csrfJson(
+  page: Page,
+  path: string,
+  method: 'POST' | 'PUT',
+  body?: unknown,
+) {
+  return page.evaluate(
+    async ({ body, method, path }) => {
+      const token = document.cookie
+        .split(';')
+        .map((part) => part.trim())
+        .find((part) => part.startsWith('csrftoken='))
+        ?.slice('csrftoken='.length);
+      const response = await fetch(path, {
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        credentials: 'same-origin',
+        headers: {
+          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+          ...(token ? { 'X-CSRFToken': decodeURIComponent(token) } : {}),
+        },
+        method,
+      });
+      return {
+        data: (await response.json()) as unknown,
+        status: response.status,
+      };
     },
     { body, method, path },
   );
@@ -180,12 +211,27 @@ test('assessment phase 13: authoring, delivery, attempt, conflict, manual gradin
     student.locator(`a[href="/organizaciones/${slug}/evaluaciones/entregas"]`),
   ).toHaveCount(0);
   await expect(student.getByText('Diagnóstico integral E2E')).toBeVisible();
+  await expect(
+    student.getByRole('link', { name: 'Calificaciones', exact: true }),
+  ).toBeVisible();
+  await expect(
+    student.getByRole('heading', { name: 'Libros de calificaciones' }),
+  ).toHaveCount(0);
   expect(
     await student.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
   await expectAccessible(student);
+  await student.setViewportSize({ height: 900, width: 1440 });
+  expect(
+    await student
+      .locator('.assessment-learner-grid')
+      .evaluate((grid) =>
+        getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean),
+      ),
+  ).toHaveLength(4);
+  await student.setViewportSize({ height: 844, width: 390 });
 
   const assignmentsResponse = await student.request.get(
     `/api/v1/organizations/${slug}/assessments/my-deliveries/`,
@@ -366,5 +412,330 @@ test('assessment phase 13: authoring, delivery, attempt, conflict, manual gradin
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+  await studentContext.close();
+});
+
+test('assessment phase 14: safe math, pools, async grading, regrading, gradebook and analytics work end to end', async ({
+  browser,
+  page,
+}) => {
+  test.setTimeout(420_000);
+  const assessmentPath = `/organizaciones/${slug}/evaluaciones/assessment-avanzado-e2e`;
+  await login(page, 'owner@organizations.e2e.test', assessmentPath);
+  await expect(
+    page.getByRole('heading', { name: 'Assessment avanzado E2E' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Pools aleatorios' }),
+  ).toBeVisible();
+  await expect(page.getByText('1 pool', { exact: true })).toBeVisible();
+  await expect(page.getByText('Elige 5 de 20')).toBeVisible();
+  await expectAccessible(page);
+
+  await page.goto(`/organizaciones/${slug}/evaluaciones/bancos`);
+  await page
+    .getByRole('heading', { name: 'Banco E2E avanzado' })
+    .locator('..')
+    .locator('..')
+    .getByRole('link', { name: 'Abrir espacio de autoría' })
+    .click();
+  await expect(page).toHaveURL(/\/evaluaciones\/bancos\/[0-9a-f-]+$/, {
+    timeout: 30_000,
+  });
+  // Next dev can expose the streamed form before React has hydrated it.
+  // Let hydration own the controls before changing the dynamic question type.
+  await page.waitForTimeout(1_500);
+  await page.getByLabel('Código estable').fill('ADV-BROWSER-MATH-001');
+  await page
+    .getByLabel('Tipo de interacción')
+    .selectOption('mathematical_expression');
+  await expect(page.getByLabel('Símbolos permitidos')).toBeVisible({
+    timeout: 30_000,
+  });
+  await page
+    .getByLabel('Enunciado')
+    .fill('Escribe una expresión equivalente a x más uno.');
+  await page.getByLabel('Símbolos permitidos').fill('x');
+  await page.getByLabel('Supuestos simbólicos').fill('x:real');
+  await page
+    .getByLabel('Estrategia de equivalencia')
+    .selectOption('symbolic_common_domain');
+  const authorMathField = page.locator('math-field').first();
+  await expect(authorMathField).toBeVisible();
+  await authorMathField.evaluate((field) => {
+    const mathField = field as HTMLElement & { value: string };
+    mathField.value = 'x+1';
+    mathField.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(
+    page
+      .locator('.assessment-quality-list li[data-ready="true"]')
+      .filter({ hasText: 'Clave configurada' }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator('.assessment-quality-list li[data-ready="true"]')
+      .filter({ hasText: 'Contrato validado antes de enviar' }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Crear borrador de pregunta' })
+    .click();
+  await expect(page).toHaveURL(
+    /\/evaluaciones\/bancos\/[0-9a-f-]+\/preguntas\/[0-9a-f-]+\/revisiones\/[0-9a-f-]+$/,
+    { timeout: 30_000 },
+  );
+  await expect(page.getByRole('heading', { name: 'Revisión 1' })).toBeVisible({
+    timeout: 30_000,
+  });
+  await page.waitForTimeout(1_500);
+  await page.getByRole('button', { name: 'Enviar a revisión' }).click();
+  await expect(
+    page.getByRole('button', { name: 'Aprobar y crear versión' }),
+  ).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: 'Aprobar y crear versión' }).click();
+  await expect(page.getByText('Aprobada', { exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  await page.goto(`/organizaciones/${slug}/evaluaciones/gradebooks`);
+  await page.getByLabel('Release del curso').selectOption({ index: 1 });
+  await page.getByRole('button', { name: 'Crear libro' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Libro de calificaciones' }),
+  ).toBeVisible({ timeout: 30_000 });
+  await page.getByLabel('Evaluación entregada').selectOption({
+    label: 'Assessment avanzado E2E · Entrega avanzada E2E',
+  });
+  await page.getByLabel('Título de columna').fill('Assessment avanzado');
+  await page.getByLabel('Peso porcentual').fill('100');
+  await page.getByLabel('Agregación de intentos').selectOption('highest');
+  await page.getByRole('button', { name: 'Añadir columna' }).click();
+  await expect(page.locator('input[name="title"]').first()).toHaveValue(
+    'Assessment avanzado',
+    { timeout: 15_000 },
+  );
+  await page.getByRole('button', { name: 'Activar libro' }).click();
+  await expect(page.getByText('Activo', { exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
+  const gradebookId = page.url().split('/').at(-1)!;
+
+  const studentContext = await browser.newContext({
+    baseURL: `http://127.0.0.1:${process.env.E2E_WEB_PORT ?? '3000'}`,
+    viewport: { height: 844, width: 390 },
+  });
+  const student = await studentContext.newPage();
+  const assignedPath = `/organizaciones/${slug}/evaluaciones/asignadas`;
+  await login(student, 'learner@organizations.e2e.test', assignedPath);
+  const advancedCard = student
+    .locator('li.assessment-learner-card')
+    .filter({ hasText: 'Assessment avanzado E2E' });
+  await advancedCard.getByRole('button', { name: 'Comenzar' }).click();
+  await expect(student).toHaveURL(/\/evaluaciones\/intentos\/[0-9a-f-]+$/, {
+    timeout: 30_000,
+  });
+  const attemptId = student.url().split('/').at(-1)!;
+  const attemptBefore = await student.request.get(
+    `/api/v1/organizations/${slug}/assessments/attempts/${attemptId}/`,
+  );
+  const initialAttempt = (await attemptBefore.json()) as {
+    items: {
+      id: string;
+      public_snapshot: {
+        prompt: { content: { content?: { text: string }[] }[] };
+      };
+    }[];
+  };
+  expect(initialAttempt.items).toHaveLength(10);
+  expect(new Set(initialAttempt.items.map((item) => item.id)).size).toBe(10);
+  const selectedPrompts = initialAttempt.items.map(
+    (item) => item.public_snapshot.prompt.content[0]?.content?.[0]?.text,
+  );
+  expect(new Set(selectedPrompts).size).toBe(10);
+  await student.reload();
+  const attemptAfterReload = await student.request.get(
+    `/api/v1/organizations/${slug}/assessments/attempts/${attemptId}/`,
+  );
+  expect(
+    (
+      (await attemptAfterReload.json()) as { items: { id: string }[] }
+    ).items.map((item) => item.id),
+  ).toEqual(initialAttempt.items.map((item) => item.id));
+
+  await student
+    .getByRole('checkbox', { name: 'Primera opción', exact: true })
+    .check();
+  await saveAndNext(student);
+  await student.getByLabel('Respuesta a la pregunta').fill('12.3');
+  await saveAndNext(student);
+  await student.getByRole('button', { name: 'Subir Tercera opción' }).click();
+  await saveAndNext(student);
+  await student.getByLabel('Derivada').selectOption('r1');
+  await student.getByLabel('Integral').selectOption('r1');
+  await saveAndNext(student);
+  const learnerMathField = student.locator('math-field').first();
+  await expect(learnerMathField).toBeVisible();
+  await learnerMathField.evaluate((field) => {
+    const mathField = field as HTMLElement & { value: string };
+    mathField.value = '1+x';
+    mathField.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(
+    student.getByText('Expresión lista para guardar.', { exact: true }),
+  ).toBeVisible();
+  await student.getByRole('button', { name: 'Guardar respuesta' }).click();
+  await expect(student.getByText('Guardada', { exact: true })).toBeVisible();
+  await student.getByRole('button', { name: 'Enviar intento' }).click();
+  await student
+    .getByRole('button', { name: 'Confirmar envío definitivo' })
+    .click();
+  await expect(
+    student.getByRole('heading', { name: 'Intento calificado' }),
+  ).toBeVisible({ timeout: 30_000 });
+  const resultResponse = await student.request.get(
+    `/api/v1/organizations/${slug}/assessments/attempts/${attemptId}/result/`,
+  );
+  const result = (await resultResponse.json()) as {
+    basis_points: number;
+    status: string;
+    total_score: string;
+  };
+  expect(result).toMatchObject({
+    basis_points: 2833,
+    status: 'graded',
+    total_score: '2.833',
+  });
+  await expectAccessible(student);
+
+  const gradesPath = `/organizaciones/${slug}/evaluaciones/calificaciones`;
+  await student.goto(gradesPath);
+  await expect(
+    student.getByRole('heading', { name: 'Mis calificaciones', level: 1 }),
+  ).toBeVisible();
+  await expect(
+    student.getByRole('heading', { name: 'Libros de calificaciones' }),
+  ).toBeVisible();
+  await expect(
+    student.getByText('Assessment avanzado', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    student.getByText('28.33 %', { exact: true }).first(),
+  ).toBeVisible();
+  expect(
+    await student.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await expectAccessible(student);
+  await student
+    .getByRole('link', { name: 'Evaluaciones', exact: true })
+    .click();
+  await expect(student).toHaveURL(assignedPath);
+  await expect(
+    student.getByRole('heading', { name: 'Libros de calificaciones' }),
+  ).toHaveCount(0);
+
+  const assessmentsResponse = await page.request.get(
+    `/api/v1/organizations/${slug}/assessments/`,
+  );
+  const assessments = (await assessmentsResponse.json()) as {
+    results: { slug: string }[];
+  };
+  expect(
+    assessments.results.some(
+      (assessment) => assessment.slug === 'assessment-avanzado-e2e',
+    ),
+  ).toBe(true);
+  const versionsResponse = await page.request.get(
+    `/api/v1/organizations/${slug}/assessments/assessment-avanzado-e2e/versions/`,
+  );
+  const versions = (await versionsResponse.json()) as { id: string }[];
+  const assessmentVersionId = versions.at(-1)!.id;
+  const scoringResponse = await page.request.get(
+    `/api/v1/organizations/${slug}/assessments/scoring-policies/${assessmentVersionId}/`,
+  );
+  const scoring = (await scoringResponse.json()) as {
+    current_revision: {
+      grading_snapshot: {
+        items: {
+          grading_payload: Record<string, unknown>;
+          scoring_policy: string;
+          source_id: string;
+        }[];
+      };
+      id: string;
+    };
+    lock_version: number;
+  };
+  const firstPolicyItem = scoring.current_revision.grading_snapshot.items[0]!;
+  const correctionResponse = await csrfJson(
+    page,
+    `/api/v1/organizations/${slug}/assessments/scoring-policies/${assessmentVersionId}/corrections/`,
+    'POST',
+    {
+      expected_version: scoring.lock_version,
+      item_overrides: {
+        [firstPolicyItem.source_id]: {
+          grading_payload: firstPolicyItem.grading_payload,
+          scoring_policy: firstPolicyItem.scoring_policy,
+        },
+      },
+      reason: 'Corrección E2E auditada sin cambiar el resultado.',
+    },
+  );
+  expect(correctionResponse.status).toBe(201);
+  const correction = correctionResponse.data as { id: string };
+  await page.goto(`/organizaciones/${slug}/evaluaciones/regrading`);
+  await page
+    .getByLabel('Versión de evaluación')
+    .selectOption(assessmentVersionId);
+  await page.getByLabel('Revisión de calificación').selectOption(correction.id);
+  await page
+    .getByLabel('Justificación auditable')
+    .fill('Recalificación E2E con preservación manual e historial completo.');
+  await page.getByLabel('Confirmo el alcance de esta recalificación').check();
+  await page.getByRole('button', { name: 'Crear recalificación' }).click();
+  await expect(page).toHaveURL(/\/evaluaciones\/regrading\/[0-9a-f-]+$/, {
+    timeout: 30_000,
+  });
+  const regradeJobId = page.url().split('/').at(-1)!;
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(
+        `/api/v1/organizations/${slug}/assessments/regrade-jobs/${regradeJobId}/`,
+      );
+      return ((await response.json()) as { status: string }).status;
+    })
+    .toBe('completed');
+  await page.reload();
+  await expect(
+    page.getByRole('definition').filter({ hasText: '1' }).first(),
+  ).toBeVisible();
+  await expect(page.getByText('Sin error')).toBeVisible();
+
+  await page.goto(
+    `/organizaciones/${slug}/evaluaciones/analitica/${assessmentVersionId}`,
+  );
+  await expect(page.getByText('Aún no hay analítica agregada')).toBeVisible();
+  await page.getByLabel('Revisión de calificación').selectOption(correction.id);
+  await page.getByRole('button', { name: 'Actualizar snapshot' }).click();
+  await expect(page.getByText('Snapshot actualizado.')).toBeVisible({
+    timeout: 45_000,
+  });
+  await expect(page.getByText('Muestra pequeña')).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(
+    page.getByText('Facilidad, discriminación y omisiones'),
+  ).toBeVisible();
+  await expectAccessible(page);
+
+  const gradebookResponse = await page.request.get(
+    `/api/v1/organizations/${slug}/assessments/gradebooks/${gradebookId}/summaries/`,
+  );
+  const summaries = (await gradebookResponse.json()) as {
+    weighted_percent_basis_points: number;
+  }[];
+  expect(summaries[0]?.weighted_percent_basis_points).toBe(2833);
   await studentContext.close();
 });

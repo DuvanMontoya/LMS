@@ -1,0 +1,23 @@
+FROM python:3.13.13-slim-trixie@sha256:7ba5f5888fbe0014ab9edb2278922995c2201fc3752c46b0be24763eb46fa9f3
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PATH="/workspace/apps/api/.venv/bin:${PATH}"
+
+RUN groupadd --gid 10001 lms \
+    && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin lms \
+    && pip install --no-cache-dir uv==0.11.19
+
+WORKDIR /workspace/apps/api
+
+COPY apps/api/pyproject.toml apps/api/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+COPY --chown=10001:10001 apps/api ./
+COPY --chown=10001:10001 schemas /workspace/schemas
+
+USER 10001:10001
+
+CMD ["celery", "-A", "config", "worker", "--loglevel=INFO", "--pool=prefork", "--concurrency=2", "--prefetch-multiplier=1", "--max-tasks-per-child=100", "--queues=grading,regrading,analytics"]

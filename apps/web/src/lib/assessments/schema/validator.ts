@@ -1,6 +1,7 @@
 import Ajv2020, { type ErrorObject } from 'ajv/dist/2020';
 
 import contentSchema from '../generated/unit-document-v1.schema.json';
+import mathExpressionResponseSchema from '../generated/math-expression-response-v1.schema.json';
 import type { AssessmentResponseV1 } from '../generated/response-v1';
 import responseSchema from '../generated/response-v1.schema.json';
 import type { QuestionPublicPayloadV1 } from '../generated/question-public-v1';
@@ -13,6 +14,7 @@ const ajv = new Ajv2020({
   validateFormats: false,
 });
 ajv.addSchema(contentSchema);
+ajv.addSchema(mathExpressionResponseSchema);
 const validatePublic =
   ajv.compile<QuestionPublicPayloadV1>(questionPublicSchema);
 const validateResponse = ajv.compile<AssessmentResponseV1>(responseSchema);

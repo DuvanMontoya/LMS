@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "LMS Django API"
 requires-python = ">=3.13.13"
 dependencies = [
+    "celery[redis]==5.6.3",
     "django-allauth[headless-spec]==65.18.0",
     "django-filter==26.1",
     "django-treebeard==6.0.0",
@@ -12,7 +13,8 @@ dependencies = [
     "drf-spectacular==0.30.0",
     "jsonschema==4.26.0",
     "psycopg[binary]==3.3.4",
-    "redis==8.0.1",
+    "redis==6.4.0",
+    "sympy==1.14.0",
 ]
 
 [dependency-groups]

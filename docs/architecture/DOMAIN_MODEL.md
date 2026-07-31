@@ -272,3 +272,23 @@ Una `LearningCohort` fija organización, curso, release y ventana. Una
 el historial de `EnrollmentReleaseAssignment` forma una cadena contigua. Cada
 asignación tiene un `CourseProgress`, compuesto por `UnitProgress` identificados
 con UUID del snapshot. `LearningEvent` registra hechos inmutables.
+
+## 15. Calificación avanzada (Prompt 14)
+
+```mermaid
+erDiagram
+  AssessmentVersion ||--|| AssessmentScoringPolicy : owns
+  AssessmentScoringPolicy ||--o{ AssessmentGradingRevision : versions
+  Attempt ||--o{ AttemptGradeVersion : history
+  AttemptGradeVersion ||--o{ AttemptItemGradeVersion : items
+  CourseRelease ||--|| CourseGradebook : consolidates
+  CourseGradebook ||--o{ GradebookColumn : configures
+  GradebookColumn ||--o{ GradebookEntry : materializes
+  AssessmentVersion ||--o{ AssessmentAnalyticsSnapshot : describes
+```
+
+Una revisión de scoring y una grade version son inmutables y digestadas;
+`Attempt.current_grade` es sólo puntero. Pools y candidatos pertenecen a la
+revisión, mientras la selección concreta pertenece al intento. Un gradebook
+draft permite ordenar/archivar columnas; la activación exige posiciones
+contiguas y 10000 basis points. Analytics snapshot conserva revisión y alcance.

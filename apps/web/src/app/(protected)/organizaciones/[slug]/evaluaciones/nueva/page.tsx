@@ -19,7 +19,7 @@ export default async function NewAssessmentPage({
           { label: 'Nueva' },
         ]}
         description="Crea la identidad y primera revisión editable del instrumento."
-        eyebrow="Assessment authoring"
+        eyebrow="Autoría de evaluaciones"
         title="Nueva evaluación"
       />
       <AssessmentCreateForm slug={slug} />

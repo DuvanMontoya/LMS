@@ -1,124 +1,352 @@
-import { ArrowRight, CheckCircle2, Circle, CircleDot } from 'lucide-react';
+import {
+  ArrowRight,
+  Award,
+  BookOpenCheck,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock3,
+  Layers3,
+  Play,
+  Sparkles,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
 
+import { LearnerDeliveryList } from '@/components/assessments/learner-deliveries';
+import { CourseCurriculum } from '@/components/learning/course-curriculum';
+import { CourseGradebook } from '@/components/learning/course-gradebook';
 import { LearningProgress } from '@/components/learning/learning-progress';
-import { PageHeader } from '@/components/platform/page-header';
-import { Badge } from '@/components/ui/badge';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
+import { getMyAssessmentDeliveries } from '@/lib/assessments/server';
 import {
   getEnrollmentForCourse,
   getLearningOutline,
 } from '@/lib/learning/server';
+import { cn } from '@/lib/utils';
+
+const tabs = [
+  { icon: Sparkles, id: 'resumen', label: 'Resumen' },
+  { icon: Layers3, id: 'contenido', label: 'Contenido' },
+  { icon: ClipboardCheck, id: 'evaluaciones', label: 'Evaluaciones' },
+  { icon: Award, id: 'calificaciones', label: 'Calificaciones' },
+] as const;
+
+type CourseTab = (typeof tabs)[number]['id'];
 
 export default async function LearningOutlinePage({
   params,
-}: Readonly<{ params: Promise<{ courseSlug: string; slug: string }> }>) {
-  const { courseSlug, slug } = await params;
+  searchParams,
+}: Readonly<{
+  params: Promise<{ courseSlug: string; slug: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}>) {
+  const [{ courseSlug, slug }, query] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const { enrollment } = await getEnrollmentForCourse(slug, courseSlug);
-  const data = await getLearningOutline(slug, enrollment.enrollment_id);
+  const [data, assessmentData] = await Promise.all([
+    getLearningOutline(slug, enrollment.enrollment_id),
+    getMyAssessmentDeliveries(slug),
+  ]);
+  const activeTab = isCourseTab(query.tab) ? query.tab : 'resumen';
+  const courseDeliveries = assessmentData.deliveries.filter(
+    ({ delivery }) =>
+      delivery.course_release_title === data.outline.course.title &&
+      delivery.course_release_number === data.outline.release_number,
+  );
+  const courseGradebooks = assessmentData.gradebooks.filter(
+    ({ gradebook }) =>
+      gradebook.course_title === data.outline.course.title &&
+      gradebook.release_number === data.outline.release_number,
+  );
+  const units = data.outline.modules.flatMap((module) => module.units);
+  const duration = units.reduce(
+    (total, unit) => total + (unit.estimated_duration_minutes ?? 0),
+    0,
+  );
+  const nextUnit =
+    units.find((unit) => unit.id === data.outline.resume.unit_id) ??
+    units.find((unit) => unit.status !== 'completed') ??
+    units[0];
+  const baseHref = `/organizaciones/${slug}/aprender/${courseSlug}`;
+
   return (
-    <main className="academic-page" id="contenido-principal">
-      <PageHeader
-        actions={
-          data.outline.resume.href ? (
-            <Button asChild size="sm">
+    <main className="academic-page course-home" id="contenido-principal">
+      <Breadcrumb className="mb-4 min-w-0 overflow-hidden">
+        <BreadcrumbList className="min-w-0">
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/organizaciones/${slug}/aprendizaje`}>
+                Mi aprendizaje
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem className="min-w-0">
+            <BreadcrumbPage className="truncate">
+              {data.outline.course.title}
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <section className="course-home-hero">
+        <div className="course-home-hero__main">
+          <p className="academic-kicker">Aula del curso</p>
+          <div className="course-home-hero__release">
+            Release {data.outline.release_number}
+          </div>
+          <h1>{data.outline.course.title}</h1>
+          <p>{data.outline.course.summary}</p>
+          <dl className="course-home-hero__facts">
+            <CourseFact
+              icon={<Layers3 />}
+              label="Estructura"
+              value={`${data.outline.modules.length} módulos`}
+            />
+            <CourseFact
+              icon={<BookOpenCheck />}
+              label="Lecciones"
+              value={`${units.length} unidades`}
+            />
+            <CourseFact
+              icon={<Clock3 />}
+              label="Duración"
+              value={duration ? formatMinutes(duration) : 'A tu ritmo'}
+            />
+            <CourseFact
+              icon={<Users />}
+              label="Cohorte"
+              value={data.outline.cohort?.name ?? 'Matrícula individual'}
+            />
+          </dl>
+        </div>
+        <aside className="course-home-hero__progress">
+          <span>Tu avance</span>
+          <strong>
+            {(data.outline.progress.percent_basis_points / 100).toFixed(0)}%
+          </strong>
+          <LearningProgress progress={data.outline.progress} />
+          {data.outline.resume.href ? (
+            <Button asChild className="w-full">
               <Link href={data.outline.resume.href}>
-                Continuar
-                <ArrowRight data-icon="inline-end" />
+                <Play />
+                {data.outline.progress.status === 'not_started'
+                  ? 'Comenzar curso'
+                  : 'Continuar aprendiendo'}
               </Link>
             </Button>
-          ) : null
-        }
-        breadcrumbs={[
-          { href: `/organizaciones/${slug}`, label: data.organization.name },
-          {
-            href: `/organizaciones/${slug}/aprendizaje`,
-            label: 'Mi aprendizaje',
-          },
-          { label: data.outline.course.title },
-        ]}
-        description={data.outline.course.summary}
-        eyebrow={`Release asignado ${data.outline.release_number}`}
-        title={data.outline.course.title}
-      />
-      <section className="mt-5 border p-5" aria-label="Progreso del curso">
-        <LearningProgress progress={data.outline.progress} />
+          ) : null}
+          <small>
+            {data.outline.progress.completed_units} de{' '}
+            {data.outline.progress.total_units} lecciones completadas
+          </small>
+        </aside>
       </section>
-      {data.outline.cohort ? (
-        <p className="mt-3 text-sm text-muted-foreground">
-          Cohorte: {data.outline.cohort.name}
-        </p>
-      ) : null}
-      <section className="mt-6 border">
-        <header className="border-b px-5 py-4">
-          <h2 className="font-semibold">Ruta de aprendizaje</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            El orden y las unidades pertenecen al release fijado en tu
-            matrícula.
-          </p>
-        </header>
-        <ol className="divide-y">
-          {data.outline.modules.map((module) => (
-            <li
-              className="grid lg:grid-cols-[16rem_minmax(0,1fr)]"
-              key={module.id}
-            >
-              <div className="border-b bg-muted/15 px-5 py-4 lg:border-r lg:border-b-0">
-                <span className="text-xs text-muted-foreground">
-                  Módulo {module.position}
-                </span>
-                <h3 className="mt-1 text-sm font-semibold">{module.title}</h3>
-                {module.description ? (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {module.description}
-                  </p>
-                ) : null}
+
+      <nav aria-label="Secciones del curso" className="course-tab-nav">
+        {tabs.map(({ icon: Icon, id, label }) => (
+          <Link
+            aria-current={activeTab === id ? 'page' : undefined}
+            className={cn(activeTab === id && 'is-active')}
+            href={id === 'resumen' ? baseHref : `${baseHref}?tab=${id}`}
+            key={id}
+          >
+            <Icon />
+            <span>{label}</span>
+            {id === 'evaluaciones' && courseDeliveries.length ? (
+              <small>{courseDeliveries.length}</small>
+            ) : null}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="course-tab-panel">
+        {activeTab === 'resumen' ? (
+          <CourseOverview
+            nextUnit={nextUnit}
+            outline={data.outline}
+            tabHref={`${baseHref}?tab=contenido`}
+          />
+        ) : null}
+        {activeTab === 'contenido' ? (
+          <section className="course-curriculum-panel">
+            <header>
+              <div>
+                <p className="academic-kicker">Plan de estudios</p>
+                <h2>Contenido del curso</h2>
+                <p>
+                  Recorre las lecciones en el orden estable del release que
+                  tienes asignado.
+                </p>
               </div>
-              <ol className="divide-y">
-                {module.units.map((unit) => (
-                  <li key={unit.id}>
-                    <Link
-                      aria-current={unit.is_current ? 'step' : undefined}
-                      className="flex min-h-14 items-center gap-3 px-5 py-3 text-sm hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
-                      href={unit.href}
-                    >
-                      <UnitState status={unit.status} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-medium">{unit.title}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {unit.status === 'completed'
-                            ? 'Completada'
-                            : unit.status === 'in_progress'
-                              ? 'En progreso'
-                              : 'No iniciada'}
-                        </span>
-                      </span>
-                      {unit.is_current ? (
-                        <Badge variant="outline">Actual</Badge>
-                      ) : null}
-                      <ArrowRight className="size-4" aria-hidden="true" />
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            </li>
-          ))}
-        </ol>
-      </section>
+              <span>{units.length} lecciones</span>
+            </header>
+            <CourseCurriculum modules={data.outline.modules} />
+          </section>
+        ) : null}
+        {activeTab === 'evaluaciones' ? (
+          <section aria-labelledby="evaluaciones-curso">
+            <header className="course-tab-heading">
+              <div>
+                <p className="academic-kicker">Aplicación y evidencia</p>
+                <h2 id="evaluaciones-curso">Evaluaciones del curso</h2>
+                <p>
+                  Actividades asignadas específicamente a este release. Tus
+                  notas se consultan en la pestaña Calificaciones.
+                </p>
+              </div>
+              <span>{courseDeliveries.length}</span>
+            </header>
+            <LearnerDeliveryList deliveries={courseDeliveries} slug={slug} />
+          </section>
+        ) : null}
+        {activeTab === 'calificaciones' ? (
+          <section aria-labelledby="calificaciones-curso">
+            <header className="course-tab-heading">
+              <div>
+                <p className="academic-kicker">Rendimiento académico</p>
+                <h2 id="calificaciones-curso">Calificaciones</h2>
+                <p>
+                  Resultados ponderados del libro activo para este curso y
+                  release.
+                </p>
+              </div>
+              <span>{courseGradebooks.length}</span>
+            </header>
+            <CourseGradebook gradebooks={courseGradebooks} />
+          </section>
+        ) : null}
+      </div>
     </main>
   );
 }
 
-function UnitState({ status }: Readonly<{ status: string }>) {
-  if (status === 'completed')
-    return (
-      <CheckCircle2 aria-label="Completada" className="size-4 text-primary" />
-    );
-  if (status === 'in_progress')
-    return (
-      <CircleDot aria-label="En progreso" className="size-4 text-primary" />
-    );
+function CourseOverview({
+  nextUnit,
+  outline,
+  tabHref,
+}: Readonly<{
+  nextUnit:
+    | Awaited<
+        ReturnType<typeof getLearningOutline>
+      >['outline']['modules'][number]['units'][number]
+    | undefined;
+  outline: Awaited<ReturnType<typeof getLearningOutline>>['outline'];
+  tabHref: string;
+}>) {
   return (
-    <Circle aria-label="No iniciada" className="size-4 text-muted-foreground" />
+    <div className="course-overview-grid">
+      <section className="course-next-step">
+        <div className="course-next-step__icon">
+          {outline.progress.status === 'completed' ? (
+            <CheckCircle2 />
+          ) : (
+            <Play />
+          )}
+        </div>
+        <div>
+          <p className="academic-kicker">
+            {outline.progress.status === 'not_started'
+              ? 'Tu punto de partida'
+              : outline.progress.status === 'completed'
+                ? 'Ruta completada'
+                : 'Continúa donde quedaste'}
+          </p>
+          <h2>{nextUnit?.title ?? outline.course.title}</h2>
+          <p>
+            {nextUnit?.summary ||
+              'Consulta el contenido completo y vuelve a cualquier lección.'}
+          </p>
+          {nextUnit ? (
+            <Button asChild className="mt-5">
+              <Link href={nextUnit.href}>
+                Abrir lección
+                <ArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+      </section>
+      <section className="course-module-preview">
+        <header>
+          <div>
+            <p className="academic-kicker">Recorrido</p>
+            <h2>Ruta de aprendizaje</h2>
+          </div>
+          <Button asChild size="sm" variant="outline">
+            <Link href={tabHref}>Ver contenido completo</Link>
+          </Button>
+        </header>
+        <ol>
+          {outline.modules.map((module) => {
+            const completed = module.units.filter(
+              (unit) => unit.status === 'completed',
+            ).length;
+            return (
+              <li key={module.id}>
+                <span>{String(module.position).padStart(2, '0')}</span>
+                <div>
+                  <strong>{module.title}</strong>
+                  <small>
+                    {completed}/{module.units.length} lecciones completadas
+                  </small>
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="course-module-preview__progress"
+                >
+                  <span
+                    style={{
+                      width: `${
+                        module.units.length
+                          ? (completed / module.units.length) * 100
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+    </div>
   );
+}
+
+function CourseFact({
+  icon,
+  label,
+  value,
+}: Readonly<{ icon: React.ReactNode; label: string; value: string }>) {
+  return (
+    <div>
+      <dt>
+        {icon}
+        {label}
+      </dt>
+      <dd>{value}</dd>
+    </div>
+  );
+}
+
+function isCourseTab(value: string | undefined): value is CourseTab {
+  return tabs.some((tab) => tab.id === value);
+}
+
+function formatMinutes(value: number) {
+  if (value < 60) return `${value} min`;
+  const hours = Math.floor(value / 60);
+  const minutes = value % 60;
+  return minutes ? `${hours} h ${minutes} min` : `${hours} h`;
 }

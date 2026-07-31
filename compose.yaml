@@ -51,6 +51,57 @@ services:
       retries: 20
       start_period: 10s
 
+  assessment-worker:
+    profiles: ["async"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.worker
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      REDIS_CACHE_DB: ${REDIS_CACHE_DB:-1}
+      CELERY_BROKER_DB: ${CELERY_BROKER_DB:-2}
+      CELERY_WORKER_REMOTE_CONTROL: "true"
+      FRONTEND_ORIGIN: http://127.0.0.1:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - lms_internal
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "celery -A config inspect ping --timeout=2 2>/dev/null | grep -q pong",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+
 networks:
   lms_internal:
     driver: bridge

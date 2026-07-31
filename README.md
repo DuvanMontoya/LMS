@@ -527,7 +527,7 @@ evaluaciones, certificados, enrollment approval ni publicación automática.
 
 ## Banco de preguntas y evaluaciones
 
-`domain.assessments` posee bancos, ocho tipos de pregunta, revisiones y
+`domain.assessments` posee bancos, nueve tipos de pregunta, revisiones y
 versiones inmutables, composición de evaluaciones, deliveries fijadas a
 releases, assignments, intentos, respuestas, scoring determinista y decisiones
 manuales append-only. El learner recibe sólo snapshots públicos; claves,
@@ -541,6 +541,9 @@ Rutas locales principales:
 - `/organizaciones/organizacion-demo/evaluaciones/asignadas`
 - `/organizaciones/organizacion-demo/evaluaciones/resultados`
 - `/organizaciones/organizacion-demo/evaluaciones/calificacion-manual`
+- `/organizaciones/organizacion-demo/evaluaciones/regrading`
+- `/organizaciones/organizacion-demo/evaluaciones/gradebooks`
+- `/organizaciones/organizacion-demo/evaluaciones/analitica`
 
 Después de los demos anteriores:
 
@@ -558,11 +561,11 @@ pnpm assessments:visual
 ```
 
 El demo es idempotente y sólo funciona con `DEBUG=True`: conserva el banco
-`fundamentos-calculo`, ocho preguntas, el diagnóstico, la entrega y el
-assignment existentes. Numeric usa `Decimal`, no float; todos los graders son
-all-or-none y long text espera decisión manual. No hay autosave, JWT,
-`localStorage`, symbolic grading, ejecución de código ni import/export QTI.
-QTI 3 permanece como mapa futuro sin declaración de conformidad.
+`fundamentos-calculo`, nueve preguntas base, diez candidatos de pool, el
+diagnóstico, la entrega y el assignment existentes. Numeric usa `Decimal`, no
+float, y long text espera decisión manual. No hay autosave, JWT,
+`localStorage`, ejecución de código ni import/export QTI. QTI 3 permanece como
+mapa futuro sin declaración de conformidad.
 
 La interfaz y la API aplican una matriz institucional estricta: author crea y
 envía pero no aprueba ni califica; reviewer revisa sin modificar; instructor
@@ -571,3 +574,70 @@ aprendizaje”, “Mis evaluaciones” y sus propios intentos/resultados permiti
 Los editores de claves son visuales y no requieren códigos internos. El E2E
 crea banco, pregunta y evaluación en Chromium, valida axe y 390 px, y limpia
 todos sus datos aislados.
+
+## Calificación avanzada, worker y analítica
+
+Scoring engine v2 calcula primero crédito por ítem en basis points
+(`0..10000`) y después puntos con `Decimal`; nunca produce crédito negativo ni
+superior al máximo. Selección múltiple proporcional con penalización,
+ordenamiento por posición, matching por parejas y numeric por bandas usan
+fórmulas deterministas declaradas en `scoring-policy-v2.schema.json`. Cada
+`AssessmentVersion` tiene una política y revisiones append-only; una corrección
+requiere justificación y no cambia el payload público.
+
+`mathematical_expression` usa MathLive para LaTeX y Cortex Compute Engine para
+crear MathJSON en el navegador. El backend acepta únicamente un AST allowlisted,
+con símbolos/funciones/supuestos declarados, máximo 200 nodos, profundidad 24,
+enteros acotados y exponentes enteros entre -20 y 20. Nunca usa `eval`,
+`parse_expr`, `parse_latex` ni `sympify` sobre texto no confiable. Constructores
+explícitos crean SymPy; equivalencia estructural y simbólica se ejecutan fuera
+del proceso HTTP. Un timeout o resultado no concluyente queda pendiente de
+revisión, no incorrecto.
+
+Celery 5.6.3 corre en el contenedor Linux no root `assessment-worker`, pool
+prefork, concurrencia 2 y colas `grading`, `regrading` y `analytics`. Redis DB 2
+es sólo broker JSON, separado de cache auth; no hay result backend ni pickle.
+Los jobs, estados y resultados durables viven en PostgreSQL. Para operar:
+
+```powershell
+pnpm async:build
+pnpm async:up
+pnpm async:status
+pnpm async:smoke
+pnpm async:logs
+pnpm async:down
+```
+
+Los pools seleccionan sin reemplazo y persisten la selección junto con la seed
+del intento; leer nunca recalcula. `AttemptGradeVersion` e item grades son
+append-only y `current_grade` señala la vigente. Regrading crea versiones
+nuevas, conserva decisiones manuales, actualiza el gradebook y permite reintento
+de fallidos sin duplicar resultados. El gradebook pertenece a un release, exige
+pesos activos que sumen 10000 y agrega `highest` o `latest`; su resumen no es
+course completion ni “nota definitiva”.
+
+Analytics crea snapshots append-only por versión/revisión, calcula muestra,
+media, percentiles, aprobación, facilidad, omisiones, opciones y discriminación
+con agregados PostgreSQL. Muestras pequeñas y varianza cero se suprimen; los
+datos son descriptivos, no públicos ni recomendaciones automáticas.
+
+Demo y validación completa:
+
+```powershell
+pnpm assessments:advanced-demo
+pnpm assessments:test:partial-credit
+pnpm assessments:test:math
+pnpm assessments:test:pools
+pnpm assessments:test:grade-versions
+pnpm assessments:test:regrading
+pnpm assessments:test:gradebook
+pnpm assessments:test:analytics
+pnpm assessments:test:worker
+pnpm assessments:advanced-e2e
+pnpm assessments:advanced-visual
+```
+
+Si un resultado permanece “en proceso”, verifica `pnpm async:status` y revisa
+`pnpm async:logs`; nunca reescribas un grade histórico. `async:down` detiene el
+worker sin eliminar PostgreSQL. El E2E avanzado usa base, prefijo Redis y worker
+efímeros y los limpia siempre.

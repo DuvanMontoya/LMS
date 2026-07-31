@@ -77,6 +77,9 @@ class OrganizationPolicyTests(TestCase):
                 Capability.ASSESSMENT_AUTHORING_SUBMIT,
                 Capability.ASSESSMENT_DELIVERY_VIEW,
                 Capability.ASSESSMENT_RESULTS_VIEW,
+                Capability.ASSESSMENT_REGRADING_VIEW,
+                Capability.ASSESSMENT_GRADEBOOK_VIEW,
+                Capability.ASSESSMENT_ANALYTICS_VIEW,
             },
             RoleCode.REVIEWER: {
                 Capability.ASSESSMENT_BANK_VIEW,
@@ -86,6 +89,8 @@ class OrganizationPolicyTests(TestCase):
                 Capability.ASSESSMENT_AUTHORING_REVIEW,
                 Capability.ASSESSMENT_DELIVERY_VIEW,
                 Capability.ASSESSMENT_RESULTS_VIEW,
+                Capability.ASSESSMENT_REGRADING_VIEW,
+                Capability.ASSESSMENT_ANALYTICS_VIEW,
             },
             RoleCode.INSTRUCTOR: {
                 Capability.ASSESSMENT_BANK_VIEW,
@@ -95,6 +100,12 @@ class OrganizationPolicyTests(TestCase):
                 Capability.ASSESSMENT_DELIVERY_MANAGE,
                 Capability.ASSESSMENT_GRADING_MANAGE,
                 Capability.ASSESSMENT_RESULTS_VIEW,
+                Capability.ASSESSMENT_REGRADING_VIEW,
+                Capability.ASSESSMENT_REGRADING_MANAGE,
+                Capability.ASSESSMENT_GRADEBOOK_VIEW,
+                Capability.ASSESSMENT_GRADEBOOK_MANAGE,
+                Capability.ASSESSMENT_ANALYTICS_VIEW,
+                Capability.ASSESSMENT_ANALYTICS_REFRESH,
             },
             RoleCode.LEARNER: {Capability.ASSESSMENT_ATTEMPT},
         }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
@@ -160,6 +161,7 @@ ALLAUTH_TRUSTED_PROXY_COUNT = 0
 _redis_host = os.environ.get("REDIS_HOST", "127.0.0.1")
 _redis_port = os.environ.get("REDIS_PORT", "6379")
 _redis_cache_db = os.environ.get("REDIS_CACHE_DB", "1")
+_celery_broker_db = os.environ.get("CELERY_BROKER_DB", "2")
 _redis_password = os.environ.get("REDIS_PASSWORD", "")
 if not _redis_password:
     raise RuntimeError(
@@ -178,6 +180,62 @@ CACHES = {
             "retry_on_timeout": False,
         },
     }
+}
+
+if (
+    not _redis_cache_db.isdecimal()
+    or not _celery_broker_db.isdecimal()
+    or _redis_cache_db == _celery_broker_db
+):
+    raise RuntimeError(
+        "REDIS_CACHE_DB and CELERY_BROKER_DB must be distinct numeric databases."
+    )
+
+CELERY_BROKER_URL = (
+    f"redis://:{quote(_redis_password, safe='')}@"
+    f"{_redis_host}:{_redis_port}/{_celery_broker_db}"
+)
+CELERY_RESULT_BACKEND = None
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_TASK_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "UTC"
+CELERY_ENABLE_UTC = True
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 100
+CELERY_WORKER_ENABLE_REMOTE_CONTROL = (
+    os.environ.get("CELERY_WORKER_REMOTE_CONTROL", "false").lower() == "true"
+)
+CELERY_TASK_SOFT_TIME_LIMIT = 30
+CELERY_TASK_TIME_LIMIT = 45
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+ASSESSMENT_TASK_QUEUE_PREFIX = os.environ.get("ASSESSMENT_TASK_QUEUE_PREFIX", "")
+if ASSESSMENT_TASK_QUEUE_PREFIX and not re.fullmatch(
+    r"lms-e2e-[a-f0-9]{32}-", ASSESSMENT_TASK_QUEUE_PREFIX
+):
+    raise RuntimeError("ASSESSMENT_TASK_QUEUE_PREFIX is invalid.")
+ASSESSMENT_TASK_COUNTDOWN_SECONDS = int(
+    os.environ.get("ASSESSMENT_TASK_COUNTDOWN_SECONDS", "0")
+)
+if (
+    ASSESSMENT_TASK_COUNTDOWN_SECONDS < 0
+    or ASSESSMENT_TASK_COUNTDOWN_SECONDS > 5
+    or (ASSESSMENT_TASK_COUNTDOWN_SECONDS and not ASSESSMENT_TASK_QUEUE_PREFIX)
+):
+    raise RuntimeError("ASSESSMENT_TASK_COUNTDOWN_SECONDS is invalid.")
+CELERY_TASK_ROUTES = {
+    "domain.assessments.tasks.grade_attempt_task": {
+        "queue": f"{ASSESSMENT_TASK_QUEUE_PREFIX}grading"
+    },
+    "domain.assessments.tasks.process_regrade_job_task": {
+        "queue": f"{ASSESSMENT_TASK_QUEUE_PREFIX}regrading"
+    },
+    "domain.assessments.tasks.refresh_analytics_task": {
+        "queue": f"{ASSESSMENT_TASK_QUEUE_PREFIX}analytics"
+    },
 }
 
 PASSWORD_HASHERS = [
@@ -250,5 +308,16 @@ SPECTACULAR_SETTINGS = {
         "AssessmentAttemptStatus": "domain.assessments.choices.AttemptStatus",
         "AssessmentResponseStatus": "domain.assessments.choices.ResponseStatus",
         "AssessmentAttemptEventType": "domain.assessments.choices.AttemptEventType",
+        "AssessmentPoolSelectionStrategy": "domain.assessments.choices.PoolSelectionStrategy",
+        "AssessmentGradingRevisionSource": "domain.assessments.choices.GradingRevisionSource",
+        "AssessmentGradeSource": "domain.assessments.choices.GradeSource",
+        "AssessmentGradingStatus": "domain.assessments.choices.GradingStatus",
+        "AssessmentJobStatus": "domain.assessments.choices.JobStatus",
+        "AssessmentRegradeAttemptStatus": "domain.assessments.choices.RegradeAttemptStatus",
+        "AssessmentGradebookStatus": "domain.assessments.choices.GradebookStatus",
+        "AssessmentGradebookColumnStatus": "domain.assessments.choices.GradebookColumnStatus",
+        "AssessmentAttemptAggregation": "domain.assessments.choices.AttemptAggregation",
+        "AssessmentGradebookEntryStatus": "domain.assessments.choices.GradebookEntryStatus",
+        "AssessmentGradebookSummaryStatus": "domain.assessments.choices.GradebookSummaryStatus",
     },
 }

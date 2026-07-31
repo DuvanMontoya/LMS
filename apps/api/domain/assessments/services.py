@@ -29,6 +29,8 @@ from .choices import (
     AttemptStatus,
     AuthoringStatus,
     DeliveryStatus,
+    FeedbackMode,
+    GradeSource,
     LifecycleStatus,
     ResponseStatus,
 )
@@ -40,11 +42,15 @@ from .exceptions import (
     AttemptExpired,
     AttemptUnavailable,
 )
+from .grading import create_attempt_grade, create_original_grading_policy
+from .jobs import create_attempt_grading_job
 from .models import (
     Assessment,
     AssessmentDelivery,
     AssessmentItem,
     AssessmentItemObjective,
+    AssessmentItemPool,
+    AssessmentPoolCandidate,
     AssessmentRevision,
     AssessmentRevisionObjective,
     AssessmentRevisionTransition,
@@ -70,7 +76,7 @@ from .schemas import (
     validate_question_definition,
     validate_response,
 )
-from .scoring import basis_points, quantize_score, score_question
+from .scoring import quantize_score
 
 OPEN_AUTHORING_STATUSES = {
     AuthoringStatus.DRAFT,
@@ -789,6 +795,225 @@ def reorder_assessment_items(
     return locked
 
 
+def _validate_pool_candidates(
+    *,
+    revision: AssessmentRevision,
+    pool: AssessmentItemPool | None,
+    question_versions: Iterable[QuestionVersion],
+    selection_count: int,
+) -> list[QuestionVersion]:
+    candidates = list(question_versions)
+    if len(candidates) < 2 or len(candidates) > 200:
+        raise AssessmentInvalid("Un pool debe contener entre 2 y 200 candidatos.")
+    if len({item.id for item in candidates}) != len(candidates):
+        raise AssessmentInvalid("Un pool no admite candidatos repetidos.")
+    if selection_count <= 0 or selection_count > len(candidates):
+        raise AssessmentInvalid("La cantidad seleccionada excede los candidatos.")
+    if any(
+        item.question.organization.id != revision.organization.id for item in candidates
+    ):
+        raise AssessmentInvalid("Un candidato pertenece a otra organización.")
+    candidate_ids = {item.id for item in candidates}
+    if AssessmentItem.objects.filter(
+        section__revision=revision,
+        question_version_id__in=candidate_ids,
+    ).exists():
+        raise AssessmentInvalid("Un candidato ya existe como ítem fijo.")
+    duplicate_pools = AssessmentPoolCandidate.objects.filter(
+        pool__revision=revision,
+        question_version_id__in=candidate_ids,
+    )
+    if pool is not None:
+        duplicate_pools = duplicate_pools.exclude(pool=pool)
+    if duplicate_pools.exists():
+        raise AssessmentInvalid("Un candidato ya pertenece a otro pool.")
+    return candidates
+
+
+@transaction.atomic
+def create_assessment_pool(
+    *,
+    actor: object,
+    revision: AssessmentRevision,
+    expected_version: int,
+    title: str,
+    instructions: str,
+    selection_count: int,
+    points_per_item: Decimal,
+    shuffle_selected: bool,
+    question_versions: Iterable[QuestionVersion],
+) -> tuple[AssessmentRevision, AssessmentItemPool]:
+    locked = _locked_assessment_revision(revision, expected_version)
+    _require_editable(locked)
+    candidates = _validate_pool_candidates(
+        revision=locked,
+        pool=None,
+        question_versions=question_versions,
+        selection_count=selection_count,
+    )
+    position = (
+        locked.item_pools.select_for_update().aggregate(maximum=Max("position"))[
+            "maximum"
+        ]
+        or 0
+    ) + 1
+    pool = AssessmentItemPool(
+        revision=locked,
+        title=title,
+        instructions=instructions,
+        position=position,
+        selection_count=selection_count,
+        points_per_item=quantize_score(points_per_item),
+        shuffle_selected=shuffle_selected,
+        created_by_id=_actor_id(actor),
+        updated_by_id=_actor_id(actor),
+    )
+    _clean_save(pool)
+    AssessmentPoolCandidate.objects.bulk_create(
+        [
+            AssessmentPoolCandidate(
+                pool=pool,
+                question_version=question_version,
+                position=position,
+                created_by_id=_actor_id(actor),
+            )
+            for position, question_version in enumerate(candidates, start=1)
+        ]
+    )
+    locked.updated_by_id = _actor_id(actor)
+    locked.lock_version += 1
+    locked.save(update_fields=["updated_by", "lock_version", "updated_at"])
+    return locked, pool
+
+
+@transaction.atomic
+def update_assessment_pool(
+    *,
+    actor: object,
+    revision: AssessmentRevision,
+    pool: AssessmentItemPool,
+    expected_version: int,
+    title: str,
+    instructions: str,
+    selection_count: int,
+    points_per_item: Decimal,
+    shuffle_selected: bool,
+) -> tuple[AssessmentRevision, AssessmentItemPool]:
+    locked = _locked_assessment_revision(revision, expected_version)
+    _require_editable(locked)
+    locked_pool = AssessmentItemPool.objects.select_for_update().get(pk=pool.pk)
+    if locked_pool.revision_id != locked.id:
+        raise AssessmentInvalid("El pool pertenece a otra revisión.")
+    candidate_count = locked_pool.candidates.count()
+    if selection_count <= 0 or selection_count > candidate_count:
+        raise AssessmentInvalid("La cantidad seleccionada excede los candidatos.")
+    locked_pool.title = title
+    locked_pool.instructions = instructions
+    locked_pool.selection_count = selection_count
+    locked_pool.points_per_item = quantize_score(points_per_item)
+    locked_pool.shuffle_selected = shuffle_selected
+    locked_pool.updated_by_id = _actor_id(actor)
+    _clean_save(locked_pool)
+    locked.updated_by_id = _actor_id(actor)
+    locked.lock_version += 1
+    locked.save(update_fields=["updated_by", "lock_version", "updated_at"])
+    return locked, locked_pool
+
+
+@transaction.atomic
+def replace_pool_candidates(
+    *,
+    actor: object,
+    revision: AssessmentRevision,
+    pool: AssessmentItemPool,
+    expected_version: int,
+    question_versions: Iterable[QuestionVersion],
+) -> tuple[AssessmentRevision, AssessmentItemPool]:
+    locked = _locked_assessment_revision(revision, expected_version)
+    _require_editable(locked)
+    locked_pool = AssessmentItemPool.objects.select_for_update().get(pk=pool.pk)
+    if locked_pool.revision_id != locked.id:
+        raise AssessmentInvalid("El pool pertenece a otra revisión.")
+    candidates = _validate_pool_candidates(
+        revision=locked,
+        pool=locked_pool,
+        question_versions=question_versions,
+        selection_count=locked_pool.selection_count,
+    )
+    existing = list(
+        AssessmentPoolCandidate.objects.select_for_update()
+        .filter(pool=locked_pool)
+        .order_by("position", "id")
+    )
+    existing_ids = [candidate.question_version_id for candidate in existing]
+    submitted_ids = [question_version.id for question_version in candidates]
+    if submitted_ids[: len(existing_ids)] != existing_ids:
+        raise AssessmentInvalid(
+            "Los candidatos existentes son inmutables; sólo pueden añadirse candidatos."
+        )
+    additions = candidates[len(existing_ids) :]
+    AssessmentPoolCandidate.objects.bulk_create(
+        [
+            AssessmentPoolCandidate(
+                pool=locked_pool,
+                question_version=question_version,
+                position=position,
+                created_by_id=_actor_id(actor),
+            )
+            for position, question_version in enumerate(
+                additions, start=len(existing) + 1
+            )
+        ]
+    )
+    locked.updated_by_id = _actor_id(actor)
+    locked.lock_version += 1
+    locked.save(update_fields=["updated_by", "lock_version", "updated_at"])
+    return locked, locked_pool
+
+
+@transaction.atomic
+def reorder_assessment_structure(
+    *,
+    actor: object,
+    revision: AssessmentRevision,
+    expected_version: int,
+    section_ids: Iterable[object],
+    pool_ids: Iterable[object],
+) -> AssessmentRevision:
+    locked = _locked_assessment_revision(revision, expected_version)
+    _require_editable(locked)
+    sections = list(locked.sections.select_for_update().order_by("position", "id"))
+    pools = list(locked.item_pools.select_for_update().order_by("position", "id"))
+    ordered_sections = _require_exact_order(
+        submitted_ids=section_ids,
+        existing_ids=(section.id for section in sections),
+        label="secciones",
+    )
+    ordered_pools = _require_exact_order(
+        submitted_ids=pool_ids,
+        existing_ids=(pool.id for pool in pools),
+        label="pools",
+    )
+    for entries, ordered_ids in (
+        (sections, ordered_sections),
+        (pools, ordered_pools),
+    ):
+        by_id = {entry.id: entry for entry in entries}
+        temporary_offset = len(entries) + 1
+        for entry in entries:
+            entry.position += temporary_offset
+            entry.save(update_fields=["position", "updated_at"])
+        for position, entry_id in enumerate(ordered_ids, start=1):
+            entry = by_id[entry_id]
+            entry.position = position
+            entry.updated_by_id = _actor_id(actor)
+            entry.save(update_fields=["position", "updated_by", "updated_at"])
+    locked.updated_by_id = _actor_id(actor)
+    locked.lock_version += 1
+    locked.save(update_fields=["updated_by", "lock_version", "updated_at"])
+    return locked
+
+
 def assessment_readiness(revision: AssessmentRevision) -> tuple[str, ...]:
     issues: list[str] = []
     if not revision.title.strip():
@@ -801,8 +1026,13 @@ def assessment_readiness(revision: AssessmentRevision) -> tuple[str, ...]:
             "items__objective_links", "items__question_version"
         ).order_by("position")
     )
-    if not sections:
-        issues.append("section_required")
+    pools = list(
+        revision.item_pools.prefetch_related("candidates__question_version").order_by(
+            "position"
+        )
+    )
+    if not sections and not pools:
+        issues.append("structure_required")
     seen_versions: set[object] = set()
     for section in sections:
         items = list(section.items.all())
@@ -817,6 +1047,18 @@ def assessment_readiness(revision: AssessmentRevision) -> tuple[str, ...]:
                 issues.append(f"item_objectives_required:{item.id}")
             if not item_objectives.issubset(objective_ids):
                 issues.append(f"item_objectives_outside_assessment:{item.id}")
+    for pool in pools:
+        candidates = list(pool.candidates.all())
+        if len(candidates) < 2:
+            issues.append(f"pool_candidates_minimum:{pool.id}")
+        if len(candidates) > 200:
+            issues.append(f"pool_candidates_limit:{pool.id}")
+        if pool.selection_count > len(candidates):
+            issues.append(f"pool_selection_exceeds_candidates:{pool.id}")
+        for candidate in candidates:
+            if candidate.question_version_id in seen_versions:
+                issues.append(f"question_version_repeated:{candidate.id}")
+            seen_versions.add(candidate.question_version_id)
     return tuple(issues)
 
 
@@ -889,6 +1131,51 @@ def _build_assessment_snapshots(
                 "items": public_items,
             }
         )
+    public_pools: list[dict[str, Any]] = []
+    pools = revision.item_pools.prefetch_related(
+        "candidates__question_version"
+    ).order_by("position")
+    for pool in pools:
+        public_candidates: list[dict[str, Any]] = []
+        for candidate in pool.candidates.all().order_by("position"):
+            question = candidate.question_version
+            validate_public_question(question.public)
+            public_candidates.append(
+                {
+                    "id": str(candidate.id),
+                    "question_version_id": str(question.id),
+                    "position": candidate.position,
+                    "question": deep_json_copy(question.public),
+                }
+            )
+            grading_items.append(
+                {
+                    "assessment_item_id": str(candidate.id),
+                    "pool_id": str(pool.id),
+                    "candidate_position": candidate.position,
+                    "question_version_id": str(question.id),
+                    "type": question.type,
+                    "grading": deep_json_copy(question.grading),
+                    "feedback": deep_json_copy(question.feedback),
+                    "question_digest": question.definition_digest,
+                }
+            )
+        points_per_item = quantize_score(pool.points_per_item)
+        maximum += points_per_item * pool.selection_count
+        item_count += pool.selection_count
+        public_pools.append(
+            {
+                "id": str(pool.id),
+                "title": pool.title,
+                "instructions": pool.instructions,
+                "position": pool.position,
+                "selection_count": pool.selection_count,
+                "points_per_item": format(points_per_item, "f"),
+                "selection_strategy": pool.selection_strategy,
+                "shuffle_selected": pool.shuffle_selected,
+                "candidates": public_candidates,
+            }
+        )
     public_snapshot = {
         "schema_version": CURRENT_ASSESSMENT_SCHEMA_VERSION,
         "assessment": {
@@ -907,6 +1194,7 @@ def _build_assessment_snapshots(
         },
         "objectives": objective_snapshots,
         "sections": public_sections,
+        "pools": public_pools,
     }
     grading_snapshot = {
         "schema_version": CURRENT_ASSESSMENT_SCHEMA_VERSION,
@@ -993,6 +1281,7 @@ def transition_assessment_revision(
             created_by_id=_actor_id(actor),
         )
         _clean_save(version)
+        create_original_grading_policy(version=version, actor=actor)
     now = timezone.now()
     locked.status = to_status
     locked.status_changed_by_id = _actor_id(actor)
@@ -1023,6 +1312,10 @@ def create_assessment_revision_from_version(
     ).exists():
         raise AssessmentConflict("La evaluación ya tiene una revisión abierta.")
     settings = version.public_snapshot["settings"]
+    feedback_mode = {
+        "after_grading": FeedbackMode.FULL_AFTER_GRADING,
+        "after_submission": FeedbackMode.FULL_AFTER_GRADING,
+    }.get(settings["feedback_mode"], settings["feedback_mode"])
     now = timezone.now()
     revision = AssessmentRevision(
         assessment=assessment,
@@ -1038,7 +1331,7 @@ def create_assessment_revision_from_version(
         pass_basis_points=settings["pass_basis_points"],
         shuffle_sections=settings["shuffle_sections"],
         shuffle_items=settings["shuffle_items"],
-        feedback_mode=settings["feedback_mode"],
+        feedback_mode=feedback_mode,
         status_changed_by_id=_actor_id(actor),
         status_changed_at=now,
         created_by_id=_actor_id(actor),
@@ -1101,6 +1394,27 @@ def create_assessment_revision_from_version(
                         position=objective_position,
                         created_by_id=_actor_id(actor),
                     )
+    for pool_data in version.public_snapshot.get("pools", []):
+        pool = AssessmentItemPool.objects.create(
+            revision=revision,
+            title=pool_data["title"],
+            instructions=pool_data["instructions"],
+            position=pool_data["position"],
+            selection_count=pool_data["selection_count"],
+            points_per_item=Decimal(pool_data["points_per_item"]),
+            selection_strategy=pool_data["selection_strategy"],
+            shuffle_selected=pool_data["shuffle_selected"],
+            created_by_id=_actor_id(actor),
+            updated_by_id=_actor_id(actor),
+        )
+        for candidate_data in pool_data["candidates"]:
+            grading_entry = grading_by_item[candidate_data["id"]]
+            AssessmentPoolCandidate.objects.create(
+                pool=pool,
+                question_version_id=grading_entry["question_version_id"],
+                position=candidate_data["position"],
+                created_by_id=_actor_id(actor),
+            )
     return revision
 
 
@@ -1280,7 +1594,16 @@ def _require_learner_assignment(
 
 def _ordered_snapshot_items(
     version: AssessmentVersion, seed: int
-) -> list[tuple[dict[str, Any], dict[str, Any], int, int]]:
+) -> list[
+    tuple[
+        dict[str, Any],
+        dict[str, Any],
+        int,
+        int,
+        str | None,
+        int | None,
+    ]
+]:
     generator = random.Random(seed)
     sections = [deep_json_copy(item) for item in version.public_snapshot["sections"]]
     grading = {
@@ -1288,14 +1611,66 @@ def _ordered_snapshot_items(
     }
     if version.public_snapshot["settings"]["shuffle_sections"]:
         generator.shuffle(sections)
-    ordered: list[tuple[dict[str, Any], dict[str, Any], int, int]] = []
+    ordered: list[
+        tuple[
+            dict[str, Any],
+            dict[str, Any],
+            int,
+            int,
+            str | None,
+            int | None,
+        ]
+    ] = []
     for section in sections:
         items = list(section["items"])
         if version.public_snapshot["settings"]["shuffle_items"]:
             generator.shuffle(items)
         for item in items:
             ordered.append(
-                (item, grading[item["id"]], section["position"], item["position"])
+                (
+                    item,
+                    grading[item["id"]],
+                    section["position"],
+                    item["position"],
+                    None,
+                    None,
+                )
+            )
+    for pool in sorted(
+        version.public_snapshot.get("pools", []),
+        key=lambda item: (item["position"], item["id"]),
+    ):
+        candidates = sorted(
+            pool["candidates"],
+            key=lambda item: (item["position"], item["id"]),
+        )
+        pool_seed = int.from_bytes(
+            hashlib.sha256(f"{seed}:{pool['id']}".encode()).digest()[:8],
+            byteorder="big",
+        )
+        pool_generator = random.Random(pool_seed)
+        selected = pool_generator.sample(candidates, pool["selection_count"])
+        if not pool["shuffle_selected"]:
+            selected.sort(key=lambda item: (item["position"], item["id"]))
+        for selected_position, candidate in enumerate(selected, start=1):
+            public_item = {
+                "id": candidate["id"],
+                "question_version_id": candidate["question_version_id"],
+                "position": selected_position,
+                "points": pool["points_per_item"],
+                "required": True,
+                "question": candidate["question"],
+                "objectives": [],
+            }
+            ordered.append(
+                (
+                    public_item,
+                    grading[candidate["id"]],
+                    len(sections) + pool["position"],
+                    selected_position,
+                    pool["id"],
+                    candidate["position"],
+                )
             )
     return ordered
 
@@ -1349,6 +1724,8 @@ def start_attempt(*, actor: object, assignment: DeliveryAssignment) -> Attempt:
         grading_item,
         section_position,
         item_position,
+        pool_id,
+        candidate_position,
     ) in enumerate(_ordered_snapshot_items(version, seed), start=1):
         snapshot = {
             "public": public_item["question"],
@@ -1360,6 +1737,8 @@ def start_attempt(*, actor: object, assignment: DeliveryAssignment) -> Attempt:
         attempt_item = AttemptItem(
             attempt=attempt,
             assessment_item_id=public_item["id"],
+            pool_id=pool_id,
+            candidate_position=candidate_position,
             question_version_id=public_item["question_version_id"],
             section_position=section_position,
             item_position=item_position,
@@ -1470,65 +1849,17 @@ def save_response(
 
 
 def _score_attempt_locked(attempt: Attempt, *, actor: object) -> Attempt:
-    items = list(attempt.items.order_by("display_position"))
-    responses = {
-        response.attempt_item_id: response
-        for response in Response.objects.select_for_update().filter(
-            attempt_item__attempt=attempt
-        )
-    }
-    auto_score = Decimal("0.000")
-    manual_score = Decimal("0.000")
-    pending_manual = False
-    now = timezone.now()
-    for item in items:
-        response = responses.get(item.id)
-        if response is None:
-            response = Response(
-                attempt_item=item,
-                response={
-                    "schema_version": CURRENT_ASSESSMENT_SCHEMA_VERSION,
-                    "type": item.public_snapshot["type"],
-                    "value": None,
-                },
-                status=ResponseStatus.UNANSWERED,
-                saved_at=now,
-            )
-        result = score_question(
-            question_type=item.public_snapshot["type"],
-            grading=item.grading_snapshot,
-            response=response.response,
-            maximum=item.points,
-        )
-        response.score = result.score
-        response.graded_at = now
-        if result.requires_manual:
-            response.status = ResponseStatus.PENDING_MANUAL
-            pending_manual = True
-        else:
-            response.status = ResponseStatus.AUTO_GRADED
-            auto_score += result.score
-        _clean_save(response)
-    attempt.auto_score = quantize_score(auto_score)
-    attempt.manual_score = quantize_score(manual_score)
-    attempt.total_score = quantize_score(auto_score + manual_score)
-    attempt.submitted_at = attempt.submitted_at or now
-    if pending_manual:
-        attempt.status = AttemptStatus.PENDING_MANUAL
-        attempt.basis_points = None
-        attempt.passed = None
-        attempt.graded_at = None
-    else:
-        attempt.status = AttemptStatus.GRADED
-        attempt.basis_points = basis_points(
-            score=attempt.total_score, maximum=attempt.maximum_score
-        )
-        attempt.passed = (
-            attempt.basis_points >= attempt.assessment_version.pass_basis_points
-        )
-        attempt.graded_at = now
-    attempt.lock_version += 1
-    _clean_save(attempt)
+    policy = attempt.assessment_version.grading_policy
+    if policy.current_revision is None:
+        raise AssessmentConflict("La evaluación no tiene policy de scoring vigente.")
+    grade = create_attempt_grade(
+        attempt=attempt,
+        grading_revision=policy.current_revision,
+        source=GradeSource.INITIAL,
+        actor=actor,
+    )
+    attempt.refresh_from_db()
+    pending_manual = grade.grading_status == "pending_manual"
     _record_attempt_event(
         attempt=attempt,
         event_type=AttemptEventType.AUTO_GRADED,
@@ -1540,7 +1871,7 @@ def _score_attempt_locked(attempt: Attempt, *, actor: object) -> Attempt:
             attempt=attempt,
             event_type=AttemptEventType.COMPLETED,
             actor=actor,
-            payload={"basis_points": attempt.basis_points},
+            payload={"basis_points": grade.percent_basis_points},
         )
     return attempt
 
@@ -1556,12 +1887,29 @@ def submit_attempt(
         allow_expired=True,
     )
     locked.submitted_at = timezone.now()
+    locked.save(update_fields=["submitted_at", "updated_at"])
     _record_attempt_event(
         attempt=locked,
         event_type=AttemptEventType.SUBMITTED,
         actor=actor,
         payload={},
     )
+    policy = locked.assessment_version.grading_policy
+    if policy.current_revision is None:
+        raise AssessmentConflict("La evaluación no tiene policy de scoring vigente.")
+    has_mathematical_expression = any(
+        item["question_type"] == "mathematical_expression"
+        for item in policy.current_revision.grading_snapshot["items"]
+    )
+    if has_mathematical_expression:
+        locked.status = AttemptStatus.GRADING_PENDING
+        locked.lock_version += 1
+        locked.save(update_fields=["status", "lock_version", "updated_at"])
+        create_attempt_grading_job(
+            attempt=locked,
+            grading_revision=policy.current_revision,
+        )
+        return locked
     return _score_attempt_locked(locked, actor=actor)
 
 
@@ -1612,43 +1960,17 @@ def grade_response_manually(
     locked_response.graded_at = timezone.now()
     locked_response.grading_version += 1
     _clean_save(locked_response)
-
-    responses = list(
-        Response.objects.select_for_update().filter(attempt_item__attempt=attempt)
+    policy = attempt.assessment_version.grading_policy
+    if policy.current_revision is None:
+        raise AssessmentConflict("La evaluación no tiene policy de scoring vigente.")
+    grade = create_attempt_grade(
+        attempt=attempt,
+        grading_revision=policy.current_revision,
+        source=GradeSource.MANUAL_GRADE,
+        actor=actor,
     )
-    attempt.auto_score = quantize_score(
-        sum(
-            (
-                item.score
-                for item in responses
-                if item.status == ResponseStatus.AUTO_GRADED
-            ),
-            Decimal("0"),
-        )
-    )
-    attempt.manual_score = quantize_score(
-        sum(
-            (
-                item.score
-                for item in responses
-                if item.status == ResponseStatus.MANUALLY_GRADED
-            ),
-            Decimal("0"),
-        )
-    )
-    attempt.total_score = quantize_score(attempt.auto_score + attempt.manual_score)
-    pending = any(item.status == ResponseStatus.PENDING_MANUAL for item in responses)
-    attempt.lock_version += 1
-    if not pending:
-        attempt.status = AttemptStatus.GRADED
-        attempt.basis_points = basis_points(
-            score=attempt.total_score, maximum=attempt.maximum_score
-        )
-        attempt.passed = (
-            attempt.basis_points >= attempt.assessment_version.pass_basis_points
-        )
-        attempt.graded_at = timezone.now()
-    _clean_save(attempt)
+    attempt.refresh_from_db()
+    pending = grade.grading_status == "pending_manual"
     _record_attempt_event(
         attempt=attempt,
         event_type=AttemptEventType.MANUAL_GRADED,

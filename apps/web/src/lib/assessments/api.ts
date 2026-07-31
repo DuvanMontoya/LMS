@@ -13,6 +13,153 @@ export class AssessmentApiError extends Error {
   }
 }
 
+export function createRegradeJob(
+  slug: string,
+  body: components['schemas']['RegradeJobCreate'],
+) {
+  return required(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/assessments/regrade-jobs/',
+      { body, params: { path: { slug } } },
+    ),
+  );
+}
+
+export function retryRegradeJob(
+  slug: string,
+  jobId: string,
+  expectedVersion: number,
+) {
+  return required(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/assessments/regrade-jobs/{job_id}/retry-failed/',
+      {
+        body: { expected_version: expectedVersion },
+        params: { path: { job_id: jobId, slug } },
+      },
+    ),
+  );
+}
+
+export function createGradebook(
+  slug: string,
+  body: components['schemas']['GradebookCreate'],
+) {
+  return required(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/assessments/gradebooks/',
+      { body, params: { path: { slug } } },
+    ),
+  );
+}
+
+export function activateGradebook(
+  slug: string,
+  gradebookId: string,
+  expectedVersion: number,
+) {
+  return required(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/activate/',
+      {
+        body: { expected_version: expectedVersion },
+        params: { path: { gradebook_id: gradebookId, slug } },
+      },
+    ),
+  );
+}
+
+export function addGradebookColumn(
+  slug: string,
+  gradebookId: string,
+  body: components['schemas']['GradebookColumnCreate'],
+) {
+  return required(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/columns/',
+      {
+        body,
+        params: { path: { gradebook_id: gradebookId, slug } },
+      },
+    ),
+  );
+}
+
+export function updateGradebookColumn(
+  slug: string,
+  gradebookId: string,
+  columnId: string,
+  body: components['schemas']['GradebookColumnUpdate'],
+) {
+  return required(
+    platformBrowserClient.PATCH(
+      '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/columns/{column_id}/',
+      {
+        body,
+        params: {
+          path: { column_id: columnId, gradebook_id: gradebookId, slug },
+        },
+      },
+    ),
+  );
+}
+
+export function reorderGradebookColumns(
+  slug: string,
+  gradebookId: string,
+  body: components['schemas']['GradebookColumnOrder'],
+) {
+  return required(
+    platformBrowserClient.PUT(
+      '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/columns/order/',
+      {
+        body,
+        params: { path: { gradebook_id: gradebookId, slug } },
+      },
+    ),
+  );
+}
+
+export function archiveGradebookColumn(
+  slug: string,
+  gradebookId: string,
+  columnId: string,
+  expectedVersion: number,
+) {
+  return required(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/assessments/gradebooks/{gradebook_id}/columns/{column_id}/archive/',
+      {
+        body: { expected_version: expectedVersion },
+        params: {
+          path: { column_id: columnId, gradebook_id: gradebookId, slug },
+        },
+      },
+    ),
+  );
+}
+
+export function refreshAssessmentAnalytics(
+  slug: string,
+  body: components['schemas']['AnalyticsRefresh'],
+) {
+  return required(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/assessments/analytics/refresh/',
+      { body, params: { path: { slug } } },
+    ),
+  );
+}
+
+export function getAssessmentAnalyticsJob(slug: string, jobId: string) {
+  return required(
+    platformBrowserClient.GET(
+      '/api/v1/organizations/{slug}/assessments/analytics/jobs/{job_id}/',
+      { params: { path: { job_id: jobId, slug } } },
+    ),
+  );
+}
+
 function apiErrorMessage(value: unknown, path = ''): string | null {
   if (typeof value === 'string') {
     return path ? `${path}: ${value}` : value;
@@ -278,6 +425,44 @@ export function updateAssessmentItem(
   );
 }
 
+export function createAssessmentPool(
+  path: AssessmentRevisionPath,
+  body: components['schemas']['PoolCreate'],
+) {
+  return required(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/assessments/{assessment_slug}/revisions/{revision_id}/pools/',
+      { body, params: { path: assessmentRevisionPath(path) } },
+    ),
+  );
+}
+
+export function replaceAssessmentPoolCandidates(
+  slug: string,
+  poolId: string,
+  body: components['schemas']['PoolCandidates'],
+) {
+  return required(
+    platformBrowserClient.PUT(
+      '/api/v1/organizations/{slug}/assessments/pools/{pool_id}/candidates/',
+      { body, params: { path: { pool_id: poolId, slug } } },
+    ),
+  );
+}
+
+export function updateAssessmentPool(
+  slug: string,
+  poolId: string,
+  body: components['schemas']['PoolUpdate'],
+) {
+  return required(
+    platformBrowserClient.PATCH(
+      '/api/v1/organizations/{slug}/assessments/pools/{pool_id}/',
+      { body, params: { path: { pool_id: poolId, slug } } },
+    ),
+  );
+}
+
 export function transitionAssessmentRevision(
   path: AssessmentRevisionPath,
   action: 'approve' | 'request-changes' | 'submit-review',
@@ -433,6 +618,18 @@ export function gradeAssessmentResponse(
     platformBrowserClient.POST(
       '/api/v1/organizations/{slug}/assessments/manual-grading/{response_id}/',
       { body, params: { path: { response_id: responseId, slug } } },
+    ),
+  );
+}
+
+export function getAssessmentResultBrowser(slug: string, attemptId: string) {
+  return required(
+    platformBrowserClient.GET(
+      '/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/result/',
+      {
+        params: { path: { attempt_id: attemptId, slug } },
+        cache: 'no-store',
+      },
     ),
   );
 }

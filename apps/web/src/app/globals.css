@@ -775,15 +775,15 @@
   }
 
   .academic-page-header {
-    @apply border-b border-border pb-4;
+    @apply border-b border-border pb-5;
   }
 
   .academic-page-header .academic-kicker {
-    @apply sr-only;
+    @apply block;
   }
 
   .academic-page-header .academic-description {
-    @apply sr-only;
+    @apply block;
   }
 
   .academic-page-header__body {
@@ -886,17 +886,25 @@
   }
 
   .learning-course-grid {
-    @apply mt-5 grid gap-4 lg:grid-cols-2;
+    @apply mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
   }
 
   .learning-course-card,
   .library-course-card {
-    @apply flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card p-5 shadow-[0_10px_32px_rgb(41_56_82_/_0.055)] sm:p-6;
+    @apply flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card p-4 shadow-[0_10px_32px_rgb(41_56_82_/_0.055)] sm:p-5;
   }
 
   .learning-course-card__icon,
   .library-course-card__icon {
-    @apply grid size-11 shrink-0 place-items-center rounded-lg border border-primary/15 bg-primary/8;
+    @apply grid size-9 shrink-0 place-items-center rounded-lg border border-primary/15 bg-primary/8;
+  }
+
+  .learning-course-card__progress {
+    @apply mt-4 border-t border-border pt-3;
+  }
+
+  .learning-course-card__progress > div > div:first-child {
+    @apply gap-0.5;
   }
 
   .learning-assessment-section {
@@ -931,6 +939,1026 @@
     @apply size-5 text-primary/65;
   }
 
+  .course-home {
+    @apply pb-12;
+  }
+
+  .course-home-hero {
+    @apply relative grid overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 text-white shadow-[0_24px_70px_rgb(15_23_42_/_0.18)] lg:grid-cols-[minmax(0,1fr)_22rem];
+    background-image:
+      radial-gradient(
+        circle at 72% 18%,
+        rgb(59 130 246 / 25%),
+        transparent 24rem
+      ),
+      linear-gradient(135deg, rgb(15 23 42), rgb(25 41 72));
+  }
+
+  .course-home-hero__main {
+    @apply relative p-6 sm:p-8 lg:p-10;
+  }
+
+  .course-home-hero__main > .academic-kicker {
+    @apply text-sky-300;
+  }
+
+  .course-home-hero__release {
+    @apply absolute top-6 right-6 rounded-full border border-white/15 bg-white/7 px-3 py-1 font-mono text-[0.625rem] font-semibold tracking-wider text-slate-300 uppercase sm:top-8 sm:right-8 lg:hidden;
+  }
+
+  .course-home-hero__main h1 {
+    @apply mt-3 max-w-4xl text-3xl leading-[1.08] font-semibold tracking-[-0.045em] text-balance sm:text-4xl lg:text-[2.65rem];
+  }
+
+  .course-home-hero__main > p:last-of-type {
+    @apply mt-4 max-w-3xl text-sm leading-6 text-slate-300 sm:text-base sm:leading-7;
+  }
+
+  .course-home-hero__facts {
+    @apply mt-6 grid grid-cols-2 gap-4 border-t border-white/12 pt-5 xl:mt-8 xl:grid-cols-4 xl:gap-3 xl:pt-6;
+  }
+
+  .course-home-hero__facts > div {
+    @apply min-w-0;
+  }
+
+  .course-home-hero__facts dt {
+    @apply flex items-center gap-2 text-[0.625rem] font-semibold tracking-wider text-slate-400 uppercase;
+  }
+
+  .course-home-hero__facts dt svg {
+    @apply size-3.5 text-sky-300;
+  }
+
+  .course-home-hero__facts dd {
+    @apply mt-1 truncate text-sm font-medium text-slate-100;
+  }
+
+  .course-home-hero__progress {
+    @apply relative flex flex-col justify-center border-t border-white/12 bg-white/6 p-5 backdrop-blur-sm sm:p-8 lg:border-t-0 lg:border-l;
+  }
+
+  .course-home-hero__progress > span {
+    @apply text-xs font-semibold tracking-wider text-slate-300 uppercase;
+  }
+
+  .course-home-hero__progress > strong {
+    @apply mt-1 text-4xl font-semibold tracking-[-0.05em] sm:mt-2 sm:text-5xl;
+  }
+
+  .course-home-hero__progress > div {
+    @apply mt-3 sm:mt-5;
+  }
+
+  .course-home-hero__progress > div span {
+    @apply text-slate-100;
+  }
+
+  .course-home-hero__progress > div span:last-child {
+    @apply text-slate-300;
+  }
+
+  .course-home-hero__progress progress {
+    @apply bg-white/12;
+  }
+
+  .course-home-hero__progress > a {
+    @apply mt-4 sm:mt-6;
+  }
+
+  .course-home-hero__progress > small {
+    @apply mt-3 text-center text-xs text-slate-400;
+  }
+
+  .course-tab-nav {
+    @apply mt-6 flex gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1.5 shadow-[0_10px_32px_rgb(41_56_82_/_0.05)];
+    scrollbar-width: thin;
+  }
+
+  .course-tab-nav a {
+    @apply relative flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .course-tab-nav a svg {
+    @apply size-4;
+  }
+
+  .course-tab-nav a small {
+    @apply grid size-5 place-items-center rounded-full bg-primary/10 font-mono text-[0.625rem] text-primary;
+  }
+
+  .course-tab-nav a.is-active {
+    @apply bg-primary text-primary-foreground shadow-sm;
+  }
+
+  .course-tab-nav a.is-active small {
+    @apply bg-white/18 text-white;
+  }
+
+  .course-tab-panel {
+    @apply mt-5;
+  }
+
+  .course-overview-grid {
+    @apply grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)];
+  }
+
+  .course-next-step,
+  .course-module-preview,
+  .course-curriculum-panel,
+  .course-gradebook,
+  .course-tab-empty {
+    @apply rounded-xl border border-border bg-card shadow-[0_12px_36px_rgb(41_56_82_/_0.055)];
+  }
+
+  .course-next-step {
+    @apply flex items-start gap-5 p-6 sm:p-8;
+  }
+
+  .course-next-step__icon {
+    @apply grid size-12 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-[0_8px_22px_rgb(37_99_235_/_0.22)];
+  }
+
+  .course-next-step__icon svg {
+    @apply size-5;
+  }
+
+  .course-next-step h2,
+  .course-module-preview h2,
+  .course-curriculum-panel h2,
+  .course-tab-heading h2,
+  .course-gradebook h2,
+  .course-tab-empty h2 {
+    @apply mt-1 text-xl font-semibold tracking-[-0.025em];
+  }
+
+  .course-next-step > div:last-child > p:last-of-type,
+  .course-module-preview header p:last-child,
+  .course-curriculum-panel > header p:last-child,
+  .course-tab-heading p:last-child,
+  .course-gradebook header p:last-child,
+  .course-tab-empty p {
+    @apply mt-1 text-sm leading-6 text-muted-foreground;
+  }
+
+  .course-module-preview {
+    @apply overflow-hidden;
+  }
+
+  .course-module-preview > header,
+  .course-curriculum-panel > header,
+  .course-tab-heading {
+    @apply flex flex-col gap-4 border-b border-border bg-muted/15 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6;
+  }
+
+  .course-module-preview > ol {
+    @apply divide-y divide-border;
+  }
+
+  .course-module-preview > ol > li {
+    @apply grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-5 py-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_8rem] sm:px-6;
+  }
+
+  .course-module-preview > ol > li > span:first-child {
+    @apply grid size-9 place-items-center rounded-lg border border-primary/12 bg-primary/6 font-mono text-xs font-semibold text-primary;
+  }
+
+  .course-module-preview li div:nth-child(2) {
+    @apply grid min-w-0;
+  }
+
+  .course-module-preview li div:nth-child(2) strong {
+    @apply truncate text-sm font-semibold;
+  }
+
+  .course-module-preview li div:nth-child(2) small {
+    @apply mt-0.5 text-xs text-muted-foreground;
+  }
+
+  .course-module-preview__progress {
+    @apply col-span-2 ml-[3.25rem] h-1.5 overflow-hidden rounded-full bg-muted sm:col-span-1 sm:ml-0;
+  }
+
+  .course-module-preview__progress span {
+    @apply block h-full rounded-full bg-primary;
+  }
+
+  .course-curriculum-panel {
+    @apply overflow-hidden;
+  }
+
+  .course-curriculum-panel > header > span,
+  .course-tab-heading > span {
+    @apply grid size-10 shrink-0 place-items-center rounded-full border border-primary/15 bg-primary/7 font-mono text-sm font-semibold text-primary;
+  }
+
+  .course-curriculum {
+    @apply divide-y divide-border;
+  }
+
+  .course-curriculum__module {
+    @apply grid min-w-0 lg:grid-cols-[17rem_minmax(0,1fr)];
+  }
+
+  .course-curriculum__module > header {
+    @apply border-b border-border bg-muted/18 px-5 py-5 lg:border-r lg:border-b-0;
+  }
+
+  .course-curriculum__module > header > span {
+    @apply font-mono text-[0.625rem] font-semibold tracking-wider text-primary uppercase;
+  }
+
+  .course-curriculum__module > header h3 {
+    @apply mt-1 text-sm font-semibold;
+  }
+
+  .course-curriculum__module > header p {
+    @apply mt-2 text-xs leading-5 text-muted-foreground;
+  }
+
+  .course-curriculum__module > header small {
+    @apply mt-3 block text-xs text-muted-foreground;
+  }
+
+  .course-curriculum__module > ol {
+    @apply min-w-0 divide-y divide-border;
+  }
+
+  .course-curriculum__module > ol a {
+    @apply flex min-h-16 min-w-0 items-center gap-3 px-5 py-3.5 transition-colors hover:bg-muted/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring;
+  }
+
+  .course-curriculum__module > ol a[data-current='true'] {
+    @apply bg-primary/5;
+  }
+
+  .course-curriculum__module > ol a > span {
+    @apply grid min-w-0 flex-1;
+  }
+
+  .course-curriculum__module > ol a strong {
+    @apply truncate text-sm font-medium;
+  }
+
+  .course-curriculum__module > ol a span small {
+    @apply mt-0.5 line-clamp-1 text-xs text-muted-foreground;
+  }
+
+  .course-curriculum__state {
+    @apply size-4 shrink-0 text-muted-foreground;
+  }
+
+  .course-curriculum__state[data-status='completed'],
+  .course-curriculum__state[data-status='in_progress'] {
+    @apply text-primary;
+  }
+
+  .course-curriculum__duration {
+    @apply flex shrink-0 items-center gap-1 text-xs text-muted-foreground;
+  }
+
+  .course-curriculum__duration svg,
+  .course-curriculum__play {
+    @apply size-3.5;
+  }
+
+  .course-tab-heading {
+    @apply rounded-t-xl border border-border bg-card;
+  }
+
+  .course-tab-heading + .assessment-learner-grid,
+  .course-tab-heading + .assessment-learner-empty,
+  .course-tab-heading + .course-gradebook-list {
+    @apply mt-0;
+  }
+
+  .course-tab-heading + .assessment-learner-grid {
+    @apply rounded-b-xl border-x border-b border-border bg-muted/10 p-5 sm:p-6;
+  }
+
+  .course-tab-heading + .assessment-learner-empty {
+    @apply rounded-t-none border-t-0;
+  }
+
+  .course-gradebook-list {
+    @apply grid gap-5 rounded-b-xl border-x border-b border-border bg-muted/10 p-5 sm:p-6;
+  }
+
+  .course-gradebook {
+    @apply overflow-hidden;
+  }
+
+  .course-gradebook > header {
+    @apply flex items-center justify-between gap-5 border-b border-border bg-muted/15 px-5 py-5 sm:px-6;
+  }
+
+  .course-gradebook__score {
+    @apply grid min-w-20 shrink-0 justify-items-center rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900;
+  }
+
+  .course-gradebook__score[data-complete='true'] {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-800;
+  }
+
+  .course-gradebook__score span {
+    @apply text-2xl font-semibold tracking-[-0.035em];
+  }
+
+  .course-gradebook__score small {
+    @apply text-[0.625rem] font-semibold tracking-wider uppercase;
+  }
+
+  .course-gradebook > ul {
+    @apply divide-y divide-border;
+  }
+
+  .course-gradebook > ul li {
+    @apply grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-3 px-5 py-4 sm:px-6;
+  }
+
+  .course-gradebook__status svg {
+    @apply size-4 text-muted-foreground;
+  }
+
+  .course-gradebook__status svg[aria-label='Calificada'] {
+    @apply text-emerald-600;
+  }
+
+  .course-gradebook__activity {
+    @apply grid min-w-0;
+  }
+
+  .course-gradebook__activity strong {
+    @apply truncate text-sm font-medium;
+  }
+
+  .course-gradebook__activity small {
+    @apply text-xs text-muted-foreground;
+  }
+
+  .course-gradebook__result {
+    @apply font-mono text-sm font-semibold;
+  }
+
+  .course-gradebook > footer {
+    @apply flex items-start gap-2 border-t border-border bg-muted/15 px-5 py-3 text-xs leading-5 text-muted-foreground sm:px-6;
+  }
+
+  .course-gradebook > footer svg {
+    @apply mt-0.5 size-3.5 shrink-0 text-primary;
+  }
+
+  .course-tab-empty {
+    @apply rounded-t-none border-t-0 px-6 py-12 text-center;
+  }
+
+  .course-tab-empty > svg {
+    @apply mx-auto size-8 text-primary/65;
+  }
+
+  .learner-record-nav {
+    @apply mt-5 flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1.5 shadow-[0_8px_28px_rgb(41_56_82_/_0.045)];
+  }
+
+  .learner-record-nav a {
+    @apply flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .learner-record-nav a svg {
+    @apply size-4;
+  }
+
+  .learner-record-nav a.is-active {
+    @apply bg-primary text-primary-foreground shadow-sm;
+  }
+
+  .learner-assessment-catalog,
+  .learner-grade-detail {
+    @apply mt-5 overflow-hidden rounded-xl border border-border bg-card shadow-[0_12px_36px_rgb(41_56_82_/_0.05)];
+  }
+
+  .learner-assessment-catalog > header,
+  .learner-grade-detail > header {
+    @apply flex items-center justify-between gap-4 border-b border-border bg-muted/15 px-5 py-4 sm:px-6;
+  }
+
+  .learner-assessment-catalog > header h2,
+  .learner-grade-detail > header h2 {
+    @apply mt-1 text-lg font-semibold;
+  }
+
+  .learner-assessment-catalog > header p:last-child,
+  .learner-grade-detail > header p:last-child {
+    @apply mt-1 max-w-3xl text-sm text-muted-foreground;
+  }
+
+  .learner-assessment-catalog > header > span,
+  .learner-grade-detail > header > span {
+    @apply grid size-9 shrink-0 place-items-center rounded-full border border-primary/15 bg-primary/7 font-mono text-sm font-semibold text-primary;
+  }
+
+  .learner-assessment-catalog > .assessment-learner-grid {
+    @apply mt-0 bg-muted/8 p-4;
+  }
+
+  .learner-assessment-catalog > .assessment-learner-empty {
+    @apply my-4;
+  }
+
+  .learner-grade-summary {
+    @apply mt-5 grid gap-5 rounded-xl border border-border bg-card p-5 shadow-[0_12px_36px_rgb(41_56_82_/_0.055)] xl:grid-cols-[minmax(0,0.72fr)_minmax(38rem,1.28fr)] xl:items-center sm:p-6;
+  }
+
+  .learner-grade-summary h2 {
+    @apply mt-1 text-xl font-semibold tracking-[-0.025em];
+  }
+
+  .learner-grade-summary > div > p:last-child {
+    @apply mt-1 max-w-2xl text-sm leading-6 text-muted-foreground;
+  }
+
+  .learner-grade-summary dl {
+    @apply grid overflow-hidden rounded-lg border border-border sm:grid-cols-2 lg:grid-cols-4;
+  }
+
+  .learner-grade-summary dl > div {
+    @apply border-b border-border px-4 py-3 last:border-b-0;
+  }
+
+  @media (min-width: 40rem) {
+    .learner-grade-summary dl > div:nth-child(odd) {
+      @apply border-r;
+    }
+
+    .learner-grade-summary dl > div:nth-last-child(-n + 2) {
+      @apply border-b-0;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .learner-grade-summary dl > div {
+      @apply border-r border-b-0;
+    }
+
+    .learner-grade-summary dl > div:last-child {
+      @apply border-r-0;
+    }
+  }
+
+  .learner-grade-summary dt {
+    @apply flex items-center gap-1.5 text-[0.625rem] font-semibold tracking-wider text-muted-foreground uppercase;
+  }
+
+  .learner-grade-summary dt svg {
+    @apply size-3.5 text-primary;
+  }
+
+  .learner-grade-summary dd {
+    @apply mt-1 text-lg font-semibold;
+  }
+
+  .learner-grade-detail > .course-gradebook-list {
+    @apply rounded-none border-0 bg-muted/8 p-4 sm:p-5;
+  }
+
+  .library-course-detail {
+    @apply pb-14;
+  }
+
+  .library-course-hero {
+    @apply relative grid min-h-[23rem] overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 text-white shadow-[0_26px_70px_rgb(15_23_42_/_0.17)] lg:grid-cols-[minmax(0,1fr)_24rem];
+    background-image:
+      radial-gradient(
+        circle at 72% 28%,
+        rgb(37 99 235 / 28%),
+        transparent 28rem
+      ),
+      linear-gradient(135deg, rgb(15 23 42), rgb(24 43 78));
+  }
+
+  .library-course-hero__content {
+    @apply relative z-10 flex flex-col justify-center p-6 sm:p-9 lg:p-12;
+  }
+
+  .library-course-hero__content > .academic-kicker {
+    @apply text-sky-300;
+  }
+
+  .library-course-hero__subjects {
+    @apply mt-4 flex flex-wrap gap-2;
+  }
+
+  .library-course-hero__subjects > span {
+    @apply border-white/15 bg-white/7 text-slate-200;
+  }
+
+  .library-course-hero__content h1 {
+    @apply mt-5 max-w-4xl text-3xl leading-[1.06] font-semibold tracking-[-0.05em] text-balance sm:text-4xl lg:text-5xl;
+  }
+
+  .library-course-hero__content > p:last-of-type {
+    @apply mt-4 max-w-3xl text-sm leading-6 text-slate-300 sm:text-base sm:leading-7;
+  }
+
+  .library-course-hero__actions {
+    @apply mt-7 flex flex-wrap gap-3;
+  }
+
+  .library-course-hero__actions a:last-child {
+    @apply border-white/20 text-white hover:text-white;
+    background-color: rgb(255 255 255 / 8%) !important;
+  }
+
+  .library-course-hero__actions a:last-child:hover {
+    background-color: rgb(255 255 255 / 14%) !important;
+  }
+
+  .library-course-hero__visual {
+    @apply relative hidden place-items-center overflow-hidden border-l border-white/10 lg:grid;
+  }
+
+  .library-course-hero__visual > div {
+    @apply relative z-10 grid size-48 place-items-center rounded-full border border-white/12 bg-white/7 shadow-[0_24px_70px_rgb(0_0_0_/_0.2)] backdrop-blur-md;
+  }
+
+  .library-course-hero__visual > div svg {
+    @apply size-9 text-sky-300;
+  }
+
+  .library-course-hero__visual > div span {
+    @apply -mt-6 text-5xl font-semibold tracking-[-0.06em];
+  }
+
+  .library-course-hero__visual > div small {
+    @apply -mt-8 text-xs font-semibold tracking-wider text-slate-300 uppercase;
+  }
+
+  .library-course-hero__visual > span {
+    @apply absolute rounded-full border border-white/8;
+  }
+
+  .library-course-hero__visual > span:nth-of-type(1) {
+    @apply size-64;
+  }
+
+  .library-course-hero__visual > span:nth-of-type(2) {
+    @apply size-80;
+  }
+
+  .library-course-layout {
+    @apply mt-7 grid items-start gap-7 xl:grid-cols-[minmax(0,1fr)_21rem];
+  }
+
+  .library-course-main {
+    @apply grid min-w-0 gap-6;
+  }
+
+  .library-course-about,
+  .library-course-objectives,
+  .library-course-curriculum,
+  .library-course-card-sticky {
+    @apply rounded-xl border border-border bg-card shadow-[0_12px_38px_rgb(41_56_82_/_0.055)];
+  }
+
+  .library-course-about {
+    @apply p-6 sm:p-8;
+  }
+
+  .library-course-about h2,
+  .library-course-objectives h2,
+  .library-course-curriculum h2 {
+    @apply mt-1 text-xl font-semibold tracking-[-0.025em] sm:text-2xl;
+  }
+
+  .library-course-about > p:last-child {
+    @apply mt-4 max-w-4xl text-sm leading-7 text-foreground/80 sm:text-base;
+  }
+
+  .library-course-objectives {
+    @apply p-6 sm:p-8;
+  }
+
+  .library-course-objectives > header {
+    @apply flex items-start gap-3;
+  }
+
+  .library-course-objectives > header > svg {
+    @apply mt-1 size-5 text-primary;
+  }
+
+  .library-course-objectives ul {
+    @apply mt-6 grid gap-3 md:grid-cols-2;
+  }
+
+  .library-course-objectives li {
+    @apply flex items-start gap-3 rounded-lg border border-border bg-muted/15 p-4 text-sm leading-6;
+  }
+
+  .library-course-objectives li > svg {
+    @apply mt-1 size-4 shrink-0 text-emerald-600;
+  }
+
+  .library-course-objectives li span {
+    @apply grid;
+  }
+
+  .library-course-objectives li strong {
+    @apply font-mono text-[0.625rem] tracking-wider text-muted-foreground;
+  }
+
+  .library-course-curriculum {
+    @apply scroll-mt-20 overflow-hidden;
+  }
+
+  .library-course-curriculum > header {
+    @apply border-b border-border bg-muted/15 px-6 py-5 sm:px-8;
+  }
+
+  .library-course-curriculum > header p:last-child {
+    @apply mt-1 text-sm text-muted-foreground;
+  }
+
+  .library-course-curriculum > div {
+    @apply divide-y divide-border;
+  }
+
+  .library-course-curriculum details > summary {
+    @apply grid min-h-20 cursor-pointer list-none grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 px-5 py-4 transition-colors hover:bg-muted/25 sm:px-6;
+  }
+
+  .library-course-curriculum details > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .library-course-curriculum details > summary > span:first-child {
+    @apply grid size-9 place-items-center rounded-lg border border-primary/12 bg-primary/6 font-mono text-xs font-semibold text-primary;
+  }
+
+  .library-course-curriculum details > summary > span:nth-child(2) {
+    @apply grid min-w-0;
+  }
+
+  .library-course-curriculum details > summary strong {
+    @apply truncate text-sm font-semibold sm:text-base;
+  }
+
+  .library-course-curriculum details > summary small {
+    @apply mt-0.5 text-xs text-muted-foreground;
+  }
+
+  .library-course-curriculum details > summary > svg {
+    @apply size-4 transition-transform;
+  }
+
+  .library-course-curriculum details[open] > summary > svg {
+    @apply rotate-180;
+  }
+
+  .library-course-curriculum details > p {
+    @apply border-t border-border bg-muted/12 px-6 py-3 text-sm leading-6 text-muted-foreground sm:px-8;
+  }
+
+  .library-course-curriculum details > ol {
+    @apply divide-y divide-border border-t border-border bg-muted/8;
+  }
+
+  .library-course-curriculum details li a {
+    @apply flex min-h-13 items-center gap-3 px-6 py-3 text-sm transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-8;
+  }
+
+  .library-course-curriculum details li a span:first-child {
+    @apply font-mono text-xs text-muted-foreground;
+  }
+
+  .library-course-curriculum details li a span:nth-child(2) {
+    @apply min-w-0 flex-1 font-medium;
+  }
+
+  .library-course-curriculum details li a svg {
+    @apply size-4 text-muted-foreground;
+  }
+
+  .library-course-card-sticky {
+    @apply overflow-hidden xl:sticky xl:top-20;
+  }
+
+  .library-course-card-sticky__cover {
+    @apply flex min-h-36 flex-col items-center justify-center bg-slate-950 text-white;
+    background-image:
+      radial-gradient(
+        circle at 50% 0%,
+        rgb(59 130 246 / 32%),
+        transparent 9rem
+      ),
+      linear-gradient(145deg, rgb(15 23 42), rgb(30 50 88));
+  }
+
+  .library-course-card-sticky__cover svg {
+    @apply size-7 text-sky-300;
+  }
+
+  .library-course-card-sticky__cover span {
+    @apply mt-3 text-sm font-semibold;
+  }
+
+  .library-course-card-sticky__cover small {
+    @apply mt-1 font-mono text-[0.625rem] tracking-wider text-slate-400 uppercase;
+  }
+
+  .library-course-card-sticky__body {
+    @apply p-5;
+  }
+
+  .library-course-card-sticky__body > p {
+    @apply mt-5 text-sm font-semibold;
+  }
+
+  .library-course-card-sticky dl {
+    @apply mt-2 divide-y divide-border;
+  }
+
+  .library-course-card-sticky dl > div {
+    @apply grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3;
+  }
+
+  .library-course-card-sticky dt {
+    @apply flex items-center gap-2 text-xs text-muted-foreground;
+  }
+
+  .library-course-card-sticky dt svg {
+    @apply size-3.5 text-primary;
+  }
+
+  .library-course-card-sticky dd {
+    @apply text-sm font-semibold;
+  }
+
+  .learning-player-frame {
+    min-height: 100svh;
+  }
+
+  .learning-player {
+    @apply min-h-svh bg-slate-50 text-slate-950;
+  }
+
+  .learning-player__topbar {
+    @apply sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/94 px-3 shadow-[0_1px_0_rgb(15_23_42_/_0.02)] backdrop-blur-xl sm:px-5;
+  }
+
+  .learning-player__brand {
+    @apply flex min-w-0 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500;
+  }
+
+  .learning-player__brand > span:first-child {
+    @apply grid size-9 shrink-0 place-items-center rounded-lg bg-slate-950 text-white;
+  }
+
+  .learning-player__brand svg {
+    @apply size-4;
+  }
+
+  .learning-player__brand > span:last-child {
+    @apply hidden min-w-0 sm:grid;
+  }
+
+  .learning-player__brand small {
+    @apply font-mono text-[0.5625rem] font-semibold tracking-wider text-slate-500 uppercase;
+  }
+
+  .learning-player__brand strong {
+    @apply max-w-64 truncate text-sm font-semibold;
+  }
+
+  .learning-player__position {
+    @apply min-w-0 flex-1 border-l border-slate-200 pl-3 sm:ml-2 sm:pl-5;
+  }
+
+  .learning-player__position span {
+    @apply block font-mono text-[0.5625rem] font-semibold tracking-wider text-blue-600 uppercase;
+  }
+
+  .learning-player__position p {
+    @apply truncate text-sm font-medium;
+  }
+
+  .learning-player__release {
+    @apply hidden sm:inline-flex;
+  }
+
+  .learning-player__mobile-outline {
+    @apply sticky top-16 z-30 border-b border-slate-200 bg-white lg:hidden;
+  }
+
+  .learning-player__mobile-outline > summary {
+    @apply flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-semibold;
+  }
+
+  .learning-player__mobile-outline > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .learning-player__mobile-outline > summary svg {
+    @apply size-4 text-blue-600;
+  }
+
+  .learning-player__mobile-outline > summary span {
+    @apply rounded-full bg-blue-50 px-2 py-0.5 font-mono text-[0.625rem] text-blue-700;
+  }
+
+  .learning-player__mobile-outline > summary progress {
+    @apply ml-auto h-1.5 w-14 overflow-hidden rounded-full accent-blue-600;
+  }
+
+  .learning-player__mobile-outline > div {
+    @apply max-h-[70svh] overflow-y-auto border-t border-slate-200 p-4;
+  }
+
+  .learning-player__mobile-outline .course-curriculum {
+    @apply mt-4 rounded-lg border border-slate-200;
+  }
+
+  .learning-player__layout {
+    @apply mx-auto grid w-full max-w-[120rem] lg:grid-cols-[21rem_minmax(0,1fr)];
+  }
+
+  .learning-player__sidebar {
+    @apply sticky top-16 hidden h-[calc(100svh-4rem)] min-w-0 grid-rows-[auto_minmax(0,1fr)_auto] border-r border-slate-200 bg-white lg:grid;
+  }
+
+  .learning-player__sidebar > header {
+    @apply border-b border-slate-200 p-5;
+  }
+
+  .learning-player__sidebar > header > div:first-child {
+    @apply mb-4 flex items-center justify-between gap-3;
+  }
+
+  .learning-player__sidebar > header span {
+    @apply text-sm font-semibold;
+  }
+
+  .learning-player__sidebar > header small {
+    @apply text-xs text-slate-500;
+  }
+
+  .learning-player__curriculum-scroll {
+    @apply min-h-0 overflow-y-auto;
+    scrollbar-width: thin;
+  }
+
+  .course-curriculum[data-variant='player'] {
+    @apply divide-y divide-slate-200;
+  }
+
+  .course-curriculum[data-variant='player'] .course-curriculum__module {
+    @apply block;
+  }
+
+  .course-curriculum[data-variant='player']
+    .course-curriculum__module
+    > header {
+    @apply border-r-0 border-b border-slate-200 bg-slate-50 px-4 py-3;
+  }
+
+  .course-curriculum[data-variant='player']
+    .course-curriculum__module
+    > header
+    small {
+    @apply mt-1;
+  }
+
+  .course-curriculum[data-variant='player'] .course-curriculum__module > ol a {
+    @apply min-h-14 gap-2.5 px-4 py-3;
+  }
+
+  .course-curriculum[data-variant='player']
+    .course-curriculum__module
+    > ol
+    a[data-current='true'] {
+    @apply border-l-2 border-blue-600 bg-blue-50 pl-3.5 text-blue-950;
+  }
+
+  .learning-player__sidebar > footer {
+    @apply border-t border-slate-200 p-3;
+  }
+
+  .learning-player__sidebar > footer a {
+    @apply w-full justify-start;
+  }
+
+  .learning-player__stage {
+    @apply min-w-0 px-3 py-4 sm:px-6 sm:py-6 xl:px-10;
+  }
+
+  .learning-player__lesson {
+    @apply mx-auto max-w-5xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_16px_46px_rgb(15_23_42_/_0.06)];
+  }
+
+  .learning-player__lesson-heading {
+    @apply border-b border-slate-200 px-5 py-4 sm:px-8 sm:py-5 lg:px-10;
+    background-image: linear-gradient(
+      135deg,
+      rgb(248 250 252),
+      rgb(239 246 255 / 65%)
+    );
+  }
+
+  .learning-player__lesson-heading > p {
+    @apply font-mono text-[0.625rem] font-semibold tracking-wider text-blue-600 uppercase;
+  }
+
+  .learning-player__lesson-heading h1 {
+    @apply mt-1.5 text-xl leading-tight font-semibold tracking-[-0.035em] text-balance sm:text-2xl lg:text-[1.75rem];
+  }
+
+  .learning-player__lesson-heading > div:first-of-type {
+    @apply mt-2 max-w-3xl text-sm leading-5 text-slate-600;
+  }
+
+  .learning-player__topics {
+    @apply mt-3 flex flex-wrap gap-1.5;
+  }
+
+  .learning-player__document {
+    @apply px-5 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-9;
+  }
+
+  .learning-player__document [id] {
+    scroll-margin-top: 8rem;
+  }
+
+  .learning-player__objectives {
+    @apply mx-5 mb-6 overflow-hidden rounded-lg border border-slate-200 bg-slate-50/70 sm:mx-8 sm:mb-8 lg:mx-10;
+  }
+
+  .learning-player__objectives > summary {
+    @apply flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-slate-700 transition-colors hover:bg-slate-100;
+  }
+
+  .learning-player__objectives > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .learning-player__objectives > summary > svg {
+    @apply size-4 shrink-0 text-blue-600;
+  }
+
+  .learning-player__objectives > summary > div {
+    @apply grid min-w-0;
+  }
+
+  .learning-player__objectives > summary strong {
+    @apply text-sm font-semibold;
+  }
+
+  .learning-player__objectives > summary small {
+    @apply text-xs text-slate-500;
+  }
+
+  .learning-player__objectives ul {
+    @apply grid gap-2 border-t border-slate-200 bg-white px-4 py-4 text-sm leading-6;
+  }
+
+  .learning-player__objectives li {
+    @apply border-l-2 border-blue-200 pl-3 text-slate-600;
+  }
+
+  .learning-player__completion {
+    @apply mx-auto mt-5 grid max-w-5xl gap-5 rounded-xl border border-slate-200 bg-white p-5 shadow-[0_12px_34px_rgb(15_23_42_/_0.045)] sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center;
+  }
+
+  .learning-player__completion h2 {
+    @apply mt-1 text-lg font-semibold;
+  }
+
+  .learning-player__completion > div:first-child > p:last-child {
+    @apply mt-1 text-sm text-slate-500;
+  }
+
+  .learning-player__completion > div:last-child {
+    @apply min-w-64;
+  }
+
+  .learning-player__navigation {
+    @apply mx-auto mt-5 grid max-w-5xl gap-3 sm:grid-cols-2;
+  }
+
+  .learning-player__navigation a span {
+    @apply grid min-w-0 text-left;
+  }
+
+  .learning-player__navigation a:last-child span {
+    @apply text-right;
+  }
+
+  .learning-player__navigation a small {
+    @apply font-mono text-[0.5625rem] font-semibold tracking-wider opacity-65 uppercase;
+  }
+
+  .learning-player__navigation a span {
+    @apply max-w-full truncate;
+  }
+
   .library-overview > strong {
     @apply flex items-baseline gap-2 text-3xl font-semibold text-primary;
   }
@@ -940,7 +1968,7 @@
   }
 
   .library-course-grid {
-    @apply mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3;
+    @apply mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
   }
 
   .library-course-card__facts {
@@ -1280,6 +2308,22 @@
     @apply border-b border-border;
   }
 
+  .academic-page > .assessment-builder-section {
+    @apply mt-6 overflow-hidden rounded-xl border border-border bg-card shadow-[0_12px_35px_rgb(15_23_42_/_0.05)];
+  }
+
+  .academic-page
+    > .assessment-builder-section
+    > .assessment-builder-section__header {
+    @apply flex items-start justify-between gap-4;
+  }
+
+  .academic-page
+    > .assessment-builder-section
+    > :not(.assessment-builder-section__header) {
+    @apply mx-5 my-5 sm:mx-6 sm:my-6;
+  }
+
   .assessment-builder-section__header {
     @apply grid grid-cols-[2rem_2.5rem_minmax(0,1fr)] items-start gap-3 border-b border-border/70 bg-muted/25 px-5 py-4 sm:px-6;
   }
@@ -1556,7 +2600,13 @@
   }
 
   .assessment-results-summary dl {
-    @apply grid grid-cols-2 overflow-hidden rounded-lg border border-border sm:grid-cols-4;
+    @apply grid w-full grid-cols-2 overflow-hidden rounded-lg border border-border lg:min-w-[36rem];
+    grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  }
+
+  .assessment-results-summary--gradebook dl {
+    @apply min-w-0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .assessment-results-summary dl > div {
@@ -2174,7 +3224,7 @@
   }
 
   .assessment-learner-grid {
-    @apply mt-6 grid gap-4 lg:grid-cols-2;
+    @apply mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
   }
 
   .assessment-learner-empty {
@@ -2251,7 +3301,7 @@
   }
 
   .assessment-learner-card {
-    @apply flex flex-col overflow-hidden rounded-xl border border-border bg-card p-5 shadow-[0_12px_35px_rgb(15_23_42_/_0.055)] sm:p-6;
+    @apply flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card p-4 shadow-[0_10px_28px_rgb(15_23_42_/_0.05)];
   }
 
   .assessment-learner-card__header {
@@ -2259,23 +3309,23 @@
   }
 
   .assessment-learner-card__header h2 {
-    @apply mt-2 text-lg font-semibold tracking-[-0.02em];
+    @apply mt-1.5 line-clamp-2 text-base leading-snug font-semibold tracking-[-0.02em];
   }
 
   .assessment-learner-card__header > div > p:last-child {
-    @apply mt-1 text-sm text-muted-foreground;
+    @apply mt-1 line-clamp-1 text-xs text-muted-foreground;
   }
 
   .assessment-learner-card__facts {
-    @apply mt-5 grid gap-px overflow-hidden rounded-lg border border-border bg-border text-sm sm:grid-cols-2;
+    @apply mt-4 grid grid-cols-2 gap-2 text-xs;
   }
 
   .assessment-learner-card__facts > div {
-    @apply grid grid-cols-[1.25rem_1fr] gap-x-2 bg-muted/20 px-3 py-3;
+    @apply grid min-w-0 grid-cols-[1rem_minmax(0,1fr)] gap-x-1.5 rounded-md border border-border bg-muted/20 px-2 py-2;
   }
 
   .assessment-learner-card__facts svg {
-    @apply row-span-2 mt-0.5 size-4 text-primary;
+    @apply row-span-2 mt-0.5 size-3.5 text-primary;
   }
 
   .assessment-learner-card__facts dt {
@@ -2283,27 +3333,23 @@
   }
 
   .assessment-learner-card__facts dd {
-    @apply mt-0.5 font-semibold;
+    @apply mt-0.5 truncate font-semibold;
   }
 
-  .assessment-learner-card__progress {
-    @apply mt-5;
+  .assessment-learner-card__footer {
+    @apply mt-auto flex items-center justify-between gap-3 border-t border-border pt-4;
   }
 
-  .assessment-learner-card__progress > div {
-    @apply h-1.5 overflow-hidden rounded-full bg-muted;
+  .assessment-learner-card__footer p {
+    @apply flex min-w-0 items-center gap-1.5 truncate text-xs text-muted-foreground;
   }
 
-  .assessment-learner-card__progress > div > span {
-    @apply block h-full rounded-full bg-primary text-[0] transition-[width];
+  .assessment-learner-card__footer p svg {
+    @apply size-3.5 shrink-0;
   }
 
-  .assessment-learner-card__progress p {
-    @apply mt-2 flex items-center gap-1.5 text-xs text-muted-foreground;
-  }
-
-  .assessment-learner-card__progress p svg {
-    @apply size-3.5;
+  .assessment-learner-card__footer button {
+    @apply shrink-0;
   }
 
   .assessment-grading-queue {

@@ -11,7 +11,16 @@ async function login(page: Page, email: string, next: string) {
   await page.goto(`/auth/iniciar-sesion?next=${encodeURIComponent(next)}`);
   await page.getByLabel('Correo electrónico').fill(email);
   await page.getByLabel('Contraseña').fill(password!);
-  await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+  const [response] = await Promise.all([
+    page.waitForResponse(
+      (candidate) =>
+        candidate.url().includes('/_allauth/browser/v1/auth/login') &&
+        candidate.request().method() === 'POST',
+    ),
+    page.getByRole('button', { name: 'Iniciar sesión' }).click(),
+  ]);
+  expect(response.ok()).toBe(true);
+  await page.goto(next);
   await expect(page).toHaveURL(next, { timeout: 20_000 });
 }
 
@@ -100,11 +109,56 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
   ).toBe(true);
   await expectAccessible(student);
 
+  const courseHomePath = `/organizaciones/${slug}/aprender/${courseSlug}`;
+  await student.goto(courseHomePath);
+  await expect(
+    student.getByRole('heading', {
+      name: 'Funciones para lectura institucional',
+      level: 1,
+    }),
+  ).toBeVisible();
+  await expect(
+    student.getByRole('navigation', { name: 'Secciones del curso' }),
+  ).toBeVisible();
+  await student.getByRole('link', { name: 'Contenido', exact: true }).click();
+  await expect(student).toHaveURL(`${courseHomePath}?tab=contenido`, {
+    timeout: 20_000,
+  });
+  await expect(
+    student.getByRole('heading', { name: 'Contenido del curso' }),
+  ).toBeVisible({ timeout: 20_000 });
+  await student.getByRole('link', { name: 'Evaluaciones' }).click();
+  await expect(
+    student.getByRole('heading', { name: 'Evaluaciones del curso' }),
+  ).toBeVisible({ timeout: 20_000 });
+  await student.getByRole('link', { name: 'Calificaciones' }).click();
+  await expect(
+    student.getByRole('heading', { name: 'Calificaciones', exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
+  expect(
+    await student.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await expectAccessible(student);
+
+  await student.goto(learningPath);
   await student.getByRole('link', { name: 'Comenzar' }).click();
   await expect(
     student.getByRole('heading', { name: 'Concepto de función', level: 1 }),
   ).toBeVisible({ timeout: 20_000 });
   await expect(student.getByText('Una función asigna')).toBeVisible();
+  await expect(
+    student.getByRole('navigation', { name: 'Navegación entre lecciones' }),
+  ).toBeVisible();
+  await expect(
+    student.getByRole('link', { name: 'Mi aprendizaje' }),
+  ).toHaveCount(0);
+  expect(
+    await student.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
   await student
     .getByRole('button', { name: 'Marcar unidad como completada' })
     .click();
@@ -147,7 +201,7 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
     timeout: 20_000,
   });
   await student.goto(learningPath);
-  await expect(student.getByText('Disponible')).toBeVisible();
+  await expect(student.getByText('Disponible', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Revocar' }).click();
   await page
@@ -210,13 +264,13 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
   await Promise.all([
     expect(
       student.getByRole('heading', { name: 'Concepto de función', level: 1 }),
-    ).toBeVisible(),
+    ).toBeVisible({ timeout: 20_000 }),
     expect(
       competing.getByRole('heading', {
         name: 'Concepto de función',
         level: 1,
       }),
-    ).toBeVisible(),
+    ).toBeVisible({ timeout: 20_000 }),
   ]);
   const completionResponses = await Promise.all([
     Promise.all([

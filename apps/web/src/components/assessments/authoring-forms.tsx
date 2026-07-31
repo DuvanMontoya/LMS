@@ -25,6 +25,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
+import { MathExpressionField } from '@/components/assessments/math-expression-field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,7 +43,7 @@ import type { QuestionBankPage, QuestionPage } from '@/lib/assessments/server';
 const assessmentSchema = z.object({
   attempt_limit: z.number().int().positive().max(20),
   description: z.string().trim().max(5000),
-  pass_basis_points: z.number().int().min(0).max(10000),
+  pass_percent: z.number().min(0).max(100),
   slug: z
     .string()
     .trim()
@@ -56,17 +57,22 @@ export function AssessmentCreateForm({ slug }: Readonly<{ slug: string }>) {
   const router = useRouter();
   const mutation = useAssessmentMutation((values: AssessmentValues) =>
     createAssessment(slug, {
-      ...values,
+      attempt_limit: values.attempt_limit,
+      description: values.description,
       feedback_mode: 'full_after_grading',
+      pass_basis_points: Math.round(values.pass_percent * 100),
       shuffle_items: false,
       shuffle_sections: false,
+      slug: values.slug,
+      time_limit_minutes: values.time_limit_minutes,
+      title: values.title,
     }),
   );
   const form = useForm<AssessmentValues>({
     defaultValues: {
       attempt_limit: 2,
       description: '',
-      pass_basis_points: 6000,
+      pass_percent: 60,
       slug: '',
       time_limit_minutes: 45,
       title: '',
@@ -160,19 +166,21 @@ export function AssessmentCreateForm({ slug }: Readonly<{ slug: string }>) {
               <p className="assessment-control-suffix">intentos</p>
             </Field>
             <Field
-              hint="Se almacena con precisión de puntos base."
+              hint="Porcentaje mínimo para aprobar."
               label="Umbral de aprobación"
               name="assessment-pass"
             >
               <Input
                 id="assessment-pass"
-                max={10000}
+                max={100}
                 min={0}
+                step="0.01"
                 type="number"
-                {...form.register('pass_basis_points', {
+                {...form.register('pass_percent', {
                   valueAsNumber: true,
                 })}
               />
+              <p className="assessment-control-suffix">%</p>
             </Field>
           </div>
         </BuilderSection>
@@ -397,6 +405,7 @@ export const QUESTION_TYPES = [
   ['long_text', 'Texto largo'],
   ['ordering', 'Ordenamiento'],
   ['matching', 'Emparejamiento'],
+  ['mathematical_expression', 'Expresión matemática'],
 ] as const;
 type QuestionType = (typeof QUESTION_TYPES)[number][0];
 
@@ -412,6 +421,11 @@ const questionSchema = z
     feedbackCorrect: z.string().trim().max(5000),
     feedbackGeneral: z.string().trim().max(5000),
     feedbackIncorrect: z.string().trim().max(5000),
+    allowedFunctions: z.string(),
+    allowedSymbols: z.string(),
+    mathAssumptions: z.string(),
+    mathLatex: z.string().max(4096),
+    mathStrategy: z.enum(['structural', 'symbolic_common_domain']),
     options: z.string(),
     prompt: z.string().trim().min(1, 'Escribe el enunciado.').max(5000),
     tolerance: z.string(),
@@ -424,6 +438,7 @@ const questionSchema = z
       'long_text',
       'ordering',
       'matching',
+      'mathematical_expression',
     ]),
   })
   .superRefine((values, context) => {
@@ -542,6 +557,82 @@ const questionSchema = z
         });
       }
     }
+    if (values.type === 'mathematical_expression') {
+      const symbols = commaValues(values.allowedSymbols);
+      const functions = commaValues(values.allowedFunctions);
+      const allowedFunctionNames = new Set([
+        'Sin',
+        'Cos',
+        'Tan',
+        'Exp',
+        'Ln',
+        'Log',
+        'Abs',
+      ]);
+      if (
+        symbols.length === 0 ||
+        symbols.length > 10 ||
+        new Set(symbols).size !== symbols.length ||
+        symbols.some((symbol) => !/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(symbol))
+      ) {
+        context.addIssue({
+          code: 'custom',
+          message:
+            'Define entre 1 y 10 símbolos únicos, separados por comas, con nombres seguros.',
+          path: ['allowedSymbols'],
+        });
+      }
+      if (
+        functions.length > 7 ||
+        new Set(functions).size !== functions.length ||
+        functions.some((name) => !allowedFunctionNames.has(name))
+      ) {
+        context.addIssue({
+          code: 'custom',
+          message:
+            'Usa sólo funciones permitidas y sin repetir: Sin, Cos, Tan, Exp, Ln, Log o Abs.',
+          path: ['allowedFunctions'],
+        });
+      }
+      try {
+        JSON.parse(values.accepted);
+      } catch {
+        context.addIssue({
+          code: 'custom',
+          message: 'Construye una expresión matemática válida.',
+          path: ['accepted'],
+        });
+      }
+      if (!values.mathLatex.trim()) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Escribe la expresión esperada.',
+          path: ['mathLatex'],
+        });
+      }
+      const assumptions = commaValues(values.mathAssumptions);
+      if (
+        assumptions.some((entry) => {
+          const [symbol, assumption, extra] = entry
+            .split(':')
+            .map((item) => item.trim());
+          return (
+            Boolean(extra) ||
+            !symbol ||
+            !symbols.includes(symbol) ||
+            !assumption ||
+            !['real', 'positive', 'nonnegative', 'integer'].includes(assumption)
+          );
+        })
+      ) {
+        context.addIssue({
+          code: 'custom',
+          message:
+            'Usa símbolo:supuesto con símbolos permitidos y supuestos real, positive, nonnegative o integer.',
+          path: ['mathAssumptions'],
+        });
+      }
+    }
   });
 type QuestionValues = z.infer<typeof questionSchema>;
 
@@ -561,6 +652,13 @@ function promptDocument(text: string) {
 function lines(value: string) {
   return value
     .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function commaValues(value: string) {
+  return value
+    .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
 }
@@ -616,7 +714,7 @@ export function buildQuestionDefinition(values: QuestionValues) {
         .map((item) => item.trim())
         .filter(Boolean),
     };
-  } else {
+  } else if (type === 'matching') {
     const midpoint = Math.max(1, Math.floor(options.length / 2));
     publicPayload.left = options
       .slice(0, midpoint)
@@ -634,6 +732,36 @@ export function buildQuestionDefinition(values: QuestionValues) {
               pair.length === 2 && Boolean(pair[0]) && Boolean(pair[1]),
           ),
       ),
+    };
+  } else {
+    const allowedSymbols = commaValues(values.allowedSymbols);
+    const allowedFunctions = commaValues(values.allowedFunctions);
+    const symbolAssumptions = Object.fromEntries(
+      commaValues(values.mathAssumptions)
+        .flatMap((entry) => {
+          const parts = entry.split(':').map((item) => item.trim());
+          return parts.length === 2 && parts[0] && parts[1]
+            ? ([[parts[0], parts[1]]] as const)
+            : [];
+        })
+        .filter(
+          ([symbol, assumption]) =>
+            allowedSymbols.includes(symbol) &&
+            ['real', 'positive', 'nonnegative', 'integer'].includes(assumption),
+        )
+        .map(([symbol, assumption]) => [symbol, [assumption]]),
+    );
+    publicPayload.allowed_symbols = allowedSymbols;
+    publicPayload.allowed_functions = allowedFunctions;
+    publicPayload.response_guidance =
+      'Escribe una expresión equivalente usando únicamente los símbolos y funciones indicados.';
+    publicPayload.maximum_latex_length = 4096;
+    grading = {
+      allowed_functions: allowedFunctions,
+      allowed_symbols: allowedSymbols,
+      equivalence_strategy: values.mathStrategy,
+      expected_mathjson: JSON.parse(values.accepted),
+      symbol_assumptions: symbolAssumptions,
     };
   }
   return {
@@ -653,7 +781,6 @@ export function QuestionCreateForm({
   bankId,
   slug,
 }: Readonly<{ bankId: string; slug: string }>) {
-  const router = useRouter();
   const mutation = useAssessmentMutation((values: QuestionValues) =>
     createQuestion(slug, bankId, {
       code: values.code,
@@ -668,6 +795,11 @@ export function QuestionCreateForm({
       feedbackCorrect: 'Respuesta correcta.',
       feedbackGeneral: 'Revisa el objetivo asociado.',
       feedbackIncorrect: 'Revisa tu procedimiento.',
+      allowedFunctions: '',
+      allowedSymbols: 'x',
+      mathAssumptions: 'x:real',
+      mathLatex: '',
+      mathStrategy: 'structural',
       options: 'Primera opción\nSegunda opción',
       prompt: '',
       tolerance: '0',
@@ -682,6 +814,18 @@ export function QuestionCreateForm({
   const watchedAccepted = useWatch({
     control: form.control,
     name: 'accepted',
+  });
+  const watchedAllowedFunctions = useWatch({
+    control: form.control,
+    name: 'allowedFunctions',
+  });
+  const watchedAllowedSymbols = useWatch({
+    control: form.control,
+    name: 'allowedSymbols',
+  });
+  const watchedMathLatex = useWatch({
+    control: form.control,
+    name: 'mathLatex',
   });
   const previewOptions = lines(watchedOptions);
   useEffect(() => {
@@ -727,9 +871,10 @@ export function QuestionCreateForm({
     selectedType;
   async function submit(values: QuestionValues) {
     try {
-      await mutation.mutateAsync(questionSchema.parse(values));
-      form.reset();
-      router.refresh();
+      const revision = await mutation.mutateAsync(questionSchema.parse(values));
+      window.location.assign(
+        `/organizaciones/${slug}/evaluaciones/bancos/${bankId}/preguntas/${revision.question_id}/revisiones/${revision.id}`,
+      );
     } catch {
       // React Query conserva y presenta el error en el formulario.
     }
@@ -826,6 +971,61 @@ export function QuestionCreateForm({
               />
             </Field>
           ) : null}
+          {selectedType === 'mathematical_expression' ? (
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field
+                error={form.formState.errors.allowedSymbols?.message}
+                hint="Entre 1 y 10 nombres separados por comas."
+                label="Símbolos permitidos"
+                name="question-math-symbols"
+              >
+                <Input
+                  id="question-math-symbols"
+                  placeholder="x, y"
+                  {...form.register('allowedSymbols')}
+                />
+              </Field>
+              <Field
+                error={form.formState.errors.allowedFunctions?.message}
+                hint="Sin, Cos, Tan, Exp, Ln, Log y Abs."
+                label="Funciones permitidas"
+                name="question-math-functions"
+              >
+                <Input
+                  id="question-math-functions"
+                  placeholder="Sin, Cos"
+                  {...form.register('allowedFunctions')}
+                />
+              </Field>
+              <Field
+                error={form.formState.errors.mathAssumptions?.message}
+                hint="Formato símbolo:supuesto; separa entradas con comas."
+                label="Supuestos simbólicos"
+                name="question-math-assumptions"
+              >
+                <Input
+                  id="question-math-assumptions"
+                  placeholder="x:real, y:positive"
+                  {...form.register('mathAssumptions')}
+                />
+              </Field>
+              <Field
+                label="Estrategia de equivalencia"
+                name="question-math-strategy"
+              >
+                <select
+                  className="academic-control"
+                  id="question-math-strategy"
+                  {...form.register('mathStrategy')}
+                >
+                  <option value="structural">Estructural canónica</option>
+                  <option value="symbolic_common_domain">
+                    Simbólica en dominio común
+                  </option>
+                </select>
+              </Field>
+            </div>
+          ) : null}
         </BuilderSection>
         <BuilderSection
           description="La clave queda en el snapshot secreto y nunca viaja al navegador del learner."
@@ -836,7 +1036,12 @@ export function QuestionCreateForm({
           <div className="grid gap-5 sm:grid-cols-2">
             <div className={selectedType === 'numeric' ? '' : 'sm:col-span-2'}>
               <Field
-                error={form.formState.errors.accepted?.message}
+                error={
+                  selectedType === 'mathematical_expression'
+                    ? (form.formState.errors.mathLatex?.message ??
+                      form.formState.errors.accepted?.message)
+                    : form.formState.errors.accepted?.message
+                }
                 hint={answerHint(selectedType)}
                 label={
                   selectedType === 'long_text'
@@ -890,6 +1095,36 @@ export function QuestionCreateForm({
                     }
                     options={previewOptions}
                   />
+                ) : selectedType === 'mathematical_expression' ? (
+                  <MathExpressionField
+                    allowedFunctions={commaValues(watchedAllowedFunctions)}
+                    allowedSymbols={commaValues(watchedAllowedSymbols)}
+                    label="Expresión esperada"
+                    onChange={(value) => {
+                      form.setValue('mathLatex', value?.latex ?? '', {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                      form.setValue(
+                        'accepted',
+                        value ? JSON.stringify(value.mathjson) : '',
+                        {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        },
+                      );
+                    }}
+                    value={{
+                      latex: watchedMathLatex,
+                      mathjson: (() => {
+                        try {
+                          return JSON.parse(watchedAccepted);
+                        } catch {
+                          return '';
+                        }
+                      })(),
+                    }}
+                  />
                 ) : (
                   <Textarea
                     className="min-h-24"
@@ -914,6 +1149,15 @@ export function QuestionCreateForm({
               </Field>
             ) : null}
           </div>
+          {['multiple_choice', 'ordering', 'matching'].includes(
+            selectedType,
+          ) ? (
+            <p className="assessment-type-note">
+              Esta interacción admite crédito parcial determinista cuando la
+              revisión de política de calificación lo habilita. La clave
+              editorial sigue siendo completa y secreta.
+            </p>
+          ) : null}
           <details className="assessment-feedback-panel">
             <summary>Personalizar retroalimentación</summary>
             <div className="mt-4 grid gap-4 sm:grid-cols-3">
@@ -966,7 +1210,12 @@ export function QuestionCreateForm({
             {watchedPrompt.trim() ||
               'El enunciado aparecerá aquí mientras escribes.'}
           </h3>
-          {previewOptions.length ? (
+          {[
+            'single_choice',
+            'multiple_choice',
+            'ordering',
+            'matching',
+          ].includes(selectedType) && previewOptions.length ? (
             <ol>
               {previewOptions.map((option, index) => (
                 <li key={`${option}-${index}`}>
@@ -981,7 +1230,10 @@ export function QuestionCreateForm({
                 ? 'Área de respuesta extensa'
                 : selectedType === 'numeric'
                   ? 'Campo de respuesta numérica'
-                  : 'Campo de respuesta'}
+                  : selectedType === 'mathematical_expression'
+                    ? watchedMathLatex.trim() ||
+                      'Editor matemático con vista LaTeX'
+                    : 'Campo de respuesta'}
             </div>
           )}
         </div>
@@ -998,7 +1250,11 @@ export function QuestionCreateForm({
             />
             <QualityItem
               label="Clave configurada"
-              ready={watchedAccepted.trim().length > 0}
+              ready={
+                watchedAccepted.trim().length > 0 &&
+                (selectedType !== 'mathematical_expression' ||
+                  watchedMathLatex.trim().length > 0)
+              }
             />
             <QualityItem
               label="Contrato validado antes de enviar"
@@ -1213,12 +1469,14 @@ function typeDescription(type: QuestionType) {
       'Respuesta abierta con decisión humana, rúbrica y correcciones append-only.',
     matching:
       'Relación explícita entre dos conjuntos; se valida cobertura de la columna izquierda.',
+    mathematical_expression:
+      'Expresión segura: el navegador construye MathJSON y el servidor valida y califica sin evaluar texto.',
     multiple_choice:
-      'Una o más opciones correctas, sin puntaje parcial en esta fase.',
+      'Una o más opciones correctas; la política puede otorgar crédito parcial sin producir puntajes negativos.',
     numeric:
       'Comparación Decimal determinista con tolerancia absoluta controlada.',
     ordering:
-      'Secuencia completa; cada opción debe aparecer exactamente una vez.',
+      'Secuencia completa con crédito parcial opcional por posición o pares adyacentes.',
     short_text:
       'Comparación normalizada contra una lista de respuestas aceptadas.',
     single_choice:
@@ -1232,6 +1490,8 @@ function answerHint(type: QuestionType) {
   const hints: Record<QuestionType, string> = {
     long_text: 'Sólo será visible para quien califica.',
     matching: 'Selecciona una correspondencia para cada elemento.',
+    mathematical_expression:
+      'Construye la respuesta esperada; se guardan LaTeX canónico y MathJSON estructurado.',
     multiple_choice:
       'Marca todas las opciones que deben considerarse correctas.',
     numeric: 'Decimal sin exponente; admite punto o coma no ambiguos.',
@@ -1378,12 +1638,14 @@ export function QuestionRevisionEditor({
             <Eye />
             <div>
               <p>Vista pública</p>
-              <h2>Experiencia del learner</h2>
+              <h2>Experiencia del estudiante</h2>
             </div>
           </header>
           <article>
-            <span>{preview.type}</span>
-            <h3>{preview.prompt || 'Enunciado no disponible'}</h3>
+            <span>{questionInteractionLabel(preview.type)}</span>
+            <h3 className="whitespace-pre-line">
+              {preview.prompt || 'Enunciado no disponible'}
+            </h3>
             {preview.options.length ? (
               <ol>
                 {preview.options.map((option, index) => (
@@ -1394,7 +1656,7 @@ export function QuestionRevisionEditor({
                 ))}
               </ol>
             ) : (
-              <div>Campo de respuesta del learner</div>
+              <div>Campo de respuesta del estudiante</div>
             )}
           </article>
         </section>
@@ -1466,9 +1728,11 @@ function questionPreviewFromDefinition(source: string) {
       type?: string;
     };
     const prompt = (definition.public?.prompt?.content ?? [])
-      .flatMap((block) => block.content ?? [])
-      .map((node) => node.text ?? '')
-      .join(' ')
+      .map((block) =>
+        (block.content ?? []).map((node) => node.text ?? '').join(''),
+      )
+      .filter(Boolean)
+      .join('\n')
       .trim();
     return {
       options: (definition.public?.options ?? []).map(
@@ -1480,6 +1744,22 @@ function questionPreviewFromDefinition(source: string) {
   } catch {
     return { options: [] as string[], prompt: '', type: 'JSON inválido' };
   }
+}
+
+function questionInteractionLabel(type: string) {
+  return (
+    {
+      long_text: 'Respuesta extensa',
+      matching: 'Emparejamiento',
+      mathematical_expression: 'Expresión matemática',
+      multiple_choice: 'Selección múltiple',
+      numeric: 'Respuesta numérica',
+      ordering: 'Ordenamiento',
+      short_text: 'Respuesta corta',
+      single_choice: 'Selección única',
+      true_false: 'Verdadero o falso',
+    }[type] ?? type
+  );
 }
 
 export function BankList({

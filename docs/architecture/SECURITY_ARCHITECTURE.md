@@ -97,3 +97,17 @@ vencido no acepta respuestas y submit es definitivo. Versiones, AttemptItem,
 ManualGradeDecision y AttemptEvent rechazan UPDATE/DELETE en PostgreSQL. No hay
 DELETE físico, JWT, Web Storage, autosave, ejecución de código, symbolic grading
 ni logging de respuestas/claves.
+
+### Calificación avanzada
+
+- MathJSON se valida por forma, operador, símbolo, función, tamaño, profundidad,
+  entero y exponente antes de construir SymPy; no se parsea texto ni LaTeX.
+- El proceso HTTP no ejecuta SymPy. El worker Linux no root recibe sólo IDs de
+  job, usa JSON, soft/hard limits y no publica puertos.
+- Grading payload, expected MathJSON, respuestas y seeds no viajan en tareas,
+  logs, OpenAPI learner, SSR ni browser storage.
+- Jobs y grades usan locks/idempotency en PostgreSQL; revisiones, grade versions,
+  item grades y snapshots analíticos son append-only.
+- Policies de organización aplican anti-IDOR y separan regrading, gradebook y
+  analytics; staff no omite permisos.
+- Timeout/inconclusive nunca se convierte en respuesta incorrecta.

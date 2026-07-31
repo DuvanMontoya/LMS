@@ -461,6 +461,15 @@ class DeliverySerializer(serializers.ModelSerializer):
     assessment_title = serializers.CharField(
         source="assessment_version.title", read_only=True
     )
+    assessment_version_number = serializers.IntegerField(
+        source="assessment_version.number", read_only=True
+    )
+    course_release_title = serializers.CharField(
+        source="course_release.title", read_only=True, allow_null=True
+    )
+    course_release_number = serializers.IntegerField(
+        source="course_release.number", read_only=True, allow_null=True
+    )
 
     class Meta:
         model = AssessmentDelivery
@@ -468,7 +477,10 @@ class DeliverySerializer(serializers.ModelSerializer):
             "id",
             "assessment_version_id",
             "assessment_title",
+            "assessment_version_number",
             "course_release_id",
+            "course_release_title",
+            "course_release_number",
             "unit_id",
             "name",
             "status",

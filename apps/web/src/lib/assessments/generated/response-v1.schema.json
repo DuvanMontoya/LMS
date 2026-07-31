@@ -15,7 +15,8 @@
         "short_text",
         "long_text",
         "ordering",
-        "matching"
+        "matching",
+        "mathematical_expression"
       ]
     },
     "value": {}
@@ -121,6 +122,22 @@
               "maxLength": 64,
               "pattern": "^[A-Za-z0-9_-]+$"
             }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "mathematical_expression" } },
+        "required": ["type"]
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "oneOf": [
+              { "type": "null" },
+              { "$ref": "urn:lms:assessment:math-expression-response:1" }
+            ]
           }
         }
       }

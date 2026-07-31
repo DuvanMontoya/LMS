@@ -76,6 +76,18 @@ def question_definition(question_type: str) -> dict[str, object]:
             {"id": "r2", "label": "3"},
         ]
         grading = {"correct_pairs": {"l1": "r1", "l2": "r2"}}
+    elif question_type == "mathematical_expression":
+        public["allowed_symbols"] = ["x"]
+        public["allowed_functions"] = []
+        public["response_guidance"] = "Escribe una expresión equivalente."
+        public["maximum_latex_length"] = 4096
+        grading = {
+            "expected_mathjson": ["Add", "x", 1],
+            "equivalence_strategy": "structural",
+            "symbol_assumptions": {"x": ["real"]},
+            "allowed_symbols": ["x"],
+            "allowed_functions": [],
+        }
     else:
         raise AssertionError(f"Unsupported type: {question_type}")
     return {

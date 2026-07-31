@@ -6,6 +6,11 @@ import { useEffect, useState } from 'react';
 
 import { AcademicDocument } from '@/components/content/academic-document';
 import { MutationError } from '@/components/assessments/authoring-forms';
+import {
+  MathExpressionField,
+  type MathExpressionValidationState,
+  type MathExpressionValue,
+} from '@/components/assessments/math-expression-field';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +26,8 @@ import type { LMSUnitAcademicDocumentVersion1 } from '@/lib/content/generated/un
 
 type Option = { id: string; label: string };
 type PublicQuestion = {
+  allowed_functions?: string[];
+  allowed_symbols?: string[];
   false_label?: string;
   left?: Option[];
   options?: Option[];
@@ -32,7 +39,13 @@ type PublicQuestion = {
   type: string;
   unit?: string;
 };
-type Answer = boolean | null | string | string[] | Record<string, string>;
+type Answer =
+  | boolean
+  | null
+  | string
+  | string[]
+  | Record<string, string>
+  | MathExpressionValue;
 
 export function AttemptRunner({
   initialAttempt,
@@ -174,6 +187,7 @@ export function AttemptRunner({
           answer={answers[active.id]}
           index={activeIndex}
           item={active}
+          key={active.id}
           onAnswer={(answer) => {
             setAnswers((current) => ({ ...current, [active.id]: answer }));
             setSaved((current) => ({ ...current, [active.id]: false }));
@@ -222,6 +236,15 @@ function QuestionPanel({
   total: number;
 }>) {
   const question = item.public_snapshot as PublicQuestion;
+  const [mathValidationState, setMathValidationState] =
+    useState<MathExpressionValidationState>(
+      question.type === 'mathematical_expression' && answer ? 'valid' : 'idle',
+    );
+
+  const mathResponseBlocked =
+    question.type === 'mathematical_expression' &&
+    (mathValidationState === 'validating' || mathValidationState === 'invalid');
+
   return (
     <section
       aria-labelledby={`question-title-${item.id}`}
@@ -252,6 +275,7 @@ function QuestionPanel({
         answer={answer}
         itemId={item.id}
         onAnswer={onAnswer}
+        onMathValidationStateChange={setMathValidationState}
         question={question}
       />
       <footer className="assessment-question-panel__footer">
@@ -273,7 +297,7 @@ function QuestionPanel({
         </Button>
         <Button
           className="ml-auto"
-          disabled={savePending}
+          disabled={savePending || mathResponseBlocked}
           onClick={onSave}
           type="button"
         >
@@ -289,11 +313,13 @@ function ResponseControl({
   answer,
   itemId,
   onAnswer,
+  onMathValidationStateChange,
   question,
 }: Readonly<{
   answer: Answer | undefined;
   itemId: string;
   onAnswer: (answer: Answer) => void;
+  onMathValidationStateChange: (state: MathExpressionValidationState) => void;
   question: PublicQuestion;
 }>) {
   const legend = `Respuesta a la pregunta`;
@@ -416,8 +442,12 @@ function ResponseControl({
     );
   }
   if (question.type === 'matching') {
-    const pairs =
-      answer && typeof answer === 'object' && !Array.isArray(answer)
+    const pairs: Record<string, string> =
+      answer &&
+      typeof answer === 'object' &&
+      !Array.isArray(answer) &&
+      !('latex' in answer) &&
+      Object.values(answer).every((value) => typeof value === 'string')
         ? answer
         : {};
     return (
@@ -472,6 +502,32 @@ function ResponseControl({
       </div>
     );
   }
+  if (question.type === 'mathematical_expression') {
+    const expression =
+      answer &&
+      typeof answer === 'object' &&
+      !Array.isArray(answer) &&
+      'latex' in answer &&
+      'mathjson' in answer
+        ? (answer as MathExpressionValue)
+        : null;
+    return (
+      <div className="mt-6">
+        <MathExpressionField
+          allowedFunctions={question.allowed_functions ?? []}
+          allowedSymbols={question.allowed_symbols ?? []}
+          label={legend}
+          onChange={onAnswer}
+          onValidationStateChange={onMathValidationStateChange}
+          value={expression}
+        />
+        <p className="mt-2 text-sm text-muted-foreground">
+          La validación del navegador ayuda a escribir la expresión; la
+          calificación se realiza de forma segura en el servidor.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="mt-6">
       <Label htmlFor={`answer-${itemId}`}>{legend}</Label>
@@ -503,7 +559,10 @@ function answerFrom(question: PublicQuestion, response: unknown): Answer {
       (typeof value === 'object' &&
         value !== null &&
         !Array.isArray(value) &&
-        Object.values(value).every((item) => typeof item === 'string'))
+        (('latex' in value &&
+          typeof value.latex === 'string' &&
+          'mathjson' in value) ||
+          Object.values(value).every((item) => typeof item === 'string')))
     )
       return value as Answer;
   }

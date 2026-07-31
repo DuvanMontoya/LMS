@@ -240,3 +240,22 @@ append-only; Next y DRF sirven la biblioteca sólo desde ese JSON. ADR 0021 y
 asignación activa fija un `CourseRelease`. Progreso y continuidad se escriben
 con locks/versiones y toda lectura usa el snapshot asignado. ADR 0022 y
 `LEARNING.md` contienen las reglas y catorce diagramas normativos.
+
+# Calificación avanzada (Prompt 14)
+
+```mermaid
+flowchart LR
+  UI["MathLive + Compute Engine"] --> API["MathJSON allowlisted"]
+  API --> PG["PostgreSQL durable job"]
+  PG --> CELERY["Celery prefork worker"]
+  CELERY --> SYMPY["Explicit SymPy constructors"]
+  SYMPY --> GRADE["Append-only grade version"]
+  GRADE --> BOOK["Release gradebook"]
+  GRADE --> ANA["Append-only analytics snapshot"]
+```
+
+`domain.assessments` sigue siendo único propietario. Redis DB 2 transporta IDs
+de job en JSON y nunca es fuente de verdad. El HTTP sólo valida y encola; SymPy
+corre en el worker Linux. Regrading parte de una revisión explícita, bloquea e
+idempotiza por intento y conserva manual grades. Gradebook y analytics son
+proyecciones reconstruibles sobre releases/grades, no progreso del curso.

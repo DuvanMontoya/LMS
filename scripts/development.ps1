@@ -85,10 +85,15 @@ function Test-ExpectedProcess([int]$ProcessId, [ValidateSet('api', 'web')][strin
     if ($null -eq $process) {
         return $false
     }
-    $expected = if ($Kind -eq 'api') { 'manage.py runserver' } else { 'next dev' }
+    if ($Kind -eq 'api') {
+        return (
+            $process.ExecutablePath -eq $pythonExecutable -and
+            $process.CommandLine -like '*manage.py*runserver*127.0.0.1:8000*'
+        )
+    }
     return (
-        $process.CommandLine -like "*$repositoryRoot*" -and
-        $process.CommandLine -like "*$expected*"
+        $process.CommandLine -like "*$nextExecutable*" -and
+        $process.CommandLine -like '*next*dev*127.0.0.1*3000*'
     )
 }
 

@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lms:assessment:math-expression:1",
+  "title": "Mathematical expression question definition v1",
+  "type": "object",
+  "required": ["schema_version", "type", "public", "grading", "feedback"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "type": { "const": "mathematical_expression" },
+    "public": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "type",
+        "prompt",
+        "allowed_symbols",
+        "allowed_functions",
+        "response_guidance",
+        "maximum_latex_length"
+      ],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "type": { "const": "mathematical_expression" },
+        "prompt": { "$ref": "urn:lms:content:unit-document:1" },
+        "allowed_symbols": { "$ref": "#/$defs/symbols" },
+        "allowed_functions": { "$ref": "#/$defs/functions" },
+        "response_guidance": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "maximum_latex_length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        }
+      },
+      "additionalProperties": false
+    },
+    "grading": {
+      "type": "object",
+      "required": [
+        "expected_mathjson",
+        "equivalence_strategy",
+        "symbol_assumptions",
+        "allowed_symbols",
+        "allowed_functions"
+      ],
+      "properties": {
+        "expected_mathjson": {},
+        "equivalence_strategy": {
+          "enum": ["structural", "symbolic_common_domain"]
+        },
+        "symbol_assumptions": {
+          "type": "object",
+          "maxProperties": 10,
+          "propertyNames": { "$ref": "#/$defs/symbol_name" },
+          "additionalProperties": {
+            "type": "array",
+            "maxItems": 4,
+            "uniqueItems": true,
+            "items": {
+              "enum": ["real", "positive", "nonnegative", "integer"]
+            }
+          }
+        },
+        "allowed_symbols": { "$ref": "#/$defs/symbols" },
+        "allowed_functions": { "$ref": "#/$defs/functions" }
+      },
+      "additionalProperties": false
+    },
+    "feedback": {
+      "type": "object",
+      "properties": {
+        "general": { "type": "string", "maxLength": 5000 },
+        "correct": { "type": "string", "maxLength": 5000 },
+        "incorrect": { "type": "string", "maxLength": 5000 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "symbol_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+    },
+    "symbols": {
+      "type": "array",
+      "maxItems": 10,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/symbol_name" }
+    },
+    "functions": {
+      "type": "array",
+      "maxItems": 7,
+      "uniqueItems": true,
+      "items": {
+        "enum": ["Sin", "Cos", "Tan", "Exp", "Ln", "Log", "Abs"]
+      }
+    }
+  },
+  "additionalProperties": false
+}

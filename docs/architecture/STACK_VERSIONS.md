@@ -89,3 +89,18 @@ No se añadió dependencia. Se revalidaron los pins reales: Python 3.13.13,
 Django 6.0.7, PostgreSQL 18.4, DRF 3.17.1, drf-spectacular 0.30.0,
 django-filter 26.1, Next 16.2.12, React 19.2.8, TanStack Query 5.101.4,
 React Hook Form 7.83.0, Zod 4.4.3, Playwright 1.62.0 y axe 4.12.1.
+
+## Stack de calificación avanzada (Prompt 14)
+
+| Componente | Versión exacta | Función |
+| --- | --- | --- |
+| SymPy | 1.14.0 | Álgebra exacta mediante constructores explícitos |
+| Celery con extra Redis | 5.6.3 | Grading, regrading y analytics asíncronos |
+| redis-py | 6.4.0 | Transporte compatible resuelto por Celery |
+| Cortex Compute Engine | 0.99.0 | Conversión UX LaTeX a MathJSON |
+| MathLive | 0.110.0 | Entrada matemática accesible existente |
+| Python worker | 3.13.13 slim-trixie por digest | Runtime Linux no root |
+
+No se instalaron NumPy, SciPy, pandas, ANTLR, parser LaTeX backend ni result
+backend de Celery. PostgreSQL 18.4 conserva estado durable; Redis 8.8.1 DB 2 es
+broker y DB 1 continúa reservada a cache auth.

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lms:assessment:grading-revision:1",
+  "title": "Assessment grading revision snapshot v1",
+  "type": "object",
+  "required": ["schema_version", "scoring_engine_version", "items"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "scoring_engine_version": { "const": 2 },
+    "items": {
+      "type": "array",
+      "maxItems": 40500,
+      "items": {
+        "type": "object",
+        "required": [
+          "source_kind",
+          "source_id",
+          "question_version_id",
+          "question_type",
+          "scoring_policy",
+          "grading_payload",
+          "maximum_score",
+          "feedback_payload",
+          "scoring_engine_version"
+        ],
+        "properties": {
+          "source_kind": { "enum": ["fixed_item", "pool_candidate"] },
+          "source_id": { "type": "string", "format": "uuid" },
+          "question_version_id": { "type": "string", "format": "uuid" },
+          "question_type": {
+            "enum": [
+              "single_choice",
+              "multiple_choice",
+              "true_false",
+              "numeric",
+              "short_text",
+              "long_text",
+              "ordering",
+              "matching",
+              "mathematical_expression"
+            ]
+          },
+          "scoring_policy": {
+            "enum": [
+              "all_or_nothing",
+              "manual",
+              "exact_set",
+              "proportional_with_penalty",
+              "exact",
+              "position_fraction",
+              "adjacent_pair_fraction",
+              "per_pair",
+              "binary_tolerance",
+              "banded_tolerance",
+              "structural",
+              "symbolic_common_domain"
+            ]
+          },
+          "grading_payload": { "type": "object", "maxProperties": 20 },
+          "maximum_score": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,8})(\\.[0-9]{1,3})?$"
+          },
+          "feedback_payload": { "type": "object", "maxProperties": 10 },
+          "scoring_engine_version": { "const": 2 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
