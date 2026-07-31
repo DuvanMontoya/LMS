@@ -7,6 +7,7 @@ from domain.catalog.models import (
     Concept,
     Discipline,
     LearningObjective,
+    PrerequisiteKind,
     Subject,
     Topic,
 )
@@ -177,7 +178,7 @@ class UpdateObjectiveSerializer(serializers.Serializer):
 
 class SubjectPrerequisiteSerializer(serializers.Serializer):
     prerequisite_id = serializers.UUIDField()
-    kind = serializers.ChoiceField(choices=("required", "recommended"))
+    kind = serializers.ChoiceField(choices=PrerequisiteKind.choices)
     rationale = serializers.CharField(max_length=1000, required=False, allow_blank=True)
 
 

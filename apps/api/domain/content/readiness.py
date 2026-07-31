@@ -3,14 +3,16 @@ from __future__ import annotations
 
 from django.core.exceptions import ObjectDoesNotExist
 
+from domain.assets.choices import AssetKind, AssetVersionStatus, VariantRole
 from domain.courses.choices import StructureStatus
 from domain.courses.models import CourseRevision, CourseUnit
 
+from .asset_references import ASSET_NODE_KINDS
 from .canonical import content_digest
 from .exceptions import ContentDomainError
-from .extraction import has_meaningful_content
+from .extraction import has_meaningful_content, iter_nodes
 from .models import UnitContentDocument
-from .schemas import CURRENT_CONTENT_SCHEMA_VERSION
+from .schemas import schema_registry
 from .validators import validate_content
 
 
@@ -68,7 +70,7 @@ def content_readiness_issues(revision: CourseRevision) -> list[dict[str, str]]:
             )
             continue
         current = document.current_version
-        if current.schema_version != CURRENT_CONTENT_SCHEMA_VERSION:
+        if current.schema_version not in schema_registry():
             issues.append(
                 {
                     "code": "unit_content_schema_unsupported",
@@ -105,4 +107,75 @@ def content_readiness_issues(revision: CourseRevision) -> list[dict[str, str]]:
                     "message": f"La unidad «{unit.title}» no contiene contenido académico significativo.",
                 }
             )
+        issues.extend(_asset_readiness_issues(unit, current))
     return issues
+
+
+def _asset_readiness_issues(
+    unit: CourseUnit, content_version: object
+) -> list[dict[str, str]]:
+    from .models import UnitContentVersion
+
+    assert isinstance(content_version, UnitContentVersion)
+    expected: set[tuple[str, str]] = set()
+    for node, _path in iter_nodes(content_version.content):
+        node_type = str(node.get("type", ""))
+        if node_type not in ASSET_NODE_KINDS:
+            continue
+        attrs = node.get("attrs")
+        if not isinstance(attrs, dict):
+            continue
+        node_id = str(attrs.get("nodeId", ""))
+        expected.add((node_id, "primary"))
+        if node_type == "videoAsset" and attrs.get("captionsAssetVersionId"):
+            expected.add((node_id, "captions"))
+    references = list(
+        content_version.asset_references.select_related("asset_version__asset")
+        .prefetch_related("asset_version__variants")
+        .all()
+    )
+    actual = {(str(item.node_id), item.reference_role) for item in references}
+    base_path = f"modules.{unit.module_id}.units.{unit.id}.content"
+    if actual != expected:
+        return [
+            {
+                "code": "asset_missing",
+                "path": base_path,
+                "message": "Las referencias de assets no coinciden con el documento.",
+            }
+        ]
+    problems: list[dict[str, str]] = []
+    required_roles = {
+        AssetKind.IMAGE: {VariantRole.IMAGE_THUMBNAIL, VariantRole.IMAGE_MEDIUM},
+        AssetKind.AUDIO: {VariantRole.AUDIO_PLAYBACK},
+        AssetKind.VIDEO: {VariantRole.VIDEO_PLAYBACK, VariantRole.VIDEO_POSTER},
+        AssetKind.CAPTION: {VariantRole.CAPTION_NORMALIZED},
+    }
+    for reference in references:
+        version = reference.asset_version
+        code = ""
+        if version.asset.organization_id != revision_organization_id(unit):
+            code = "asset_missing"
+        elif version.status != AssetVersionStatus.READY or not version.sha256:
+            code = (
+                "caption_not_ready"
+                if version.asset.kind == AssetKind.CAPTION
+                else "asset_not_ready"
+            )
+        else:
+            present = {variant.role for variant in version.variants.all()}
+            if not required_roles.get(version.asset.kind, set()).issubset(present):
+                code = "asset_variant_missing"
+        if code:
+            problems.append(
+                {
+                    "code": code,
+                    "path": f"{base_path}.assets.{reference.node_id}",
+                    "message": "El asset referenciado no está listo para publicación.",
+                }
+            )
+    return problems
+
+
+def revision_organization_id(unit: CourseUnit) -> object:
+    return unit.module.revision.course.organization_id

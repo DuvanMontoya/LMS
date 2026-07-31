@@ -220,6 +220,23 @@ class LearningUnitSerializer(serializers.Serializer):
     content = serializers.DictField()
     progress = ProgressSerializer()
     navigation = serializers.DictField()
+    assets = serializers.ListField(child=serializers.DictField(), required=False)
+
+
+class LearningAssetAccessSerializer(serializers.Serializer):
+    unit_id = serializers.UUIDField()
+    asset_version_ids = serializers.ListField(
+        child=serializers.UUIDField(), min_length=1, max_length=50
+    )
+
+    def validate_asset_version_ids(self, value: list[object]) -> list[object]:
+        if len(set(value)) != len(value):
+            raise serializers.ValidationError("No repitas versiones de asset.")
+        return value
+
+
+class LearningAssetAccessResponseSerializer(serializers.Serializer):
+    assets = serializers.ListField(child=serializers.DictField())
 
 
 class CompleteUnitSerializer(serializers.Serializer):

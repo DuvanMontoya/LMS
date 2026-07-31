@@ -88,3 +88,12 @@ pools, jobs, grade versions, regrading, gradebook y analítica. Celery sólo lla
 servicios de assessments; no introduce un dominio ni persistencia alterna.
 Redis no contiene grades. `courses`, `content`, `publishing` y `learning`
 continúan sin importar assessments; el gradebook no modifica `CourseProgress`.
+
+### Assets
+
+`domain.assets` posee assets lógicos, versiones/variantes, sesiones/partes,
+jobs/eventos, S3, cuarentena, procesamiento y descriptors. No importa
+`content`, `publishing` ni `learning`. Esos módulos pueden depender de sus
+contratos estables: content materializa referencias, publishing manifiestos y
+learning entrega release-pinned. `courses` continúa sin importar content/assets
+y assessments permanece desacoplado.

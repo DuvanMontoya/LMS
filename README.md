@@ -641,3 +641,71 @@ Si un resultado permanece “en proceso”, verifica `pnpm async:status` y revis
 `pnpm async:logs`; nunca reescribas un grade histórico. `async:down` detiene el
 worker sin eliminar PostgreSQL. El E2E avanzado usa base, prefijo Redis y worker
 efímeros y los limpia siempre.
+
+## Assets académicos y multimedia
+
+La plataforma usa AWS S3 como contrato productivo y LocalStack sólo en
+desarrollo/CI. Dos buckets privados separan `quarantine` de objetos listos:
+quarantine expira y aborta multipart incompletos; private tiene versioning.
+Encryption, block-public-access y CORS de origen exacto se aplican con
+`pnpm storage:init`. Los endpoints internos, credenciales y keys generadas con
+UUID quedan exclusivamente en backend.
+
+El navegador calcula SHA-256 e inicializa una carga directa. Archivos pequeños
+usan presigned POST y los grandes multipart con máximo tres partes concurrentes,
+checksum por parte, progreso y cancelación. Django sólo recibe metadata; al
+completar verifica `HeadObject`, tamaño y checksum. ETag no sustituye SHA-256.
+Después se crea un job durable y el objeto continúa inaccesible en cuarentena.
+
+ClamAV 1.5.3 analiza primero y falla cerrado. El media worker Linux no root usa
+FFmpeg/ffprobe 8.1.2 compilado desde source firmado, Pillow 12.3.0 y pypdf
+6.14.2. Procesa JPEG/PNG/WebP, PDF, audio, video, VTT y datasets CSV/JSON/text;
+rechaza SVG, HTML, archives, executables, spoofing, animación, bombas, PDF
+cifrado, UTF-8 inválido y límites excedidos. Produce variantes append-only,
+elimina metadata y limpia temporales. FFmpeg incluye GPL/libx264; Boto3 es
+Apache-2.0, Pillow MIT-CMU y pypdf BSD-3-Clause.
+
+`Asset` es la identidad archivables; `AssetVersion` fija bytes y
+`AssetVariant` fija derivados. Upload no significa READY y READY no significa
+published. Content v2 guarda `assetVersionId`, alt/transcript/captions;
+publication v2 incluye un manifest fijado en el digest; learning entrega sólo
+descriptores temporales de variantes autorizadas por matrícula/release. Un
+`current_version` nuevo no altera releases históricos.
+
+Superficies locales:
+
+- `/organizaciones/organizacion-demo/recursos`
+- `/organizaciones/organizacion-demo/recursos/nuevo`
+- `/organizaciones/organizacion-demo/recursos/<asset-id>`
+
+Operación reproducible:
+
+```powershell
+pnpm storage:validate
+pnpm storage:init
+pnpm storage:status
+pnpm media:build
+pnpm media:up
+pnpm media:status
+pnpm demo:organizations
+pnpm assets:demo
+pnpm assets:smoke
+pnpm assets:check
+pnpm assets:test
+pnpm assets:e2e
+```
+
+`assets:demo` es development-only e idempotente; genera imagen, PDF, audio,
+video, VTT, CSV y JSON propios y espera el pipeline real. `assets:smoke`
+comprueba storage, worker, ClamAV/FFmpeg, reconciliación y rechazo EICAR creado
+en runtime. Logs: `pnpm media:logs`. Para detener: `pnpm media:down`. Para
+limpiar sólo buckets locales: `pnpm storage:reset-local`; nunca se usa en
+producción.
+
+Errores frecuentes: un worker sin la cola `media` deja jobs pendientes; ClamAV
+no healthy impide procesar; CORS/origen distinto bloquea el navegador; un
+checksum distinto rechaza complete; una URL expirada exige refresh, no
+persistencia. Revisa `media:status`, `media:logs` y el detalle del job. HLS,
+CDN, OCR y transcripción automática están deliberadamente fuera de Phase 15.
+La arquitectura, límites y threat model viven en
+`docs/architecture/ASSETS_AND_MEDIA.md` y ADR 0025.

@@ -4,8 +4,11 @@ import type { ReactNode } from 'react';
 
 import { contentEditorExtensions } from '@/lib/content/editor/extensions';
 import type { LMSUnitAcademicDocumentVersion1 } from '@/lib/content/generated/unit-document-v1';
+import type { LMSUnitAcademicDocumentVersion2 } from '@/lib/content/generated/unit-document-v2';
 import { safeContentHref } from '@/lib/content/schema/validator';
+import type { AssetAccessDescriptor } from '@/lib/assets/api';
 
+import { AcademicAsset } from './academic-asset';
 import { CopyCodeButton } from './copy-code-button';
 import { MathJaxFormula } from './mathjax-formula';
 
@@ -30,8 +33,44 @@ function semanticNodeProps(node: { attrs: Record<string, unknown> }) {
 }
 
 export function AcademicDocument({
+  assets = [],
   document,
-}: Readonly<{ document: LMSUnitAcademicDocumentVersion1 }>) {
+  refreshContext,
+}: Readonly<{
+  assets?: readonly AssetAccessDescriptor[];
+  document: LMSUnitAcademicDocumentVersion1 | LMSUnitAcademicDocumentVersion2;
+  refreshContext?: {
+    enrollmentId: string;
+    slug: string;
+    unitId: string;
+  };
+}>) {
+  const descriptorByVersion = new Map(
+    assets.map((descriptor) => [descriptor.asset_version_id, descriptor]),
+  );
+  const asset = (
+    kind: 'audio' | 'dataset' | 'document' | 'image' | 'video',
+    node: { attrs: Record<string, unknown> },
+  ) => {
+    const versionId = String(node.attrs.assetVersionId ?? '');
+    const captionId =
+      typeof node.attrs.captionsAssetVersionId === 'string'
+        ? node.attrs.captionsAssetVersionId
+        : '';
+    return (
+      <AcademicAsset
+        attrs={node.attrs}
+        kind={kind}
+        {...(descriptorByVersion.get(captionId)
+          ? { captionDescriptor: descriptorByVersion.get(captionId)! }
+          : {})}
+        {...(descriptorByVersion.get(versionId)
+          ? { descriptor: descriptorByVersion.get(versionId)! }
+          : {})}
+        {...(refreshContext ? { refreshContext } : {})}
+      />
+    );
+  };
   return (
     <article className="academic-document" data-testid="academic-document">
       {renderToReactElement({
@@ -64,6 +103,7 @@ export function AcademicDocument({
             },
           },
           nodeMapping: {
+            audioAsset: ({ node }) => asset('audio', node),
             blockquote: ({ children, node }) => (
               <blockquote
                 {...semanticNodeProps(node)}
@@ -120,6 +160,8 @@ export function AcademicDocument({
               </figure>
             ),
             hardBreak: () => <br />,
+            datasetAsset: ({ node }) => asset('dataset', node),
+            documentAsset: ({ node }) => asset('document', node),
             heading: ({ children, node }) => {
               const level = Number(node.attrs.level);
               if (level === 2)
@@ -153,6 +195,7 @@ export function AcademicDocument({
               );
             },
             horizontalRule: () => <hr className="border-slate-300" />,
+            imageAsset: ({ node }) => asset('image', node),
             inlineMath: ({ node }) => (
               <MathJaxFormula latex={String(node.attrs.latex ?? '')} />
             ),
@@ -229,6 +272,7 @@ export function AcademicDocument({
                   <tr>{children}</tr>
                 </tbody>
               ),
+            videoAsset: ({ node }) => asset('video', node),
           },
           unhandledMark: ({ children }) => children as ReactNode,
           unhandledNode: ({ node }) => (

@@ -90,6 +90,16 @@ class LearningUnitNotFound(LearningDomainError):
     status_code = 404
 
 
+class LearningAssetAccessDenied(LearningDomainError):
+    code = "asset_access_denied"
+    status_code = 403
+
+
+class LearningAssetNotInRelease(LearningDomainError):
+    code = "asset_access_not_in_release"
+    status_code = 404
+
+
 class LearningPositionInvalid(LearningDomainError):
     code = "learning_position_invalid"
 

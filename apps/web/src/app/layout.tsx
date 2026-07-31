@@ -6,10 +6,18 @@ import { QueryProvider } from '@/lib/query/provider';
 import { cn } from '@/lib/utils';
 import './globals.css';
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist-sans' });
+const geist = Geist({
+  subsets: ['latin'],
+  variable: '--font-geist-sans',
+  // The application uses the variable through the root class but does not
+  // need either face during the first paint. Avoid emitting a misleading
+  // preload that browsers report as unused on protected routes.
+  preload: false,
+});
 const geistMono = Geist_Mono({
   subsets: ['latin'],
   variable: '--font-geist-mono',
+  preload: false,
 });
 
 export const metadata: Metadata = {

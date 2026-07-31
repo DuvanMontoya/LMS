@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
+from domain.assets.models import AssetVersion
 from domain.courses.models import CourseUnit
 
 if TYPE_CHECKING:
@@ -134,3 +135,52 @@ class UnitContentVersion(models.Model):
 
     def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         raise ValidationError("Las versiones de contenido no se eliminan.")
+
+
+class ContentAssetReference(models.Model):
+    class ReferenceRole(models.TextChoices):
+        PRIMARY = "primary", "Primary"
+        CAPTIONS = "captions", "Captions"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    content_version = models.ForeignKey(
+        UnitContentVersion,
+        on_delete=models.PROTECT,
+        related_name="asset_references",
+    )
+    node_id = models.UUIDField(editable=False)
+    asset_version = models.ForeignKey(
+        AssetVersion,
+        on_delete=models.PROTECT,
+        related_name="content_references",
+    )
+    reference_role = models.CharField(
+        max_length=16, choices=ReferenceRole.choices, editable=False
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["content_version", "node_id", "reference_role"],
+                name="content_asset_ref_node_role_unique",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=["content_version"], name="content_asset_ref_version_ix"
+            ),
+            models.Index(fields=["asset_version"], name="content_asset_ref_asset_ix"),
+            models.Index(fields=["node_id"], name="content_asset_ref_node_ix"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.content_version_id}:{self.node_id}:{self.reference_role}"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if not self._state.adding:
+            raise ValidationError("Las referencias de assets son inmutables.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
+        raise ValidationError("Las referencias de assets no se eliminan.")

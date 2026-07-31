@@ -259,3 +259,12 @@ de job en JSON y nunca es fuente de verdad. El HTTP sólo valida y encola; SymPy
 corre en el worker Linux. Regrading parte de una revisión explícita, bloquea e
 idempotiza por intento y conserva manual grades. Gradebook y analytics son
 proyecciones reconstruibles sobre releases/grades, no progreso del curso.
+
+## Assets académicos privados
+
+ADR 0025 añade `domain.assets` como proveedor aguas arriba. AWS S3 es el
+contrato, LocalStack sólo una implementación local. Browser sube directamente a
+quarantine; un job Celery durable ejecuta ClamAV y pipelines acotados antes de
+crear variantes privadas. Content fija `AssetVersion`, publication incluye su
+manifest en el digest y learning firma variantes sólo para la matrícula y
+release efectivos. Véanse los diagramas en `ASSETS_AND_MEDIA.md`.

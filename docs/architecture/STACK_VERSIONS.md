@@ -104,3 +104,19 @@ React Hook Form 7.83.0, Zod 4.4.3, Playwright 1.62.0 y axe 4.12.1.
 No se instalaron NumPy, SciPy, pandas, ANTLR, parser LaTeX backend ni result
 backend de Celery. PostgreSQL 18.4 conserva estado durable; Redis 8.8.1 DB 2 es
 broker y DB 1 continúa reservada a cache auth.
+
+## Phase 15 — media
+
+| Componente | Pin | Licencia/uso |
+| --- | --- | --- |
+| boto3 | 1.43.61 | Apache-2.0; gateway S3 directo |
+| Pillow | 12.3.0 | MIT-CMU; imágenes |
+| pypdf | 6.14.2 | BSD-3-Clause; inspección PDF |
+| FFmpeg | 8.1.2 | GPL por libx264; source/PGP verificados |
+| ClamAV | 1.5.3 | GPL-2.0; antivirus oficial |
+| LocalStack | 4.14.0 + digest | Community local, sólo S3 |
+
+Celery continúa en 5.6.3. `django-storages`, python-magic, MinIO, HLS, OCR y
+transcripción no se incorporaron. LocalStack 4.14.0 es un pin de compatibilidad
+local anterior al requisito de token de versiones 2026.07; reevaluar antes de
+actualizar.

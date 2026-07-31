@@ -148,3 +148,23 @@ terceros como autoridad.
 | Zod 4 | https://zod.dev/basics | Validación de UUID, fechas y payloads antes de mutar. |
 | Playwright | https://playwright.dev/docs/accessibility-testing | E2E visible, locators por rol y axe A/AA. |
 | MDN | https://developer.mozilla.org/docs/Web/API/Intersection_Observer_API ; https://developer.mozilla.org/docs/Web/API/Window/pagehide_event ; https://developer.mozilla.org/docs/Web/API/Request/keepalive | Posición visible, debounce y flush de navegación. |
+
+## Prompt 15 consultation — 2026-07-31
+
+| Tema | Fuente oficial | Evidencia aplicada |
+| --- | --- | --- |
+| AWS S3 uploads/checksums | https://docs.aws.amazon.com/AmazonS3/latest/userguide/PresignedUrlUploadObject.html ; https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity-upload.html ; https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpuoverview.html | Presigned upload, checksum SHA-256 y flujo multipart; ETag no es digest autoritativo. |
+| AWS S3 controls | https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html ; https://docs.aws.amazon.com/AmazonS3/latest/userguide/Versioning.html ; https://docs.aws.amazon.com/AmazonS3/latest/userguide/intro-lifecycle-rules.html | Block public access, versioning, lifecycle y abort multipart. |
+| Boto3 1.43.61 | https://boto3.amazonaws.com/v1/documentation/api/latest/index.html ; https://pypi.org/project/boto3/1.43.61/ | Cliente S3 directo, Python 3.13 y Apache-2.0. |
+| Pillow 12.3.0 | https://pillow.readthedocs.io/en/stable/releasenotes/12.3.0.html ; https://pypi.org/project/pillow/12.3.0/ | Verificación, EXIF transpose, límites/decompression bombs y MIT-CMU. |
+| pypdf 6.14.2 | https://pypdf.readthedocs.io/en/stable/ ; https://pypi.org/project/pypdf/6.14.2/ | PDF/pages/encryption y BSD-3-Clause. |
+| FFmpeg 8.1.2 | https://ffmpeg.org/download.html ; https://ffmpeg.org/releases/ ; https://ffmpeg.org/legal.html | Tarball estable, firma PGP `FCF986EA15E6E293A5644F10B4322F04D67658D8`, ffprobe y obligaciones GPL/libx264. |
+| ClamAV 1.5.3 | https://docs.clamav.net/manual/Installing/Docker.html ; https://docs.clamav.net/manual/Usage/Scanning.html | Imagen oficial, daemon/INSTREAM y fail closed. |
+| LocalStack | https://docs.localstack.cloud/aws/services/s3/ ; https://github.com/localstack/localstack/releases/tag/v4.14.0 | Emulación S3 local fijada; versiones recientes con autenticación/licencia no se adoptaron. |
+| Celery 5.6.3 | https://docs.celeryq.dev/en/stable/django/first-steps-with-django.html ; https://docs.celeryq.dev/en/stable/userguide/tasks.html | Dispatch after commit, acks late, retries e idempotencia. |
+| WebVTT | https://www.w3.org/TR/webvtt1/ | Gramática, cues y asociación `<track>`. |
+| WCAG 2.2 / HTML media | https://www.w3.org/TR/WCAG22/ ; https://html.spec.whatwg.org/multipage/media.html | Alt/decorative, transcript, captions, progreso y controles nativos. |
+
+PyPI, repositorios oficiales, registries e imágenes publicadas confirmaron pins
+y licencias. `django-storages` 1.14.6 fue rechazado por no declarar Django 6 ni
+Python 3.13; MinIO fue rechazado tras el archivado de su repositorio comunitario.

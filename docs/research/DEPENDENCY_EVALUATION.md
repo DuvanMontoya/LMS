@@ -142,3 +142,21 @@ resuelven una carencia del corte inicial y aumentarían autoridad, superficie de
 ataque o irreproducibilidad. La alternativa de retirada es eliminar el módulo
 antes de producción; una vez exista historial, las migraciones append-only
 exigen plan explícito.
+
+## Phase 15
+
+| Dependencia | Problema | Licencia | Owner | Alternativa/retiro |
+| --- | --- | --- | --- | --- |
+| boto3 1.43.61 | S3, presign y checksums con contrato AWS | Apache-2.0 | assets | adaptador AWS SDK futuro conservando gateway |
+| Pillow 12.3.0 | decodificación y variantes de imagen seguras | MIT-CMU | assets processing | retirar soporte de imagen/variantes |
+| pypdf 6.14.2 | inspección acotada de PDF/cifrado/páginas | BSD-3-Clause | assets processing | aceptar sólo MIME sin metadata, no recomendado |
+| FFmpeg 8.1.2 + libx264 | probe/transcode audio y video | GPL | media image | build LGPL sin x264 o servicio externo mediante ADR |
+| ClamAV 1.5.3 | detección malware antes de entrega | GPL-2.0 | platform security | proveedor antivirus equivalente fail-closed |
+| LocalStack 4.14.0 | fidelidad S3 local/CI | licencia Community del pin | developer experience | pruebas contra cuenta AWS aislada |
+
+No se añadió `django-storages`: Boto3 directo mantiene explícitos checksums,
+multipart y buckets sin una abstracción que no declara el stack. No se añadió
+python-magic: cada parser combina allowlist, firma y validación propia. No se
+añadieron MinIO, Axios, tus, Uppy, HLS, OCR o speech-to-text. FFmpeg introduce
+la obligación material de distribuir avisos/source correspondiente; la imagen
+documenta origen, fingerprint y build reproducible.

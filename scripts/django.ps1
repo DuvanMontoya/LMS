@@ -164,6 +164,13 @@ switch ($Action) {
         [Environment]::SetEnvironmentVariable('EMAIL_PORT', '587', 'Process')
         [Environment]::SetEnvironmentVariable('EMAIL_HOST_USER', 'placeholder', 'Process')
         [Environment]::SetEnvironmentVariable('EMAIL_HOST_PASSWORD', 'placeholder', 'Process')
+        [Environment]::SetEnvironmentVariable('ASSET_S3_REGION', 'us-east-1', 'Process')
+        [Environment]::SetEnvironmentVariable('ASSET_QUARANTINE_BUCKET', 'lms-production-check-quarantine', 'Process')
+        [Environment]::SetEnvironmentVariable('ASSET_PRIVATE_BUCKET', 'lms-production-check-private', 'Process')
+        [Environment]::SetEnvironmentVariable('ASSET_S3_INTERNAL_ENDPOINT', $null, 'Process')
+        [Environment]::SetEnvironmentVariable('ASSET_S3_PUBLIC_ENDPOINT', $null, 'Process')
+        [Environment]::SetEnvironmentVariable('ASSET_S3_ACCESS_KEY_ID', $null, 'Process')
+        [Environment]::SetEnvironmentVariable('ASSET_S3_SECRET_ACCESS_KEY', $null, 'Process')
         Invoke-Django @('check', '--deploy')
     }
     'MakeMigrationsCheck' { Invoke-Django @('makemigrations', '--check', '--dry-run') }

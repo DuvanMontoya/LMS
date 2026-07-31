@@ -4,18 +4,33 @@ import { ReactNodeViewRenderer } from '@tiptap/react';
 
 import {
   AcademicCodeNodeView,
+  AssetNodeView,
   DisplayMathNodeView,
   InlineMathNodeView,
 } from '@/components/content/editor-node-views';
 
 import {
   AcademicCodeBlock,
+  AudioAsset,
   contentEditorExtensions,
   DisplayMath,
+  DocumentAsset,
+  DatasetAsset,
+  ImageAsset,
   InlineMath,
+  VideoAsset,
 } from './extensions';
 
-const interactiveNames = new Set(['codeBlock', 'displayMath', 'inlineMath']);
+const interactiveNames = new Set([
+  'audioAsset',
+  'codeBlock',
+  'datasetAsset',
+  'displayMath',
+  'documentAsset',
+  'imageAsset',
+  'inlineMath',
+  'videoAsset',
+]);
 
 export const interactiveContentEditorExtensions = [
   ...contentEditorExtensions.filter(
@@ -36,4 +51,12 @@ export const interactiveContentEditorExtensions = [
       return ReactNodeViewRenderer(InlineMathNodeView);
     },
   }),
+  ...[ImageAsset, AudioAsset, VideoAsset, DocumentAsset, DatasetAsset].map(
+    (extension) =>
+      extension.extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(AssetNodeView);
+        },
+      }),
+  ),
 ];

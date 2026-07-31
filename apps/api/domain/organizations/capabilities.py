@@ -60,6 +60,13 @@ class Capability(StrEnum):
     ASSESSMENT_GRADEBOOK_MANAGE = "assessment.gradebook.manage"
     ASSESSMENT_ANALYTICS_VIEW = "assessment.analytics.view"
     ASSESSMENT_ANALYTICS_REFRESH = "assessment.analytics.refresh"
+    ASSET_LIBRARY_VIEW = "asset.library.view"
+    ASSET_LIBRARY_MANAGE = "asset.library.manage"
+    ASSET_UPLOAD = "asset.upload"
+    ASSET_ARCHIVE = "asset.archive"
+    ASSET_ORIGINAL_DOWNLOAD = "asset.original.download"
+    ASSET_REPROCESS = "asset.reprocess"
+    ASSET_SECURITY_VIEW = "asset.security.view"
 
 
 _ALL_CAPABILITIES = frozenset(Capability)
@@ -102,6 +109,11 @@ _COURSE_AUTHOR_CAPABILITIES = frozenset(
         Capability.ASSESSMENT_REGRADING_VIEW,
         Capability.ASSESSMENT_GRADEBOOK_VIEW,
         Capability.ASSESSMENT_ANALYTICS_VIEW,
+        Capability.ASSET_LIBRARY_VIEW,
+        Capability.ASSET_LIBRARY_MANAGE,
+        Capability.ASSET_UPLOAD,
+        Capability.ASSET_ORIGINAL_DOWNLOAD,
+        Capability.ASSET_REPROCESS,
     }
 )
 
@@ -132,6 +144,7 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.ASSESSMENT_RESULTS_VIEW,
                 Capability.ASSESSMENT_REGRADING_VIEW,
                 Capability.ASSESSMENT_ANALYTICS_VIEW,
+                Capability.ASSET_LIBRARY_VIEW,
             }
         ),
         RoleCode.INSTRUCTOR: _MEMBER_READ_CAPABILITIES
@@ -156,6 +169,7 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.ASSESSMENT_GRADEBOOK_MANAGE,
                 Capability.ASSESSMENT_ANALYTICS_VIEW,
                 Capability.ASSESSMENT_ANALYTICS_REFRESH,
+                Capability.ASSET_LIBRARY_VIEW,
             }
         ),
         RoleCode.LEARNER: _MEMBER_READ_CAPABILITIES

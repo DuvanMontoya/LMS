@@ -24,3 +24,12 @@ if not _redis_prefix.startswith("lms-e2e-"):
 EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
 EMAIL_FILE_PATH = _mail_path
 CACHES["default"]["KEY_PREFIX"] = _redis_prefix  # noqa: F405
+ASSET_S3_INTERNAL_ENDPOINT = os.environ.get(
+    "ASSET_S3_INTERNAL_ENDPOINT", "http://127.0.0.1:4566"
+)
+ASSET_S3_PUBLIC_ENDPOINT = os.environ.get(
+    "ASSET_S3_PUBLIC_ENDPOINT", "http://127.0.0.1:4566"
+)
+ASSET_S3_ACCESS_KEY_ID = "test"
+ASSET_S3_SECRET_ACCESS_KEY = "test"
+ASSET_S3_FORCE_PATH_STYLE = True

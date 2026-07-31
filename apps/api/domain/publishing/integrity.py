@@ -8,7 +8,7 @@ from domain.courses.models import Course
 
 from .canonical import canonical_json_bytes
 from .models import CoursePublication, CourseRelease
-from .schemas import CURRENT_RELEASE_SCHEMA_VERSION, validate_release_snapshot
+from .schemas import validate_release_snapshot
 from .snapshots import snapshot_metrics
 
 
@@ -32,8 +32,15 @@ def verify_release(release: CourseRelease) -> IntegrityResult:
     def add(code: str, detail: str) -> None:
         issues.append(IntegrityIssue(code, release.number, detail))
 
-    if release.schema_version != CURRENT_RELEASE_SCHEMA_VERSION:
+    snapshot_version = (
+        release.snapshot.get("schema_version")
+        if isinstance(release.snapshot, dict)
+        else None
+    )
+    if release.schema_version not in {1, 2}:
         add("schema_unsupported", "La versión del schema no está soportada.")
+    elif snapshot_version != release.schema_version:
+        add("schema_mismatch", "La versión del modelo y el snapshot no coincide.")
     try:
         validate_release_snapshot(release.snapshot)
     except Exception:

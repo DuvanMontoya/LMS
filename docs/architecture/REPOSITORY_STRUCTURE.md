@@ -105,3 +105,11 @@ Prompt 14 adapta la estructura real sin crear apps paralelas:
 - `schemas/assessment/`: MathJSON, response, scoring y grading revision.
 - `evaluaciones/regrading`, `gradebooks`, `analitica`: rutas Next protegidas.
 - `scripts/async.ps1`: ciclo de vida reproducible del worker.
+- `apps/api/domain/assets/`: modelos, policies, uploads, storage, processing,
+  delivery, API, comandos y pruebas de assets.
+- `apps/api/Dockerfile.media-worker` e `infrastructure/media/`: build firmado
+  de FFmpeg y worker privado no root.
+- `apps/web/src/components/assets/`, `src/lib/assets/` y rutas `recursos/`:
+  library, carga, detalle, picker y renderer.
+- `scripts/storage.ps1`, `scripts/media.ps1`, `scripts/assets.ps1`: operación
+  reproducible de Phase 15.

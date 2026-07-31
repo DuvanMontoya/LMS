@@ -64,4 +64,12 @@ allowlisted, pools persistidos, grading y regrading durable con Celery,
 versiones append-only de grade, gradebook por release y snapshots analíticos.
 Las migraciones `0006`–`0008`, ADR 0024, OpenAPI, tipos generados, worker Linux,
 demo y Chromium mantienen las fronteras de Phase 13. El siguiente alcance es
-Prompt 15; media, archivos, S3, ejecución de código, QTI e IRT siguen excluidos.
+Prompt 15.
+
+## Phase 15 — Assets académicos y multimedia
+
+Completada localmente el 2026-07-31. ADR 0025 introduce `domain.assets`, S3
+privado/LocalStack, uploads simples/multipart, cuarentena ClamAV, procesamiento
+Pillow/pypdf/FFmpeg, versiones/variantes inmutables, content/publication schema
+v2 y entrega release-pinned. HLS, CDN, OCR y transcripción quedan aplazados.
+La fase siguiente es Prompt 16; no fue iniciada.

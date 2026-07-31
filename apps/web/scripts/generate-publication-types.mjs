@@ -8,18 +8,6 @@ import prettier from 'prettier';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(scriptDirectory, '..', '..', '..');
-const releaseSourcePath = path.join(
-  repositoryRoot,
-  'schemas',
-  'publication',
-  'course-release-v1.schema.json',
-);
-const contentSourcePath = path.join(
-  repositoryRoot,
-  'schemas',
-  'content',
-  'unit-document-v1.schema.json',
-);
 const outputDirectory = path.join(
   repositoryRoot,
   'apps',
@@ -29,17 +17,7 @@ const outputDirectory = path.join(
   'publishing',
   'generated',
 );
-const typePath = path.join(outputDirectory, 'course-release-v1.ts');
-const releaseSchemaPath = path.join(
-  outputDirectory,
-  'course-release-v1.schema.json',
-);
-const contentSchemaPath = path.join(
-  outputDirectory,
-  'unit-document-v1.schema.json',
-);
 const checkOnly = process.argv.slice(2).includes('--check');
-const contentReference = 'urn:lms:content:unit-document:1';
 
 if (process.argv.slice(2).some((argument) => argument !== '--check')) {
   throw new Error(
@@ -47,80 +25,96 @@ if (process.argv.slice(2).some((argument) => argument !== '--check')) {
   );
 }
 
-const [releaseSource, contentSource] = await Promise.all([
-  readFile(releaseSourcePath, 'utf8'),
-  readFile(contentSourcePath, 'utf8'),
-]);
-const releaseSchema = JSON.parse(releaseSource);
-const contentSchema = JSON.parse(contentSource);
-const ajv = new Ajv2020({
-  allErrors: true,
-  strict: true,
-  coerceTypes: false,
-  removeAdditional: false,
-  useDefaults: false,
-  loadSchema: undefined,
-});
-ajv.addFormat(
-  'uuid',
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-);
-ajv.addSchema(contentSchema);
-ajv.compile(releaseSchema);
+const outputs = [];
+for (const version of [1, 2]) {
+  const releaseSourcePath = path.join(
+    repositoryRoot,
+    'schemas',
+    'publication',
+    `course-release-v${version}.schema.json`,
+  );
+  const contentSourcePath = path.join(
+    repositoryRoot,
+    'schemas',
+    'content',
+    `unit-document-v${version}.schema.json`,
+  );
+  const [releaseSource, contentSource] = await Promise.all([
+    readFile(releaseSourcePath, 'utf8'),
+    readFile(contentSourcePath, 'utf8'),
+  ]);
+  const releaseSchema = JSON.parse(releaseSource);
+  const contentSchema = JSON.parse(contentSource);
+  const ajv = new Ajv2020({
+    allErrors: true,
+    strict: true,
+    coerceTypes: false,
+    removeAdditional: false,
+    useDefaults: false,
+    loadSchema: undefined,
+  });
+  ajv.addFormat(
+    'uuid',
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  );
+  ajv.addSchema(contentSchema);
+  ajv.compile(releaseSchema);
 
-function resolveContentReference(value) {
-  if (Array.isArray(value)) return value.map(resolveContentReference);
-  if (value && typeof value === 'object') {
-    if (value.$ref === contentReference) {
-      const contentContract = structuredClone(contentSchema);
-      delete contentContract.$defs;
-      delete contentContract.$id;
-      delete contentContract.$schema;
-      return contentContract;
+  const contentReference = `urn:lms:content:unit-document:${version}`;
+  function resolveContentReference(value) {
+    if (Array.isArray(value)) return value.map(resolveContentReference);
+    if (value && typeof value === 'object') {
+      if (value.$ref === contentReference) {
+        const contentContract = structuredClone(contentSchema);
+        delete contentContract.$defs;
+        delete contentContract.$id;
+        delete contentContract.$schema;
+        return contentContract;
+      }
+      return Object.fromEntries(
+        Object.entries(value).map(([key, item]) => [
+          key,
+          resolveContentReference(item),
+        ]),
+      );
     }
-    return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [
-        key,
-        resolveContentReference(item),
-      ]),
-    );
+    return value;
   }
-  return value;
-}
 
-const typeSchema = resolveContentReference(releaseSchema);
-typeSchema.$defs = {
-  ...typeSchema.$defs,
-  ...structuredClone(contentSchema.$defs),
-};
-const generatedType = await prettier.format(
-  `${await compile(typeSchema, 'CourseReleaseSnapshotV1', {
-    bannerComment:
-      '/* Generated from schemas/publication/course-release-v1.schema.json. Do not edit. */',
-    format: false,
-    unknownAny: false,
-  })}
-export type CourseReleaseSnapshotV1 = LMSImmutableCourseReleaseVersion1;
+  const typeSchema = resolveContentReference(releaseSchema);
+  typeSchema.$defs = {
+    ...typeSchema.$defs,
+    ...structuredClone(contentSchema.$defs),
+  };
+  const generatedType = await prettier.format(
+    `${await compile(typeSchema, `CourseReleaseSnapshotV${version}`, {
+      bannerComment: `${version === 2 ? '/* eslint-disable @typescript-eslint/no-explicit-any */\n' : ''}/* Generated from schemas/publication/course-release-v${version}.schema.json. Do not edit. */`,
+      format: false,
+      unknownAny: false,
+    })}
+export type CourseReleaseSnapshotV${version} = LMSImmutableCourseReleaseVersion${version};
 `,
-  {
-    parser: 'typescript',
-    singleQuote: true,
-    trailingComma: 'all',
-  },
-);
-const generatedReleaseSchema = await prettier.format(
-  JSON.stringify(releaseSchema),
-  { parser: 'json' },
-);
-const generatedContentSchema = await prettier.format(
-  JSON.stringify(contentSchema),
-  { parser: 'json' },
-);
-const outputs = [
-  [typePath, generatedType],
-  [releaseSchemaPath, generatedReleaseSchema],
-  [contentSchemaPath, generatedContentSchema],
-];
+    {
+      parser: 'typescript',
+      singleQuote: true,
+      trailingComma: 'all',
+    },
+  );
+  outputs.push(
+    [
+      path.join(outputDirectory, `course-release-v${version}.ts`),
+      generatedType,
+    ],
+    [
+      path.join(outputDirectory, `course-release-v${version}.schema.json`),
+      await prettier.format(JSON.stringify(releaseSchema), { parser: 'json' }),
+    ],
+    [
+      path.join(outputDirectory, `unit-document-v${version}.schema.json`),
+      await prettier.format(JSON.stringify(contentSchema), { parser: 'json' }),
+    ],
+  );
+}
 
 if (checkOnly) {
   const drift = [];

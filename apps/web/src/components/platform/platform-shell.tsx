@@ -10,6 +10,7 @@ import {
   FileCheck2,
   GitBranch,
   GraduationCap,
+  Images,
   LayoutDashboard,
   LibraryBig,
   ListTree,
@@ -251,6 +252,26 @@ function PlatformSidebar({
           visible:
             capabilities.has('course.authoring.view') ||
             capabilities.has('course.approved.view'),
+        },
+        {
+          children: [
+            {
+              href: `${organizationBase}/recursos`,
+              label: 'Todos los recursos',
+              exact: true,
+            },
+            {
+              href: `${organizationBase}/recursos/nuevo`,
+              icon: Plus,
+              label: 'Cargar recurso',
+              exact: true,
+              visible: capabilities.has('asset.upload'),
+            },
+          ],
+          href: `${organizationBase}/recursos`,
+          icon: Images,
+          label: 'Recursos',
+          visible: capabilities.has('asset.library.view'),
         },
         {
           href: `${organizationBase}/biblioteca`,

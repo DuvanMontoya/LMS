@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "domain.publishing",
     "domain.learning",
     "domain.assessments",
+    "domain.assets",
 ]
 
 MIDDLEWARE = [
@@ -155,6 +156,11 @@ if _frontend_parsed.hostname in {"127.0.0.1", "localhost"}:
     if _alt_origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(_alt_origin)
 
+# Direct browser uploads use the same exact local origins trusted by Django's
+# CSRF boundary. Production keeps the explicitly configured frontend origin;
+# development accepts only the localhost/loopback pair, never a wildcard.
+ASSET_S3_ALLOWED_ORIGINS = tuple(CSRF_TRUSTED_ORIGINS)
+
 
 ALLAUTH_TRUSTED_PROXY_COUNT = 0
 
@@ -236,7 +242,38 @@ CELERY_TASK_ROUTES = {
     "domain.assessments.tasks.refresh_analytics_task": {
         "queue": f"{ASSESSMENT_TASK_QUEUE_PREFIX}analytics"
     },
+    "domain.assets.processing.tasks.process_asset_version_task": {"queue": "media"},
 }
+CELERY_IMPORTS = ("domain.assets.processing.tasks",)
+
+ASSET_S3_REGION = os.environ.get("ASSET_S3_REGION", "us-east-1")
+ASSET_S3_INTERNAL_ENDPOINT = os.environ.get("ASSET_S3_INTERNAL_ENDPOINT", "")
+ASSET_S3_PUBLIC_ENDPOINT = os.environ.get("ASSET_S3_PUBLIC_ENDPOINT", "")
+ASSET_S3_ACCESS_KEY_ID = os.environ.get("ASSET_S3_ACCESS_KEY_ID", "")
+ASSET_S3_SECRET_ACCESS_KEY = os.environ.get("ASSET_S3_SECRET_ACCESS_KEY", "")
+ASSET_S3_FORCE_PATH_STYLE = (
+    os.environ.get("ASSET_S3_FORCE_PATH_STYLE", "false").lower() == "true"
+)
+ASSET_QUARANTINE_BUCKET = os.environ.get(
+    "ASSET_QUARANTINE_BUCKET", "lms-assets-quarantine"
+)
+ASSET_PRIVATE_BUCKET = os.environ.get("ASSET_PRIVATE_BUCKET", "lms-assets-private")
+ASSET_S3_SERVER_SIDE_ENCRYPTION = os.environ.get(
+    "ASSET_S3_SERVER_SIDE_ENCRYPTION", "AES256"
+)
+ASSET_UPLOAD_URL_TTL_SECONDS = int(
+    os.environ.get("ASSET_UPLOAD_URL_TTL_SECONDS", "900")
+)
+ASSET_DOWNLOAD_URL_TTL_SECONDS = int(
+    os.environ.get("ASSET_DOWNLOAD_URL_TTL_SECONDS", "600")
+)
+ASSET_CLAMAV_HOST = os.environ.get("ASSET_CLAMAV_HOST", "127.0.0.1")
+ASSET_CLAMAV_PORT = int(os.environ.get("ASSET_CLAMAV_PORT", "3310"))
+ASSET_CLAMAV_TIMEOUT_SECONDS = int(os.environ.get("ASSET_CLAMAV_TIMEOUT_SECONDS", "30"))
+ASSET_PIPELINE_NAME = "lms-media"
+ASSET_PIPELINE_VERSION = "1"
+ASSET_FFMPEG_PATH = os.environ.get("ASSET_FFMPEG_PATH", "ffmpeg")
+ASSET_FFPROBE_PATH = os.environ.get("ASSET_FFPROBE_PATH", "ffprobe")
 
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.Argon2PasswordHasher",
@@ -319,5 +356,12 @@ SPECTACULAR_SETTINGS = {
         "AssessmentAttemptAggregation": "domain.assessments.choices.AttemptAggregation",
         "AssessmentGradebookEntryStatus": "domain.assessments.choices.GradebookEntryStatus",
         "AssessmentGradebookSummaryStatus": "domain.assessments.choices.GradebookSummaryStatus",
+        "CatalogPrerequisiteKind": "domain.catalog.models.PrerequisiteKind",
+        "AssetKind": "domain.assets.choices.AssetKind",
+        "AssetVersionStatus": "domain.assets.choices.AssetVersionStatus",
+        "AssetUploadMethod": "domain.assets.choices.UploadMethod",
+        "AssetUploadStatus": "domain.assets.choices.UploadStatus",
+        "AssetProcessingJobStatus": "domain.assets.choices.ProcessingJobStatus",
+        "AssetVariantRole": "domain.assets.choices.VariantRole",
     },
 }

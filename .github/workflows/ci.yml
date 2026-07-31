@@ -52,6 +52,14 @@ jobs:
           pnpm run async:up
           pnpm run async:status
           pnpm run async:smoke
+          pnpm run storage:validate
+          pnpm run storage:init
+          pnpm run storage:status
+          pnpm run storage:smoke
+          pnpm run media:build
+          pnpm run media:up
+          pnpm run media:status
+          pnpm run media:smoke
           pnpm run organizations:check
           pnpm run organizations:test:policies
           pnpm run organizations:test:concurrency
@@ -78,6 +86,20 @@ jobs:
           pnpm run content:test:security
           pnpm run content:test
           pnpm run content:schema:api
+          pnpm run assets:check
+          pnpm run assets:migrations
+          pnpm run assets:test:uploads
+          pnpm run assets:test:security
+          pnpm run assets:test:processing
+          pnpm run assets:test:content
+          pnpm run assets:test:publishing
+          pnpm run assets:test:access
+          pnpm run assets:test:concurrency
+          pnpm run assets:test
+          pnpm run assets:schema
+          pnpm run assets:client:check
+          pnpm run organizations:demo
+          pnpm run assets:smoke
           pnpm run publishing:check
           pnpm run publishing:migrations
           pnpm run publishing:schema
@@ -143,6 +165,17 @@ jobs:
           pnpm run learning:e2e
           pnpm run assessments:e2e
           pnpm run assessments:advanced-e2e
+          pnpm run assets:e2e
+          pnpm run assets:visual
+      - name: Stop and clean academic media services
+        if: always()
+        shell: pwsh
+        run: |
+          try {
+            pnpm run storage:reset-local
+          } finally {
+            pnpm run media:down
+          }
       - name: Stop the asynchronous assessment worker
         if: always()
         run: pnpm run async:down

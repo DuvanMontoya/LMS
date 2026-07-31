@@ -11,6 +11,40 @@ export interface paths {
   '/api/v1/organizations/': {
     get: operations['organizations_list'];
   };
+  '/api/v1/organizations/{organization_slug}/assets/': {
+    get: operations['organizations_assets_list'];
+  };
+  '/api/v1/organizations/{organization_slug}/assets/{asset_id}/': {
+    get: operations['organizations_assets_retrieve'];
+    patch: operations['organizations_assets_partial_update'];
+  };
+  '/api/v1/organizations/{organization_slug}/assets/{asset_id}/archive/': {
+    post: operations['organizations_assets_archive_create'];
+  };
+  '/api/v1/organizations/{organization_slug}/assets/{asset_id}/restore/': {
+    post: operations['organizations_assets_restore_create'];
+  };
+  '/api/v1/organizations/{organization_slug}/assets/{asset_id}/usage/': {
+    get: operations['organizations_assets_usage_retrieve'];
+  };
+  '/api/v1/organizations/{organization_slug}/assets/{asset_id}/versions/': {
+    get: operations['organizations_assets_versions_list'];
+  };
+  '/api/v1/organizations/{organization_slug}/assets/{asset_id}/versions/{version_id}/': {
+    get: operations['organizations_assets_versions_retrieve'];
+  };
+  '/api/v1/organizations/{organization_slug}/assets/{asset_id}/versions/{version_id}/access/': {
+    post: operations['organizations_assets_versions_access_create'];
+  };
+  '/api/v1/organizations/{organization_slug}/assets/{asset_id}/versions/{version_id}/original-download/': {
+    post: operations['organizations_assets_versions_original_download_create'];
+  };
+  '/api/v1/organizations/{organization_slug}/assets/{asset_id}/versions/{version_id}/promote/': {
+    post: operations['organizations_assets_versions_promote_create'];
+  };
+  '/api/v1/organizations/{organization_slug}/assets/{asset_id}/versions/{version_id}/reprocess/': {
+    post: operations['organizations_assets_versions_reprocess_create'];
+  };
   '/api/v1/organizations/{organization_slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/content/': {
     get: operations['organizations_courses_revisions_units_content_retrieve'];
     put: operations['organizations_courses_revisions_units_content_update'];
@@ -26,6 +60,27 @@ export interface paths {
   };
   '/api/v1/organizations/{organization_slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/content/versions/{version_number}/restore/': {
     post: operations['organizations_courses_revisions_units_content_versions_restore_create'];
+  };
+  '/api/v1/organizations/{organization_slug}/processing-jobs/{job_id}/': {
+    get: operations['organizations_processing_jobs_retrieve'];
+  };
+  '/api/v1/organizations/{organization_slug}/uploads/': {
+    post: operations['organizations_uploads_create'];
+  };
+  '/api/v1/organizations/{organization_slug}/uploads/{session_id}/': {
+    get: operations['organizations_uploads_retrieve'];
+  };
+  '/api/v1/organizations/{organization_slug}/uploads/{session_id}/abort/': {
+    post: operations['organizations_uploads_abort_create'];
+  };
+  '/api/v1/organizations/{organization_slug}/uploads/{session_id}/complete/': {
+    post: operations['organizations_uploads_complete_create'];
+  };
+  '/api/v1/organizations/{organization_slug}/uploads/{session_id}/parts/{part_number}/record/': {
+    post: operations['organizations_uploads_parts_record_create'];
+  };
+  '/api/v1/organizations/{organization_slug}/uploads/{session_id}/parts/{part_number}/sign/': {
+    post: operations['organizations_uploads_parts_sign_create'];
   };
   '/api/v1/organizations/{slug}/': {
     get: operations['organizations_retrieve'];
@@ -577,6 +632,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/': {
     get: operations['organizations_learning_me_enrollments_retrieve'];
   };
+  '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/assets/access/': {
+    post: operations['organizations_learning_me_enrollments_assets_access_create'];
+  };
   '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/outline/': {
     get: operations['organizations_learning_me_enrollments_outline_retrieve'];
   };
@@ -997,6 +1055,200 @@ export interface components {
       time_limit_minutes: number | null;
       title: string;
     };
+    AssetAccessDescriptor: {
+      /** Format: uuid */
+      asset_version_id: string;
+      /** Format: date-time */
+      expires_at: string;
+      kind: components['schemas']['AssetKind'];
+      source: components['schemas']['DeliveredObject'] | null;
+      variants: components['schemas']['DeliveredObject'][];
+    };
+    AssetDetail: {
+      /** Format: date-time */
+      archived_at?: string | null;
+      /** Format: date-time */
+      created_at: string;
+      current_version: components['schemas']['AssetVersion'];
+      description?: string;
+      /** Format: uuid */
+      id: string;
+      kind: components['schemas']['AssetKind'];
+      lock_version?: number;
+      name: string;
+      status?: components['schemas']['CourseLifecycleStatus'];
+      /** Format: date-time */
+      updated_at: string;
+      versions: readonly components['schemas']['AssetVersion'][];
+    };
+    AssetError: {
+      code: string;
+      detail: string;
+    };
+    /**
+     * @description * `image` - Imagen
+     * * `document` - Documento
+     * * `audio` - Audio
+     * * `video` - Video
+     * * `dataset` - Dataset
+     * * `caption` - Captions
+     * @enum {string}
+     */
+    AssetKind: 'image' | 'document' | 'audio' | 'video' | 'dataset' | 'caption';
+    /**
+     * @description * `queued` - En cola
+     * * `running` - En ejecución
+     * * `completed` - Completado
+     * * `completed_with_errors` - Completado con errores
+     * * `failed` - Fallido
+     * @enum {string}
+     */
+    AssetProcessingJobStatus:
+      'queued' | 'running' | 'completed' | 'completed_with_errors' | 'failed';
+    AssetSummary: {
+      /** Format: date-time */
+      archived_at?: string | null;
+      /** Format: date-time */
+      created_at: string;
+      current_version: components['schemas']['AssetVersion'];
+      description?: string;
+      /** Format: uuid */
+      id: string;
+      kind: components['schemas']['AssetKind'];
+      lock_version?: number;
+      name: string;
+      status?: components['schemas']['CourseLifecycleStatus'];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    AssetUpdate: {
+      description: string;
+      expected_lock_version: number;
+      name: string;
+    };
+    /**
+     * @description * `single` - Simple
+     * * `multipart` - Multipart
+     * @enum {string}
+     */
+    AssetUploadMethod: 'single' | 'multipart';
+    /**
+     * @description * `initiated` - Iniciada
+     * * `uploading` - Cargando
+     * * `uploaded` - Cargada
+     * * `completed` - Completada
+     * * `aborted` - Abortada
+     * * `expired` - Expirada
+     * * `failed` - Fallida
+     * @enum {string}
+     */
+    AssetUploadStatus:
+      | 'initiated'
+      | 'uploading'
+      | 'uploaded'
+      | 'completed'
+      | 'aborted'
+      | 'expired'
+      | 'failed';
+    AssetUsage: {
+      content_versions: unknown[];
+      current_reference_count: number;
+      releases: unknown[];
+    };
+    AssetVariant: {
+      bitrate?: number | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: int64 */
+      duration_milliseconds?: number | null;
+      extension: string;
+      height?: number | null;
+      /** Format: uuid */
+      id: string;
+      mime_type: string;
+      pipeline_name: string;
+      pipeline_version: string;
+      role: components['schemas']['AssetVariantRole'];
+      sha256: string;
+      /** Format: int64 */
+      size_bytes: number;
+      technical_metadata?: unknown;
+      width?: number | null;
+    };
+    /**
+     * @description * `image_thumbnail` - Miniatura
+     * * `image_medium` - Imagen mediana
+     * * `image_large` - Imagen grande
+     * * `image_web_fallback` - Fallback web
+     * * `audio_playback` - Audio reproducible
+     * * `video_playback` - Video reproducible
+     * * `video_poster` - Poster de video
+     * * `caption_normalized` - Captions normalizados
+     * @enum {string}
+     */
+    AssetVariantRole:
+      | 'image_thumbnail'
+      | 'image_medium'
+      | 'image_large'
+      | 'image_web_fallback'
+      | 'audio_playback'
+      | 'video_playback'
+      | 'video_poster'
+      | 'caption_normalized';
+    AssetVersion: {
+      column_count?: number | null;
+      /** Format: date-time */
+      created_at: string;
+      declared_mime_type: string;
+      detected_mime_type?: string;
+      /** Format: int64 */
+      duration_milliseconds?: number | null;
+      extension?: string;
+      /** Format: date-time */
+      failed_at?: string | null;
+      failure_code?: string;
+      height?: number | null;
+      /** Format: uuid */
+      id: string;
+      malware_signature: string | null;
+      number: number;
+      original_filename: string;
+      page_count?: number | null;
+      pipeline_name?: string;
+      pipeline_version?: string;
+      processing_jobs: readonly components['schemas']['ProcessingJob'][];
+      /** Format: date-time */
+      ready_at?: string | null;
+      /** Format: date-time */
+      rejected_at?: string | null;
+      /** Format: int64 */
+      row_count?: number | null;
+      sha256?: string;
+      /** Format: int64 */
+      size_bytes?: number | null;
+      status?: components['schemas']['AssetVersionStatus'];
+      technical_metadata?: unknown;
+      variants: readonly components['schemas']['AssetVariant'][];
+      width?: number | null;
+    };
+    /**
+     * @description * `pending_upload` - Pendiente de carga
+     * * `uploaded` - Cargado
+     * * `scanning` - Escaneando
+     * * `processing` - Procesando
+     * * `ready` - Listo
+     * * `rejected` - Rechazado
+     * * `failed` - Fallido
+     * @enum {string}
+     */
+    AssetVersionStatus:
+      | 'pending_upload'
+      | 'uploaded'
+      | 'scanning'
+      | 'processing'
+      | 'ready'
+      | 'rejected'
+      | 'failed';
     AssignmentCreate: {
       /** Format: uuid */
       release_assignment_id?: string;
@@ -1067,6 +1319,12 @@ export interface components {
     };
     /** @enum {unknown} */
     BlankEnum: '';
+    /**
+     * @description * `required` - Obligatorio
+     * * `recommended` - Recomendado
+     * @enum {string}
+     */
+    CatalogPrerequisiteKind: 'required' | 'recommended';
     /**
      * @description * `remember` - Recordar
      * * `understand` - Comprender
@@ -1343,6 +1601,38 @@ export interface components {
       slug: string;
       title: string;
     };
+    DeliveredObject: {
+      duration_milliseconds: number | null;
+      height: number | null;
+      mime_type: string;
+      role: components['schemas']['DeliveredObjectRoleEnum'];
+      size_bytes: number;
+      /** Format: uri */
+      url: string;
+      width: number | null;
+    };
+    /**
+     * @description * `image_thumbnail` - Miniatura
+     * * `image_medium` - Imagen mediana
+     * * `image_large` - Imagen grande
+     * * `image_web_fallback` - Fallback web
+     * * `audio_playback` - Audio reproducible
+     * * `video_playback` - Video reproducible
+     * * `video_poster` - Poster de video
+     * * `caption_normalized` - Captions normalizados
+     * * `original` - Original
+     * @enum {string}
+     */
+    DeliveredObjectRoleEnum:
+      | 'image_thumbnail'
+      | 'image_medium'
+      | 'image_large'
+      | 'image_web_fallback'
+      | 'audio_playback'
+      | 'video_playback'
+      | 'video_poster'
+      | 'caption_normalized'
+      | 'original';
     Delivery: {
       assessment_title: string;
       /** Format: uuid */
@@ -1489,6 +1779,9 @@ export interface components {
       | 'membership_revoked'
       | 'role_assigned'
       | 'role_revoked';
+    ExpectedLock: {
+      expected_lock_version: number;
+    };
     ExpectedVersion: {
       expected_version: number;
     };
@@ -1685,11 +1978,11 @@ export interface components {
       required: boolean;
     };
     /**
-     * @description * `required` - required
-     * * `recommended` - recommended
+     * @description * `initial_processing` - Procesamiento inicial
+     * * `reprocess_variants` - Reprocesar variantes
      * @enum {string}
      */
-    KindEnum: 'required' | 'recommended';
+    JobTypeEnum: 'initial_processing' | 'reprocess_variants';
     LearnerDelivery: {
       /** Format: date-time */
       assigned_at: string;
@@ -1725,6 +2018,16 @@ export interface components {
       | 'publication_withdrawn'
       | 'membership_inactive'
       | 'release_invalid';
+    LearningAssetAccess: {
+      asset_version_ids: string[];
+      /** Format: uuid */
+      unit_id: string;
+    };
+    LearningAssetAccessResponse: {
+      assets: {
+        [key: string]: unknown;
+      }[];
+    };
     LearningOutline: {
       cohort: components['schemas']['CohortSummary'] | null;
       course: components['schemas']['CourseSummary'];
@@ -1741,6 +2044,9 @@ export interface components {
      */
     LearningProgressStatus: 'not_started' | 'in_progress' | 'completed';
     LearningUnit: {
+      assets?: {
+        [key: string]: unknown;
+      }[];
       content: {
         [key: string]: unknown;
       };
@@ -2136,15 +2442,43 @@ export interface components {
     PrerequisiteGraphEntry: {
       /** Format: uuid */
       entity_id: string;
-      kind: components['schemas']['KindEnum'];
+      kind: components['schemas']['CatalogPrerequisiteKind'];
       /** Format: uuid */
       prerequisite_id: string;
       rationale?: string;
+    };
+    PresignedPost: {
+      fields: {
+        [key: string]: string;
+      };
+      /** Format: uri */
+      url: string;
     };
     PrimarySubject: {
       /** Format: uuid */
       id: string;
       name: string;
+    };
+    ProcessingJob: {
+      /** Format: uuid */
+      asset_version_id: string;
+      attempt_count?: number;
+      /** Format: date-time */
+      completed_at?: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      job_type: components['schemas']['JobTypeEnum'];
+      last_error_code?: string;
+      pipeline_name: string;
+      pipeline_version: string;
+      stage?: components['schemas']['StageEnum'];
+      /** Format: date-time */
+      started_at?: string | null;
+      status?: components['schemas']['AssetProcessingJobStatus'];
+      /** Format: date-time */
+      updated_at: string;
     };
     Progress: {
       /** Format: date-time */
@@ -2343,6 +2677,11 @@ export interface components {
       code: string;
       message: string;
       path: string;
+    };
+    RecordPart: {
+      checksum_sha256: string;
+      etag: string;
+      size_bytes: number;
     };
     RegradeJob: {
       assessment_title: string;
@@ -2572,6 +2911,38 @@ export interface components {
       instructions: string;
       title: string;
     };
+    SignPart: {
+      checksum_sha256: string;
+    };
+    SignedPart: {
+      part_number: number;
+      /** Format: uri */
+      url: string;
+    };
+    /**
+     * @description * `queued` - En cola
+     * * `downloading` - Descargando
+     * * `scanning` - Escaneando
+     * * `validating` - Validando
+     * * `extracting_metadata` - Extrayendo metadatos
+     * * `transcoding` - Transcodificando
+     * * `uploading_variants` - Subiendo variantes
+     * * `promoting_original` - Promoviendo original
+     * * `cleaning_quarantine` - Limpiando cuarentena
+     * * `completed` - Completado
+     * @enum {string}
+     */
+    StageEnum:
+      | 'queued'
+      | 'downloading'
+      | 'scanning'
+      | 'validating'
+      | 'extracting_metadata'
+      | 'transcoding'
+      | 'uploading_variants'
+      | 'promoting_original'
+      | 'cleaning_quarantine'
+      | 'completed';
     StructureOrder: {
       expected_version: number;
       pool_ids: string[];
@@ -2588,7 +2959,7 @@ export interface components {
       status: string;
     };
     SubjectPrerequisite: {
-      kind: components['schemas']['KindEnum'];
+      kind: components['schemas']['CatalogPrerequisiteKind'];
       /** Format: uuid */
       prerequisite_id: string;
       rationale?: string;
@@ -2727,6 +3098,68 @@ export interface components {
       description?: string;
       title?: string;
     };
+    UploadInitialize: {
+      /** Format: uuid */
+      asset_id?: string | null;
+      declared_mime_type: string;
+      /** @default */
+      description?: string;
+      expected_sha256?: string;
+      filename: string;
+      kind: components['schemas']['AssetKind'];
+      name: string;
+      size_bytes: number;
+    };
+    UploadInstructions: {
+      /** Format: uuid */
+      asset_id: string;
+      /** Format: uuid */
+      asset_version_id: string;
+      /** Format: date-time */
+      expires_at: string;
+      part_size_bytes: number | null;
+      post: components['schemas']['PresignedPost'] | null;
+      /** Format: uuid */
+      session_id: string;
+      upload_method: components['schemas']['AssetUploadMethod'];
+    };
+    UploadPart: {
+      checksum_algorithm?: string;
+      checksum_value?: string;
+      etag: string;
+      part_number: number;
+      /** Format: date-time */
+      recorded_at: string;
+      /** Format: int64 */
+      size_bytes: number;
+    };
+    UploadSession: {
+      /** Format: date-time */
+      aborted_at?: string | null;
+      /** Format: uuid */
+      asset_id: string;
+      /** Format: uuid */
+      asset_version_id: string;
+      /** Format: date-time */
+      completed_at?: string | null;
+      /** Format: date-time */
+      created_at: string;
+      declared_filename: string;
+      declared_mime_type: string;
+      expected_sha256?: string;
+      /** Format: int64 */
+      expected_size_bytes: number;
+      /** Format: date-time */
+      expires_at: string;
+      failure_code?: string;
+      /** Format: int64 */
+      part_size_bytes?: number | null;
+      parts: readonly components['schemas']['UploadPart'][];
+      /** Format: uuid */
+      session_id: string;
+      status?: components['schemas']['AssetUploadStatus'];
+      upload_method: components['schemas']['AssetUploadMethod'];
+    };
     UserSummary: {
       display: string;
       /** Format: email */
@@ -2787,6 +3220,703 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['Organization'][];
+        };
+      };
+    };
+  };
+  organizations_assets_list: {
+    parameters: {
+      query?: {
+        kind?: string;
+        search?: string;
+        status?: string;
+      };
+      path: {
+        organization_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssetSummary'][];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_assets_retrieve: {
+    parameters: {
+      path: {
+        asset_id: string;
+        organization_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssetDetail'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_assets_partial_update: {
+    parameters: {
+      path: {
+        asset_id: string;
+        organization_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssetUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['AssetUpdate'];
+        'multipart/form-data': components['schemas']['AssetUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssetDetail'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_assets_archive_create: {
+    parameters: {
+      path: {
+        asset_id: string;
+        organization_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ExpectedLock'];
+        'application/x-www-form-urlencoded': components['schemas']['ExpectedLock'];
+        'multipart/form-data': components['schemas']['ExpectedLock'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssetSummary'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_assets_restore_create: {
+    parameters: {
+      path: {
+        asset_id: string;
+        organization_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ExpectedLock'];
+        'application/x-www-form-urlencoded': components['schemas']['ExpectedLock'];
+        'multipart/form-data': components['schemas']['ExpectedLock'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssetSummary'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_assets_usage_retrieve: {
+    parameters: {
+      path: {
+        asset_id: string;
+        organization_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssetUsage'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_assets_versions_list: {
+    parameters: {
+      path: {
+        asset_id: string;
+        organization_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssetVersion'][];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_assets_versions_retrieve: {
+    parameters: {
+      path: {
+        asset_id: string;
+        organization_slug: string;
+        version_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssetVersion'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_assets_versions_access_create: {
+    parameters: {
+      path: {
+        asset_id: string;
+        organization_slug: string;
+        version_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssetAccessDescriptor'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_assets_versions_original_download_create: {
+    parameters: {
+      path: {
+        asset_id: string;
+        organization_slug: string;
+        version_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssetAccessDescriptor'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_assets_versions_promote_create: {
+    parameters: {
+      path: {
+        asset_id: string;
+        organization_slug: string;
+        version_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ExpectedLock'];
+        'application/x-www-form-urlencoded': components['schemas']['ExpectedLock'];
+        'multipart/form-data': components['schemas']['ExpectedLock'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssetSummary'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_assets_versions_reprocess_create: {
+    parameters: {
+      path: {
+        asset_id: string;
+        organization_slug: string;
+        version_id: string;
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          'application/json': components['schemas']['ProcessingJob'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
         };
       };
     };
@@ -2982,6 +4112,413 @@ export interface operations {
       409: {
         content: {
           'application/json': components['schemas']['ContentError'];
+        };
+      };
+    };
+  };
+  organizations_processing_jobs_retrieve: {
+    parameters: {
+      path: {
+        job_id: string;
+        organization_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ProcessingJob'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_uploads_create: {
+    parameters: {
+      path: {
+        organization_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UploadInitialize'];
+        'application/x-www-form-urlencoded': components['schemas']['UploadInitialize'];
+        'multipart/form-data': components['schemas']['UploadInitialize'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['UploadInstructions'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_uploads_retrieve: {
+    parameters: {
+      path: {
+        organization_slug: string;
+        session_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['UploadSession'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_uploads_abort_create: {
+    parameters: {
+      path: {
+        organization_slug: string;
+        session_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['UploadSession'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_uploads_complete_create: {
+    parameters: {
+      path: {
+        organization_slug: string;
+        session_id: string;
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          'application/json': components['schemas']['ProcessingJob'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_uploads_parts_record_create: {
+    parameters: {
+      path: {
+        organization_slug: string;
+        part_number: number;
+        session_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RecordPart'];
+        'application/x-www-form-urlencoded': components['schemas']['RecordPart'];
+        'multipart/form-data': components['schemas']['RecordPart'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['UploadSession'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_uploads_parts_sign_create: {
+    parameters: {
+      path: {
+        organization_slug: string;
+        part_number: number;
+        session_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SignPart'];
+        'application/x-www-form-urlencoded': components['schemas']['SignPart'];
+        'multipart/form-data': components['schemas']['SignPart'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['SignedPart'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      413: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      415: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      422: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
+        };
+      };
+      429: {
+        content: {
+          'application/json': components['schemas']['AssetError'];
         };
       };
     };
@@ -7086,6 +8623,33 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['MyLearning'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_me_enrollments_assets_access_create: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LearningAssetAccess'];
+        'application/x-www-form-urlencoded': components['schemas']['LearningAssetAccess'];
+        'multipart/form-data': components['schemas']['LearningAssetAccess'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LearningAssetAccessResponse'];
         };
       };
       404: {

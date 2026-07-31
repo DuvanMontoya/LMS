@@ -292,3 +292,13 @@ Una revisión de scoring y una grade version son inmutables y digestadas;
 revisión, mientras la selección concreta pertenece al intento. Un gradebook
 draft permite ordenar/archivar columnas; la activación exige posiciones
 contiguas y 10000 basis points. Analytics snapshot conserva revisión y alcance.
+
+## Assets
+
+`Asset` (UUID, organización, clase, estado, lock) agrupa
+`AssetVersion` inmutables numeradas. Cada versión conserva source metadata,
+SHA-256, estado terminal, análisis y pipeline; `AssetVariant` registra derivados
+append-only. `AssetUploadSession` y `AssetUploadPart` modelan carga directa;
+`AssetProcessingJob` es durable e idempotente y `AssetEvent` audita cambios.
+`ContentAssetReference` fija versión/nodo; el release manifest vuelve esa
+referencia parte del snapshot/digest.

@@ -102,6 +102,141 @@ services:
           cpus: "2.0"
           memory: 1G
 
+  localstack:
+    profiles: ["media"]
+    # 4.14.0 is the final supported Community release before auth-token-only
+    # image consolidation. See ADR 0025 for the dated operational trade-off.
+    image: localstack/localstack:4.14.0
+    environment:
+      SERVICES: s3
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      PERSISTENCE: "1"
+      DEBUG: "0"
+      S3_SKIP_SIGNATURE_VALIDATION: "0"
+    ports:
+      - "127.0.0.1:4566:4566"
+    volumes:
+      - localstack_data:/var/lib/localstack
+    networks:
+      - lms_internal
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl --fail --silent http://127.0.0.1:4566/_localstack/health | grep -q '\"s3\"'",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  clamav:
+    profiles: ["media"]
+    image: clamav/clamav:1.5.3_base
+    volumes:
+      - clamav_definitions:/var/lib/clamav
+      - ./infrastructure/media/clamd.conf:/etc/clamav/clamd.conf:ro
+    expose:
+      - "3310"
+    networks:
+      - lms_internal
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 120s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    tmpfs:
+      - /tmp:size=6g,mode=1777
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+
+  media-worker:
+    profiles: ["media"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.media-worker
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      REDIS_CACHE_DB: ${REDIS_CACHE_DB:-1}
+      CELERY_BROKER_DB: ${CELERY_BROKER_DB:-2}
+      CELERY_WORKER_REMOTE_CONTROL: "true"
+      FRONTEND_ORIGIN: http://127.0.0.1:3000
+      ASSET_S3_REGION: us-east-1
+      ASSET_S3_INTERNAL_ENDPOINT: http://localstack:4566
+      ASSET_S3_PUBLIC_ENDPOINT: http://127.0.0.1:4566
+      ASSET_S3_ACCESS_KEY_ID: test
+      ASSET_S3_SECRET_ACCESS_KEY: test
+      ASSET_S3_FORCE_PATH_STYLE: "true"
+      ASSET_QUARANTINE_BUCKET: ${ASSET_QUARANTINE_BUCKET:?ASSET_QUARANTINE_BUCKET is required}
+      ASSET_PRIVATE_BUCKET: ${ASSET_PRIVATE_BUCKET:?ASSET_PRIVATE_BUCKET is required}
+      ASSET_CLAMAV_HOST: clamav
+      ASSET_CLAMAV_PORT: "3310"
+      ASSET_FFMPEG_PATH: /opt/ffmpeg/bin/ffmpeg
+      ASSET_FFPROBE_PATH: /opt/ffmpeg/bin/ffprobe
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
+    networks:
+      - lms_internal
+    restart: unless-stopped
+    stop_grace_period: 60s
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "celery -A config inspect ping --timeout=2 2>/dev/null | grep -q pong",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp:size=6g,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+
 networks:
   lms_internal:
     driver: bridge
@@ -109,3 +244,5 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  localstack_data:
+  clamav_definitions:

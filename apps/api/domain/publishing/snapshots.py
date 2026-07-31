@@ -5,8 +5,11 @@ from typing import Any
 
 from django.db.models import Prefetch
 
+from domain.assets.models import AssetVariant
+from domain.assets.selectors import preferred_variants
 from domain.content.canonical import content_digest
-from domain.content.models import UnitContentDocument
+from domain.content.models import ContentAssetReference, UnitContentDocument
+from domain.content.schemas import CURRENT_CONTENT_SCHEMA_VERSION, migrate_document
 from domain.content.validators import validate_content
 from domain.courses.choices import AuthoringStatus, CourseStatus, StructureStatus
 from domain.courses.models import (
@@ -42,7 +45,19 @@ def release_revision_queryset():
     objective_links = CourseUnitLearningObjective.objects.select_related(
         "learning_objective"
     ).order_by("position")
-    documents = UnitContentDocument.objects.select_related("current_version")
+    references = ContentAssetReference.objects.select_related(
+        "asset_version__asset"
+    ).prefetch_related(
+        Prefetch(
+            "asset_version__variants",
+            queryset=AssetVariant.objects.order_by("role", "created_at"),
+        )
+    )
+    documents = UnitContentDocument.objects.select_related(
+        "current_version"
+    ).prefetch_related(
+        Prefetch("current_version__asset_references", queryset=references)
+    )
     units = (
         CourseUnit.objects.filter(status=StructureStatus.ACTIVE)
         .prefetch_related(
@@ -92,7 +107,14 @@ def _content_snapshot(unit: CourseUnit) -> dict[str, Any]:
         raise ReleaseSnapshotInvalid(
             f"La unidad {unit.id} no tiene versión de contenido vigente."
         )
-    validated = validate_content(version.content, schema_version=version.schema_version)
+    migrated_content = migrate_document(
+        version.content,
+        from_version=version.schema_version,
+        to_version=CURRENT_CONTENT_SCHEMA_VERSION,
+    )
+    validated = validate_content(
+        migrated_content, schema_version=CURRENT_CONTENT_SCHEMA_VERSION
+    )
     if (
         validated.digest != version.digest
         or content_digest(version.content) != version.digest
@@ -101,13 +123,13 @@ def _content_snapshot(unit: CourseUnit) -> dict[str, Any]:
             f"El digest de contenido de la unidad {unit.id} es inválido."
         )
     return {
-        "schema_version": version.schema_version,
+        "schema_version": CURRENT_CONTENT_SCHEMA_VERSION,
         "document_version": version.number,
         "digest": version.digest,
         "character_count": version.character_count,
         "word_count": version.word_count,
         "node_count": version.node_count,
-        "document": deep_json_copy(version.content),
+        "document": deep_json_copy(migrated_content),
     }
 
 
@@ -147,11 +169,18 @@ def build_release_snapshot(
         for link in revision.objective_alignments.all()
     ]
     modules: list[dict[str, Any]] = []
+    asset_versions: dict[str, Any] = {}
     unit_count = 0
     topic_count = 0
     for module in revision.modules.all():
         units: list[dict[str, Any]] = []
         for unit in module.units.all():
+            document = unit.content_document
+            if document.current_version is not None:
+                for reference in document.current_version.asset_references.all():
+                    asset_versions[str(reference.asset_version_id)] = (
+                        reference.asset_version
+                    )
             topics = [
                 {
                     "id": str(link.topic_id),
@@ -230,12 +259,39 @@ def build_release_snapshot(
             "learning_objectives": objectives,
         },
         "modules": modules,
+        "assets": [
+            _asset_manifest_entry(asset_versions[version_id])
+            for version_id in sorted(asset_versions)
+        ],
     }
     validate_release_snapshot(snapshot)
     canonical = canonical_json_bytes(snapshot)
     if len(canonical) > MAX_CANONICAL_BYTES:
         raise ReleaseSnapshotTooLarge("El release supera 50 MiB canónicos.")
     return snapshot, canonical
+
+
+def _asset_manifest_entry(version: Any) -> dict[str, Any]:
+    return {
+        "asset_version_id": str(version.id),
+        "asset_id": str(version.asset_id),
+        "kind": version.asset.kind,
+        "sha256": version.sha256,
+        "detected_mime_type": version.detected_mime_type,
+        "size_bytes": version.size_bytes,
+        "metadata": deep_json_copy(version.technical_metadata),
+        "variants": [
+            {
+                "role": variant.role,
+                "mime_type": variant.mime_type,
+                "sha256": variant.sha256,
+                "width": variant.width,
+                "height": variant.height,
+                "duration_milliseconds": variant.duration_milliseconds,
+            }
+            for variant in preferred_variants(version)
+        ],
+    }
 
 
 def snapshot_metrics(snapshot: dict[str, Any]) -> dict[str, int]:

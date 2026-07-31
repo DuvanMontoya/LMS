@@ -12,26 +12,25 @@ from referencing import Registry
 from .canonical import deep_json_copy
 from .exceptions import ContentSchemaUnsupported
 
-CURRENT_CONTENT_SCHEMA_VERSION = 1
-SCHEMA_PATH = (
-    Path(__file__).resolve().parents[4]
-    / "schemas"
-    / "content"
-    / "unit-document-v1.schema.json"
-)
+CURRENT_CONTENT_SCHEMA_VERSION = 2
+SCHEMA_DIRECTORY = Path(__file__).resolve().parents[4] / "schemas" / "content"
 
 
 @lru_cache(maxsize=1)
 def schema_registry() -> dict[int, dict[str, Any]]:
-    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    Draft202012Validator.check_schema(schema)
-    for item in _walk_schema(schema):
-        reference = item.get("$ref")
-        if isinstance(reference, str) and not reference.startswith("#/"):
-            raise RuntimeError(
-                "El schema de contenido no puede usar referencias remotas."
-            )
-    return {CURRENT_CONTENT_SCHEMA_VERSION: schema}
+    registry: dict[int, dict[str, Any]] = {}
+    for version in (1, 2):
+        path = SCHEMA_DIRECTORY / f"unit-document-v{version}.schema.json"
+        schema = json.loads(path.read_text(encoding="utf-8"))
+        Draft202012Validator.check_schema(schema)
+        for item in _walk_schema(schema):
+            reference = item.get("$ref")
+            if isinstance(reference, str) and not reference.startswith("#/"):
+                raise RuntimeError(
+                    "El schema de contenido no puede usar referencias remotas."
+                )
+        registry[version] = schema
+    return registry
 
 
 def _walk_schema(value: object):
@@ -69,12 +68,15 @@ def _reject_remote_reference(uri: str):
 def migrate_document(
     content: object, *, from_version: int, to_version: int
 ) -> dict[str, Any]:
-    if from_version != to_version or from_version != CURRENT_CONTENT_SCHEMA_VERSION:
+    if from_version == to_version and from_version in schema_registry():
+        copied = deep_json_copy(content)
+    elif from_version == 1 and to_version == 2:
+        copied = deep_json_copy(content)
+    else:
         raise ContentSchemaUnsupported(
             "No existe una migración explícita para esa versión del documento.",
             path="schema_version",
         )
-    copied = deep_json_copy(content)
     if not isinstance(copied, dict):
         raise ContentSchemaUnsupported("El documento no tiene una raíz válida.")
     return copied

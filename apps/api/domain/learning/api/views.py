@@ -17,6 +17,7 @@ from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
 
 from domain.courses.models import Course
+from domain.learning.assets import learning_asset_descriptors
 from domain.learning.exceptions import LearningDomainError
 from domain.learning.models import CourseEnrollment, LearningCohort
 from domain.learning.selectors import (
@@ -64,6 +65,8 @@ from .serializers import (
     EnrollmentLifecycleSerializer,
     EnrollmentReadSerializer,
     ErrorSerializer,
+    LearningAssetAccessResponseSerializer,
+    LearningAssetAccessSerializer,
     LearningOutlineSerializer,
     LearningUnitSerializer,
     MyLearningSerializer,
@@ -570,11 +573,40 @@ class MyUnitView(APIView):
         enrollment = my_enrollment(request.user, organization, enrollment_id)
         from domain.learning.access import require_learning_access
 
+        def payload() -> dict[str, Any]:
+            access = require_learning_access(actor=request.user, enrollment=enrollment)
+            result = learning_unit(enrollment, unit_id)
+            result["assets"] = learning_asset_descriptors(
+                access=access, unit_id=unit_id
+            )
+            return result
+
+        result = _domain_call(payload)
+        return result if isinstance(result, Response) else Response(result)
+
+
+class MyAssetAccessView(APIView):
+    @extend_schema(
+        request=LearningAssetAccessSerializer,
+        responses={200: LearningAssetAccessResponseSerializer, 404: ErrorSerializer},
+    )
+    def post(self, request: Request, slug: str, enrollment_id: uuid.UUID) -> Response:
+        organization = _organization(request, slug)
+        enrollment = my_enrollment(request.user, organization, enrollment_id)
+        serializer = LearningAssetAccessSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        from domain.learning.access import require_learning_access
+
         result = _domain_call(
-            lambda: (
-                require_learning_access(actor=request.user, enrollment=enrollment),
-                learning_unit(enrollment, unit_id),
-            )[1]
+            lambda: {
+                "assets": learning_asset_descriptors(
+                    access=require_learning_access(
+                        actor=request.user, enrollment=enrollment
+                    ),
+                    unit_id=serializer.validated_data["unit_id"],
+                    requested_ids=tuple(serializer.validated_data["asset_version_ids"]),
+                )
+            }
         )
         return result if isinstance(result, Response) else Response(result)
 

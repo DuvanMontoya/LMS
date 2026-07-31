@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 
 import { completeContentFixture } from '@/lib/content/test-fixtures';
@@ -24,9 +25,17 @@ const current = {
   word_count: 20,
 };
 
+function renderWorkspace(element: React.ReactElement) {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      {element}
+    </QueryClientProvider>,
+  );
+}
+
 describe('ContentWorkspace read-only mode', () => {
   it('renders the real document and history without editing or restore controls', () => {
-    render(
+    renderWorkspace(
       <ContentWorkspace
         courseSlug="calculo"
         current={current}
@@ -48,7 +57,7 @@ describe('ContentWorkspace read-only mode', () => {
 
 describe('ContentWorkspace editable mode', () => {
   it('does not report internal stable-ID transactions as unsaved user changes', async () => {
-    render(
+    renderWorkspace(
       <ContentWorkspace
         courseSlug="calculo"
         current={{ ...current, editable: true }}

@@ -111,3 +111,20 @@ ni logging de respuestas/claves.
 - Policies de organización aplican anti-IDOR y separan regrading, gradebook y
   analytics; staff no omite permisos.
 - Timeout/inconclusive nunca se convierte en respuesta incorrecta.
+
+## Threat model de assets
+
+- Entrada: nombre, MIME, extensión, bytes, checksums, metadata multimedia y VTT
+  son no confiables. Allowlist + magic bytes/ffprobe/parser + límites previenen
+  spoofing, parser bombs, decompression bombs y contenido activo.
+- Malware: quarantine no es firmable; ClamAV falla cerrado, registra evidencia
+  mínima y elimina objetos infectados. Staff/superuser no tienen bypass.
+- Storage: block-public-access, encryption, versioning, CORS exacto, lifecycle,
+  keys UUID y credenciales sólo servidor. ETag no autentica contenido.
+- API: capabilities por organización, selectors anti-IDOR, serializers cerrados,
+  rate limits y ausencia de DELETE/upload remoto evitan mass assignment, SSRF y
+  borrado histórico.
+- Procesamiento: subprocess argv sin shell, timeouts, FFmpeg sin red, worker no
+  root/read-only y temporales limpiados reducen RCE, exfiltración y agotamiento.
+- Entrega: matrícula + release + unidad se validan antes de URLs temporales;
+  descriptors no exponen buckets/keys y sólo permiten variantes necesarias.

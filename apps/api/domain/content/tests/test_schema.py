@@ -37,6 +37,46 @@ class ContentSchemaTests(TestCase):
         invalid["unexpected"] = True
         with self.assertRaises(ContentSchemaInvalid):
             validate_content(invalid, schema_version=1)
+
+        invalid_v2 = full_document()
+        invalid_v2["content"][0]["type"] = "script"
+        with self.assertRaises(ContentSchemaInvalid):
+            validate_content(invalid_v2, schema_version=2)
+
+    def test_v2_accepts_legacy_and_accessible_asset_nodes(self) -> None:
+        validate_content(full_document(), schema_version=2)
+        document = full_document()
+        document["content"].append(
+            {
+                "type": "imageAsset",
+                "attrs": {
+                    "nodeId": "50000000-0000-4000-8000-000000000001",
+                    "assetVersionId": "50000000-0000-4000-8000-000000000002",
+                    "altText": "Gráfica de una función cuadrática",
+                    "decorative": False,
+                    "caption": "Figura 1",
+                    "displaySize": "large",
+                },
+            }
+        )
+        validate_content(document, schema_version=2)
+
+        missing_alt = full_document()
+        missing_alt["content"].append(
+            {
+                "type": "imageAsset",
+                "attrs": {
+                    "nodeId": "50000000-0000-4000-8000-000000000003",
+                    "assetVersionId": "50000000-0000-4000-8000-000000000004",
+                    "altText": "",
+                    "decorative": False,
+                    "caption": "",
+                    "displaySize": "large",
+                },
+            }
+        )
+        with self.assertRaises(ContentSchemaInvalid):
+            validate_content(missing_alt, schema_version=2)
         invalid = full_document()
         invalid["content"][0]["type"] = "script"
         with self.assertRaises(ContentSchemaInvalid):

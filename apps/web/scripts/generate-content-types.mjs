@@ -7,12 +7,6 @@ import { compile } from 'json-schema-to-typescript';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(scriptDirectory, '..', '..', '..');
-const sourcePath = path.join(
-  repositoryRoot,
-  'schemas',
-  'content',
-  'unit-document-v1.schema.json',
-);
 const outputDirectory = path.join(
   repositoryRoot,
   'apps',
@@ -22,8 +16,6 @@ const outputDirectory = path.join(
   'content',
   'generated',
 );
-const typePath = path.join(outputDirectory, 'unit-document-v1.ts');
-const schemaPath = path.join(outputDirectory, 'unit-document-v1.schema.json');
 const checkOnly = process.argv.slice(2).includes('--check');
 
 if (process.argv.slice(2).some((argument) => argument !== '--check')) {
@@ -32,8 +24,6 @@ if (process.argv.slice(2).some((argument) => argument !== '--check')) {
   );
 }
 
-const source = await readFile(sourcePath, 'utf8');
-const schema = JSON.parse(source);
 const ajv = new Ajv2020({
   allErrors: true,
   strict: true,
@@ -42,19 +32,35 @@ const ajv = new Ajv2020({
   useDefaults: false,
   loadSchema: undefined,
 });
-ajv.compile(schema);
+ajv.addFormat(
+  'uuid',
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+);
 
-const generatedType = await compile(schema, 'UnitDocumentV1', {
-  bannerComment:
-    '/* Generated from schemas/content/unit-document-v1.schema.json. Do not edit. */',
-  format: false,
-  unknownAny: false,
-});
-const generatedSchema = `${JSON.stringify(schema, null, 2)}\n`;
-const outputs = [
-  [typePath, generatedType],
-  [schemaPath, generatedSchema],
-];
+const outputs = [];
+for (const version of [1, 2]) {
+  const sourcePath = path.join(
+    repositoryRoot,
+    'schemas',
+    'content',
+    `unit-document-v${version}.schema.json`,
+  );
+  const source = await readFile(sourcePath, 'utf8');
+  const schema = JSON.parse(source);
+  ajv.compile(schema);
+  const generatedType = await compile(schema, `UnitDocumentV${version}`, {
+    bannerComment: `${version === 2 ? '/* eslint-disable @typescript-eslint/no-explicit-any */\n' : ''}/* Generated from schemas/content/unit-document-v${version}.schema.json. Do not edit. */`,
+    format: false,
+    unknownAny: false,
+  });
+  outputs.push(
+    [path.join(outputDirectory, `unit-document-v${version}.ts`), generatedType],
+    [
+      path.join(outputDirectory, `unit-document-v${version}.schema.json`),
+      `${JSON.stringify(schema, null, 2)}\n`,
+    ],
+  );
+}
 
 if (checkOnly) {
   const drift = [];
@@ -66,15 +72,14 @@ if (checkOnly) {
       drift.push(path.relative(repositoryRoot, destination));
       continue;
     }
-    if (actual !== expected) {
+    if (actual !== expected)
       drift.push(path.relative(repositoryRoot, destination));
-    }
   }
   if (drift.length > 0) {
     throw new Error(`Generated content contract drift: ${drift.join(', ')}`);
   }
   console.log(
-    'Generated content schema and TypeScript types are synchronized.',
+    'Generated content schemas and TypeScript types are synchronized.',
   );
 } else {
   await mkdir(outputDirectory, { recursive: true });
@@ -87,5 +92,5 @@ if (checkOnly) {
       await unlink(temporary).catch(() => undefined);
     }
   }
-  console.log('Generated content schema and TypeScript types.');
+  console.log('Generated content schemas and TypeScript types.');
 }

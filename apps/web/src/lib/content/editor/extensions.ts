@@ -195,6 +195,79 @@ export const AcademicCodeBlock = Node.create({
   },
 });
 
+function assetNode(
+  name:
+    | 'audioAsset'
+    | 'datasetAsset'
+    | 'documentAsset'
+    | 'imageAsset'
+    | 'videoAsset',
+  attributes: Record<string, { default: unknown }>,
+) {
+  return Node.create({
+    name,
+    group: 'block',
+    atom: true,
+    isolating: true,
+    addAttributes() {
+      return {
+        assetVersionId: { default: '' },
+        nodeId: idAttribute,
+        ...attributes,
+      };
+    },
+    parseHTML() {
+      return [{ tag: `figure[data-asset-node="${name}"]` }];
+    },
+    renderHTML({ HTMLAttributes }) {
+      return [
+        'figure',
+        mergeAttributes(HTMLAttributes, {
+          'data-asset-node': name,
+          'data-asset-version-id': HTMLAttributes.assetVersionId,
+        }),
+        [
+          'figcaption',
+          {},
+          String(
+            HTMLAttributes.caption ??
+              HTMLAttributes.title ??
+              HTMLAttributes.label ??
+              name,
+          ),
+        ],
+      ];
+    },
+  });
+}
+
+export const ImageAsset = assetNode('imageAsset', {
+  altText: { default: '' },
+  caption: { default: '' },
+  decorative: { default: false },
+  displaySize: { default: 'large' },
+});
+export const AudioAsset = assetNode('audioAsset', {
+  caption: { default: '' },
+  title: { default: '' },
+  transcript: { default: '' },
+});
+export const VideoAsset = assetNode('videoAsset', {
+  caption: { default: '' },
+  captionsAssetVersionId: { default: null },
+  silent: { default: false },
+  title: { default: '' },
+  transcript: { default: '' },
+});
+export const DocumentAsset = assetNode('documentAsset', {
+  description: { default: '' },
+  label: { default: '' },
+});
+export const DatasetAsset = assetNode('datasetAsset', {
+  description: { default: '' },
+  label: { default: '' },
+});
+
 const AcademicTable = Table.extend({
   addAttributes() {
     return {
@@ -240,6 +313,11 @@ const stableNodeTypes = [
   'tableRow',
   'tableCell',
   'tableHeader',
+  'imageAsset',
+  'audioAsset',
+  'videoAsset',
+  'documentAsset',
+  'datasetAsset',
 ];
 
 export const contentEditorExtensions: Extensions = [
@@ -258,6 +336,11 @@ export const contentEditorExtensions: Extensions = [
   AcademicTableRow,
   AcademicTableCell,
   AcademicTableHeader,
+  ImageAsset,
+  AudioAsset,
+  VideoAsset,
+  DocumentAsset,
+  DatasetAsset,
   UniqueID.configure({
     attributeName: 'nodeId',
     generateID: () => crypto.randomUUID(),

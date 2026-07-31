@@ -111,3 +111,13 @@ dominio y el E2E usan el worker Linux real con PostgreSQL y Redis efímeros.
 Frontend cubre Compute Engine, MathLive, polling acotado, compositor de pools,
 consolas, tablas, axe, teclado, escritorio y 390 px. Checks de drift, build,
 auditorías y regresiones de fases previas siguen siendo obligatorios.
+
+## Phase 15
+
+Pytest separa gateway, uploads, multipart, checksums, formats, processing,
+security/IDOR, delivery y concurrencia; content/publication/learning conservan
+regresiones v1 y añaden contratos v2/pinning. `assets:smoke` usa LocalStack,
+ClamAV y media worker reales y genera EICAR en runtime. Vitest cubre contratos y
+componentes; Playwright Chromium prueba library/upload, teclado, axe y 390 px.
+Migraciones/triggers se aplican en PostgreSQL limpio y CI limpia servicios con
+`if: always()`.

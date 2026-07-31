@@ -16,6 +16,18 @@ if (Test-Path -LiteralPath $environmentFile) {
         Add-Content -LiteralPath $environmentFile -Value "`n# Reserved for Django cache and django-allauth rate-limit keys.`nREDIS_CACHE_DB=1" -Encoding utf8NoBOM
         Write-Host 'Added the non-secret Redis cache database setting to the existing local environment.'
     }
+    $assetDefaults = [ordered]@{
+        'AWS_ACCESS_KEY_ID' = 'test'
+        'AWS_SECRET_ACCESS_KEY' = 'test'
+        'AWS_DEFAULT_REGION' = 'us-east-1'
+        'ASSET_QUARANTINE_BUCKET' = 'lms-assets-quarantine'
+        'ASSET_PRIVATE_BUCKET' = 'lms-assets-private'
+    }
+    foreach ($entry in $assetDefaults.GetEnumerator()) {
+        if (-not (Select-String -LiteralPath $environmentFile -Pattern "^$($entry.Key)=" -Quiet)) {
+            Add-Content -LiteralPath $environmentFile -Value "$($entry.Key)=$($entry.Value)" -Encoding utf8NoBOM
+        }
+    }
     Write-Host 'Local infrastructure environment already exists; keeping its secrets unchanged.'
     exit 0
 }
@@ -38,6 +50,13 @@ REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
 REDIS_PASSWORD=$redisPassword
 REDIS_CACHE_DB=1
+CELERY_BROKER_DB=2
+
+AWS_ACCESS_KEY_ID=test
+AWS_SECRET_ACCESS_KEY=test
+AWS_DEFAULT_REGION=us-east-1
+ASSET_QUARANTINE_BUCKET=lms-assets-quarantine
+ASSET_PRIVATE_BUCKET=lms-assets-private
 "@
 
 Set-Content -LiteralPath $environmentFile -Value $content -Encoding utf8NoBOM

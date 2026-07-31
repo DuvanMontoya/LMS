@@ -15,6 +15,7 @@ import { LearningProgress } from '@/components/learning/learning-progress';
 import { LearningUnitControls } from '@/components/learning/learning-unit-controls';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { parseAssetDescriptors } from '@/lib/assets/descriptors';
 import {
   getEnrollmentForCourse,
   getLearningOutline,
@@ -177,7 +178,15 @@ export default async function LearningUnitPage({
             </header>
 
             <div className="learning-player__document">
-              <AcademicDocument document={publishedUnit.content.document} />
+              <AcademicDocument
+                assets={parseAssetDescriptors(data.payload.assets)}
+                document={publishedUnit.content.document}
+                refreshContext={{
+                  enrollmentId: enrollment.enrollment_id,
+                  slug,
+                  unitId,
+                }}
+              />
             </div>
 
             {publishedUnit.learning_objectives.length ? (

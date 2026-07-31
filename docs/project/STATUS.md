@@ -2,12 +2,138 @@
 
 ## Phase
 
-**Phase 14 — Motor avanzado de calificación y analítica** está completada
-localmente el 2026-07-30. `domain.assessments` conserva la propiedad de scoring
-v2, expresiones matemáticas seguras, pools, grade versions, regrading,
-gradebooks y analítica. PostgreSQL es autoritativo; Celery ejecuta jobs
-durables mediante Redis DB 2. La implementación y sus rutas fueron verificadas
-con PostgreSQL, un worker Linux real y Chromium real en escritorio y 390 px.
+**Phase 15 — Assets académicos y multimedia** está completada localmente el
+2026-07-31. `domain.assets` posee el almacenamiento privado, cuarentena,
+versiones inmutables, uploads y procesamiento; content, publishing y learning
+lo consumen mediante contratos estables. La implementación fue verificada con
+PostgreSQL, LocalStack S3, ClamAV, FFmpeg, Celery y Chromium reales.
+
+## Phase 15 — Assets académicos y multimedia
+
+- **Fecha y prompt:** 2026-07-31; Prompt 15 ejecutado de principio a fin sin
+  iniciar el Prompt 16.
+- **Git inicial y final:** `HEAD` y `origin/main` iniciales en
+  `f87a1e0dafcadcb6879555268f8ec261c4116ff0`, rama `main`, remoto
+  `https://github.com/DuvanMontoya/LMS.git`. Codex no ejecutó add, commit,
+  push, reset, restore, clean, rebase, merge ni pull. El SHA final se registra
+  al concluir la verificación y permanece igual porque no hubo commits.
+- **Versiones:** Python 3.13.13, Django 6.0.7, Boto3 1.43.61, Pillow 12.3.0,
+  pypdf 6.14.2, FFmpeg 8.1.2, ClamAV 1.5.3, LocalStack 4.14.0, Celery 5.6.3,
+  Redis 8.8.1/redis-py 6.4.0, PostgreSQL 18.4, Node 24.18.0, pnpm 10.33.2,
+  Next.js 16.2.12, React 19.2.8, TypeScript 6.0.2 y Playwright 1.62.0.
+- **Dependencias y licencias:** Boto3 (Apache-2.0), Pillow (MIT-CMU) y pypdf
+  (BSD-3-Clause) se fijaron de forma exacta. FFmpeg con libx264 es GPL,
+  ClamAV es GPL-2.0 y LocalStack Community sólo se acepta para desarrollo/CI.
+  No se añadieron MinIO, django-storages, python-magic, Uppy, tus, Axios,
+  HLS, OCR ni transcripción. `pip-audit` y `pnpm audit --prod` no reportaron
+  vulnerabilidades conocidas.
+- **ADR y límites:** ADR 0025 decide AWS S3 como contrato productivo,
+  LocalStack sólo local, cuarentena fail-closed y `AssetVersion` inmutable.
+  Assets no importa content, publishing ni learning; éstos registran
+  integraciones mediante contratos y providers.
+- **App y capacidades:** `domain.assets` añade `asset.library.view`,
+  `asset.library.manage`, `asset.upload`, `asset.original.download`,
+  `asset.security.view` y `asset.reprocess`. Owner/Admin gestiona; Instructor
+  carga y usa; Reviewer consulta; Learner no ve la biblioteca. Staff y
+  superuser no eluden policies ni antivirus.
+- **Modelos:** `Asset`, `AssetVersion`, `AssetVariant`,
+  `AssetUploadSession`, `AssetUploadPart`, `AssetProcessingJob` y
+  `AssetEvent` usan UUID, locks, unicidad, estados terminales y triggers
+  PostgreSQL append-only. No existe DELETE público.
+- **Buckets y LocalStack:** cuarentena y privado separados, sin public-read,
+  AES256, CORS con origen exacto, versioning en privado, lifecycle de
+  cuarentena y abort multipart. LocalStack 4.14.0 está fijado por tag y digest,
+  sólo habilita S3, no monta Docker socket y valida firmas.
+- **Boto3 y uploads:** gateway explícito Boto3 con SigV4, path-style sólo
+  local, keys UUID server-generated, presigned POST simple y presigned PUT
+  multipart. El backend nunca recibe bytes; valida tamaño, metadata,
+  `HeadObject`, checksum SHA-256, partes, expiración, complete y abort
+  idempotentes.
+- **Cuarentena y malware:** ningún objeto se firma desde cuarentena. ClamAV
+  valida antes de promover; error de scanner falla cerrado. El smoke EICAR real
+  terminó `rejected`, guardó `malware_detected` y firma, y eliminó el objeto.
+- **Procesamiento:** Pillow corrige EXIF, elimina metadata y produce thumbnail,
+  medium y large WebP; pypdf rechaza cifrado y limita páginas; FFprobe valida
+  audio/video, FFmpeg produce audio normalizado, H.264/AAC y poster. WebVTT se
+  normaliza; CSV, JSON y text validan UTF-8 y generan perfilado/preview seguro.
+- **Jobs y workers:** PostgreSQL conserva jobs durables y eventos; dispatch
+  ocurre `on_commit`, leases/locks evitan duplicados y los temporales se
+  limpian. El media worker Linux no root usa Celery/Redis DB 2, FFmpeg firmado
+  y ClamAV, no publica puertos y separa la cola `media`.
+- **Variants y versiones:** source original, variantes y SHA-256 quedan
+  inmutables; la promoción usa optimistic lock y reprocesar crea un pipeline
+  nuevo sin alterar el source.
+- **Content v2:** `imageAsset`, `audioAsset`, `videoAsset`,
+  `documentAsset` y `datasetAsset` fijan `AssetVersion`; alt/decorative,
+  transcript y captions se validan. `ContentAssetReference` es append-only,
+  organization-safe y rechaza versiones no listas o de kind incorrecto. V1
+  continúa aceptado y existe migración v1→v2.
+- **Publication v2:** el manifest no expone bucket/key, participa en el digest
+  y bloquea publicación por referencias inválidas, alt o captions faltantes.
+  El release conserva pinning aunque cambie la current version o se archive el
+  asset; crear draft desde release conserva la versión exacta. V1 sigue
+  verificándose.
+- **Delivery:** learning entrega sólo con matrícula efectiva y snapshot de
+  release asignado. Los descriptors omiten keys, usan URLs temporales y
+  variantes autorizadas; imágenes learner no exponen original. Existe refresh
+  batch validado por unidad para image, audio, video, captions, document y
+  dataset.
+- **API, OpenAPI y tipos:** endpoints `/api/v1/organizations/...` cubren
+  biblioteca, detalle, versiones, uploads/parts, jobs, acceso y usages.
+  Serializers cerrados, 404 anti-IDOR y capabilities protegen cada recurso.
+  OpenAPI, cliente generado y schemas/tipos content/publication v2 pasan
+  validación y drift checks.
+- **Frontend:** biblioteca, filtro, upload simple/multipart con progreso y
+  cancelación, detalle, estados, versiones, usages y picker accesible están
+  integrados en la navegación. El editor inserta la versión inmutable y exige
+  metadata accesible antes de guardar.
+- **Renderer y accesibilidad:** image responsive, audio con transcript, video
+  con `<track>`, PDF/dataset como descarga y preview de dataset seguro. File
+  input etiquetado, progreso anunciado, teclado, axe y 390 px pasan sin
+  overflow horizontal.
+- **Demo y README:** `pnpm assets:demo` crea siete assets reales (image, PDF,
+  audio, video, VTT, CSV y JSON), es development-only e idempotente; segunda
+  ejecución creó 0 y omitió 7. README documenta setup, storage, workers,
+  rutas, seguridad, troubleshooting y limpieza.
+- **Navegador real:** Chromium integrado validó biblioteca, carga directa
+  browser→LocalStack→worker→ready, detalle, descriptor, imagen 960 px,
+  playback audio/video, poster, dataset preview y picker a 390 px. Durante la
+  inspección se corrigieron capabilities frontend, `asset_id` opcional,
+  verificación de releases v1 históricos y preview de dataset.
+- **Verificación correctiva (2026-07-31):** se comprobó desde Chromium la
+  carga directa de los 16 formatos declarados (`png`, `jpg`, `jpeg`, `webp`,
+  `pdf`, `wav`, `mp3`, `m4a`, `ogg`, `mp4`, `mov`, `webm`, `vtt`, `csv`,
+  `json` y `txt`), todos en estado `ready` en PostgreSQL. Se aceptan alias MIME
+  de contenedor (`audio/x-m4a` y `video/quicktime`) y el formulario infiere
+  un MIME seguro por extensión cuando el navegador no lo declara. Se fijó el
+  socket local de ClamAV requerido por la imagen oficial, se permitió CORS
+  sólo para `localhost` y `127.0.0.1`, y se desactivó el preload inicial de
+  Geist para eliminar advertencias de fuentes no utilizadas. Las máscaras de
+  scroll quedaron estáticas para no activar posicionamiento ligado al scroll
+  en Firefox. La biblioteca usa tarjetas compactas por tipo; no presenta
+  overflow a 390 px (343×300,
+  una por fila) ni en escritorio (tres columnas de 403×316), y las vistas de
+  imagen, audio, video, dataset, PDF y WebVTT fueron abiertas en sus rutas de
+  detalle sin errores de consola.
+- **Pruebas y cobertura:** 232/232 backend con 75,78 %, 46/46 Vitest,
+  E2E assets 1/1 y visual/axe 1/1. Se añadieron pruebas de gateway S3,
+  administración, comandos, API, services, procesamiento limpio/infectado,
+  checksum y concurrencia. Auth, organizations, catalog, courses, content v1,
+  publishing v1, learning, assessments y advanced grading no presentan
+  regresiones.
+- **Migraciones:** assets 0001/0002 y content 0002/0003 aplican desde una base
+  PostgreSQL vacía, incluidos triggers; no hay migraciones pendientes.
+- **CI:** levanta PostgreSQL, Redis, LocalStack, ClamAV y media worker; crea
+  buckets, ejecuta smoke EICAR, migraciones, contratos, checks, pruebas,
+  cobertura, build y Chromium, con cleanup `always()`.
+- **Riesgos, deuda y trabajo no realizado:** AWS real, IAM/KMS, CDN y operación
+  productiva permanecen para infraestructura autorizada; Redis conserva el
+  riesgo de licencia ya documentado. FFmpeg/libx264 requiere aceptación GPL.
+  No se implementaron HLS, CDN, OCR, transcripción ni upload por URL. No hay
+  bloqueo esencial local.
+- **Aceptación:** los 240 criterios están clasificados `PASS` en
+  `docs/project/PHASE_15_ACCEPTANCE.md`.
+- **Siguiente paso:** **Prompt 16 — Búsqueda, notificaciones y observabilidad: búsqueda académica, eventos de dominio, notificaciones internas, correo asíncrono, Sentry, OpenTelemetry, métricas, logs y operación.**
 
 ## Phase 14 — Motor avanzado de calificación y analítica
 

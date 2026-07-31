@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lms:publication:course-release:2",
+  "title": "LMS immutable course release version 2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "release_number",
+    "previous_release_digest",
+    "organization",
+    "course",
+    "curriculum",
+    "modules",
+    "assets"
+  ],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "release_number": { "type": "integer", "minimum": 1 },
+    "previous_release_digest": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      ]
+    },
+    "organization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "slug"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "slug": { "type": "string", "minLength": 1, "maxLength": 120 }
+      }
+    },
+    "course": {
+      "type": "object",
+      "required": [
+        "id",
+        "slug",
+        "source_revision_id",
+        "source_revision_number",
+        "title",
+        "summary",
+        "description",
+        "language_code",
+        "estimated_duration_minutes"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "slug": { "type": "string" },
+        "source_revision_id": { "type": "string", "format": "uuid" },
+        "source_revision_number": { "type": "integer", "minimum": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "subtitle": { "type": ["string", "null"] },
+        "summary": { "type": "string" },
+        "description": { "type": "string" },
+        "language_code": { "type": "string" },
+        "estimated_duration_minutes": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "curriculum": {
+      "type": "object",
+      "required": ["subjects", "learning_objectives"],
+      "properties": {
+        "subjects": { "type": "array", "items": { "type": "object" } },
+        "learning_objectives": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "modules": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "description", "position", "units"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "position": { "type": "integer", "minimum": 1 },
+          "units": {
+            "type": "array",
+            "maxItems": 5000,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "title",
+                "summary",
+                "estimated_duration_minutes",
+                "position",
+                "topics",
+                "learning_objectives",
+                "content"
+              ],
+              "properties": {
+                "id": { "type": "string", "format": "uuid" },
+                "title": { "type": "string" },
+                "summary": { "type": "string" },
+                "estimated_duration_minutes": {
+                  "type": ["integer", "null"],
+                  "minimum": 1
+                },
+                "position": { "type": "integer", "minimum": 1 },
+                "topics": { "type": "array", "items": { "type": "object" } },
+                "learning_objectives": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                },
+                "content": {
+                  "type": "object",
+                  "required": [
+                    "schema_version",
+                    "document_version",
+                    "digest",
+                    "character_count",
+                    "word_count",
+                    "node_count",
+                    "document"
+                  ],
+                  "properties": {
+                    "schema_version": { "const": 2 },
+                    "document_version": { "type": "integer", "minimum": 1 },
+                    "digest": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "character_count": { "type": "integer", "minimum": 0 },
+                    "word_count": { "type": "integer", "minimum": 0 },
+                    "node_count": { "type": "integer", "minimum": 0 },
+                    "document": {
+                      "$ref": "urn:lms:content:unit-document:2"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "asset_version_id",
+          "asset_id",
+          "kind",
+          "sha256",
+          "detected_mime_type",
+          "size_bytes",
+          "metadata",
+          "variants"
+        ],
+        "properties": {
+          "asset_version_id": { "type": "string", "format": "uuid" },
+          "asset_id": { "type": "string", "format": "uuid" },
+          "kind": {
+            "enum": ["image", "document", "audio", "video", "dataset", "caption"]
+          },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "detected_mime_type": { "type": "string", "minLength": 1 },
+          "size_bytes": { "type": "integer", "minimum": 1 },
+          "metadata": { "type": "object" },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "role",
+                "mime_type",
+                "sha256",
+                "width",
+                "height",
+                "duration_milliseconds"
+              ],
+              "properties": {
+                "role": { "type": "string" },
+                "mime_type": { "type": "string" },
+                "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+                "width": { "type": ["integer", "null"], "minimum": 1 },
+                "height": { "type": ["integer", "null"], "minimum": 1 },
+                "duration_milliseconds": {
+                  "type": ["integer", "null"],
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

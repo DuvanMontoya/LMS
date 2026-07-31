@@ -99,3 +99,20 @@ schema drift, lint, tipos, pruebas, build y Playwright al cambiar cualquier pin.
 Compute Engine es adaptador de entrada, no autoridad de nota; SymPy sólo corre
 en el worker. La compatibilidad exige repetir build/worker/E2E ante cualquier
 cambio de pin.
+
+## Phase 15
+
+| Combinación | Resultado | Evidencia |
+| --- | --- | --- |
+| Python 3.13.13 + Django 6.0.7 + boto3 1.43.61 | Compatible | classifiers PyPI, lock y gateway/smoke S3 |
+| Python 3.13.13 + Pillow 12.3.0 | Compatible | classifiers, import y pipeline imagen |
+| Python 3.13.13 + pypdf 6.14.2 | Compatible | classifiers, import y pipeline PDF |
+| Celery 5.6.3 + Redis 8.8.1 + Django 6 | Compatible | worker real, ping y jobs media |
+| FFmpeg 8.1.2 + Debian trixie + libx264 | Compatible GPL | build firmado, ffprobe/transcodes reales |
+| ClamAV 1.5.3 + media worker | Compatible | PING, clean demo y EICAR rechazado |
+| LocalStack 4.14.0 + S3 API | Compatible sólo local | buckets/checksums/presign/lifecycle smoke |
+| django-storages 1.14.6 + Django 6/Python 3.13 | Rechazado | classifiers oficiales insuficientes |
+| MinIO community | Rechazado | repositorio archivado; AWS S3 es contrato |
+
+La compatibilidad requiere repetir build, smoke real, migración y Chromium al
+cambiar cualquier pin. LocalStack 4.14.0 no es recomendación productiva.

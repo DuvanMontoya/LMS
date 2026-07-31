@@ -12,15 +12,9 @@ from referencing import Registry, Resource
 
 from .exceptions import ReleaseSnapshotInvalid
 
-CURRENT_RELEASE_SCHEMA_VERSION = 1
+CURRENT_RELEASE_SCHEMA_VERSION = 2
 REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
-RELEASE_SCHEMA_PATH = (
-    REPOSITORY_ROOT / "schemas" / "publication" / "course-release-v1.schema.json"
-)
-CONTENT_SCHEMA_PATH = (
-    REPOSITORY_ROOT / "schemas" / "content" / "unit-document-v1.schema.json"
-)
-CONTENT_SCHEMA_ID = "urn:lms:content:unit-document:1"
+SCHEMA_ROOT = REPOSITORY_ROOT / "schemas"
 
 
 def _walk(value: object):
@@ -34,13 +28,22 @@ def _walk(value: object):
             pending.extend(current)
 
 
-@lru_cache(maxsize=1)
-def release_schema() -> dict[str, Any]:
-    schema = json.loads(RELEASE_SCHEMA_PATH.read_text(encoding="utf-8"))
-    content_schema = json.loads(CONTENT_SCHEMA_PATH.read_text(encoding="utf-8"))
+@lru_cache(maxsize=2)
+def release_schema(version: int) -> dict[str, Any]:
+    schema = json.loads(
+        (
+            SCHEMA_ROOT / "publication" / f"course-release-v{version}.schema.json"
+        ).read_text(encoding="utf-8")
+    )
+    content_schema_id = f"urn:lms:content:unit-document:{version}"
+    content_schema = json.loads(
+        (SCHEMA_ROOT / "content" / f"unit-document-v{version}.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
     Draft202012Validator.check_schema(schema)
     Draft202012Validator.check_schema(content_schema)
-    allowed_external = {CONTENT_SCHEMA_ID}
+    allowed_external = {content_schema_id}
     for item in _walk(schema):
         reference = item.get("$ref")
         if (
@@ -52,22 +55,30 @@ def release_schema() -> dict[str, Any]:
     return schema
 
 
-@lru_cache(maxsize=1)
-def release_validator() -> Draft202012Validator:
-    content_schema = json.loads(CONTENT_SCHEMA_PATH.read_text(encoding="utf-8"))
+@lru_cache(maxsize=2)
+def release_validator(version: int) -> Draft202012Validator:
+    content_schema_id = f"urn:lms:content:unit-document:{version}"
+    content_schema = json.loads(
+        (SCHEMA_ROOT / "content" / f"unit-document-v{version}.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
     registry = Registry().with_resource(
-        CONTENT_SCHEMA_ID, Resource.from_contents(content_schema)
+        content_schema_id, Resource.from_contents(content_schema)
     )
     return Draft202012Validator(
-        release_schema(),
+        release_schema(version),
         format_checker=FormatChecker(),
         registry=registry,
     )
 
 
 def validate_release_snapshot(snapshot: object) -> None:
+    if not isinstance(snapshot, dict) or snapshot.get("schema_version") not in {1, 2}:
+        raise ReleaseSnapshotInvalid("La versión del snapshot no está soportada.")
+    version = int(snapshot["schema_version"])
     try:
-        release_validator().validate(snapshot)
+        release_validator(version).validate(snapshot)
     except JsonSchemaValidationError as error:
         path = ".".join(str(part) for part in error.absolute_path) or "snapshot"
         raise ReleaseSnapshotInvalid(

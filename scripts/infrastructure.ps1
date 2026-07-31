@@ -70,14 +70,24 @@ function Get-ImageDigest([string]$Image, [string]$Repository) {
 function Write-ImageLock {
     $postgresDigest = Get-ImageDigest 'postgres:18.4-trixie' 'postgres'
     $redisDigest = Get-ImageDigest 'redis:8.8.1-trixie' 'redis'
+    $localstackDigest = Get-ImageDigest 'localstack/localstack:4.14.0' 'localstack/localstack'
+    $clamavDigest = Get-ImageDigest 'clamav/clamav:1.5.3_base' 'clamav/clamav'
     $content = @"
-# Generated from Docker Official Images for linux/amd64. Review before committing.
+# Generated from approved image manifests for linux/amd64. Review before committing.
 # Regenerate intentionally with: pnpm infra:lock
 services:
   postgres:
     image: postgres:18.4-trixie@$($postgresDigest.Split('@', 2)[1])
   redis:
     image: redis:8.8.1-trixie@$($redisDigest.Split('@', 2)[1])
+  assessment-worker:
+    image: lms-assessment-worker:python-3.13.13
+  localstack:
+    image: localstack/localstack:4.14.0@$($localstackDigest.Split('@', 2)[1])
+  clamav:
+    image: clamav/clamav:1.5.3_base@$($clamavDigest.Split('@', 2)[1])
+  media-worker:
+    image: lms-media-worker:ffmpeg-8.1.2
 "@
     Set-Content -LiteralPath $lockFile -Value $content -Encoding utf8NoBOM
     Write-Host 'Updated compose.lock.yaml from locally pulled official image digests.'
@@ -145,6 +155,10 @@ switch ($Action) {
         Assert-LastExitCode 'docker compose config --images'
         if (-not ($images | Where-Object { $_ -match '^postgres:18\.4-trixie@sha256:[0-9a-f]{64}$' })) { throw 'PostgreSQL image lock is not effective.' }
         if (-not ($images | Where-Object { $_ -match '^redis:8\.8\.1-trixie@sha256:[0-9a-f]{64}$' })) { throw 'Redis image lock is not effective.' }
+        $mediaImages = & docker compose @lockedComposeArguments --profile media config --images
+        Assert-LastExitCode 'docker compose media config --images'
+        if (-not ($mediaImages | Where-Object { $_ -match '^localstack/localstack:4\.14\.0@sha256:[0-9a-f]{64}$' })) { throw 'LocalStack image lock is not effective.' }
+        if (-not ($mediaImages | Where-Object { $_ -match '^clamav/clamav:1\.5\.3_base@sha256:[0-9a-f]{64}$' })) { throw 'ClamAV image lock is not effective.' }
         Write-Host 'Compose configuration, required variables, and approved image locks validate.'
     }
     'Pull' {

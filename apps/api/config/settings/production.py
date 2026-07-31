@@ -26,9 +26,21 @@ for setting_name in (
     "EMAIL_HOST_USER",
     "EMAIL_HOST_PASSWORD",
     "FRONTEND_ORIGIN",
+    "ASSET_S3_REGION",
+    "ASSET_QUARANTINE_BUCKET",
+    "ASSET_PRIVATE_BUCKET",
 ):
     if not os.environ.get(setting_name):
         raise RuntimeError(f"{setting_name} is required in production.")
+
+if ASSET_S3_INTERNAL_ENDPOINT or ASSET_S3_PUBLIC_ENDPOINT:  # noqa: F405
+    raise RuntimeError(
+        "Production uses the AWS S3 endpoint; LocalStack endpoints are forbidden."
+    )
+if ASSET_S3_ACCESS_KEY_ID or ASSET_S3_SECRET_ACCESS_KEY:  # noqa: F405
+    raise RuntimeError(
+        "Production S3 credentials must come from the AWS credential chain."
+    )
 
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True

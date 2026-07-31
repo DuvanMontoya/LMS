@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { AssetPickerDialog } from '@/components/assets/asset-picker-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,7 +52,7 @@ import {
 } from '@/lib/content/api';
 import { findDuplicateNodeIds } from '@/lib/content/editor/extensions';
 import { interactiveContentEditorExtensions } from '@/lib/content/editor/interactive-extensions';
-import type { LMSUnitAcademicDocumentVersion1 } from '@/lib/content/generated/unit-document-v1';
+import type { LMSUnitAcademicDocumentVersion2 } from '@/lib/content/generated/unit-document-v2';
 import {
   contentSafetyError,
   safeContentHref,
@@ -150,14 +151,14 @@ function VersionHistory({
   currentVersion: number;
   onRestore: (
     number: number,
-    document: LMSUnitAcademicDocumentVersion1,
+    document: LMSUnitAcademicDocumentVersion2,
     next: ContentCurrent,
   ) => void;
   path: ContentPath;
   versions: ContentVersion[];
 }>) {
   const [viewed, setViewed] = useState<{
-    document: LMSUnitAcademicDocumentVersion1;
+    document: LMSUnitAcademicDocumentVersion2;
     number: number;
   }>();
   const [error, setError] = useState('');
@@ -322,7 +323,7 @@ function EditableContent({
   versions,
 }: Readonly<{
   current: ContentCurrent;
-  initialDocument: LMSUnitAcademicDocumentVersion1;
+  initialDocument: LMSUnitAcademicDocumentVersion2;
   path: ContentPath;
   versions: ContentVersion[];
 }>) {
@@ -447,7 +448,7 @@ function EditableContent({
       const next = await saveContent(path, {
         content: validation.document,
         expected_document_version: documentVersion,
-        schema_version: 1,
+        schema_version: 2,
       });
       setDocumentVersion(next.document_version);
       setCurrentForHistory(next);
@@ -803,6 +804,12 @@ function EditableContent({
               <Table2 />
               Tabla
             </EditorButton>
+            <AssetPickerDialog
+              onInsert={(node) => {
+                blockInsertionChain(editor).insertContent(node).run();
+              }}
+              slug={path.organizationSlug}
+            />
             <EditorButton
               disabled={!editor.can().chain().focus().undo().run()}
               onClick={() => editor.chain().focus().undo().run()}

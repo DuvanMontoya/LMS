@@ -1,7 +1,8 @@
 import Ajv2020, { type ErrorObject } from 'ajv/dist/2020';
 
-import type { LMSUnitAcademicDocumentVersion1 } from '../generated/unit-document-v1';
-import schema from '../generated/unit-document-v1.schema.json';
+import type { LMSUnitAcademicDocumentVersion2 } from '../generated/unit-document-v2';
+import schemaV1 from '../generated/unit-document-v1.schema.json';
+import schemaV2 from '../generated/unit-document-v2.schema.json';
 
 const ajv = new Ajv2020({
   allErrors: true,
@@ -9,17 +10,49 @@ const ajv = new Ajv2020({
   strict: true,
   validateFormats: false,
 });
-const validateDocument = ajv.compile<LMSUnitAcademicDocumentVersion1>(schema);
+const validateV1 = ajv.compile(schemaV1);
+const validateDocument = ajv.compile<LMSUnitAcademicDocumentVersion2>(schemaV2);
+const ASSET_NODES = new Set([
+  'audioAsset',
+  'datasetAsset',
+  'documentAsset',
+  'imageAsset',
+  'videoAsset',
+]);
+
+function legacyProjection(value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const document = structuredClone(value) as Record<string, unknown>;
+  if (!Array.isArray(document.content)) return document;
+  document.content = document.content.map((node) => {
+    if (
+      node &&
+      typeof node === 'object' &&
+      !Array.isArray(node) &&
+      ASSET_NODES.has(String((node as Record<string, unknown>).type))
+    ) {
+      const attrs = (node as Record<string, unknown>).attrs;
+      const nodeId =
+        attrs && typeof attrs === 'object' && !Array.isArray(attrs)
+          ? (attrs as Record<string, unknown>).nodeId
+          : undefined;
+      return { attrs: { nodeId }, type: 'paragraph' };
+    }
+    return node;
+  });
+  return document;
+}
 
 export type ContentValidationResult =
-  | { valid: true; document: LMSUnitAcademicDocumentVersion1 }
+  | { valid: true; document: LMSUnitAcademicDocumentVersion2 }
   | { valid: false; errors: readonly ErrorObject[]; message: string };
 
 export function validateContentDocument(
   value: unknown,
 ): ContentValidationResult {
-  if (validateDocument(value)) return { document: value, valid: true };
-  const errors = validateDocument.errors ?? [];
+  if (validateDocument(value) && validateV1(legacyProjection(value)))
+    return { document: value, valid: true };
+  const errors = validateDocument.errors ?? validateV1.errors ?? [];
   const message = validationMessage(errors);
   return {
     errors,
@@ -57,7 +90,7 @@ function validationMessage(errors: readonly ErrorObject[]): string {
 
 export function assertContentDocument(
   value: unknown,
-): asserts value is LMSUnitAcademicDocumentVersion1 {
+): asserts value is LMSUnitAcademicDocumentVersion2 {
   const result = validateContentDocument(value);
   if (!result.valid) throw new Error(result.message);
 }

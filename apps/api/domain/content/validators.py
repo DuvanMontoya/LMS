@@ -29,6 +29,9 @@ from .security import validate_link, validate_math
 ALLOWED_CODE_LANGUAGES = frozenset(
     {"plaintext", "python", "javascript", "typescript", "json", "sql", "latex"}
 )
+ASSET_NODE_TYPES = frozenset(
+    {"imageAsset", "audioAsset", "videoAsset", "documentAsset", "datasetAsset"}
+)
 
 
 @dataclass(frozen=True)
@@ -105,6 +108,47 @@ def _validate_schema(content: object, schema_version: int) -> None:
         raise ContentSchemaInvalid(
             "El documento no cumple el contrato semántico.",
             path=_safe_path(error.absolute_path),
+        )
+    if schema_version == 2:
+        _validate_legacy_nodes_with_v1(content)
+
+
+def _validate_legacy_nodes_with_v1(content: object) -> None:
+    copied = deep_json_copy(content)
+    if not isinstance(copied, dict) or not isinstance(copied.get("content"), list):
+        return
+
+    def replace_assets(value: object, *, asset_allowed: bool = False) -> object:
+        if isinstance(value, list):
+            return [replace_assets(item) for item in value]
+        if not isinstance(value, dict):
+            return value
+        node_type = value.get("type")
+        if node_type in ASSET_NODE_TYPES:
+            if not asset_allowed:
+                raise ContentSchemaInvalid(
+                    "Los recursos académicos deben ser bloques de primer nivel.",
+                    path="content",
+                )
+            attrs = value.get("attrs")
+            node_id = attrs.get("nodeId") if isinstance(attrs, dict) else None
+            return {"type": "paragraph", "attrs": {"nodeId": node_id}}
+        return {key: replace_assets(item) for key, item in value.items()}
+
+    transformed = {
+        **copied,
+        "content": [
+            replace_assets(item, asset_allowed=True) for item in copied["content"]
+        ],
+    }
+    errors = sorted(
+        validator_for(1).iter_errors(transformed),
+        key=lambda error: tuple(str(item) for item in error.absolute_path),
+    )
+    if errors:
+        raise ContentSchemaInvalid(
+            "Los nodos heredados no cumplen el contrato v1.",
+            path=_safe_path(errors[0].absolute_path),
         )
 
 
@@ -195,3 +239,4 @@ def validate_content(content: object, *, schema_version: int) -> ValidatedConten
 def validate_schema_contract() -> None:
     validator_for.cache_clear()
     validator_for(1)
+    validator_for(2)

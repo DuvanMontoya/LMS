@@ -76,3 +76,12 @@ arrancar. Colas `grading`, `regrading` y `analytics` comparten broker Redis DB 2
 con prefetch 1; cache auth permanece en DB 1. No existe result backend, Beat ni
 Flower. El escalado futuro puede multiplicar workers conservando locks e
 idempotencia en PostgreSQL.
+
+## Media y storage
+
+Producción apunta Boto3 a AWS S3 y usa roles/credenciales fuera del bundle.
+Local/CI activan el profile `media`: LocalStack sólo S3, ClamAV sin puerto host
+y `media-worker` no root/sin puertos, filesystem read-only y tmpfs. El worker
+consume la cola media mediante Redis y accede a PostgreSQL/S3/ClamAV por red
+interna. FFmpeg 8.1.2 se compila una vez con cache de capas desde tarball
+verificado por PGP. Escalar workers conserva locks/idempotencia PostgreSQL.

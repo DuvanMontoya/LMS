@@ -24,6 +24,7 @@ urlpatterns = [
     path(BASE + "me/", views.MyLearningView.as_view()),
     path(ME, views.MyEnrollmentView.as_view()),
     path(ME + "outline/", views.MyOutlineView.as_view()),
+    path(ME + "assets/access/", views.MyAssetAccessView.as_view()),
     path(UNIT, views.MyUnitView.as_view()),
     path(UNIT + "open/", views.OpenUnitView.as_view()),
     path(UNIT + "complete/", views.CompleteUnitView.as_view()),

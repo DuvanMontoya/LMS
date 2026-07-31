@@ -1,4 +1,4 @@
-# Generated from Docker Official Images for linux/amd64. Review before committing.
+# Generated from approved image manifests for linux/amd64. Review before committing.
 # Regenerate intentionally with: pnpm infra:lock
 services:
   postgres:
@@ -7,3 +7,9 @@ services:
     image: redis:8.8.1-trixie@sha256:c88d347edef6249a6d2293f926f1eeb48bd40c57cbcd02c07f52e7f1fd2cb46b
   assessment-worker:
     image: lms-assessment-worker:python-3.13.13
+  localstack:
+    image: localstack/localstack:4.14.0@sha256:75ba7a4bda54a3020019fba23e99c61bbff7dbf23eea12919e5b75b15c6f03f2
+  clamav:
+    image: clamav/clamav:1.5.3_base@sha256:d25b40d8decf55e13302be8be351544fb0ed317e090feb96d961366b236c1a60
+  media-worker:
+    image: lms-media-worker:ffmpeg-8.1.2

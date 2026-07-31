@@ -12,13 +12,13 @@ from domain.courses.models import CourseRevision, CourseUnit
 from domain.courses.policies import can_manage_course
 from domain.organizations.models import Organization
 
+from .asset_references import create_asset_references, validate_asset_references
 from .canonical import deep_json_copy
 from .exceptions import (
     ContentAccessDenied,
     ContentDocumentConflict,
     ContentNotEditable,
     ContentRestoreInvalid,
-    ContentSchemaUnsupported,
     ContentVersionNotFound,
 )
 from .models import UnitContentDocument, UnitContentVersion
@@ -147,6 +147,7 @@ def save_unit_content(
     document = _locked_document(locked_unit)
     current_number = _expected_version(document, expected_document_version)
     validated = validate_content(content, schema_version=schema_version)
+    references = validate_asset_references(validated.content, organization=organization)
     if (
         document is not None
         and document.current_version is not None
@@ -172,6 +173,7 @@ def save_unit_content(
         number=current_number + 1,
         actor=actor,
     )
+    create_asset_references(version, references)
     return SaveContentResult(document, version, False)
 
 
@@ -197,11 +199,6 @@ def restore_unit_content(
     ).first()
     if historical is None:
         raise ContentVersionNotFound("La versión solicitada no existe.")
-    if historical.schema_version != CURRENT_CONTENT_SCHEMA_VERSION:
-        raise ContentSchemaUnsupported(
-            "La versión histórica requiere una migración explícita.",
-            path="schema_version",
-        )
     migrated = migrate_document(
         historical.content,
         from_version=historical.schema_version,
@@ -210,6 +207,7 @@ def restore_unit_content(
     validated = validate_content(
         migrated, schema_version=CURRENT_CONTENT_SCHEMA_VERSION
     )
+    references = validate_asset_references(validated.content, organization=organization)
     version = _append_version(
         document=document,
         validated=validated,
@@ -217,6 +215,7 @@ def restore_unit_content(
         number=current_number + 1,
         actor=actor,
     )
+    create_asset_references(version, references)
     return SaveContentResult(document, version, False)
 
 
@@ -254,17 +253,22 @@ def clone_current_unit_documents(
                 "El contenido fuente no supera la verificación de integridad."
             )
         target = units_by_source_id[source_id]
+        references = validate_asset_references(
+            validated.content,
+            organization=target.module.revision.course.organization,
+        )
         target_document = UnitContentDocument.objects.create(
             unit=target,
             created_by=actor,
             updated_by=actor,
         )
-        _append_version(
+        cloned_version = _append_version(
             document=target_document,
             validated=validated,
             schema_version=source_version.schema_version,
             number=1,
             actor=actor,
         )
+        create_asset_references(cloned_version, references)
         created.append(target_document)
     return created
