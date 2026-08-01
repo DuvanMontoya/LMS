@@ -1,3 +1,5 @@
+import json
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -69,4 +71,29 @@ class RegistrationSettingsApiTests(TestCase):
                 content_type="application/json",
             ).status_code,
             403,
+        )
+
+    def test_closed_registration_rejects_direct_allauth_signup(self) -> None:
+        registration = PlatformRegistrationSettings.current()
+        registration.signup_mode = PlatformRegistrationSettings.SignupMode.CLOSED
+        registration.public_signup_enabled = False
+        registration.full_clean()
+        registration.save(
+            update_fields=("signup_mode", "public_signup_enabled", "updated_at")
+        )
+
+        response = self.client.post(
+            "/_allauth/browser/v1/auth/signup",
+            data=json.dumps(
+                {
+                    "email": "blocked@example.test",
+                    "password": "CorrectHorseBatteryStaple42!",
+                }
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(
+            get_user_model().objects.filter(email="blocked@example.test").exists()
         )

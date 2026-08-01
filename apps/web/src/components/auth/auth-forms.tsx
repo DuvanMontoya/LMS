@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, LoaderCircle } from 'lucide-react';
+import { CheckCircle2, Eye, EyeOff, LoaderCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
@@ -141,6 +141,16 @@ function ErrorSummary({ message }: Readonly<{ message: string | null }>) {
   );
 }
 
+function StatusSummary({ message }: Readonly<{ message: string | null }>) {
+  if (!message) return null;
+  return (
+    <Alert className="border-emerald-600/20 bg-emerald-500/5" role="status">
+      <CheckCircle2 className="text-emerald-700" />
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
+  );
+}
+
 function submitError<T extends FieldValues>(
   error: unknown,
   setError: ReturnType<typeof useForm<T>>['setError'],
@@ -170,11 +180,19 @@ function SubmitButton({
   );
 }
 
-export function LoginForm() {
+export function LoginForm({
+  registrationAvailable = true,
+}: Readonly<{ registrationAvailable?: boolean }>) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useLogin();
   const [message, setMessage] = useState<string | null>(null);
+  const statusMessage =
+    searchParams.get('reset') === '1'
+      ? 'Tu contraseña fue actualizada. Ya puedes iniciar sesión.'
+      : searchParams.get('verified') === '1'
+        ? 'Tu correo fue verificado. Ya puedes iniciar sesión.'
+        : null;
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
@@ -195,6 +213,7 @@ export function LoginForm() {
       onSubmit={form.handleSubmit(onSubmit)}
       className="auth-form-grid"
     >
+      <StatusSummary message={statusMessage} />
       <ErrorSummary message={message} />
       <Field
         name="email"
@@ -219,12 +238,14 @@ export function LoginForm() {
         >
           ¿Olvidaste tu contraseña?
         </Link>
-        <Link
-          className="font-medium text-primary underline-offset-4 hover:underline"
-          href="/auth/registro"
-        >
-          Crear una cuenta
-        </Link>
+        {registrationAvailable ? (
+          <Link
+            className="font-medium text-primary underline-offset-4 hover:underline"
+            href="/auth/registro"
+          >
+            Crear una cuenta
+          </Link>
+        ) : null}
       </nav>
     </form>
   );
@@ -305,7 +326,9 @@ export function VerifyEmailForm() {
       form.reset({ code: '' });
       const session = await getBrowserAuthSession();
       router.replace(
-        session.kind === 'authenticated' ? '/estudiar' : '/auth/iniciar-sesion',
+        session.kind === 'authenticated'
+          ? '/estudiar'
+          : '/auth/iniciar-sesion?verified=1',
       );
     } catch (error) {
       setMessage(submitError(error, form.setError));
@@ -365,7 +388,7 @@ export function PasswordRequestForm() {
     setMessage(null);
     try {
       await request.mutateAsync({ email });
-      router.push('/auth/restablecer-contrasena');
+      router.push('/auth/restablecer-contrasena?sent=1');
     } catch (error) {
       setMessage(submitError(error, form.setError));
     }
@@ -397,6 +420,7 @@ export function PasswordRequestForm() {
 
 export function PasswordResetForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const reset = useResetPassword();
   const [message, setMessage] = useState<string | null>(null);
   const form = useForm<PasswordResetValues>({
@@ -408,8 +432,7 @@ export function PasswordResetForm() {
     try {
       await reset.mutateAsync({ code, password });
       form.reset({ code: '', password: '', confirmation: '' });
-      setMessage('La contraseña fue actualizada. Ahora puedes iniciar sesión.');
-      router.refresh();
+      router.replace('/auth/iniciar-sesion?reset=1');
     } catch (error) {
       setMessage(submitError(error, form.setError));
     }
@@ -420,6 +443,13 @@ export function PasswordResetForm() {
       onSubmit={form.handleSubmit(onSubmit)}
       className="auth-form-grid"
     >
+      <StatusSummary
+        message={
+          searchParams.get('sent') === '1'
+            ? 'Código enviado. Escríbelo abajo junto con tu contraseña nueva.'
+            : null
+        }
+      />
       <ErrorSummary message={message} />
       <Field
         name="code"
@@ -448,6 +478,10 @@ export function PasswordResetForm() {
       <p className="text-sm">
         <Link className="underline" href="/auth/iniciar-sesion">
           Iniciar sesión
+        </Link>
+        {' · '}
+        <Link className="underline" href="/auth/recuperar-contrasena">
+          Solicitar otro código
         </Link>
       </p>
     </form>

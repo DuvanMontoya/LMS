@@ -40,6 +40,19 @@ import {
   roleLabel,
   sortRoles,
 } from '@/lib/organizations/labels';
+import {
+  ageFromBirthDate,
+  departmentOptions,
+  documentTypeOptions,
+  educationInstitutionApplies,
+  educationLevelOptions,
+  educationStageOptions,
+  genderOptions,
+  memberTypeOptions,
+  registrationReasonOptions,
+  socioeconomicStratumOptions,
+  suggestedDocument,
+} from './member-profile-options';
 
 type Membership =
   operations['organizations_memberships_retrieve']['responses'][200]['content']['application/json'];
@@ -106,19 +119,6 @@ function statusLabel(status: string | undefined) {
     suspended: 'Suspendida',
   };
   return status ? (labels[status] ?? status) : 'Sin estado';
-}
-
-function ageFromBirthDate(value: string) {
-  if (!value) return null;
-  const birth = new Date(`${value}T00:00:00`);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  if (
-    today.getMonth() < birth.getMonth() ||
-    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
-  )
-    age -= 1;
-  return age;
 }
 
 function profileValues(profile: MemberProfile): ProfileValues {
@@ -429,10 +429,11 @@ export function MemberDetailPanel({
                   }
                   value={profile.second_surname}
                 />
-                <ProfileField
+                <ProfileSelectField
                   disabled={!canEditProfile}
                   label="Tipo de miembro"
                   onChange={(value) => updateProfileField('member_type', value)}
+                  options={[['', 'Sin seleccionar'], ...memberTypeOptions]}
                   value={profile.member_type}
                 />
                 <ProfileField
@@ -455,15 +456,23 @@ export function MemberDetailPanel({
                   disabled={!canEditProfile}
                   label="WhatsApp"
                   onChange={(value) => updateProfileField('whatsapp', value)}
+                  type="tel"
                   value={profile.whatsapp}
                 />
                 <div className="space-y-2">
                   <ProfileField
                     disabled={!canEditProfile}
                     label="Fecha de nacimiento"
-                    onChange={(value) =>
-                      updateProfileField('date_of_birth', value)
-                    }
+                    onChange={(value) => {
+                      const documentType = suggestedDocument(
+                        ageFromBirthDate(value),
+                      ) as DocumentType;
+                      setProfile((current) => ({
+                        ...current,
+                        date_of_birth: value,
+                        document_type: documentType,
+                      }));
+                    }}
                     type="date"
                     value={profile.date_of_birth}
                   />
@@ -474,12 +483,13 @@ export function MemberDetailPanel({
                     </p>
                   ) : null}
                 </div>
-                <ProfileField
+                <ProfileSelectField
                   disabled={!canEditProfile}
                   label="Tipo de documento"
                   onChange={(value) =>
                     updateProfileField('document_type', value)
                   }
+                  options={documentTypeOptions}
                   value={profile.document_type}
                 />
                 <ProfileField
@@ -490,42 +500,54 @@ export function MemberDetailPanel({
                   }
                   value={profile.document_number}
                 />
-                <ProfileField
+                <ProfileSelectField
                   disabled={!canEditProfile}
                   label="Género"
                   onChange={(value) => updateProfileField('gender', value)}
+                  options={genderOptions}
                   value={profile.gender}
                 />
-                <ProfileField
+                <ProfileSelectField
                   disabled={!canEditProfile}
                   label="Situación educativa"
-                  onChange={(value) =>
-                    updateProfileField('education_stage', value)
-                  }
+                  onChange={(value) => {
+                    setProfile((current) => ({
+                      ...current,
+                      education_stage: value as EducationStage,
+                      education_institution: educationInstitutionApplies(value)
+                        ? current.education_institution
+                        : '',
+                    }));
+                  }}
+                  options={educationStageOptions}
                   value={profile.education_stage}
                 />
-                <ProfileField
-                  disabled={!canEditProfile}
-                  label="Institución educativa"
-                  onChange={(value) =>
-                    updateProfileField('education_institution', value)
-                  }
-                  value={profile.education_institution}
-                />
-                <ProfileField
+                {educationInstitutionApplies(profile.education_stage) ? (
+                  <ProfileField
+                    disabled={!canEditProfile}
+                    label="Institución educativa"
+                    onChange={(value) =>
+                      updateProfileField('education_institution', value)
+                    }
+                    value={profile.education_institution}
+                  />
+                ) : null}
+                <ProfileSelectField
                   disabled={!canEditProfile}
                   label="Grado o nivel"
                   onChange={(value) =>
                     updateProfileField('education_level', value)
                   }
+                  options={educationLevelOptions}
                   value={profile.education_level}
                 />
-                <ProfileField
+                <ProfileSelectField
                   disabled={!canEditProfile}
-                  label="Departamento (código DANE)"
+                  label="Departamento"
                   onChange={(value) =>
                     updateProfileField('department_code', value)
                   }
+                  options={departmentOptions}
                   value={profile.department_code}
                 />
                 <ProfileField
@@ -542,40 +564,59 @@ export function MemberDetailPanel({
                   onChange={(value) => updateProfileField('address', value)}
                   value={profile.address}
                 />
-                <ProfileField
+                <ProfileSelectField
                   disabled={!canEditProfile}
                   label="Estrato"
                   onChange={(value) =>
                     updateProfileField('socioeconomic_stratum', value)
                   }
+                  options={socioeconomicStratumOptions}
                   value={profile.socioeconomic_stratum}
                 />
-                <ProfileField
+                <ProfileSelectField
                   disabled={!canEditProfile}
                   label="Motivo de registro"
-                  onChange={(value) =>
-                    updateProfileField('registration_reason', value)
-                  }
+                  onChange={(value) => {
+                    setProfile((current) => ({
+                      ...current,
+                      registration_reason: value as RegistrationReason,
+                      registration_reason_detail:
+                        value === 'other'
+                          ? current.registration_reason_detail
+                          : '',
+                    }));
+                  }}
+                  options={registrationReasonOptions}
                   value={profile.registration_reason}
                 />
-                <ProfileField
-                  disabled={!canEditProfile}
-                  label="Detalle del motivo"
-                  onChange={(value) =>
-                    updateProfileField('registration_reason_detail', value)
-                  }
-                  value={profile.registration_reason_detail}
-                />
-                <ProfileField
+                {profile.registration_reason === 'other' ? (
+                  <ProfileField
+                    disabled={!canEditProfile}
+                    label="Detalle del motivo"
+                    onChange={(value) =>
+                      updateProfileField('registration_reason_detail', value)
+                    }
+                    value={profile.registration_reason_detail}
+                  />
+                ) : null}
+                <ProfileSelectField
                   disabled={!canEditProfile}
                   label="Idioma"
                   onChange={(value) => updateProfileField('locale', value)}
+                  options={[
+                    ['es', 'Español'],
+                    ['es-CO', 'Español (Colombia)'],
+                  ]}
                   value={profile.locale}
                 />
-                <ProfileField
+                <ProfileSelectField
                   disabled={!canEditProfile}
                   label="Zona horaria"
                   onChange={(value) => updateProfileField('timezone', value)}
+                  options={[
+                    ['America/Bogota', 'Colombia (Bogotá)'],
+                    ['UTC', 'UTC'],
+                  ]}
                   value={profile.timezone}
                 />
               </div>
@@ -753,7 +794,7 @@ export function MemberDetailPanel({
                 variant="outline"
               >
                 <KeyRound />
-                Enviar recuperación
+                Enviar instrucciones
               </Button>
             ) : null}
           </CardContent>
@@ -792,6 +833,40 @@ function ProfileField({
         type={type}
         value={value}
       />
+    </div>
+  );
+}
+
+function ProfileSelectField({
+  disabled,
+  label,
+  onChange,
+  options,
+  value,
+}: Readonly<{
+  disabled: boolean;
+  label: string;
+  onChange: (value: string) => void;
+  options: ReadonlyArray<readonly [string, string]>;
+  value: string;
+}>) {
+  const id = `profile-${label.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-')}`;
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <select
+        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={disabled}
+        id={id}
+        onChange={(event) => onChange(event.target.value)}
+        value={value}
+      >
+        {options.map(([optionValue, optionLabel]) => (
+          <option key={optionValue || 'blank'} value={optionValue}>
+            {optionLabel}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

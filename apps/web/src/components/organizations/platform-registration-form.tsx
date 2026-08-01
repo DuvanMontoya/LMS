@@ -5,7 +5,6 @@ import { useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { components } from '@/lib/api/generated/platform';
 import { useUpdatePlatformRegistrationSettings } from '@/lib/organizations/hooks';
@@ -32,7 +31,13 @@ export function PlatformRegistrationForm({
       default_timezone: timezone,
     });
     setLockVersion(updated.lock_version);
-    setSuccess('La política de registro fue actualizada.');
+    setSuccess(
+      updated.signup_mode === 'closed'
+        ? 'Registro cerrado: se ocultaron los enlaces, la ruta pública ya no muestra el formulario y el backend rechaza altas directas.'
+        : updated.signup_mode === 'invite_only'
+          ? 'Registro por invitación: sólo una invitación válida puede abrir y completar el alta.'
+          : 'Registro abierto: el formulario público y su enlace están disponibles.',
+    );
   }
 
   return (
@@ -43,8 +48,8 @@ export function PlatformRegistrationForm({
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Modo de registro</legend>
         <p className="text-xs text-muted-foreground">
-          El backend y la pantalla de registro consultan esta política en cada
-          solicitud.
+          Esta es la política global de cuentas. El backend, la portada, el
+          inicio de sesión y la ruta de registro la consultan en cada solicitud.
         </p>
         <div className="grid gap-2 sm:grid-cols-3">
           {[
@@ -72,19 +77,27 @@ export function PlatformRegistrationForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="platform-locale">Locale predeterminado</Label>
-          <Input
+          <select
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
             id="platform-locale"
             onChange={(event) => setLocale(event.target.value)}
             value={locale}
-          />
+          >
+            <option value="es">Español</option>
+            <option value="es-CO">Español (Colombia)</option>
+          </select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="platform-timezone">Zona horaria predeterminada</Label>
-          <Input
+          <select
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
             id="platform-timezone"
             onChange={(event) => setTimezone(event.target.value)}
             value={timezone}
-          />
+          >
+            <option value="America/Bogota">Colombia (Bogotá)</option>
+            <option value="UTC">UTC</option>
+          </select>
         </div>
       </div>
       {update.error instanceof Error ? (

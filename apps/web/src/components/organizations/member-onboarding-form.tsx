@@ -21,6 +21,19 @@ import {
   useCreateOrganizationInvitation,
 } from '@/lib/organizations/hooks';
 import { roleLabel } from '@/lib/organizations/labels';
+import {
+  ageFromBirthDate,
+  departmentOptions,
+  documentTypeOptions,
+  educationInstitutionApplies,
+  educationLevelOptions,
+  educationStageOptions,
+  genderOptions,
+  memberTypeOptions,
+  registrationReasonOptions,
+  socioeconomicStratumOptions,
+  suggestedDocument,
+} from './member-profile-options';
 
 type Role = components['schemas']['OrganizationRole'];
 type OnboardingMode = 'invitation' | 'managed';
@@ -94,62 +107,6 @@ const initialPerson: PersonFields = {
   timezone: 'America/Bogota',
   whatsapp: '+57 ',
 };
-
-const departments = [
-  ['05', 'Antioquia'],
-  ['08', 'Atlántico'],
-  ['11', 'Bogotá, D. C.'],
-  ['13', 'Bolívar'],
-  ['15', 'Boyacá'],
-  ['17', 'Caldas'],
-  ['18', 'Caquetá'],
-  ['19', 'Cauca'],
-  ['20', 'Cesar'],
-  ['23', 'Córdoba'],
-  ['25', 'Cundinamarca'],
-  ['27', 'Chocó'],
-  ['41', 'Huila'],
-  ['44', 'La Guajira'],
-  ['47', 'Magdalena'],
-  ['50', 'Meta'],
-  ['52', 'Nariño'],
-  ['54', 'Norte de Santander'],
-  ['63', 'Quindío'],
-  ['66', 'Risaralda'],
-  ['68', 'Santander'],
-  ['70', 'Sucre'],
-  ['73', 'Tolima'],
-  ['76', 'Valle del Cauca'],
-  ['81', 'Arauca'],
-  ['85', 'Casanare'],
-  ['86', 'Putumayo'],
-  ['88', 'San Andrés, Providencia y Santa Catalina'],
-  ['91', 'Amazonas'],
-  ['94', 'Guainía'],
-  ['95', 'Guaviare'],
-  ['97', 'Vaupés'],
-  ['99', 'Vichada'],
-] as const;
-
-function ageFromBirthDate(value: string) {
-  if (!value) return null;
-  const birth = new Date(`${value}T00:00:00`);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  if (
-    today.getMonth() < birth.getMonth() ||
-    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
-  )
-    age -= 1;
-  return age;
-}
-
-function suggestedDocument(age: number | null) {
-  if (age === null) return '';
-  if (age < 7) return 'RC';
-  if (age < 18) return 'TI';
-  return 'CC';
-}
 
 function apiError(error: unknown) {
   return error instanceof Error
@@ -329,14 +286,7 @@ export function MemberOnboardingForm({
                 <SelectField
                   label="Tipo de miembro"
                   onChange={(value) => updateField('memberType', value)}
-                  options={[
-                    ['learner', 'Estudiante'],
-                    ['instructor', 'Docente'],
-                    ['guardian', 'Acudiente'],
-                    ['administrative', 'Personal administrativo'],
-                    ['support', 'Personal de apoyo'],
-                    ['other', 'Otro'],
-                  ]}
+                  options={memberTypeOptions}
                   required={mode === 'managed'}
                   value={person.memberType}
                 />
@@ -383,16 +333,7 @@ export function MemberOnboardingForm({
                 <SelectField
                   label="Tipo de documento"
                   onChange={(value) => updateField('documentType', value)}
-                  options={[
-                    ['', 'Sin seleccionar'],
-                    ['RC', 'Registro civil'],
-                    ['TI', 'Tarjeta de identidad'],
-                    ['CC', 'Cédula de ciudadanía'],
-                    ['CE', 'Cédula de extranjería'],
-                    ['PPT', 'Permiso por protección temporal'],
-                    ['PA', 'Pasaporte'],
-                    ['DE', 'Documento extranjero'],
-                  ]}
+                  options={documentTypeOptions}
                   value={person.documentType}
                 />
                 <Field
@@ -403,14 +344,7 @@ export function MemberOnboardingForm({
                 <SelectField
                   label="Género"
                   onChange={(value) => updateField('gender', value)}
-                  options={[
-                    ['', 'Sin seleccionar'],
-                    ['female', 'Femenino'],
-                    ['male', 'Masculino'],
-                    ['non_binary', 'No binario'],
-                    ['other', 'Otro'],
-                    ['prefer_not_to_say', 'Prefiero no responder'],
-                  ]}
+                  options={genderOptions}
                   value={person.gender}
                 />
               </div>
@@ -428,21 +362,10 @@ export function MemberOnboardingForm({
                 <SelectField
                   label="Situación educativa"
                   onChange={(value) => updateField('educationStage', value)}
-                  options={[
-                    ['', 'Sin seleccionar'],
-                    ['preschool', 'Preescolar'],
-                    ['school', 'Colegio'],
-                    ['technical', 'Institución técnica o tecnológica'],
-                    ['university', 'Universidad'],
-                    ['graduated', 'Graduado'],
-                    ['not_studying', 'Actualmente no estudia'],
-                    ['other', 'Otra'],
-                  ]}
+                  options={educationStageOptions}
                   value={person.educationStage}
                 />
-                {['preschool', 'school', 'technical', 'university'].includes(
-                  person.educationStage,
-                ) ? (
+                {educationInstitutionApplies(person.educationStage) ? (
                   <Field
                     label="Institución educativa"
                     onChange={(value) =>
@@ -455,28 +378,13 @@ export function MemberOnboardingForm({
                 <SelectField
                   label="Grado o nivel"
                   onChange={(value) => updateField('educationLevel', value)}
-                  options={[
-                    ['', 'Sin seleccionar'],
-                    ['preschool', 'Preescolar'],
-                    ...Array.from(
-                      { length: 11 },
-                      (_, index) =>
-                        [`grade_${index + 1}`, `${index + 1}.º`] as const,
-                    ),
-                    ['technical', 'Técnico profesional'],
-                    ['technologist', 'Tecnólogo'],
-                    ['undergraduate', 'Pregrado universitario'],
-                    ['specialization', 'Especialización'],
-                    ['masters', 'Maestría'],
-                    ['doctorate', 'Doctorado'],
-                    ['not_applicable', 'No aplica'],
-                  ]}
+                  options={educationLevelOptions}
                   value={person.educationLevel}
                 />
                 <SelectField
                   label="Departamento"
                   onChange={(value) => updateField('departmentCode', value)}
-                  options={[['', 'Sin seleccionar'], ...departments]}
+                  options={departmentOptions}
                   value={person.departmentCode}
                 />
                 <Field
@@ -494,30 +402,13 @@ export function MemberOnboardingForm({
                   onChange={(value) =>
                     updateField('socioeconomicStratum', value)
                   }
-                  options={[
-                    ['not_reported', 'Prefiere no informar'],
-                    ['rural', 'Rural o sin estratificación'],
-                    ['1', 'Estrato 1'],
-                    ['2', 'Estrato 2'],
-                    ['3', 'Estrato 3'],
-                    ['4', 'Estrato 4'],
-                    ['5', 'Estrato 5'],
-                    ['6', 'Estrato 6'],
-                  ]}
+                  options={socioeconomicStratumOptions}
                   value={person.socioeconomicStratum}
                 />
                 <SelectField
                   label="Motivo de registro"
                   onChange={(value) => updateField('registrationReason', value)}
-                  options={[
-                    ['course', 'Tomar un curso'],
-                    ['school_support', 'Refuerzo escolar'],
-                    ['exam_preparation', 'Preparación para una evaluación'],
-                    ['professional_development', 'Formación profesional'],
-                    ['teaching', 'Enseñar o acompañar estudiantes'],
-                    ['institutional', 'Vinculación institucional'],
-                    ['other', 'Otro motivo'],
-                  ]}
+                  options={registrationReasonOptions}
                   value={person.registrationReason}
                 />
                 {person.registrationReason === 'other' ? (

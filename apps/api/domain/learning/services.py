@@ -131,9 +131,7 @@ def replace_academic_group_roster(
     group = AcademicGroup.objects.select_for_update().get(pk=group.pk)
     if not can_manage_cohorts(actor, group.organization):  # type: ignore[arg-type]
         raise LearningPermissionDenied("No puede administrar grupos académicos.")
-    requested_roles = {
-        entry["membership_id"]: str(entry["role"]) for entry in members
-    }
+    requested_roles = {entry["membership_id"]: str(entry["role"]) for entry in members}
     membership_ids = list(requested_roles)
     memberships = list(
         Membership.objects.filter(
@@ -153,7 +151,10 @@ def replace_academic_group_roster(
     }
     requested = set(membership_ids)
     for membership_id, row in existing.items():
-        if membership_id not in requested and row.status == AcademicGroupMemberStatus.ACTIVE:
+        if (
+            membership_id not in requested
+            and row.status == AcademicGroupMemberStatus.ACTIVE
+        ):
             row.status = AcademicGroupMemberStatus.INACTIVE
             row.ended_at = now
             row.save(update_fields=["status", "ended_at"])

@@ -100,6 +100,7 @@ export function ConfigurationCenter({
           <CardDescription>
             Estas reglas se aplican en el servidor antes de crear acceso. Para
             registrar una persona y darle seguimiento, usa el área de Miembros.
+            No abren ni cierran el registro global de cuentas de la plataforma.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -108,7 +109,9 @@ export function ConfigurationCenter({
             onSubmit={(event) => void saveMembershipSettings(event)}
           >
             <fieldset className="space-y-3">
-              <legend className="text-sm font-medium">Ingreso público</legend>
+              <legend className="text-sm font-medium">
+                Solicitudes para unirse a esta organización
+              </legend>
               <label className="flex items-start gap-3 rounded-lg border p-3 text-sm">
                 <input
                   checked={publicJoin}
@@ -118,11 +121,12 @@ export function ConfigurationCenter({
                 />
                 <span>
                   <span className="block font-medium">
-                    Permitir solicitudes públicas
+                    Permitir solicitudes de membresía
                   </span>
                   <span className="mt-1 block text-xs text-muted-foreground">
-                    La persona debe verificar su correo antes de que aparezca
-                    una solicitud revisable.
+                    Una cuenta ya registrada puede solicitar acceso a esta
+                    organización. La política global de registro se administra
+                    por separado.
                   </span>
                 </span>
               </label>

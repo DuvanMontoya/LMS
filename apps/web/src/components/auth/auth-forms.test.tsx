@@ -28,4 +28,15 @@ describe('LoginForm', () => {
       screen.getByRole('button', { name: 'Iniciar sesión' }),
     ).toBeEnabled();
   });
+
+  it('does not advertise signup when registration is unavailable', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LoginForm registrationAvailable={false} />
+      </QueryClientProvider>,
+    );
+    expect(
+      screen.queryByRole('link', { name: 'Crear una cuenta' }),
+    ).not.toBeInTheDocument();
+  });
 });

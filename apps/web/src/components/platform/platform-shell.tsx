@@ -432,6 +432,12 @@ function PlatformSidebar({
   const administrationNavigation: NavigationItem[] = organizationBase
     ? [
         {
+          href: `${organizationBase}/miembros`,
+          icon: Users,
+          label: 'Personas y miembros',
+          visible: capabilities.has('membership.view'),
+        },
+        {
           activePrefixes: [
             `${organizationBase}/aprendizaje/matriculas`,
             `${organizationBase}/aprendizaje/grupos`,
@@ -455,24 +461,10 @@ function PlatformSidebar({
           ],
           href: `${organizationBase}/aprendizaje/cohortes`,
           icon: GraduationCap,
-          label: 'Entrega del aprendizaje',
+          label: 'Grupos y matrículas',
           visible:
             capabilities.has('learning.cohort.view') ||
             capabilities.has('learning.enrollment.view'),
-        },
-        {
-          href: `${organizationBase}/miembros`,
-          icon: Users,
-          label: 'Miembros',
-          visible: capabilities.has('membership.view'),
-        },
-        {
-          href: `${organizationBase}/configuracion`,
-          icon: Settings2,
-          label: 'Configuración',
-          visible:
-            capabilities.has('membership.settings.view') ||
-            capabilities.has('integration.view'),
         },
         {
           children: [
@@ -518,6 +510,14 @@ function PlatformSidebar({
               capabilities.has('assessment.regrading.view') ||
               capabilities.has('assessment.gradebook.view') ||
               capabilities.has('assessment.analytics.view')),
+        },
+        {
+          href: `${organizationBase}/configuracion`,
+          icon: Settings2,
+          label: 'Configuración institucional',
+          visible:
+            capabilities.has('membership.settings.view') ||
+            capabilities.has('integration.view'),
         },
       ]
     : [];
@@ -586,12 +586,14 @@ function PlatformSidebar({
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Plataforma</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <NavigationList items={generalNavigation} pathname={pathname} />
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {generalNavigation.some((item) => item.visible !== false) ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Plataforma</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavigationList items={generalNavigation} pathname={pathname} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
 
         {activeOrganization ? (
           <SidebarGroup>
@@ -674,7 +676,9 @@ function PlatformSidebar({
 
         {academicNavigation.some((item) => item.visible !== false) ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Gestión académica</SidebarGroupLabel>
+            <SidebarGroupLabel>
+              {learnerOnly ? 'Mi espacio académico' : 'Gestión académica'}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <NavigationList items={academicNavigation} pathname={pathname} />
             </SidebarGroupContent>
@@ -692,7 +696,7 @@ function PlatformSidebar({
 
         {administrationNavigation.some((item) => item.visible !== false) ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Administración</SidebarGroupLabel>
+            <SidebarGroupLabel>Administración institucional</SidebarGroupLabel>
             <SidebarGroupContent>
               <NavigationList
                 items={administrationNavigation}

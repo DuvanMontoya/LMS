@@ -66,7 +66,9 @@ class AcademicGroupRosterEntrySerializer(serializers.Serializer):
 class AcademicGroupRosterSerializer(serializers.Serializer):
     members = AcademicGroupRosterEntrySerializer(many=True, allow_empty=True)
 
-    def validate_members(self, value: list[dict[str, object]]) -> list[dict[str, object]]:
+    def validate_members(
+        self, value: list[dict[str, object]]
+    ) -> list[dict[str, object]]:
         membership_ids = [entry["membership_id"] for entry in value]
         if len(membership_ids) != len(set(membership_ids)):
             raise serializers.ValidationError(

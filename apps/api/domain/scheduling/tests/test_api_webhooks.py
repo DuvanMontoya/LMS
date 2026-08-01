@@ -45,7 +45,9 @@ def signed_webhook(payload: dict[str, object]) -> tuple[bytes, str]:
 
 @override_settings(**LIVEKIT_SETTINGS)
 class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
-    def test_live_session_directory_includes_standalone_and_filters_course(self) -> None:
+    def test_live_session_directory_includes_standalone_and_filters_course(
+        self,
+    ) -> None:
         context = self.scheduling_context()
         standalone = create_event_series(
             actor=context["owner"],

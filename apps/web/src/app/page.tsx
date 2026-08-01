@@ -9,6 +9,7 @@ import Link from 'next/link';
 
 import { LoginResearchField } from '@/components/auth/login-research-field';
 import { Button } from '@/components/ui/button';
+import { isSignupAvailable } from '@/lib/auth/registration';
 
 const capabilities = [
   {
@@ -31,7 +32,8 @@ const capabilities = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const registrationAvailable = await isSignupAvailable();
   return (
     <main className="relative isolate min-h-svh overflow-hidden bg-[#e3e6e9] text-[#172129]">
       <LoginResearchField />
@@ -49,12 +51,14 @@ export default function Home() {
           <Button asChild className="rounded-none" variant="ghost">
             <Link href="/auth/iniciar-sesion">Ingresar</Link>
           </Button>
-          <Button asChild className="hidden rounded-none sm:inline-flex">
-            <Link href="/auth/registro">
-              Crear cuenta
-              <ArrowRight data-icon="inline-end" />
-            </Link>
-          </Button>
+          {registrationAvailable ? (
+            <Button asChild className="hidden rounded-none sm:inline-flex">
+              <Link href="/auth/registro">
+                Crear cuenta
+                <ArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+          ) : null}
         </nav>
       </header>
 
