@@ -1325,6 +1325,21 @@
         "required": ["count", "next", "previous", "results"],
         "type": "object"
       },
+      "AttendanceSummary": {
+        "properties": {
+          "duration_seconds": { "nullable": true, "type": "integer" },
+          "participant_identity": { "type": "string" },
+          "role": { "type": "string" },
+          "user_id": { "format": "uuid", "nullable": true, "type": "string" }
+        },
+        "required": [
+          "duration_seconds",
+          "participant_identity",
+          "role",
+          "user_id"
+        ],
+        "type": "object"
+      },
       "AuthTypeEnum": {
         "description": "* `oauth2_user` - OAuth 2.0 de usuario\n* `api_key` - Clave API",
         "enum": ["oauth2_user", "api_key"],
@@ -1380,6 +1395,76 @@
           }
         },
         "required": ["action", "membership_ids"],
+        "type": "object"
+      },
+      "CalendarEvent": {
+        "properties": {
+          "allDay": { "type": "boolean" },
+          "durationEditable": { "type": "boolean" },
+          "editable": { "type": "boolean" },
+          "end": { "format": "date-time", "type": "string" },
+          "extendedProps": {
+            "$ref": "#/components/schemas/CalendarExtendedProps"
+          },
+          "groupId": { "format": "uuid", "type": "string" },
+          "id": { "format": "uuid", "type": "string" },
+          "start": { "format": "date-time", "type": "string" },
+          "startEditable": { "type": "boolean" },
+          "title": { "type": "string" }
+        },
+        "required": [
+          "allDay",
+          "durationEditable",
+          "editable",
+          "end",
+          "extendedProps",
+          "groupId",
+          "id",
+          "start",
+          "startEditable",
+          "title"
+        ],
+        "type": "object"
+      },
+      "CalendarExtendedProps": {
+        "properties": {
+          "canDelete": { "type": "boolean" },
+          "canEdit": { "type": "boolean" },
+          "canJoin": { "type": "boolean" },
+          "canModerate": { "type": "boolean" },
+          "canShareScreen": { "type": "boolean" },
+          "canStart": { "type": "boolean" },
+          "courseId": { "format": "uuid", "type": "string" },
+          "courseName": { "type": "string" },
+          "courseSlug": { "type": "string" },
+          "description": { "type": "string" },
+          "eventType": { "type": "string" },
+          "hostName": { "type": "string" },
+          "liveStatus": { "nullable": true, "type": "string" },
+          "occurrenceStatus": { "type": "string" },
+          "occurrenceVersion": { "type": "integer" },
+          "recurring": { "type": "boolean" },
+          "sessionId": { "format": "uuid", "nullable": true, "type": "string" }
+        },
+        "required": [
+          "canDelete",
+          "canEdit",
+          "canJoin",
+          "canModerate",
+          "canShareScreen",
+          "canStart",
+          "courseId",
+          "courseName",
+          "courseSlug",
+          "description",
+          "eventType",
+          "hostName",
+          "liveStatus",
+          "occurrenceStatus",
+          "occurrenceVersion",
+          "recurring",
+          "sessionId"
+        ],
         "type": "object"
       },
       "CapabilitiesEnum": {
@@ -2516,6 +2601,14 @@
         "required": ["code", "detail"],
         "type": "object"
       },
+      "EventCancel": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "scope": { "$ref": "#/components/schemas/ScopeEnum" }
+        },
+        "required": ["expected_version", "scope"],
+        "type": "object"
+      },
       "EventConsumerDelivery": {
         "properties": {
           "attempt_count": { "readOnly": true, "type": "integer" },
@@ -2583,6 +2676,41 @@
       "EventConsumerDeliveryStatusEnum": {
         "description": "* `pending` - Pendiente\n* `processing` - Procesando\n* `completed` - Completada\n* `failed` - Fallida\n* `dead` - Terminal",
         "enum": ["pending", "processing", "completed", "failed", "dead"],
+        "type": "string"
+      },
+      "EventCreate": {
+        "properties": {
+          "course_slug": { "pattern": "^[-a-zA-Z0-9_]+$", "type": "string" },
+          "description": { "maxLength": 2000, "type": "string" },
+          "duration_minutes": {
+            "maximum": 720,
+            "minimum": 5,
+            "type": "integer"
+          },
+          "event_type": {
+            "allOf": [
+              { "$ref": "#/components/schemas/EventCreateEventTypeEnum" }
+            ],
+            "default": "live_class"
+          },
+          "host_membership_id": { "format": "uuid", "type": "string" },
+          "rrule": { "maxLength": 1000, "type": "string" },
+          "starts_at": { "format": "date-time", "type": "string" },
+          "timezone_name": { "maxLength": 64, "type": "string" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": [
+          "course_slug",
+          "duration_minutes",
+          "starts_at",
+          "timezone_name",
+          "title"
+        ],
+        "type": "object"
+      },
+      "EventCreateEventTypeEnum": {
+        "description": "* `live_class` - Clase en vivo\n* `academic_activity` - Actividad académica",
+        "enum": ["live_class", "academic_activity"],
         "type": "string"
       },
       "EventReplay": {
@@ -2679,31 +2807,15 @@
         "enum": ["pending", "processing", "completed", "failed"],
         "type": "string"
       },
-      "EventTypeEnum": {
-        "description": "* `membership_created` - Membresía creada\n* `membership_suspended` - Membresía suspendida\n* `membership_reactivated` - Membresía reactivada\n* `membership_revoked` - Membresía revocada\n* `role_assigned` - Rol asignado\n* `role_revoked` - Rol revocado\n* `invitation_created` - Invitación creada\n* `invitation_updated` - Invitación actualizada\n* `invitation_resent` - Invitación reenviada\n* `invitation_revoked` - Invitación revocada\n* `invitation_accepted` - Invitación aceptada\n* `join_requested` - Solicitud de ingreso creada\n* `join_approved` - Solicitud de ingreso aprobada\n* `join_rejected` - Solicitud de ingreso rechazada\n* `managed_account_created` - Cuenta administrada creada\n* `managed_account_activated` - Cuenta administrada activada\n* `profile_updated` - Perfil institucional actualizado\n* `roles_replaced` - Roles sustituidos\n* `sessions_revoked` - Sesiones revocadas\n* `membership_settings_updated` - Configuración de membresías actualizada",
-        "enum": [
-          "membership_created",
-          "membership_suspended",
-          "membership_reactivated",
-          "membership_revoked",
-          "role_assigned",
-          "role_revoked",
-          "invitation_created",
-          "invitation_updated",
-          "invitation_resent",
-          "invitation_revoked",
-          "invitation_accepted",
-          "join_requested",
-          "join_approved",
-          "join_rejected",
-          "managed_account_created",
-          "managed_account_activated",
-          "profile_updated",
-          "roles_replaced",
-          "sessions_revoked",
-          "membership_settings_updated"
-        ],
-        "type": "string"
+      "EventReschedule": {
+        "properties": {
+          "ends_at": { "format": "date-time", "type": "string" },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "scope": { "$ref": "#/components/schemas/ScopeEnum" },
+          "starts_at": { "format": "date-time", "type": "string" }
+        },
+        "required": ["ends_at", "expected_version", "scope", "starts_at"],
+        "type": "object"
       },
       "ExpectedLock": {
         "properties": {
@@ -3814,6 +3926,77 @@
         ],
         "type": "object"
       },
+      "LiveConnection": {
+        "properties": {
+          "serverUrl": { "type": "string" },
+          "session": { "$ref": "#/components/schemas/LiveSessionSummary" },
+          "token": { "type": "string" }
+        },
+        "required": ["serverUrl", "session", "token"],
+        "type": "object"
+      },
+      "LiveSessionDetail": {
+        "properties": {
+          "canDelete": { "type": "boolean" },
+          "canEdit": { "type": "boolean" },
+          "canJoin": { "type": "boolean" },
+          "canModerate": { "type": "boolean" },
+          "canShareScreen": { "type": "boolean" },
+          "canStart": { "type": "boolean" },
+          "course": { "additionalProperties": {}, "type": "object" },
+          "description": { "type": "string" },
+          "hostName": { "type": "string" },
+          "id": { "format": "uuid", "type": "string" },
+          "liveStatus": { "type": "string" },
+          "scheduledEnd": { "format": "date-time", "type": "string" },
+          "scheduledStart": { "format": "date-time", "type": "string" },
+          "sessionId": { "format": "uuid", "type": "string" },
+          "status": { "type": "string" },
+          "title": { "type": "string" }
+        },
+        "required": [
+          "canDelete",
+          "canEdit",
+          "canJoin",
+          "canModerate",
+          "canShareScreen",
+          "canStart",
+          "course",
+          "description",
+          "hostName",
+          "id",
+          "liveStatus",
+          "scheduledEnd",
+          "scheduledStart",
+          "sessionId",
+          "status",
+          "title"
+        ],
+        "type": "object"
+      },
+      "LiveSessionSummary": {
+        "properties": {
+          "canModerate": { "type": "boolean" },
+          "canShareScreen": { "type": "boolean" },
+          "id": { "format": "uuid", "type": "string" },
+          "role": { "type": "string" },
+          "scheduledEnd": { "format": "date-time", "type": "string" },
+          "scheduledStart": { "format": "date-time", "type": "string" },
+          "status": { "type": "string" },
+          "title": { "type": "string" }
+        },
+        "required": [
+          "canModerate",
+          "canShareScreen",
+          "id",
+          "role",
+          "scheduledEnd",
+          "scheduledStart",
+          "status",
+          "title"
+        ],
+        "type": "object"
+      },
       "ManagedAccountCreate": {
         "properties": {
           "email": { "format": "email", "type": "string" },
@@ -3970,7 +4153,9 @@
             "type": "string"
           },
           "event_type": {
-            "allOf": [{ "$ref": "#/components/schemas/EventTypeEnum" }],
+            "allOf": [
+              { "$ref": "#/components/schemas/MembershipEventEventTypeEnum" }
+            ],
             "readOnly": true
           },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
@@ -4000,6 +4185,32 @@
           "role"
         ],
         "type": "object"
+      },
+      "MembershipEventEventTypeEnum": {
+        "description": "* `membership_created` - Membresía creada\n* `membership_suspended` - Membresía suspendida\n* `membership_reactivated` - Membresía reactivada\n* `membership_revoked` - Membresía revocada\n* `role_assigned` - Rol asignado\n* `role_revoked` - Rol revocado\n* `invitation_created` - Invitación creada\n* `invitation_updated` - Invitación actualizada\n* `invitation_resent` - Invitación reenviada\n* `invitation_revoked` - Invitación revocada\n* `invitation_accepted` - Invitación aceptada\n* `join_requested` - Solicitud de ingreso creada\n* `join_approved` - Solicitud de ingreso aprobada\n* `join_rejected` - Solicitud de ingreso rechazada\n* `managed_account_created` - Cuenta administrada creada\n* `managed_account_activated` - Cuenta administrada activada\n* `profile_updated` - Perfil institucional actualizado\n* `roles_replaced` - Roles sustituidos\n* `sessions_revoked` - Sesiones revocadas\n* `membership_settings_updated` - Configuración de membresías actualizada",
+        "enum": [
+          "membership_created",
+          "membership_suspended",
+          "membership_reactivated",
+          "membership_revoked",
+          "role_assigned",
+          "role_revoked",
+          "invitation_created",
+          "invitation_updated",
+          "invitation_resent",
+          "invitation_revoked",
+          "invitation_accepted",
+          "join_requested",
+          "join_approved",
+          "join_rejected",
+          "managed_account_created",
+          "managed_account_activated",
+          "profile_updated",
+          "roles_replaced",
+          "sessions_revoked",
+          "membership_settings_updated"
+        ],
+        "type": "string"
       },
       "Module": {
         "properties": {
@@ -4278,6 +4489,11 @@
           "subject_id": { "format": "uuid", "readOnly": true, "type": "string" }
         },
         "required": ["code", "id", "statement", "status", "subject_id"],
+        "type": "object"
+      },
+      "OperationAccepted": {
+        "properties": { "status": { "type": "string" } },
+        "required": ["status"],
         "type": "object"
       },
       "OperationEnum": {
@@ -4686,6 +4902,19 @@
           }
         },
         "required": ["count", "results"],
+        "type": "object"
+      },
+      "ParticipantPermission": {
+        "properties": {
+          "can_publish_audio": { "type": "boolean" },
+          "can_publish_video": { "type": "boolean" },
+          "can_share_screen": { "type": "boolean" }
+        },
+        "required": [
+          "can_publish_audio",
+          "can_publish_video",
+          "can_share_screen"
+        ],
         "type": "object"
       },
       "PendingManual": {
@@ -5973,6 +6202,19 @@
         },
         "required": ["alignment_type", "id", "position", "subject"],
         "type": "object"
+      },
+      "SchedulingError": {
+        "properties": {
+          "code": { "type": "string" },
+          "detail": { "type": "string" }
+        },
+        "required": ["code", "detail"],
+        "type": "object"
+      },
+      "ScopeEnum": {
+        "description": "* `occurrence` - Sólo esta clase\n* `following` - Esta clase y las siguientes\n* `series` - Toda la serie",
+        "enum": ["occurrence", "following", "series"],
+        "type": "string"
       },
       "ScoringCorrection": {
         "properties": {
@@ -20045,6 +20287,550 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Membership" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/calendar/events/": {
+      "get": {
+        "operationId": "scheduling_calendar_events_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "course",
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "query",
+            "name": "timeZone",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/CalendarEvent" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "scheduling_calendar_events_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EventCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/EventCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/EventCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/CalendarEvent" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/events/{occurrence_id}/": {
+      "get": {
+        "operationId": "scheduling_calendar_event_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "occurrence_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CalendarEvent" }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "scheduling_calendar_event_reschedule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "occurrence_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EventReschedule" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/EventReschedule" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/EventReschedule" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CalendarEvent" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/events/{occurrence_id}/cancel/": {
+      "post": {
+        "operationId": "scheduling_calendar_event_cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "occurrence_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EventCancel" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/EventCancel" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/EventCancel" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CalendarEvent" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/": {
+      "get": {
+        "operationId": "scheduling_live_session_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LiveSessionDetail" }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/attendance/": {
+      "get": {
+        "operationId": "scheduling_live_attendance_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/AttendanceSummary" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/end/": {
+      "post": {
+        "operationId": "scheduling_live_session_end",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OperationAccepted" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/join/": {
+      "post": {
+        "operationId": "scheduling_live_session_join",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LiveConnection" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/participants/{identity}/": {
+      "delete": {
+        "operationId": "scheduling_live_participant_remove",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "identity",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OperationAccepted" }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/participants/{identity}/permissions/": {
+      "post": {
+        "operationId": "scheduling_live_participant_permissions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "identity",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ParticipantPermission" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ParticipantPermission" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ParticipantPermission" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OperationAccepted" }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/start/": {
+      "post": {
+        "operationId": "scheduling_live_session_start",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LiveConnection" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
               }
             },
             "description": ""

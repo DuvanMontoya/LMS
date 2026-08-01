@@ -782,6 +782,38 @@ export interface paths {
   '/api/v1/organizations/{slug}/memberships/{membership_id}/suspend/': {
     post: operations['organizations_memberships_suspend_create'];
   };
+  '/api/v1/organizations/{slug}/scheduling/calendar/events/': {
+    get: operations['scheduling_calendar_events_list'];
+    post: operations['scheduling_calendar_events_create'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/events/{occurrence_id}/': {
+    get: operations['scheduling_calendar_event_retrieve'];
+    patch: operations['scheduling_calendar_event_reschedule'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/events/{occurrence_id}/cancel/': {
+    post: operations['scheduling_calendar_event_cancel'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/': {
+    get: operations['scheduling_live_session_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/attendance/': {
+    get: operations['scheduling_live_attendance_list'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/end/': {
+    post: operations['scheduling_live_session_end'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/join/': {
+    post: operations['scheduling_live_session_join'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/participants/{identity}/': {
+    delete: operations['scheduling_live_participant_remove'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/participants/{identity}/permissions/': {
+    post: operations['scheduling_live_participant_permissions'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/start/': {
+    post: operations['scheduling_live_session_start'];
+  };
   '/api/v1/platform/email-deliveries/': {
     get: operations['platform_email_deliveries_list'];
   };
@@ -1481,6 +1513,13 @@ export interface components {
       previous: string | null;
       results: components['schemas']['AttemptResult'][];
     };
+    AttendanceSummary: {
+      duration_seconds: number | null;
+      participant_identity: string;
+      role: string;
+      /** Format: uuid */
+      user_id: string | null;
+    };
     /**
      * @description * `oauth2_user` - OAuth 2.0 de usuario
      * * `api_key` - Clave API
@@ -1511,6 +1550,43 @@ export interface components {
     BulkMembershipTransition: {
       action: components['schemas']['ActionEnum'];
       membership_ids: string[];
+    };
+    CalendarEvent: {
+      allDay: boolean;
+      durationEditable: boolean;
+      editable: boolean;
+      /** Format: date-time */
+      end: string;
+      extendedProps: components['schemas']['CalendarExtendedProps'];
+      /** Format: uuid */
+      groupId: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      start: string;
+      startEditable: boolean;
+      title: string;
+    };
+    CalendarExtendedProps: {
+      canDelete: boolean;
+      canEdit: boolean;
+      canJoin: boolean;
+      canModerate: boolean;
+      canShareScreen: boolean;
+      canStart: boolean;
+      /** Format: uuid */
+      courseId: string;
+      courseName: string;
+      courseSlug: string;
+      description: string;
+      eventType: string;
+      hostName: string;
+      liveStatus: string | null;
+      occurrenceStatus: string;
+      occurrenceVersion: number;
+      recurring: boolean;
+      /** Format: uuid */
+      sessionId: string | null;
     };
     /**
      * @description * `calendar` - calendar
@@ -2052,6 +2128,10 @@ export interface components {
       current_version?: number;
       detail: string;
     };
+    EventCancel: {
+      expected_version: number;
+      scope: components['schemas']['ScopeEnum'];
+    };
     EventConsumerDelivery: {
       attempt_count: number;
       /** Format: date-time */
@@ -2084,6 +2164,26 @@ export interface components {
      */
     EventConsumerDeliveryStatusEnum:
       'pending' | 'processing' | 'completed' | 'failed' | 'dead';
+    EventCreate: {
+      course_slug: string;
+      description?: string;
+      duration_minutes: number;
+      /** @default live_class */
+      event_type?: components['schemas']['EventCreateEventTypeEnum'];
+      /** Format: uuid */
+      host_membership_id?: string;
+      rrule?: string;
+      /** Format: date-time */
+      starts_at: string;
+      timezone_name: string;
+      title: string;
+    };
+    /**
+     * @description * `live_class` - Clase en vivo
+     * * `academic_activity` - Actividad académica
+     * @enum {string}
+     */
+    EventCreateEventTypeEnum: 'live_class' | 'academic_activity';
     EventReplay: {
       /** Format: date-time */
       completed_at: string | null;
@@ -2125,50 +2225,14 @@ export interface components {
      * @enum {string}
      */
     EventReplayStatusEnum: 'pending' | 'processing' | 'completed' | 'failed';
-    /**
-     * @description * `membership_created` - Membresía creada
-     * * `membership_suspended` - Membresía suspendida
-     * * `membership_reactivated` - Membresía reactivada
-     * * `membership_revoked` - Membresía revocada
-     * * `role_assigned` - Rol asignado
-     * * `role_revoked` - Rol revocado
-     * * `invitation_created` - Invitación creada
-     * * `invitation_updated` - Invitación actualizada
-     * * `invitation_resent` - Invitación reenviada
-     * * `invitation_revoked` - Invitación revocada
-     * * `invitation_accepted` - Invitación aceptada
-     * * `join_requested` - Solicitud de ingreso creada
-     * * `join_approved` - Solicitud de ingreso aprobada
-     * * `join_rejected` - Solicitud de ingreso rechazada
-     * * `managed_account_created` - Cuenta administrada creada
-     * * `managed_account_activated` - Cuenta administrada activada
-     * * `profile_updated` - Perfil institucional actualizado
-     * * `roles_replaced` - Roles sustituidos
-     * * `sessions_revoked` - Sesiones revocadas
-     * * `membership_settings_updated` - Configuración de membresías actualizada
-     * @enum {string}
-     */
-    EventTypeEnum:
-      | 'membership_created'
-      | 'membership_suspended'
-      | 'membership_reactivated'
-      | 'membership_revoked'
-      | 'role_assigned'
-      | 'role_revoked'
-      | 'invitation_created'
-      | 'invitation_updated'
-      | 'invitation_resent'
-      | 'invitation_revoked'
-      | 'invitation_accepted'
-      | 'join_requested'
-      | 'join_approved'
-      | 'join_rejected'
-      | 'managed_account_created'
-      | 'managed_account_activated'
-      | 'profile_updated'
-      | 'roles_replaced'
-      | 'sessions_revoked'
-      | 'membership_settings_updated';
+    EventReschedule: {
+      /** Format: date-time */
+      ends_at: string;
+      expected_version: number;
+      scope: components['schemas']['ScopeEnum'];
+      /** Format: date-time */
+      starts_at: string;
+    };
     ExpectedLock: {
       expected_lock_version: number;
     };
@@ -2645,6 +2709,48 @@ export interface components {
       unit_count: number;
       word_count: number;
     };
+    LiveConnection: {
+      serverUrl: string;
+      session: components['schemas']['LiveSessionSummary'];
+      token: string;
+    };
+    LiveSessionDetail: {
+      canDelete: boolean;
+      canEdit: boolean;
+      canJoin: boolean;
+      canModerate: boolean;
+      canShareScreen: boolean;
+      canStart: boolean;
+      course: {
+        [key: string]: unknown;
+      };
+      description: string;
+      hostName: string;
+      /** Format: uuid */
+      id: string;
+      liveStatus: string;
+      /** Format: date-time */
+      scheduledEnd: string;
+      /** Format: date-time */
+      scheduledStart: string;
+      /** Format: uuid */
+      sessionId: string;
+      status: string;
+      title: string;
+    };
+    LiveSessionSummary: {
+      canModerate: boolean;
+      canShareScreen: boolean;
+      /** Format: uuid */
+      id: string;
+      role: string;
+      /** Format: date-time */
+      scheduledEnd: string;
+      /** Format: date-time */
+      scheduledStart: string;
+      status: string;
+      title: string;
+    };
     ManagedAccountCreate: {
       /** Format: email */
       email: string;
@@ -2716,13 +2822,57 @@ export interface components {
     MembershipEvent: {
       /** Format: date-time */
       created_at: string;
-      event_type: components['schemas']['EventTypeEnum'];
+      event_type: components['schemas']['MembershipEventEventTypeEnum'];
       /** Format: uuid */
       id: string;
       new_status: components['schemas']['OrganizationMembershipStatus'];
       previous_status: components['schemas']['OrganizationMembershipStatus'];
       role: components['schemas']['OrganizationRole'];
     };
+    /**
+     * @description * `membership_created` - Membresía creada
+     * * `membership_suspended` - Membresía suspendida
+     * * `membership_reactivated` - Membresía reactivada
+     * * `membership_revoked` - Membresía revocada
+     * * `role_assigned` - Rol asignado
+     * * `role_revoked` - Rol revocado
+     * * `invitation_created` - Invitación creada
+     * * `invitation_updated` - Invitación actualizada
+     * * `invitation_resent` - Invitación reenviada
+     * * `invitation_revoked` - Invitación revocada
+     * * `invitation_accepted` - Invitación aceptada
+     * * `join_requested` - Solicitud de ingreso creada
+     * * `join_approved` - Solicitud de ingreso aprobada
+     * * `join_rejected` - Solicitud de ingreso rechazada
+     * * `managed_account_created` - Cuenta administrada creada
+     * * `managed_account_activated` - Cuenta administrada activada
+     * * `profile_updated` - Perfil institucional actualizado
+     * * `roles_replaced` - Roles sustituidos
+     * * `sessions_revoked` - Sesiones revocadas
+     * * `membership_settings_updated` - Configuración de membresías actualizada
+     * @enum {string}
+     */
+    MembershipEventEventTypeEnum:
+      | 'membership_created'
+      | 'membership_suspended'
+      | 'membership_reactivated'
+      | 'membership_revoked'
+      | 'role_assigned'
+      | 'role_revoked'
+      | 'invitation_created'
+      | 'invitation_updated'
+      | 'invitation_resent'
+      | 'invitation_revoked'
+      | 'invitation_accepted'
+      | 'join_requested'
+      | 'join_approved'
+      | 'join_rejected'
+      | 'managed_account_created'
+      | 'managed_account_activated'
+      | 'profile_updated'
+      | 'roles_replaced'
+      | 'sessions_revoked'
+      | 'membership_settings_updated';
     Module: {
       /** Format: date-time */
       archived_at: string | null;
@@ -2849,6 +2999,9 @@ export interface components {
       status: string;
       /** Format: uuid */
       subject_id: string;
+    };
+    OperationAccepted: {
+      status: string;
     };
     /**
      * @description * `upsert` - Actualizar
@@ -3052,6 +3205,11 @@ export interface components {
        */
       previous?: string | null;
       results: components['schemas']['Membership'][];
+    };
+    ParticipantPermission: {
+      can_publish_audio: boolean;
+      can_publish_video: boolean;
+      can_share_screen: boolean;
     };
     PendingManual: {
       answer: string | null;
@@ -3593,6 +3751,17 @@ export interface components {
       position: number;
       subject: components['schemas']['SubjectSummary'];
     };
+    SchedulingError: {
+      code: string;
+      detail: string;
+    };
+    /**
+     * @description * `occurrence` - Sólo esta clase
+     * * `following` - Esta clase y las siguientes
+     * * `series` - Toda la serie
+     * @enum {string}
+     */
+    ScopeEnum: 'occurrence' | 'following' | 'series';
     ScoringCorrection: {
       expected_version: number;
       item_overrides: {
@@ -10457,6 +10626,275 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['Membership'];
+        };
+      };
+    };
+  };
+  scheduling_calendar_events_list: {
+    parameters: {
+      query: {
+        course?: string;
+        end: string;
+        start: string;
+        timeZone: string;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CalendarEvent'][];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_calendar_events_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EventCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['EventCreate'];
+        'multipart/form-data': components['schemas']['EventCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['CalendarEvent'][];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_calendar_event_retrieve: {
+    parameters: {
+      path: {
+        occurrence_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CalendarEvent'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_calendar_event_reschedule: {
+    parameters: {
+      path: {
+        occurrence_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EventReschedule'];
+        'application/x-www-form-urlencoded': components['schemas']['EventReschedule'];
+        'multipart/form-data': components['schemas']['EventReschedule'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CalendarEvent'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_calendar_event_cancel: {
+    parameters: {
+      path: {
+        occurrence_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EventCancel'];
+        'application/x-www-form-urlencoded': components['schemas']['EventCancel'];
+        'multipart/form-data': components['schemas']['EventCancel'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CalendarEvent'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_live_session_retrieve: {
+    parameters: {
+      path: {
+        session_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LiveSessionDetail'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_live_attendance_list: {
+    parameters: {
+      path: {
+        session_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AttendanceSummary'][];
+        };
+      };
+    };
+  };
+  scheduling_live_session_end: {
+    parameters: {
+      path: {
+        session_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['OperationAccepted'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_live_session_join: {
+    parameters: {
+      path: {
+        session_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LiveConnection'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_live_participant_remove: {
+    parameters: {
+      path: {
+        identity: string;
+        session_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['OperationAccepted'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_live_participant_permissions: {
+    parameters: {
+      path: {
+        identity: string;
+        session_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ParticipantPermission'];
+        'application/x-www-form-urlencoded': components['schemas']['ParticipantPermission'];
+        'multipart/form-data': components['schemas']['ParticipantPermission'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['OperationAccepted'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_live_session_start: {
+    parameters: {
+      path: {
+        session_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LiveConnection'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
         };
       };
     };

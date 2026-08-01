@@ -11,6 +11,7 @@
 | `authoring` | Draft, review, publication, immutable snapshots/history | Published revision immutable; restoration creates a new revision. Emits `published`, `publication_retracted`. | Courses/content/assessments; cannot alter attempts. |
 | `enrollments` | Enrolment, access window, status; future cohorts | Active access is evaluated at delivery time; historical enrolment facts retained. | Identity/courses/publication; no grading policy. |
 | `learning` | Study session, bookmark, continuation | Learner state tied to delivered version. Emits `learning_event`. | Enrolments/publications; no score ownership. |
+| `scheduling` | Series and bounded occurrences, academic calendar, live-session lifecycle, attendance segments and LiveKit webhook ledger. | PostgreSQL is authoritative; every live occurrence has one immutable room name; recurring sets are bounded; signed webhooks are idempotent and attendance is append-only by connection segment. | Reads organization policies, courses and the public effective-enrollment contract from learning. Existing academic domains never import scheduling. LiveKit and FullCalendar are adapters, not sources of truth. |
 | `assessments` | Implemented: banks, question/assessment revisions and immutable versions, deliveries, assignments, attempts, responses, deterministic initial scoring and manual decisions. Future: pools, regrading, gradebook and analytics. | Public/grading snapshots are separate; one open revision and one in-progress attempt; final order is materialized; versions/items/decisions/events are trigger-protected. | Reads organization policy, catalog objectives, publishing releases and learning assignments. Reverse imports are prohibited. ADR 0023 intentionally groups the initial attempt/grading lifecycle here. |
 | `attempts` | Future extraction candidate, not a Django app in Phase 13. | Any extraction must preserve IDs, snapshots, events and transactions. | Must not be created without a new ADR and migration plan. |
 | `grading` | Future advanced grading/gradebook boundary, not a Django app in Phase 13. | Regrading and projections must cite immutable inputs and preserve decisions. | Initial deterministic/manual grading remains in assessments under ADR 0023. |
@@ -88,6 +89,15 @@ pools, jobs, grade versions, regrading, gradebook y analítica. Celery sólo lla
 servicios de assessments; no introduce un dominio ni persistencia alterna.
 Redis no contiene grades. `courses`, `content`, `publishing` y `learning`
 continúan sin importar assessments; el gradebook no modifica `CourseProgress`.
+
+# Scheduling boundary
+
+`domain.scheduling` posee series, ocurrencias acotadas, excepciones, sesiones
+LiveKit, segmentos de asistencia y webhooks idempotentes. Puede referenciar
+organizaciones/cursos y consultar matrícula efectiva mediante el contrato
+público de learning; ningún dominio anterior lo importa. LiveKit sólo ejecuta
+audio/video/pantalla y FullCalendar sólo representa y modifica mediante la API.
+Véase ADR 0031.
 
 ### Assets
 

@@ -257,9 +257,10 @@ function Invoke-E2E([string]$Grep) {
         if ($tsconfigAfter -ne $tsconfigBefore) {
             $beforeObject = $tsconfigBefore | ConvertFrom-Json
             $afterObject = $tsconfigAfter | ConvertFrom-Json
+            $escapedNextDistDirectoryName = [Regex]::Escape($nextDistDirectoryName)
             $afterObject.include = @(
                 $afterObject.include | Where-Object {
-                    $_ -notmatch '^\.local/e2e-next-[0-9a-f]+/(dev/)?types/\*\*/\*\.ts$'
+                    $_ -notmatch "^$escapedNextDistDirectoryName/(dev/)?types/\*\*/\*\.ts$"
                 }
             )
             $beforeNormalized = $beforeObject | ConvertTo-Json -Depth 100 -Compress

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import '@livekit/components-styles/components';
+import '@livekit/components-styles/themes/default';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryProvider } from '@/lib/query/provider';

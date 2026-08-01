@@ -182,3 +182,21 @@ experience. Retiro: eliminar ambos overrides cuando los parents adopten
 versiones corregidas; revisión obligatoria en cada actualización. Los warnings
 peer opcionales de WASM permanecen visibles, no se suprimen y no afectan los
 targets Windows/Linux usados por CI o runtime.
+
+## Academic scheduling and live classes — 2026-07-31
+
+| Dependencia exacta | Problema | Licencia/riesgo | Owner | Alternativa o retirada |
+| --- | --- | --- | --- | --- |
+| `livekit-api==1.2.0` | Tokens, Room Service, permisos, expulsión, webhooks firmados y Egress opcional desde Django | Apache-2.0; cliente HTTP asíncrono y servicio externo | scheduling backend | sustituir el gateway conservando sesiones/asistencia |
+| `python-dateutil==2.9.0.post0` | Parsear y expandir RRULE RFC 5545 acotadas con zonas aware | Apache-2.0/BSD; reglas complejas requieren límites | scheduling backend | retirar recurrencia o implementar parser estándar auditado |
+| `livekit-client==2.21.0` | WebRTC, dispositivos, tracks, reconexión y `Room` en navegador | Apache-2.0; bundle y permisos sensibles | scheduling web | sustituir adaptador audiovisual sin migrar datos |
+| `@livekit/components-react==2.9.23` | Contexto, tiles, grid y audio accesibles sobre el cliente | Apache-2.0; peer con LiveKit/React | scheduling web | componentes locales sobre `livekit-client` |
+| `@livekit/components-styles==1.2.0` | Base visual funcional de controles/tracks | Apache-2.0; no debe crear identidad paralela | scheduling web | CSS local manteniendo componentes |
+| `@fullcalendar/react==7.0.2` | Calendario profesional con month/week/day/list, interacción y SSR React | MIT; v7 exige tema/CSS explícito | scheduling web | vista React local sobre el mismo feed |
+| `temporal-polyfill==1.0.2` | Peer obligatorio de FullCalendar 7 para Temporal | MIT; sólo uso interno tree-shakeable | scheduling web | retirar con FullCalendar o cuando éste elimine el peer |
+
+Se rechazaron FullCalendar Premium/Scheduler, paquetes estándar v6 separados,
+`@fullcalendar/rrule`, `rrule`, SDK RTC/Agents de Python, Axios, otra
+autenticación, Google Calendar/Meet, Zoom/Jitsi, IA, transcripción y aplicación
+móvil. Los registros npm/PyPI y documentación oficial se consultaron el
+2026-07-31. Todos los pins son estables y no prerelease.

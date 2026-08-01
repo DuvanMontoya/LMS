@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "domain.content",
     "domain.publishing",
     "domain.learning",
+    "domain.scheduling",
     "domain.assessments",
     "domain.assets",
     "domain.events",
@@ -317,6 +318,31 @@ USE_I18N = True
 USE_TZ = True
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+LIVEKIT_ENABLED = os.environ.get("LIVEKIT_ENABLED", "false").lower() == "true"
+LIVEKIT_URL = os.environ.get("LIVEKIT_URL", "")
+LIVEKIT_API_KEY = os.environ.get("LIVEKIT_API_KEY", "")
+LIVEKIT_API_SECRET = os.environ.get("LIVEKIT_API_SECRET", "")
+LIVEKIT_TOKEN_TTL_SECONDS = int(os.environ.get("LIVEKIT_TOKEN_TTL_SECONDS", "300"))
+LIVEKIT_JOIN_BEFORE_START_SECONDS = int(
+    os.environ.get("LIVEKIT_JOIN_BEFORE_START_SECONDS", "900")
+)
+LIVEKIT_JOIN_AFTER_END_SECONDS = int(
+    os.environ.get("LIVEKIT_JOIN_AFTER_END_SECONDS", "300")
+)
+LIVEKIT_ROOM_EMPTY_TIMEOUT_SECONDS = int(
+    os.environ.get("LIVEKIT_ROOM_EMPTY_TIMEOUT_SECONDS", "600")
+)
+LIVEKIT_MAX_PARTICIPANTS = int(os.environ.get("LIVEKIT_MAX_PARTICIPANTS", "250"))
+LIVEKIT_STUDENT_CAN_PUBLISH_AUDIO = (
+    os.environ.get("LIVEKIT_STUDENT_CAN_PUBLISH_AUDIO", "true").lower() == "true"
+)
+LIVEKIT_STUDENT_CAN_PUBLISH_VIDEO = (
+    os.environ.get("LIVEKIT_STUDENT_CAN_PUBLISH_VIDEO", "true").lower() == "true"
+)
+LIVEKIT_EGRESS_ENABLED = (
+    os.environ.get("LIVEKIT_EGRESS_ENABLED", "false").lower() == "true"
+)
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"

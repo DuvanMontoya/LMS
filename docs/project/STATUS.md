@@ -1,5 +1,58 @@
 # Project status
 
+## Academic scheduling and live classes — complete locally
+
+- **Fecha y alcance:** 2026-07-31–2026-08-01; integración web end-to-end de
+  calendario académico, FullCalendar 7, LiveKit, asistencia y webhooks. No se
+  añadieron aplicación móvil, IA, transcripción, proveedor audiovisual
+  alternativo ni Scheduler/Premium.
+- **Decisión y arquitectura:** ADR 0031 crea `domain.scheduling` como dueño de
+  series, ocurrencias, sesiones y asistencia. PostgreSQL/Django son autoridad;
+  LiveKit es adaptador audiovisual y FullCalendar es vista. Los roles siguen
+  exclusivamente en `domain.organizations`; learner requiere tanto
+  `scheduling.view`/`live_session.join` como matrícula efectiva mediante el
+  contrato público de `domain.learning`.
+- **Implementación backend:** migración `scheduling.0001`, RRULE RFC 5545
+  acotada a 366 ocurrencias, zonas IANA, locks optimistas, salas aleatorias e
+  inmutables, tokens server-side con grants mínimos y TTL corto, inicio/fin y
+  moderación idempotentes, webhook firmado e idempotente y segmentos de
+  asistencia append-only. El feed nunca entrega room ni token y toda consulta
+  está aislada por organización.
+- **Implementación web:** rutas `/calendario` y `/clases/<sessionId>` integradas
+  en el shell; mes/semana/agenda, creación, recurrencia, drag/resize y ámbitos
+  `occurrence`/`following`/`series`; lobby con selección/prueba de dispositivos
+  y token solicitado sólo al confirmar; sala React con audio, cámara, pantalla,
+  grid y moderación. A 390 px el breakpoint cambia reactivamente a agenda y no
+  existe overflow del documento. CSP y Permissions-Policy habilitan cámara,
+  micrófono y display-capture sólo en la ruta exacta de clase.
+- **Versiones exactas:** `livekit-client@2.21.0`,
+  `@livekit/components-react@2.9.23`,
+  `@livekit/components-styles@1.2.0`, `livekit-api==1.2.0`,
+  `@fullcalendar/react@7.0.2`, `temporal-polyfill@1.0.2` y
+  `python-dateutil==2.9.0.post0`. Fuentes, licencias y compatibilidad están en
+  `docs/research` con consulta 2026-07-31.
+- **Evidencia final:** `pnpm check` PASS; build Next 16.2.12 PASS con ambas rutas;
+  `pnpm api:test` 292/292 y 75,54 % de cobertura; `pnpm web:test` 51/51;
+  `pnpm scheduling:test` 14/14; migración limpia en PostgreSQL PASS;
+  `pnpm scheduling:e2e` 1/1 en Chromium con login, creación, agenda móvil,
+  lobby, axe, headers y ausencia de token persistido; `pnpm audit --audit-level
+  high` sin vulnerabilidades conocidas; `uv lock --check` y `git diff --check`
+  PASS. La inspección visual autenticada comprobó calendario desktop y el
+  breakpoint móvil; un servicio Docker ajeno ocupaba 8000, por lo que se usaron
+  8010/3010 sin detenerlo. El runner E2E restaura ahora sólo su ruta temporal de
+  `tsconfig.json` y no deja cambios mecánicos.
+- **Límite honesto:** no existen credenciales LiveKit autorizadas en este
+  entorno. Por ello no se declara verificada una sesión A/V contra LiveKit
+  Cloud/self-hosted, TURN, WSS/HTTPS, webhook externo ni Egress. Egress queda
+  deliberadamente deshabilitado hasta decidir almacenamiento, retención,
+  privacidad y costos. La recomendación inicial es LiveKit Cloud; una futura
+  migración self-hosted requiere ADR y operación TURN/TLS/observabilidad.
+- **Siguiente paso exacto:** configurar en un entorno no local
+  `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` y
+  `LIVEKIT_WEBHOOK_URL`, registrar el webhook firmado, ejecutar el smoke real
+  profesor+estudiante en dos navegadores y conservar evidencia de red, audio,
+  cámara, pantalla, moderación y asistencia. No se hizo commit ni push.
+
 ## Phase 16 — Identity, members, registration, configuration and integrations (in progress)
 
 - **Fecha y alcance:** 2026-07-31; se inició el Prompt 16 correctivo después

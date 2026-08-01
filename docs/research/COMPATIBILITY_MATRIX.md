@@ -116,3 +116,17 @@ cambio de pin.
 
 La compatibilidad requiere repetir build, smoke real, migración y Chromium al
 cambiar cualquier pin. LocalStack 4.14.0 no es recomendación productiva.
+
+## Academic scheduling and live classes — 2026-07-31
+
+| Combinación | Resultado previo a instalación | Evidencia requerida al cierre |
+| --- | --- | --- |
+| Python 3.13.13 + `livekit-api 1.2.0` | Compatible por `Requires-Python >=3.9` | import, tokens/grants, webhook firmado y gateway mock/real si hay credenciales |
+| Django 6.0.7 + SDK asíncrono LiveKit | Compatible mediante bridge explícito, sin `asyncio.run()` | concurrencia, cierre de cliente, errores remotos e idempotencia |
+| Python 3.13.13 + `python-dateutil 2.9.0.post0` | Compatible por metadata PyPI | corpus RRULE, DST, COUNT/UNTIL, excepciones y límites |
+| React 19.2.8 + LiveKit components 2.9.23 + client 2.21.0 | Peers compatibles (`react >=18`, client `^2.20.1`) | TypeScript, Vitest, build, cleanup/reconexión y Chromium |
+| React 19.2.8 + FullCalendar React 7.0.2 | Peer oficial `^17 || ^18 || ^19`; SSR soportado | import v7, SSR/build, rango visible, interacción y axe |
+| FullCalendar 7.0.2 + temporal-polyfill 1.0.2 | Peer `^1.0.1` satisfecho | frozen install y build sin paquetes v6/Premium |
+
+La metadata compatible no sustituye `uv sync --locked`, `pnpm install
+--frozen-lockfile`, migración PostgreSQL, suites, build ni navegador real.

@@ -58,6 +58,8 @@ class OrganizationPolicyTests(TestCase):
             {
                 Capability.ORGANIZATION_VIEW,
                 Capability.ASSESSMENT_ATTEMPT,
+                Capability.SCHEDULING_VIEW,
+                Capability.LIVE_SESSION_JOIN,
                 Capability.NOTIFICATION_PREFERENCES_MANAGE_OWN,
             },
         )

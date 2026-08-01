@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import '@fullcalendar/react/skeleton.css';
+@import '@fullcalendar/react/themes/classic/theme.css';
+@import '@fullcalendar/react/themes/classic/palette.css';
 /* ejected from shadcn@4.16.0 */
 @theme inline {
   @keyframes accordion-down {
@@ -3387,6 +3390,170 @@
 
     .research-login__panel {
       justify-self: center;
+    }
+  }
+
+  .academic-calendar {
+    @apply grid gap-4;
+  }
+
+  .academic-calendar__actions {
+    @apply flex flex-col gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  .academic-calendar__actions > p {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .academic-calendar__actions > div {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .academic-calendar__surface {
+    @apply min-w-0 overflow-hidden rounded-xl border border-border bg-card p-3 shadow-[0_8px_26px_rgb(41_56_82_/_0.045)] sm:p-5;
+  }
+
+  .academic-calendar .fc {
+    --fc-border-color: var(--border);
+    --fc-page-bg-color: var(--card);
+    --fc-neutral-bg-color: color-mix(in oklab, var(--muted) 65%, transparent);
+    --fc-today-bg-color: color-mix(in oklab, var(--primary) 8%, transparent);
+    --fc-event-bg-color: var(--primary);
+    --fc-event-border-color: var(--primary);
+    --fc-button-bg-color: var(--card);
+    --fc-button-border-color: var(--border);
+    --fc-button-text-color: var(--foreground);
+    --fc-button-hover-bg-color: var(--muted);
+    --fc-button-hover-border-color: var(--border);
+    --fc-button-active-bg-color: var(--primary);
+    --fc-button-active-border-color: var(--primary);
+    font-family: inherit;
+  }
+
+  .academic-calendar .fc-toolbar-title {
+    @apply text-base font-semibold sm:text-xl;
+  }
+
+  .academic-calendar .fc-button {
+    @apply text-xs sm:text-sm;
+  }
+
+  .academic-select {
+    @apply mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50;
+  }
+
+  .live-class-meta {
+    @apply grid gap-3 sm:grid-cols-2;
+  }
+
+  .live-class-meta > div {
+    @apply grid grid-cols-[auto_1fr] gap-x-3 rounded-xl border border-border bg-card p-4;
+  }
+
+  .live-class-meta svg {
+    @apply row-span-2 size-5 text-primary;
+  }
+
+  .live-class-meta dt {
+    @apply text-xs font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+
+  .live-class-meta dd {
+    @apply text-sm font-medium;
+  }
+
+  .live-lobby {
+    @apply grid overflow-hidden rounded-2xl border border-border bg-card shadow-[0_12px_32px_rgb(41_56_82_/_0.06)] lg:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)];
+  }
+
+  .live-lobby__preview {
+    @apply flex min-h-72 flex-col items-center justify-center gap-4 bg-slate-950 p-8 text-center text-slate-200 lg:min-h-[32rem];
+  }
+
+  .live-lobby__panel {
+    @apply flex flex-col justify-center gap-5 p-6 lg:p-8;
+  }
+
+  .live-lobby__panel h2 {
+    @apply text-xl font-semibold;
+  }
+
+  .live-lobby__panel > p {
+    @apply text-sm leading-6 text-muted-foreground;
+  }
+
+  .live-status {
+    @apply w-fit rounded-full border px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .live-status[data-status='live'] {
+    @apply border-emerald-600/20 bg-emerald-500/10 text-emerald-700;
+  }
+
+  .live-classroom {
+    @apply relative grid min-h-[65svh] grid-rows-[1fr_auto] overflow-hidden rounded-2xl bg-slate-950 p-3;
+  }
+
+  .live-classroom__grid {
+    @apply min-h-0;
+  }
+
+  .live-classroom__controls {
+    @apply mx-auto flex max-w-full flex-wrap items-center justify-center gap-2 rounded-xl bg-slate-900/95 p-2 text-white;
+  }
+
+  .live-classroom__controls button {
+    @apply inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm hover:bg-white/10;
+  }
+
+  .live-classroom__participants {
+    @apply absolute top-3 right-3 z-10 hidden w-64 rounded-xl bg-slate-900/95 p-3 text-slate-100 shadow-xl lg:block;
+  }
+
+  .live-classroom__participants h2 {
+    @apply mb-2 text-sm font-semibold;
+  }
+
+  .live-classroom__participants li {
+    @apply border-t border-white/10 py-2 text-xs;
+  }
+
+  .live-classroom__participants li > span {
+    @apply block truncate font-medium;
+  }
+
+  .live-classroom__participants li > div {
+    @apply mt-1 flex gap-2;
+  }
+
+  .live-classroom__participants button {
+    @apply rounded-md bg-white/10 px-2 py-1 hover:bg-white/20;
+  }
+
+  @media (max-width: 42rem) {
+    .academic-calendar .fc {
+      min-width: 0;
+    }
+
+    .academic-calendar .fc-toolbar {
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .academic-calendar .fc-toolbar-title {
+      font-size: 1rem;
+      line-height: 1.25rem;
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
+
+    .academic-calendar .fc-toolbar-chunk {
+      max-width: 100%;
+    }
+
+    .live-classroom__controls span {
+      @apply sr-only;
     }
   }
 }

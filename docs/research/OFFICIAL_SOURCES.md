@@ -186,3 +186,24 @@ Python 3.13; MinIO fue rechazado tras el archivado de su repositorio comunitario
 | Imágenes oficiales | Docker Hub y releases oficiales | Collector 0.157.0, Prometheus 3.13.2, Jaeger 2.20.0, Loki 3.7.4 y Grafana 13.1.1, todos con digest linux/amd64 verificado. |
 
 No se usaron blogs, tutoriales, previews ni tags flotantes como autoridad.
+
+## Academic scheduling and live classes — consultation 2026-07-31
+
+| Tema | Fuente oficial | Evidencia aplicada |
+| --- | --- | --- |
+| Tokens/grants LiveKit | https://docs.livekit.io/home/server/generating-tokens | JWT firmado en backend, TTL corto, sala y grants mínimos por rol |
+| Python server API | https://docs.livekit.io/reference/python/livekit/api/ | `LiveKitAPI`, `AccessToken`, `VideoGrants`, `WebhookReceiver` y cierre del cliente |
+| Room Service | https://docs.livekit.io/reference/python/livekit/api/room_service.html | create/list/delete room, participantes, permisos y expulsión asíncronos |
+| Webhooks LiveKit | https://docs.livekit.io/intro/basics/rooms-participants-tracks/webhooks-events/ | cuerpo crudo, `application/webhook+json`, Authorization, SHA-256, retries y eventos |
+| FullCalendar 7 | https://fullcalendar.io/docs/upgrading-from-v6 | SSR/StrictMode React, subrutas estándar, CSS/tema explícitos y ausencia de Premium |
+| Temporal | https://fullcalendar.io/docs/temporal-polyfill | peer requerido y uso interno tree-shakeable |
+| FullCalendar React | https://fullcalendar.io/docs/third-party | compatibilidad declarada con React 17–19 |
+| Recurrencia | https://www.rfc-editor.org/info/rfc5545/ | RRULE, COUNT/UNTIL, zona, RECURRENCE-ID y THISANDFUTURE |
+| Registros | https://registry.npmjs.org/ ; https://pypi.org/ | versiones estables exactas, peers, Python mínimo y licencias |
+| Next local | `apps/web/node_modules/next/dist/docs/01-app/01-getting-started/05-server-and-client-components.md`; `11-css.md` | Server/Client boundary mínima y CSS externo en App Router |
+| LiveKit Cloud vs self-hosted | https://docs.livekit.io/transport/self-hosting/ | Cloud aporta edge global, region pinning, telemetría y uptime objetivo; self-hosted exige operación propia |
+| Despliegue self-hosted | https://docs.livekit.io/transport/self-hosting/deployment/ ; https://docs.livekit.io/transport/self-hosting/vm/ | TLS público, TURN, firewall, IP pública, puertos y compute optimizado son requisitos materiales |
+| Cuotas Cloud | https://docs.livekit.io/deploy/admin/quotas-and-limits/ | La aceptación debe validar concurrencia, duración, rate limits y egress del plan elegido |
+
+No se usaron tutoriales, blogs, previews, paquetes Premium ni etiquetas
+flotantes como autoridad.

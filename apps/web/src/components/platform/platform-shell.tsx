@@ -5,6 +5,7 @@ import {
   BarChart3,
   BookOpenCheck,
   Building2,
+  CalendarDays,
   ChevronDown,
   ClipboardCheck,
   FileCheck2,
@@ -204,6 +205,15 @@ function PlatformSidebar({
     : [];
   const academicNavigation: NavigationItem[] = organizationBase
     ? [
+        {
+          activePrefixes: [`${organizationBase}/clases/`],
+          href: `${organizationBase}/calendario`,
+          icon: CalendarDays,
+          label: 'Calendario',
+          visible:
+            capabilities.has('scheduling.view') ||
+            capabilities.has('assessment.attempt'),
+        },
         {
           activePrefixes: [`${organizationBase}/aprender/`],
           exact: true,

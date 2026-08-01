@@ -45,6 +45,13 @@ class Capability(StrEnum):
     LEARNING_ENROLLMENT_MANAGE = "learning.enrollment.manage"
     LEARNING_PROGRESS_VIEW = "learning.progress.view"
     LEARNING_PROGRESS_MANAGE = "learning.progress.manage"
+    SCHEDULING_VIEW = "scheduling.view"
+    SCHEDULING_CREATE = "scheduling.create"
+    SCHEDULING_MANAGE = "scheduling.manage"
+    LIVE_SESSION_JOIN = "live_session.join"
+    LIVE_SESSION_HOST = "live_session.host"
+    LIVE_SESSION_MODERATE = "live_session.moderate"
+    LIVE_ATTENDANCE_VIEW = "live_attendance.view"
     ASSESSMENT_BANK_VIEW = "assessment.bank.view"
     ASSESSMENT_BANK_MANAGE = "assessment.bank.manage"
     ASSESSMENT_BANK_VERSION = "assessment.bank.version"
@@ -114,6 +121,7 @@ _COURSE_AUTHOR_CAPABILITIES = frozenset(
         Capability.LEARNING_COHORT_VIEW,
         Capability.LEARNING_ENROLLMENT_VIEW,
         Capability.LEARNING_PROGRESS_VIEW,
+        Capability.SCHEDULING_VIEW,
         Capability.ASSESSMENT_BANK_VIEW,
         Capability.ASSESSMENT_BANK_MANAGE,
         Capability.ASSESSMENT_BANK_VERSION,
@@ -155,6 +163,7 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.COURSE_RELEASE_HISTORY_VIEW,
                 Capability.COURSE_PUBLISHED_VIEW,
                 Capability.LEARNING_PROGRESS_VIEW,
+                Capability.SCHEDULING_VIEW,
                 Capability.ASSESSMENT_BANK_VIEW,
                 Capability.ASSESSMENT_QUESTION_VIEW,
                 Capability.ASSESSMENT_QUESTION_REVIEW,
@@ -177,6 +186,12 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.LEARNING_COHORT_VIEW,
                 Capability.LEARNING_ENROLLMENT_VIEW,
                 Capability.LEARNING_PROGRESS_VIEW,
+                Capability.SCHEDULING_VIEW,
+                Capability.SCHEDULING_CREATE,
+                Capability.LIVE_SESSION_JOIN,
+                Capability.LIVE_SESSION_HOST,
+                Capability.LIVE_SESSION_MODERATE,
+                Capability.LIVE_ATTENDANCE_VIEW,
                 Capability.ASSESSMENT_BANK_VIEW,
                 Capability.ASSESSMENT_QUESTION_VIEW,
                 Capability.ASSESSMENT_AUTHORING_VIEW,
@@ -195,7 +210,13 @@ ROLE_CAPABILITIES = MappingProxyType(
             }
         ),
         RoleCode.LEARNER: _MEMBER_READ_CAPABILITIES
-        | frozenset({Capability.ASSESSMENT_ATTEMPT}),
+        | frozenset(
+            {
+                Capability.ASSESSMENT_ATTEMPT,
+                Capability.SCHEDULING_VIEW,
+                Capability.LIVE_SESSION_JOIN,
+            }
+        ),
     }
 )
 

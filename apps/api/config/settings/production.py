@@ -33,6 +33,11 @@ for setting_name in (
     if not os.environ.get(setting_name):
         raise RuntimeError(f"{setting_name} is required in production.")
 
+if LIVEKIT_ENABLED:  # noqa: F405
+    for setting_name in ("LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"):
+        if not os.environ.get(setting_name):
+            raise RuntimeError(f"{setting_name} is required when LIVEKIT_ENABLED=true.")
+
 if ASSET_S3_INTERNAL_ENDPOINT or ASSET_S3_PUBLIC_ENDPOINT:  # noqa: F405
     raise RuntimeError(
         "Production uses the AWS S3 endpoint; LocalStack endpoints are forbidden."
