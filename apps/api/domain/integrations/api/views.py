@@ -127,6 +127,7 @@ class ApiKeyConnectView(APIView):
                 api_key=serializer.validated_data["api_key"],
                 expected_version=serializer.validated_data.get("expected_version"),
             )
+            queue_health_check(actor=request.user, connection=connection)
         except IntegrationDomainError as error:
             return _error(error)
         return Response(IntegrationConnectionSerializer(connection).data)

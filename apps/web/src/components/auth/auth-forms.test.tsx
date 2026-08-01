@@ -7,7 +7,13 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { LoginForm } from './auth-forms';
+import {
+  LoginForm,
+  PasswordRequestForm,
+  PasswordResetForm,
+  SignUpForm,
+} from './auth-forms';
+import { ManagedAccountActivation } from './managed-account-activation';
 
 describe('LoginForm', () => {
   it('exposes labelled fields and password-manager autocomplete', () => {
@@ -27,6 +33,9 @@ describe('LoginForm', () => {
     expect(
       screen.getByRole('button', { name: 'Iniciar sesión' }),
     ).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: 'Iniciar sesión' }).closest('form'),
+    ).toHaveAttribute('method', 'post');
   });
 
   it('does not advertise signup when registration is unavailable', () => {
@@ -38,5 +47,25 @@ describe('LoginForm', () => {
     expect(
       screen.queryByRole('link', { name: 'Crear una cuenta' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('never falls back to GET for identity forms with secrets or codes', () => {
+    const forms = [
+      LoginForm,
+      SignUpForm,
+      PasswordRequestForm,
+      PasswordResetForm,
+      ManagedAccountActivation,
+    ];
+
+    for (const Form of forms) {
+      const { container, unmount } = render(
+        <QueryClientProvider client={new QueryClient()}>
+          <Form />
+        </QueryClientProvider>,
+      );
+      expect(container.querySelector('form')).toHaveAttribute('method', 'post');
+      unmount();
+    }
   });
 });

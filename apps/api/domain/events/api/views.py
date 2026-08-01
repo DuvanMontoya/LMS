@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 
 from domain.organizations.capabilities import Capability
 from domain.organizations.models import Organization
-from domain.organizations.policies import has_capability
+from domain.organizations.policies import has_capability, organizations_with_capability
 
 from ..models import DomainEvent, EventReplayRequest
 from ..tasks import process_event_replay
@@ -24,15 +24,7 @@ from .serializers import (
 def _visible_organizations(
     request: Request, capability: Capability
 ) -> list[Organization]:
-    if request.user.is_active and request.user.is_superuser:
-        return list(Organization.objects.all())
-    return [
-        organization
-        for organization in Organization.objects.filter(
-            memberships__user=request.user
-        ).distinct()
-        if has_capability(request.user, organization, capability)
-    ]
+    return organizations_with_capability(request.user, capability)
 
 
 class EventListView(APIView):

@@ -50,14 +50,17 @@ async function login(
 }
 
 test.describe.serial('browser session authentication', () => {
-  test('registers, verifies, logs in, reaches study and logs out', async ({
+  test('registers, verifies, logs in, reaches the study workspace and logs out', async ({
     page,
   }) => {
     const email = e2eEmail();
     await registerAndVerify(page, email);
     await login(page, email);
     await expect(
-      page.getByRole('heading', { name: 'Espacio de estudio' }),
+      page.getByRole('heading', { name: 'Espacio de trabajo' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Sin organización asignada' }),
     ).toBeVisible();
     await expect(page.getByText(email)).toBeVisible();
     await page.getByRole('button', { name: 'Cerrar sesión' }).click();
@@ -74,7 +77,7 @@ test.describe.serial('browser session authentication', () => {
     await page.goto('/auth/recuperar-contrasena');
     await page.getByLabel('Correo electrónico').fill(email);
     await page.getByRole('button', { name: 'Solicitar código' }).click();
-    await expect(page).toHaveURL('/auth/restablecer-contrasena');
+    await expect(page).toHaveURL('/auth/restablecer-contrasena?sent=1');
     const code = await waitForMailCode(
       requiredMailDirectory,
       'Usa este código para restablecer tu contraseña',
@@ -85,7 +88,7 @@ test.describe.serial('browser session authentication', () => {
     await page.getByRole('button', { name: 'Restablecer contraseña' }).click();
     await expect(
       page.getByText(
-        'La contraseña fue actualizada. Ahora puedes iniciar sesión.',
+        'Tu contraseña fue actualizada. Ya puedes iniciar sesión.',
       ),
     ).toBeVisible();
     await page.goto('/auth/iniciar-sesion');
@@ -93,8 +96,8 @@ test.describe.serial('browser session authentication', () => {
     await page.getByLabel('Contraseña').fill(password);
     await page.getByRole('button', { name: 'Iniciar sesión' }).click();
     await expect(
-      page.getByRole('region', { name: 'Iniciar sesión' }).getByRole('alert'),
-    ).toContainText('correo o la contraseña');
+      page.getByRole('region', { name: 'Aula Académica' }).getByRole('alert'),
+    ).toContainText('El correo o la contraseña no son correctos.');
     await login(page, email, newPassword);
   });
 

@@ -32,6 +32,7 @@ import {
   useCreateGoogleTestMeeting,
   useDisconnectIntegration,
   useIntegrationHealthChecks,
+  useIntegrations,
   useQueueIntegrationHealthCheck,
   useRotateIntegrationApiKey,
   useStartGoogleOAuth,
@@ -127,10 +128,12 @@ export function IntegrationCenter({
   slug: string;
 }>) {
   const google = useStartGoogleOAuth(slug);
+  const integrations = useIntegrations(slug);
+  const currentConnections = integrations.data ?? connections;
   const [capabilities, setCapabilities] = useState<GoogleCapability[]>([
     'calendar',
   ]);
-  const googleConnection = connections.find(
+  const googleConnection = currentConnections.find(
     (connection) => connection.provider === 'google_workspace',
   );
 
@@ -158,7 +161,7 @@ export function IntegrationCenter({
 
       <div className="grid gap-4 xl:grid-cols-3">
         {providers.map((provider) => {
-          const connection = connections.find(
+          const connection = currentConnections.find(
             (candidate) => candidate.provider === provider.provider,
           );
           return connection ? (

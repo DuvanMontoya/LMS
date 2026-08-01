@@ -168,14 +168,31 @@ function submitError<T extends FieldValues>(
   return error.message;
 }
 
+function useHydrated() {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+  return hydrated;
+}
+
 function SubmitButton({
   pending,
+  hydrated = true,
   children,
-}: Readonly<{ pending: boolean; children: string }>) {
+}: Readonly<{ pending: boolean; hydrated?: boolean; children: string }>) {
   return (
-    <Button type="submit" disabled={pending} className="auth-submit">
-      {pending ? <LoaderCircle className="animate-spin" /> : null}
-      {pending ? 'Enviando…' : children}
+    <Button
+      type="submit"
+      disabled={pending || !hydrated}
+      className="auth-submit"
+    >
+      {pending || !hydrated ? <LoaderCircle className="animate-spin" /> : null}
+      {!hydrated
+        ? 'Preparando formulario seguro…'
+        : pending
+          ? 'Enviando…'
+          : children}
     </Button>
   );
 }
@@ -185,6 +202,7 @@ export function LoginForm({
 }: Readonly<{ registrationAvailable?: boolean }>) {
   const searchParams = useSearchParams();
   const login = useLogin();
+  const hydrated = useHydrated();
   const [message, setMessage] = useState<string | null>(null);
   const statusMessage =
     searchParams.get('reset') === '1'
@@ -211,6 +229,7 @@ export function LoginForm({
   };
   return (
     <form
+      method="post"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
       className="auth-form-grid"
@@ -232,7 +251,9 @@ export function LoginForm({
         register={form.register}
         error={form.formState.errors.password?.message}
       />
-      <SubmitButton pending={login.isPending}>Iniciar sesión</SubmitButton>
+      <SubmitButton pending={login.isPending} hydrated={hydrated}>
+        Iniciar sesión
+      </SubmitButton>
       <nav className="auth-form-links">
         <Link
           className="font-medium text-primary underline-offset-4 hover:underline"
@@ -256,6 +277,7 @@ export function LoginForm({
 export function SignUpForm() {
   const router = useRouter();
   const signUp = useSignUp();
+  const hydrated = useHydrated();
   const [message, setMessage] = useState<string | null>(null);
   const form = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
@@ -273,6 +295,7 @@ export function SignUpForm() {
   };
   return (
     <form
+      method="post"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
       className="auth-form-grid"
@@ -300,7 +323,9 @@ export function SignUpForm() {
         register={form.register}
         error={form.formState.errors.confirmation?.message}
       />
-      <SubmitButton pending={signUp.isPending}>Crear cuenta</SubmitButton>
+      <SubmitButton pending={signUp.isPending} hydrated={hydrated}>
+        Crear cuenta
+      </SubmitButton>
       <p className="text-sm">
         ¿Ya tienes cuenta?{' '}
         <Link className="underline" href="/auth/iniciar-sesion">
@@ -316,6 +341,7 @@ export function VerifyEmailForm() {
   const router = useRouter();
   const verify = useVerifyEmail();
   const resend = useResendVerification();
+  const hydrated = useHydrated();
   const [message, setMessage] = useState<string | null>(null);
   const form = useForm<VerificationValues>({
     resolver: zodResolver(verificationSchema),
@@ -347,6 +373,7 @@ export function VerifyEmailForm() {
   };
   return (
     <form
+      method="post"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
       className="auth-form-grid"
@@ -359,7 +386,9 @@ export function VerifyEmailForm() {
         register={form.register}
         error={form.formState.errors.code?.message}
       />
-      <SubmitButton pending={verify.isPending}>Verificar correo</SubmitButton>
+      <SubmitButton pending={verify.isPending} hydrated={hydrated}>
+        Verificar correo
+      </SubmitButton>
       <Button
         type="button"
         disabled={resend.isPending}
@@ -381,6 +410,7 @@ export function VerifyEmailForm() {
 export function PasswordRequestForm() {
   const router = useRouter();
   const request = useRequestPasswordReset();
+  const hydrated = useHydrated();
   const [message, setMessage] = useState<string | null>(null);
   const form = useForm<PasswordRequestValues>({
     resolver: zodResolver(passwordRequestSchema),
@@ -397,6 +427,7 @@ export function PasswordRequestForm() {
   };
   return (
     <form
+      method="post"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
       className="auth-form-grid"
@@ -410,7 +441,9 @@ export function PasswordRequestForm() {
         register={form.register}
         error={form.formState.errors.email?.message}
       />
-      <SubmitButton pending={request.isPending}>Solicitar código</SubmitButton>
+      <SubmitButton pending={request.isPending} hydrated={hydrated}>
+        Solicitar código
+      </SubmitButton>
       <p className="text-sm">
         <Link className="underline" href="/auth/iniciar-sesion">
           Volver a inicio de sesión
@@ -424,6 +457,7 @@ export function PasswordResetForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reset = useResetPassword();
+  const hydrated = useHydrated();
   const [message, setMessage] = useState<string | null>(null);
   const form = useForm<PasswordResetValues>({
     resolver: zodResolver(passwordResetSchema),
@@ -441,6 +475,7 @@ export function PasswordResetForm() {
   };
   return (
     <form
+      method="post"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
       className="auth-form-grid"
@@ -488,7 +523,7 @@ export function PasswordResetForm() {
         register={form.register}
         error={form.formState.errors.confirmation?.message}
       />
-      <SubmitButton pending={reset.isPending}>
+      <SubmitButton pending={reset.isPending} hydrated={hydrated}>
         Restablecer contraseña
       </SubmitButton>
       <p className="text-sm">

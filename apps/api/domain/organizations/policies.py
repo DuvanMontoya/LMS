@@ -50,6 +50,26 @@ def has_capability(
     )
 
 
+def organizations_with_capability(
+    actor: User | None, capability: Capability
+) -> list[Organization]:
+    """Return only institutional contexts where the actor has an active grant.
+
+    A platform operator administers the platform itself, but does not acquire
+    an implicit membership or visibility into another institution's records.
+    """
+
+    if not actor or not actor.is_authenticated or not actor.is_active:
+        return []
+    return [
+        organization
+        for organization in Organization.objects.filter(
+            memberships__user=actor
+        ).distinct()
+        if has_capability(actor, organization, capability)
+    ]
+
+
 def target_is_active_owner(membership: Membership) -> bool:
     return (
         membership.status == MembershipStatus.ACTIVE.value

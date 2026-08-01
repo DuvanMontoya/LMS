@@ -32,6 +32,10 @@ export function InvitationActivation({ token }: Readonly<{ token: string }>) {
         );
         return;
       }
+      // The invitation token is a one-use bearer secret. Once the API has
+      // exchanged it for server-side state, keep the current UI but remove it
+      // from the address bar and browser history before showing any action.
+      window.history.replaceState(null, '', '/invitaciones/activar');
       if (data.invitation_type === 'managed_account') {
         router.replace('/invitaciones/activar-cuenta');
         return;

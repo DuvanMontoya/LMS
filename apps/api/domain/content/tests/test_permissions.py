@@ -95,21 +95,21 @@ class ContentPermissionTests(ContentFixtureMixin, TestCase):
                         content=full_document(),
                     )
 
-    def test_explicit_active_superuser_bypass_and_inactive_denial(self) -> None:
+    def test_platform_superuser_without_membership_cannot_edit_content(self) -> None:
         _owner, organization, revision, _module, unit, *_ = self.unit_context()
         operator = get_user_model().objects.create_superuser(
             email="operator@example.test", password="Password123!x"
         )
-        saved = save_unit_content(
-            actor=operator,
-            organization=organization,
-            revision=revision,
-            unit=unit,
-            expected_document_version=0,
-            schema_version=1,
-            content=full_document(),
-        )
-        self.assertEqual(saved.version.number, 1)
+        with self.assertRaises(ContentAccessDenied):
+            save_unit_content(
+                actor=operator,
+                organization=organization,
+                revision=revision,
+                unit=unit,
+                expected_document_version=0,
+                schema_version=1,
+                content=full_document(),
+            )
         operator.is_active = False
         operator.save(update_fields=["is_active"])
         with self.assertRaises(ContentAccessDenied):
@@ -118,7 +118,7 @@ class ContentPermissionTests(ContentFixtureMixin, TestCase):
                 organization=organization,
                 revision=revision,
                 unit=unit,
-                expected_document_version=1,
+                expected_document_version=0,
                 schema_version=1,
                 content=full_document(),
             )

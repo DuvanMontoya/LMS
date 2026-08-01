@@ -2,7 +2,7 @@
 
 import { LoaderCircle, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,9 +14,14 @@ export function ManagedAccountActivation() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
   return (
     <form
       className="space-y-4"
+      method="post"
       onSubmit={async (event) => {
         event.preventDefault();
         setPending(true);
@@ -51,9 +56,13 @@ export function ManagedAccountActivation() {
         </p>
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <Button disabled={pending} type="submit">
-        {pending ? <LoaderCircle className="animate-spin" /> : <Save />}
-        Activar cuenta
+      <Button disabled={pending || !hydrated} type="submit">
+        {pending || !hydrated ? (
+          <LoaderCircle className="animate-spin" />
+        ) : (
+          <Save />
+        )}
+        {!hydrated ? 'Preparando formulario seguro…' : 'Activar cuenta'}
       </Button>
     </form>
   );

@@ -140,12 +140,30 @@
 - **Evidencia de esta corrección:** `organizations:smoke` pasó 5/5,
   `organizations:test:policies` 6/6 y cuatro pruebas de identidad cubrieron
   código de recuperación, no enumeración y registro cerrado. `pnpm check`,
-  `organizations:check` y `web:test` pasaron (56/56). En Chrome se validaron
+  `organizations:check` y `web:test` pasaron (57/57). En Chrome se validaron
   sesión real de operador, navegación y formulario de instituciones, ficha
   simplificada de un miembro, formulario de código y el cierre/restauración de
   registro; la política se devolvió a `Abierto`. El viewport temporal del
   conector no cambió el ancho CSS (continuó en 1920 px), por lo que no se usa
   como evidencia nueva de 390 px.
+- **Regresión de secretos antes de la hidratación (2026-08-01):** se detectó
+  que los formularios de identidad podían caer en el envío HTML por defecto
+  antes de que React quedara listo. Todos los formularios que procesan
+  contraseña o código usan ahora `POST` explícito y su acción de envío queda
+  deshabilitada hasta la hidratación; una prueba de componentes protege esa
+  regla. En Chrome se comprobó el estado “Preparando formulario seguro…” y el
+  acceso posterior no dejó los datos en la URL. Una credencial utilizada antes
+  de la corrección debe rotarse por precaución, pues el historial local pudo
+  haberla registrado.
+- **Autenticación E2E aislada actualizada:**
+  `web-auth.ps1 -Action E2E -Grep 'browser session authentication'` pasó 4/4
+  con PostgreSQL, Redis y correo temporales. Comprueba alta y verificación,
+  inicio/cierre de sesión, recuperación con código, rechazo de la clave
+  anterior, rutas protegidas, redirecciones abiertas, CSRF y axe A/AA. Se
+  corrigieron aserciones E2E obsoletas para comprobar el espacio de trabajo,
+  el estado `?sent=1` y los mensajes accesibles que la interfaz realmente
+  presenta; no se alteró el contrato de seguridad para hacerlas pasar.
+  `web:test` 57/57, `web:typecheck` y `web:build` terminaron correctamente.
 - **Estado de avance:** **NO LISTO PARA AUDITORÍA DE PROFUNDIDAD II** hasta
   completar esa matriz E2E/a11y/móvil y los subflujos de gestión profesional
   que el registro de deuda conserva abiertos.

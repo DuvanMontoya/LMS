@@ -10,11 +10,9 @@ import { roleLabel, sortRoles } from '@/lib/organizations/labels';
 import { getAccessContext } from '@/lib/organizations/server';
 
 export default async function StudyPage() {
-  const [session, context] = await Promise.all([
-    getServerAuthSession(),
-    getAccessContext(),
-  ]);
-  if (!session) return null;
+  const session = await getServerAuthSession();
+  if (!session) redirect('/auth/iniciar-sesion?next=/estudiar');
+  const context = await getAccessContext();
   const onlyOrganization = context.organizations[0];
   if (
     context.organizations.length === 1 &&

@@ -145,6 +145,28 @@ class DiscoveryTests(TestCase):
             409,
         )
 
+    def test_platform_operator_without_membership_cannot_list_foreign_index_data(
+        self,
+    ) -> None:
+        SearchIndexJob.objects.create(
+            organization=self.organization,
+            source_type=SearchSourceType.COURSE_RELEASE,
+            operation=SearchIndexOperation.REBUILD,
+        )
+        operator = get_user_model().objects.create_superuser(
+            email="search-operator@example.test", password="StrongSearchPassword!42"
+        )
+        client = APIClient()
+        client.force_authenticate(user=operator)
+
+        generations = client.get("/api/v1/platform/search-index/")
+        jobs = client.get("/api/v1/platform/search-index/jobs/")
+
+        self.assertEqual(generations.status_code, 200)
+        self.assertEqual(generations.data, [])
+        self.assertEqual(jobs.status_code, 200)
+        self.assertEqual(jobs.data, [])
+
     def test_rebuild_generations_and_task_lifecycle(self) -> None:
         with patch(
             "domain.discovery.services.organization_documents",

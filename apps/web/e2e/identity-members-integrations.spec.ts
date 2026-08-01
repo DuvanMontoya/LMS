@@ -65,6 +65,7 @@ test.describe
   test('owner creates, corrects and activates a managed student, then accepts an existing-user invitation', async ({
     browser,
     page,
+    request,
   }) => {
     test.setTimeout(240_000);
     await login(
@@ -149,6 +150,7 @@ test.describe
     const existingPage = await existingContext.newPage();
     await existingPage.goto(invitationLink);
     await expect(existingPage.getByText('Invitación validada')).toBeVisible();
+    await expect(existingPage).toHaveURL('/invitaciones/activar');
     await existingPage
       .getByRole('link', { name: 'Iniciar sesión y aceptar' })
       .click();
@@ -162,6 +164,13 @@ test.describe
     await expect(
       existingPage.getByText('Organización A', { exact: true }).first(),
     ).toBeVisible();
+
+    const invitationPage = await request.get(
+      '/invitaciones/activar?token=non-secret-e2e-token',
+    );
+    expect(invitationPage.headers()['cache-control']).toContain('no-store');
+    expect(invitationPage.headers()['referrer-policy']).toBe('no-referrer');
+    expect(invitationPage.headers()['x-frame-options']).toBe('DENY');
 
     await existingContext.close();
     await studentContext.close();
@@ -271,16 +280,19 @@ test.describe
       'owner@organizations.e2e.test',
       `/organizaciones/${organizationSlug}/configuracion/integraciones`,
     );
-    for (const apiKey of [
-      'e2e-openai-key',
-      'e2e-gemini-key',
-      'e2e-deepseek-key',
-    ]) {
-      await page.getByLabel('API key').first().fill(apiKey);
-      await page
+    await page.waitForLoadState('networkidle', { timeout: 30_000 });
+    for (const [provider, apiKey] of [
+      ['openai', 'e2e-openai-key'],
+      ['gemini', 'e2e-gemini-key'],
+      ['deepseek', 'e2e-deepseek-key'],
+    ] as const) {
+      const input = page.locator(`#key-${provider}`);
+      await input.fill(apiKey);
+      await input
+        .locator('xpath=ancestor::form')
         .getByRole('button', { name: 'Guardar y preparar prueba' })
-        .first()
         .click();
+      await expect(input).toHaveCount(0, { timeout: 30_000 });
     }
     await expect(page.getByText('Última prueba: Correcta')).toHaveCount(3, {
       timeout: 30_000,

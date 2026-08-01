@@ -25,8 +25,9 @@ The primary risks are account takeover, authorization bypass, CSRF/XSS in author
 
 La API usa sesión Django y CSRF. Los selectores filtran por membresía activa
 antes de buscar por slug/UUID, por lo que un recurso de otra organización es
-404. Owner y administrator tienen capacidades explícitas; sólo un superuser
-activo tiene bypass y `is_staff` no concede capacidades.
+404. Owner y administrator tienen capacidades explícitas; `is_staff` e
+`is_superuser` no conceden capacidades institucionales sin una membresía activa
+(ADR 0034).
 # Currículo acotado por organización
 
 Las rutas de catálogo contienen el slug de organización y resuelven la entidad
@@ -42,8 +43,8 @@ curricular ni relaciones entre organizaciones.
 
 Los selectores comienzan por organización y curso visibles; después limitan
 revisión, módulo y unidad al padre autorizado. UUID ajenos responden 404 y una
-capacidad insuficiente 403. `is_staff` no evita políticas; sólo el superuser
-activo tiene bypass explícito. Serializers excluyen organización, actores,
+capacidad insuficiente 403. `is_staff` e `is_superuser` no evitan políticas
+institucionales. Serializers excluyen organización, actores,
 estado, posición y `lock_version`. Cada mutación exige `expected_version`,
 bloquea la revisión y rechaza una versión obsoleta con 409. Ni permisos,
 estructura ni borradores se almacenan en cookies, Redis, `localStorage` o
@@ -66,8 +67,8 @@ renderizados mantienen protocolo permitido y atributos seguros.
 La consulta siempre resuelve organización → curso → revisión → unidad; un UUID
 ajeno es 404. Capacidad insuficiente es 403, versión obsoleta 409 y payload
 inválido 400. Campos derivados, actores, número, digest, unidad y estado no son
-asignables por request. Staff no evita policies; sólo superuser activo tiene
-bypass explícito.
+asignables por request. Staff y superuser no evitan políticas institucionales
+(ADR 0034).
 
 ## Frontera de publicación
 

@@ -279,6 +279,57 @@ class NotificationTests(TestCase):
             409,
         )
 
+    def test_platform_operator_without_membership_cannot_read_or_retry_foreign_email(
+        self,
+    ) -> None:
+        foreign_owner = get_user_model().objects.create_user(
+            email="foreign-notification-owner@example.test",
+            password="StrongNotificationPassword!42",
+        )
+        foreign_organization = create_organization_with_owner(
+            actor=foreign_owner, name="Avisos ajenos", slug="avisos-ajenos"
+        )
+        foreign_event = DomainEvent.objects.create(
+            event_type="learning.enrollment.suspended.v1",
+            schema_version=1,
+            organization=foreign_organization,
+            aggregate_type="enrollment",
+            aggregate_id=uuid.uuid4(),
+            correlation_id=uuid.uuid4(),
+            payload={"enrollment_id": str(uuid.uuid4())},
+            occurred_at=timezone.now(),
+        )
+        foreign_notification = Notification.objects.create(
+            organization=foreign_organization,
+            recipient=foreign_owner,
+            event=foreign_event,
+            category=NotificationCategory.LEARNING,
+            template_key="enrollment_suspended",
+            title="Acceso suspendido",
+            body="Tu acceso fue suspendido.",
+        )
+        foreign_delivery = EmailDelivery.objects.create(
+            notification=foreign_notification,
+            recipient=foreign_owner,
+            template_key=foreign_notification.template_key,
+            recipient_email_hash="1" * 64,
+        )
+        operator = get_user_model().objects.create_superuser(
+            email="notifications-operator@example.test",
+            password="StrongNotificationPassword!42",
+        )
+        client = APIClient()
+        client.force_authenticate(user=operator)
+
+        listing = client.get("/api/v1/platform/email-deliveries/")
+        retry = client.post(
+            f"/api/v1/platform/email-deliveries/{foreign_delivery.id}/retry/"
+        )
+
+        self.assertEqual(listing.status_code, 200)
+        self.assertEqual(listing.data, [])
+        self.assertEqual(retry.status_code, 404)
+
     @patch("domain.notifications.routing._regrade_route")
     @patch("domain.notifications.routing._publication_route")
     @patch("domain.notifications.routing._assessment_revision_route")

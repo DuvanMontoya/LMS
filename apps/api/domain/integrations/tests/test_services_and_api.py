@@ -144,14 +144,23 @@ class IntegrationServiceAndApiTests(TestCase):
     def test_integration_api_exposes_no_api_key_and_honors_revision(self) -> None:
         self.client.force_login(self.owner)
         base = f"/api/v1/organizations/{self.organization.slug}/integrations"
-        created = self.client.post(
-            f"{base}/api-key/",
-            {"provider": "openai", "api_key": "api-secret-key-1234"},
-            content_type="application/json",
-        )
+        with (
+            self.captureOnCommitCallbacks(execute=True),
+            patch("domain.integrations.tasks.run_integration_health_check.delay") as delay,
+        ):
+            created = self.client.post(
+                f"{base}/api-key/",
+                {"provider": "openai", "api_key": "api-secret-key-1234"},
+                content_type="application/json",
+            )
         self.assertEqual(created.status_code, 200)
         self.assertNotIn("api_key", created.json())
         connection_id = created.json()["id"]
+        delay.assert_called_once()
+        self.assertEqual(
+            self.client.get(f"{base}/{connection_id}/health-checks/").json()[0]["status"],
+            HealthCheckStatus.QUEUED,
+        )
         self.assertEqual(self.client.get(f"{base}/").status_code, 200)
         self.assertEqual(
             self.client.get(f"{base}/{connection_id}/health-checks/").status_code,

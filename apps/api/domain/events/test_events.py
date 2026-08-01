@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.db import DatabaseError, transaction
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 from domain.organizations.services import create_organization_with_owner
 
@@ -70,6 +71,32 @@ class DomainEventTransactionTests(TestCase):
                     "password": "must-not-persist",
                 },
             )
+
+    def test_platform_operator_without_membership_cannot_read_foreign_events(
+        self,
+    ) -> None:
+        event = DomainEvent.objects.create(
+            event_type="learning.enrollment.created.v1",
+            schema_version=1,
+            organization=self.organization,
+            aggregate_type="enrollment",
+            aggregate_id=uuid.uuid4(),
+            correlation_id=uuid.uuid4(),
+            payload={"enrollment_id": str(uuid.uuid4())},
+            occurred_at=timezone.now(),
+        )
+        operator = get_user_model().objects.create_superuser(
+            email="events-operator@example.test", password="StrongEventsPassword!42"
+        )
+        client = APIClient()
+        client.force_authenticate(user=operator)
+
+        listing = client.get("/api/v1/platform/events/")
+        detail = client.get(f"/api/v1/platform/events/{event.id}/")
+
+        self.assertEqual(listing.status_code, 200)
+        self.assertEqual(listing.data, [])
+        self.assertEqual(detail.status_code, 404)
 
     def _delivery(self) -> EventConsumerDelivery:
         with transaction.atomic():

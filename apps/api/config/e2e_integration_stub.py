@@ -6,6 +6,7 @@ from urllib.parse import urlencode, urlparse
 
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 
@@ -14,7 +15,10 @@ def _authorized(request: HttpRequest) -> bool:
 
 
 @require_GET
-def models(request: HttpRequest, provider: str) -> JsonResponse:
+def models(
+    request: HttpRequest, provider: str, version: str | None = None
+) -> JsonResponse:
+    del version
     if provider == "gemini":
         if request.headers.get("x-goog-api-key") != "e2e-gemini-key":
             return JsonResponse({"error": "unauthorized"}, status=401)
@@ -58,6 +62,7 @@ def google_authorize(request: HttpRequest) -> HttpResponse:
     )
 
 
+@csrf_exempt
 @require_POST
 def google_token(request: HttpRequest) -> JsonResponse:
     if (
@@ -77,6 +82,7 @@ def google_token(request: HttpRequest) -> JsonResponse:
     )
 
 
+@csrf_exempt
 def google_resource(request: HttpRequest, resource: str) -> JsonResponse:
     if not _authorized(request):
         return JsonResponse({"error": "unauthorized"}, status=401)

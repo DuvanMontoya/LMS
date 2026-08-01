@@ -52,6 +52,10 @@ if settings.SETTINGS_MODULE == "config.settings.e2e":
                 e2e_integration_stub.models,
             ),
             path(
+                "_e2e/integrations/<str:provider>/<str:version>/models",
+                e2e_integration_stub.models,
+            ),
+            path(
                 "_e2e/integrations/<str:provider>/models",
                 e2e_integration_stub.models,
             ),

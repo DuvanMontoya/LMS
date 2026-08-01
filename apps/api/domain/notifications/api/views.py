@@ -10,8 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from domain.organizations.capabilities import Capability
-from domain.organizations.models import Organization
-from domain.organizations.policies import has_capability
+from domain.organizations.policies import has_capability, organizations_with_capability
 
 from ..models import (
     EmailDelivery,
@@ -186,18 +185,9 @@ class EmailDeliveryListView(APIView):
         responses=EmailDeliverySerializer(many=True),
     )
     def get(self, request: Request) -> Response:
-        if request.user.is_active and request.user.is_superuser:
-            organizations = list(Organization.objects.all())
-        else:
-            organizations = [
-                organization
-                for organization in Organization.objects.filter(
-                    memberships__user=request.user
-                ).distinct()
-                if has_capability(
-                    request.user, organization, Capability.PLATFORM_OPERATIONS_VIEW
-                )
-            ]
+        organizations = organizations_with_capability(
+            request.user, Capability.PLATFORM_OPERATIONS_VIEW
+        )
         rows = EmailDelivery.objects.filter(
             notification__organization__in=organizations
         ).order_by("-created_at")[:200]
