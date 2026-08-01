@@ -8,6 +8,11 @@ urlpatterns = [
         "organizations/", views.OrganizationListView.as_view(), name="organization-list"
     ),
     path(
+        "platform/organizations/",
+        views.PlatformOrganizationProvisionView.as_view(),
+        name="platform-organization-provision",
+    ),
+    path(
         "organizations/<slug:slug>/",
         views.OrganizationDetailView.as_view(),
         name="organization-detail",

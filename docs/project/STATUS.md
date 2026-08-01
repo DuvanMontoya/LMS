@@ -117,6 +117,35 @@
   estudiante`; los aliases `/configuracion/general` y
   `/configuracion/miembros` fueron navegados en Chromium y mantienen la misma
   superficie gobernada, sin crear una capa paralela.
+- **Corrección de continuidad, perfiles y control global (2026-08-01):** la
+  recuperación lleva desde la solicitud al formulario que recibe el código:
+  explica tres pasos, muestra `Código recibido`, el vencimiento de tres minutos
+  y el reenvío. La recuperación iniciada por un administrador no entrega un
+  código que éste podría usar; entrega a la persona una instrucción para abrir
+  su propio enlace e iniciar el flujo ligado a su propio navegador. La ficha de
+  miembro y el alta comparten los mismos datos principales visibles (primer
+  nombre, primer apellido y tipo de miembro); identificación, contexto
+  académico, ubicación y notas quedan en secciones opcionales sin borrar ni
+  enviar una representación distinta.
+- **Control de plataforma y aislamiento:** el superadministrador activo tiene
+  un contexto explícito de operador de plataforma, no una membresía ficticia.
+  Puede ver instituciones y crear una escribiendo sólo el nombre; el código
+  institucional se genera con un sufijo criptográfico y se crea una membresía
+  real de propietario inicial para mantener trazabilidad. Las capacidades de
+  plataforma se limitan a administración y no conceden `assessment.attempt` ni
+  convierten al operador en estudiante. La barra lateral separa el control de
+  plataforma de la administración institucional. La configuración de registro
+  sigue siendo fail-closed: al cerrar el modo, desaparece el enlace, la ruta
+  pública devuelve 404 y el adaptador rechaza la alta directa.
+- **Evidencia de esta corrección:** `organizations:smoke` pasó 5/5,
+  `organizations:test:policies` 6/6 y cuatro pruebas de identidad cubrieron
+  código de recuperación, no enumeración y registro cerrado. `pnpm check`,
+  `organizations:check` y `web:test` pasaron (56/56). En Chrome se validaron
+  sesión real de operador, navegación y formulario de instituciones, ficha
+  simplificada de un miembro, formulario de código y el cierre/restauración de
+  registro; la política se devolvió a `Abierto`. El viewport temporal del
+  conector no cambió el ancho CSS (continuó en 1920 px), por lo que no se usa
+  como evidencia nueva de 390 px.
 - **Estado de avance:** **NO LISTO PARA AUDITORÍA DE PROFUNDIDAD II** hasta
   completar esa matriz E2E/a11y/móvil y los subflujos de gestión profesional
   que el registro de deuda conserva abiertos.

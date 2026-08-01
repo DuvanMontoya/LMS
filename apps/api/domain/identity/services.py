@@ -35,9 +35,7 @@ def update_platform_registration_settings(
     )
     if not permitted:
         raise RegistrationSettingsDenied("No tienes permiso para esta operación.")
-    current = PlatformRegistrationSettings.objects.select_for_update().get_or_create(
-        singleton=1
-    )[0]
+    current = PlatformRegistrationSettings.objects.select_for_update().get(singleton=1)
     if current.lock_version != expected_version:
         raise RegistrationSettingsConflict("La configuración cambió antes de guardar.")
     if signup_mode not in {

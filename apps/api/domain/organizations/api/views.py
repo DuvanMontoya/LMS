@@ -52,7 +52,7 @@ from domain.organizations.models import (
     OrganizationMemberProfile,
     OrganizationMembershipSettings,
 )
-from domain.organizations.policies import has_capability
+from domain.organizations.policies import has_capability, is_active_platform_operator
 from domain.organizations.selectors import (
     membership_visible_to,
     memberships_for_organization,
@@ -72,6 +72,7 @@ from domain.organizations.services import (
     expire_due_invitations,
     invite_person,
     manually_activate_managed_account,
+    provision_platform_organization,
     reactivate_membership,
     replace_membership_roles,
     resend_invitation,
@@ -113,6 +114,7 @@ from .serializers import (
     OrganizationMembershipSettingsUpdateSerializer,
     OrganizationSerializer,
     OrganizationUpdateSerializer,
+    PlatformOrganizationProvisionSerializer,
     ReplaceRolesSerializer,
     UserSummarySerializer,
     access_organization_payload,
@@ -275,10 +277,9 @@ def _membership_or_404(
 class AccessContextView(APIView):
     @extend_schema(responses={200: AccessContextSerializer})
     def get(self, request: Request) -> Response:
+        actor = _actor(request)
         memberships = (
-            Membership.objects.filter(
-                user=_actor(request), status=MembershipStatus.ACTIVE.value
-            )
+            Membership.objects.filter(user=actor, status=MembershipStatus.ACTIVE.value)
             .select_related("organization")
             .prefetch_related("role_assignments")
             .order_by("organization__name")
@@ -288,8 +289,9 @@ class AccessContextView(APIView):
         ]
         return Response(
             {
-                "user": UserSummarySerializer(_actor(request)).data,
+                "user": UserSummarySerializer(actor).data,
                 "organizations": AccessOrganizationSerializer(payload, many=True).data,
+                "is_platform_operator": is_active_platform_operator(actor),
             }
         )
 
@@ -297,8 +299,36 @@ class AccessContextView(APIView):
 class OrganizationListView(APIView):
     @extend_schema(responses={200: OrganizationSerializer(many=True)})
     def get(self, request: Request) -> Response:
-        organizations = organizations_visible_to(_actor(request)).order_by("name")
+        actor = _actor(request)
+        organizations = (
+            Organization.objects.order_by("name")
+            if is_active_platform_operator(actor)
+            else organizations_visible_to(actor).order_by("name")
+        )
         return Response(OrganizationSerializer(organizations, many=True).data)
+
+
+class PlatformOrganizationProvisionView(APIView):
+    """Restricted control-plane endpoint for institutional provisioning."""
+
+    @extend_schema(
+        request=PlatformOrganizationProvisionSerializer,
+        responses={201: OrganizationSerializer},
+    )
+    def post(self, request: Request) -> Response:
+        serializer = PlatformOrganizationProvisionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            organization = provision_platform_organization(
+                actor=_actor(request),
+                name=serializer.validated_data["name"],
+            )
+        except OrganizationDomainError as error:
+            return _domain_error_response(error)
+        return Response(
+            OrganizationSerializer(organization).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class OrganizationDetailView(APIView):
@@ -532,8 +562,8 @@ class MembershipSettingsView(APIView):
             _actor(request), organization, Capability.MEMBERSHIP_SETTINGS_VIEW
         ):
             raise PermissionDenied("permission_denied")
-        settings, _ = OrganizationMembershipSettings.objects.get_or_create(
-            organization=organization
+        settings = get_object_or_404(
+            OrganizationMembershipSettings, organization=organization
         )
         return Response(OrganizationMembershipSettingsSerializer(settings).data)
 
@@ -923,9 +953,7 @@ class MemberProfileView(APIView):
             _actor(request), organization, Capability.MEMBERSHIP_VIEW
         ):
             raise PermissionDenied("permission_denied")
-        profile, _ = OrganizationMemberProfile.objects.get_or_create(
-            membership=membership
-        )
+        profile = get_object_or_404(OrganizationMemberProfile, membership=membership)
         payload = MemberProfileSerializer(profile).data
         if not has_capability(
             _actor(request), organization, Capability.MEMBERSHIP_PROFILE_MANAGE
@@ -941,9 +969,7 @@ class MemberProfileView(APIView):
         membership = _membership_or_404(_actor(request), organization, membership_id)
         serializer = MemberProfileUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        current, _ = OrganizationMemberProfile.objects.get_or_create(
-            membership=membership
-        )
+        current = get_object_or_404(OrganizationMemberProfile, membership=membership)
         values = cast(dict[str, Any], serializer.validated_data)
         try:
             profile = update_member_profile(

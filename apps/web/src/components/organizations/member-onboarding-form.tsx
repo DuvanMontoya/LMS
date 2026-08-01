@@ -255,7 +255,20 @@ export function MemberOnboardingForm({
               <legend className="text-sm font-medium">
                 Datos de la persona
               </legend>
+              <p className="text-xs leading-5 text-muted-foreground">
+                Para iniciar bastan estos datos. La persona completa su perfil
+                después de activar el acceso; no hace falta repetir un
+                formulario largo para incorporarla.
+              </p>
               <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  inputMode="email"
+                  label="Correo institucional o personal"
+                  onChange={(value) => updateField('email', value)}
+                  required
+                  type="email"
+                  value={person.email}
+                />
                 <Field
                   label="Primer nombre"
                   onChange={(value) => updateField('givenName', value)}
@@ -263,15 +276,34 @@ export function MemberOnboardingForm({
                   value={person.givenName}
                 />
                 <Field
-                  label="Segundo nombre"
-                  onChange={(value) => updateField('middleName', value)}
-                  value={person.middleName}
-                />
-                <Field
                   label="Primer apellido"
                   onChange={(value) => updateField('familyName', value)}
                   required={mode === 'managed'}
                   value={person.familyName}
+                />
+                <SelectField
+                  label="Tipo de miembro"
+                  onChange={(value) => updateField('memberType', value)}
+                  options={memberTypeOptions}
+                  required={mode === 'managed'}
+                  value={person.memberType}
+                />
+              </div>
+            </fieldset>
+
+            <details className="rounded-lg border bg-muted/20 p-4">
+              <summary className="cursor-pointer text-sm font-medium marker:text-primary">
+                Añadir datos personales opcionales
+              </summary>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                Puedes completarlos ahora si los necesitas para tu operación;
+                ninguno bloquea la invitación ni la activación.
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Segundo nombre"
+                  onChange={(value) => updateField('middleName', value)}
+                  value={person.middleName}
                 />
                 <Field
                   label="Segundo apellido"
@@ -282,21 +314,6 @@ export function MemberOnboardingForm({
                   label="Nombre visible"
                   onChange={(value) => updateField('preferredName', value)}
                   value={person.preferredName}
-                />
-                <SelectField
-                  label="Tipo de miembro"
-                  onChange={(value) => updateField('memberType', value)}
-                  options={memberTypeOptions}
-                  required={mode === 'managed'}
-                  value={person.memberType}
-                />
-                <Field
-                  inputMode="email"
-                  label="Correo institucional o personal"
-                  onChange={(value) => updateField('email', value)}
-                  required
-                  type="email"
-                  value={person.email}
                 />
                 <Field
                   label="ID institucional"
@@ -348,17 +365,17 @@ export function MemberOnboardingForm({
                   value={person.gender}
                 />
               </div>
-            </fieldset>
+            </details>
 
-            <fieldset className="space-y-4">
-              <legend className="text-sm font-medium">
-                Contexto educativo y ubicación
-              </legend>
+            <details className="rounded-lg border bg-muted/20 p-4">
+              <summary className="cursor-pointer text-sm font-medium marker:text-primary">
+                Añadir contexto académico y de ubicación
+              </summary>
               <p className="text-xs leading-5 text-muted-foreground">
                 Estos datos ayudan a organizar grupos, cursos y acompañamiento.
                 Sólo solicita lo pertinente.
               </p>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <SelectField
                   label="Situación educativa"
                   onChange={(value) => updateField('educationStage', value)}
@@ -421,7 +438,7 @@ export function MemberOnboardingForm({
                   />
                 ) : null}
               </div>
-            </fieldset>
+            </details>
 
             <fieldset className="space-y-3">
               <legend className="text-sm font-medium">

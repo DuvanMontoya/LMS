@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -23,9 +27,14 @@
         "name": "next"
       }
     ],
-    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    "types": [
+      "vitest/globals",
+      "@testing-library/jest-dom"
+    ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     }
   },
   "include": [
@@ -35,20 +44,10 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts",
-    ".local/e2e-next-be61e00dff5f44b0a2e161834af6962c/types/**/*.ts",
-    ".local/e2e-next-be61e00dff5f44b0a2e161834af6962c/dev/types/**/*.ts",
-    ".local/e2e-next-1ede0a67667448e587d6e273ca36a508/types/**/*.ts",
-    ".local/e2e-next-1ede0a67667448e587d6e273ca36a508/dev/types/**/*.ts",
-    ".local/e2e-next-29b0708d09cc4180a04f03a8a5731e8f/types/**/*.ts",
-    ".local/e2e-next-29b0708d09cc4180a04f03a8a5731e8f/dev/types/**/*.ts",
-    ".local/e2e-next-9dc3bbc627ca4fb1911eead23a874d3f/types/**/*.ts",
-    ".local/e2e-next-9dc3bbc627ca4fb1911eead23a874d3f/dev/types/**/*.ts",
-    ".local/e2e-next-79e6064e574d463180550c8740b4c587/types/**/*.ts",
-    ".local/e2e-next-79e6064e574d463180550c8740b4c587/dev/types/**/*.ts",
-    ".local/e2e-next-baef868e224448a0a6589403387ce135/types/**/*.ts",
-    ".local/e2e-next-baef868e224448a0a6589403387ce135/dev/types/**/*.ts",
-    ".local/e2e-next-521126c1fbd94a7cbaec6569bf9c8552/types/**/*.ts",
-    ".local/e2e-next-521126c1fbd94a7cbaec6569bf9c8552/dev/types/**/*.ts"
+    ".local/e2e-next-e902d90431b445d680ac79e695a696d3/types/**/*.ts",
+    ".local/e2e-next-e902d90431b445d680ac79e695a696d3/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

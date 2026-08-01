@@ -183,7 +183,6 @@ function SubmitButton({
 export function LoginForm({
   registrationAvailable = true,
 }: Readonly<{ registrationAvailable?: boolean }>) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const login = useLogin();
   const [message, setMessage] = useState<string | null>(null);
@@ -202,7 +201,10 @@ export function LoginForm({
     try {
       await login.mutateAsync({ email, password });
       form.reset({ email, password: '' });
-      router.replace(sanitizeReturnPath(searchParams.get('next')));
+      // A full navigation starts a new server request with the session cookie.
+      // Client-side route reuse can otherwise render the anonymous access
+      // context immediately after a successful login.
+      window.location.assign(sanitizeReturnPath(searchParams.get('next')));
     } catch (error) {
       setMessage(submitError(error, form.setError));
     }
@@ -388,7 +390,7 @@ export function PasswordRequestForm() {
     setMessage(null);
     try {
       await request.mutateAsync({ email });
-      router.push('/auth/restablecer-contrasena?sent=1');
+      router.replace('/auth/restablecer-contrasena?sent=1');
     } catch (error) {
       setMessage(submitError(error, form.setError));
     }
@@ -446,11 +448,25 @@ export function PasswordResetForm() {
       <StatusSummary
         message={
           searchParams.get('sent') === '1'
-            ? 'Código enviado. Escríbelo abajo junto con tu contraseña nueva.'
+            ? 'Código enviado. Escríbelo abajo junto con tu contraseña nueva antes de que venza.'
             : null
         }
       />
       <ErrorSummary message={message} />
+      <ol className="space-y-1 rounded-lg border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">
+        <li>
+          <strong className="text-foreground">1.</strong> Revisa el correo y la
+          carpeta de spam.
+        </li>
+        <li>
+          <strong className="text-foreground">2.</strong> Copia el código de un
+          solo uso; vence en 3 minutos.
+        </li>
+        <li>
+          <strong className="text-foreground">3.</strong> Escríbelo aquí y
+          define tu contraseña nueva.
+        </li>
+      </ol>
       <Field
         name="code"
         label="Código recibido"

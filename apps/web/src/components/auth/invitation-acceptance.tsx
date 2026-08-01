@@ -12,27 +12,36 @@ type State = 'accepting' | 'error';
 export function InvitationAcceptance() {
   const [state, setState] = useState<State>('accepting');
   const [message, setMessage] = useState('');
-  const started = useRef(false);
+  const acceptance = useRef<Promise<boolean> | null>(null);
 
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
     let active = true;
-    async function accept() {
-      const { response } = await platformBrowserClient.POST(
-        '/api/v1/public/invitations/accept/',
-      );
-      if (!active) return;
-      if (response.ok) {
-        window.location.assign('/organizaciones');
-        return;
-      }
-      setState('error');
-      setMessage(
-        'La invitación no está disponible para esta cuenta. Abre un enlace vigente con el correo invitado.',
-      );
+    if (acceptance.current === null) {
+      acceptance.current = platformBrowserClient
+        .POST('/api/v1/public/invitations/accept/')
+        .then(({ response }) => response.ok);
     }
-    void accept();
+
+    void acceptance.current.then(
+      (accepted) => {
+        if (!active) return;
+        if (accepted) {
+          window.location.assign('/organizaciones');
+          return;
+        }
+        setState('error');
+        setMessage(
+          'La invitación no está disponible para esta cuenta. Abre un enlace vigente con el correo invitado.',
+        );
+      },
+      () => {
+        if (!active) return;
+        setState('error');
+        setMessage(
+          'No fue posible aceptar la invitación. Comprueba tu conexión e inténtalo de nuevo.',
+        );
+      },
+    );
     return () => {
       active = false;
     };

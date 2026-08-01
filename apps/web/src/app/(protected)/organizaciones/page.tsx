@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 
 import { PageHeader } from '@/components/platform/page-header';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { roleLabel, sortRoles } from '@/lib/organizations/labels';
 import { getAccessContext } from '@/lib/organizations/server';
 
@@ -26,9 +27,17 @@ export default async function OrganizationsPage() {
             No tienes organizaciones asignadas
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-            Tu cuenta existe, pero un propietario institucional debe agregarla a
-            una organización.
+            {context.is_platform_operator
+              ? 'Crea la primera institución para iniciar su configuración y delegar la administración institucional.'
+              : 'Tu cuenta existe, pero un propietario institucional debe agregarla a una organización.'}
           </p>
+          {context.is_platform_operator ? (
+            <Button asChild className="mt-5">
+              <Link href="/administracion/organizaciones">
+                Crear institución
+              </Link>
+            </Button>
+          ) : null}
         </section>
       ) : (
         <ul className="mt-7 divide-y overflow-hidden rounded-lg border bg-card">

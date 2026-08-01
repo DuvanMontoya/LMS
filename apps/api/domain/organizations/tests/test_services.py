@@ -9,7 +9,11 @@ from django.test import TestCase
 from domain.organizations.capabilities import Capability
 from domain.organizations.choices import MembershipStatus, RoleCode
 from domain.organizations.exceptions import LastOwnerViolation, RoleAssignmentDenied
-from domain.organizations.models import Membership, MembershipEvent
+from domain.organizations.models import (
+    Membership,
+    MembershipEvent,
+    OrganizationMemberProfile,
+)
 from domain.organizations.policies import has_capability
 from domain.organizations.services import (
     add_existing_member_with_roles,
@@ -48,6 +52,9 @@ class OrganizationServiceTests(TestCase):
         )
         self.assertEqual(
             MembershipEvent.objects.filter(membership=membership).count(), 2
+        )
+        self.assertTrue(
+            OrganizationMemberProfile.objects.filter(membership=membership).exists()
         )
 
     def test_slug_is_reserved_lowercase_and_immutable(self) -> None:

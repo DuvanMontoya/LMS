@@ -128,5 +128,4 @@ class PlatformRegistrationSettings(models.Model):  # noqa: DJ012
 
     @classmethod
     def current(cls) -> PlatformRegistrationSettings:
-        settings, _ = cls.objects.get_or_create(singleton=1)
-        return settings
+        return cls.objects.get(singleton=1)

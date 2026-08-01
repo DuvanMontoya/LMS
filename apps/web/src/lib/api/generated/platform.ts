@@ -854,6 +854,10 @@ export interface paths {
   '/api/v1/platform/events/{event_id}/deliveries/': {
     get: operations['platform_event_deliveries_list'];
   };
+  '/api/v1/platform/organizations/': {
+    /** @description Restricted control-plane endpoint for institutional provisioning. */
+    post: operations['platform_organizations_create'];
+  };
   '/api/v1/platform/registration-settings/': {
     get: operations['platform_registration_settings_retrieve'];
     put: operations['platform_registration_settings_update'];
@@ -974,6 +978,7 @@ export interface components {
       role: components['schemas']['AcademicGroupRole'];
     };
     AccessContext: {
+      is_platform_operator: boolean;
       organizations: readonly components['schemas']['AccessOrganization'][];
       user: components['schemas']['UserSummary'];
     };
@@ -3610,6 +3615,10 @@ export interface components {
       /** Format: uuid */
       response_id: string;
       response_status: components['schemas']['AssessmentResponseStatus'];
+    };
+    /** @description The platform operator supplies a name; the institutional code is generated. */
+    PlatformOrganizationProvision: {
+      name: string;
     };
     PoolCandidates: {
       expected_version: number;
@@ -11549,6 +11558,23 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['EventConsumerDelivery'][];
+        };
+      };
+    };
+  };
+  /** @description Restricted control-plane endpoint for institutional provisioning. */
+  platform_organizations_create: {
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PlatformOrganizationProvision'];
+        'application/x-www-form-urlencoded': components['schemas']['PlatformOrganizationProvision'];
+        'multipart/form-data': components['schemas']['PlatformOrganizationProvision'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Organization'];
         };
       };
     };

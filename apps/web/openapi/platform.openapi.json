@@ -132,6 +132,7 @@
       },
       "AccessContext": {
         "properties": {
+          "is_platform_operator": { "readOnly": true, "type": "boolean" },
           "organizations": {
             "items": { "$ref": "#/components/schemas/AccessOrganization" },
             "readOnly": true,
@@ -142,7 +143,7 @@
             "readOnly": true
           }
         },
-        "required": ["organizations", "user"],
+        "required": ["is_platform_operator", "organizations", "user"],
         "type": "object"
       },
       "AccessOrganization": {
@@ -159,10 +160,7 @@
             "type": "string"
           },
           "membership_status": {
-            "allOf": [
-              { "$ref": "#/components/schemas/OrganizationMembershipStatus" }
-            ],
-            "readOnly": true
+            "$ref": "#/components/schemas/OrganizationMembershipStatus"
           },
           "name": { "readOnly": true, "type": "string" },
           "roles": {
@@ -5506,6 +5504,12 @@
           "response_id",
           "response_status"
         ],
+        "type": "object"
+      },
+      "PlatformOrganizationProvision": {
+        "description": "The platform operator supplies a name; the institutional code is generated.",
+        "properties": { "name": { "maxLength": 160, "type": "string" } },
+        "required": ["name"],
         "type": "object"
       },
       "PoolCandidates": {
@@ -21874,6 +21878,44 @@
                   },
                   "type": "array"
                 }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/organizations/": {
+      "post": {
+        "description": "Restricted control-plane endpoint for institutional provisioning.",
+        "operationId": "platform_organizations_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformOrganizationProvision"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformOrganizationProvision"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformOrganizationProvision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Organization" }
               }
             },
             "description": ""

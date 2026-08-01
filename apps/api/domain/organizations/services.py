@@ -16,6 +16,7 @@ from django.db import IntegrityError, transaction
 from django.http import HttpRequest
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.text import slugify
 
 from .capabilities import Capability
 from .choices import (
@@ -58,6 +59,7 @@ from .policies import (
     can_assign_role,
     can_manage_membership,
     has_capability,
+    is_active_platform_operator,
     target_is_active_owner,
 )
 
@@ -145,6 +147,9 @@ def create_organization_with_owner(
         user=actor,
         status_changed_by=actor,
     )
+    # Every membership owns its institutional profile from creation.  Keeping
+    # this invariant in the command path means profile reads remain read-only.
+    OrganizationMemberProfile.objects.create(membership=membership)
     MembershipRoleAssignment.objects.create(
         membership=membership, role=RoleCode.OWNER.value, assigned_by=actor
     )
@@ -163,6 +168,38 @@ def create_organization_with_owner(
         role=RoleCode.OWNER,
     )
     return organization
+
+
+@transaction.atomic
+def provision_platform_organization(*, actor: User, name: str) -> Organization:
+    """Provision an institution from the platform control plane.
+
+    The public identifier is generated server-side so an operator never has to
+    invent or coordinate an institutional code.  The transaction uses a short
+    random suffix and retries the vanishingly rare uniqueness collision.
+    """
+
+    if not is_active_platform_operator(actor):
+        raise OrganizationAccessDenied("Solo el superadministrador crea instituciones.")
+
+    normalized_name = name.strip()
+    base = slugify(normalized_name)[:72].strip("-") or "institucion"
+    for _ in range(5):
+        generated_slug = f"{base[:73].rstrip('-')}-{secrets.token_hex(3)}"
+        try:
+            with transaction.atomic():
+                return create_organization_with_owner(
+                    actor=actor,
+                    name=normalized_name,
+                    slug=generated_slug,
+                )
+        except IntegrityError:
+            if Organization.objects.filter(slug=generated_slug).exists():
+                continue
+            raise
+    raise OrganizationAccessDenied(
+        "No fue posible generar un código institucional único."
+    )
 
 
 @transaction.atomic

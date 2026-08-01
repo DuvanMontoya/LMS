@@ -65,6 +65,20 @@ class OrganizationUpdateSerializer(serializers.Serializer[object]):
         return normalized
 
 
+class PlatformOrganizationProvisionSerializer(serializers.Serializer[object]):
+    """The platform operator supplies a name; the institutional code is generated."""
+
+    name = serializers.CharField(max_length=160)
+
+    def validate_name(self, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise serializers.ValidationError(
+                "El nombre de la institución es obligatorio."
+            )
+        return normalized
+
+
 class MembershipSerializer(serializers.ModelSerializer[Membership]):
     membership_id = serializers.UUIDField(source="id", read_only=True)
     user = UserSummarySerializer(read_only=True)
@@ -510,9 +524,7 @@ class AccessOrganizationSerializer(serializers.Serializer[object]):
     name = serializers.CharField(read_only=True)
     slug = serializers.SlugField(read_only=True)
     membership_id = serializers.UUIDField(read_only=True)
-    membership_status = serializers.ChoiceField(
-        choices=MembershipStatus.choices, read_only=True
-    )
+    membership_status = serializers.ChoiceField(choices=MembershipStatus.choices)
     roles = serializers.ListField(
         child=serializers.ChoiceField(choices=RoleCode.choices), read_only=True
     )
@@ -522,6 +534,7 @@ class AccessOrganizationSerializer(serializers.Serializer[object]):
 class AccessContextSerializer(serializers.Serializer[object]):
     user = UserSummarySerializer(read_only=True)
     organizations = AccessOrganizationSerializer(many=True, read_only=True)
+    is_platform_operator = serializers.BooleanField(read_only=True)
 
 
 def access_organization_payload(membership: Membership) -> dict[str, object]:

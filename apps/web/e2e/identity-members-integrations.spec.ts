@@ -24,12 +24,13 @@ async function login(
   email: string,
   next = '/organizaciones',
   secret = requiredPassword,
+  destination = next,
 ) {
   await page.goto(`/auth/iniciar-sesion?next=${encodeURIComponent(next)}`);
   await page.getByLabel('Correo electrónico').fill(email);
   await page.getByLabel('Contraseña').fill(secret);
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
-  await expect(page).toHaveURL(next, { timeout: 45_000 });
+  await expect(page).toHaveURL(destination, { timeout: 45_000 });
 }
 
 test.describe
@@ -49,10 +50,8 @@ test.describe
 
     const publicContext = await browser.newContext();
     const publicPage = await publicContext.newPage();
-    await publicPage.goto('/auth/registro');
-    await expect(
-      publicPage.getByText('El acceso requiere una invitación institucional.'),
-    ).toBeVisible();
+    const closedRegistration = await publicPage.goto('/auth/registro');
+    expect(closedRegistration?.status()).toBe(404);
     await expect(publicPage.getByLabel('Correo electrónico')).toHaveCount(0);
 
     await page.getByRole('radio', { name: 'Abierto' }).check();
@@ -75,15 +74,10 @@ test.describe
     );
     const initialEmail = e2eEmail('managed-wrong');
     const correctedEmail = e2eEmail('managed-student');
-    await page.getByLabel('Nombres').fill('Ana');
-    await page.getByLabel('Apellidos').fill('Díaz');
-    await page.getByLabel('Nombre visible').fill('Ana D.');
-    await page.getByLabel('Tipo de miembro').fill('Estudiante');
     await page.getByLabel('Correo institucional o personal').fill(initialEmail);
-    await page.getByLabel('ID institucional').fill('EST-2026-001');
-    await page.getByLabel('Teléfono').fill('+57 300 000 0000');
-    await page.getByLabel('Idioma').fill('es-CO');
-    await page.getByLabel('Zona horaria').fill('America/Bogota');
+    await page.getByLabel('Primer nombre').fill('Ana');
+    await page.getByLabel('Primer apellido').fill('Díaz');
+    await page.getByLabel('Tipo de miembro').selectOption('learner');
     const managedCreation = page.waitForResponse(
       (response) =>
         response.request().method() === 'POST' &&
@@ -125,7 +119,7 @@ test.describe
     await login(
       studentPage,
       correctedEmail,
-      '/organizaciones',
+      `/organizaciones/${organizationSlug}/aprendizaje`,
       activatedPassword,
     );
     await expect(
@@ -158,16 +152,50 @@ test.describe
     await existingPage
       .getByRole('link', { name: 'Iniciar sesión y aceptar' })
       .click();
-    await login(existingPage, existingEmail, '/invitaciones/aceptar');
-    await expect(existingPage).toHaveURL('/organizaciones', {
-      timeout: 45_000,
-    });
+    await login(
+      existingPage,
+      existingEmail,
+      '/invitaciones/aceptar',
+      requiredPassword,
+      `/organizaciones/${organizationSlug}/aprendizaje`,
+    );
     await expect(
       existingPage.getByText('Organización A', { exact: true }).first(),
     ).toBeVisible();
 
     await existingContext.close();
     await studentContext.close();
+  });
+
+  test('the platform operator provisions institutions without inheriting access to existing ones', async ({
+    page,
+  }) => {
+    await login(
+      page,
+      'platform-admin@organizations.e2e.test',
+      '/administracion/organizaciones',
+    );
+    await expect(
+      page.getByRole('heading', { name: 'Instituciones' }),
+    ).toBeVisible();
+    const foreignOrganization = await page.goto(
+      `/organizaciones/${organizationSlug}`,
+    );
+    expect(foreignOrganization?.status()).toBe(404);
+
+    await page.goto('/administracion/organizaciones');
+    const institutionName = `Institución E2E ${randomUUID().slice(0, 8)}`;
+    await page.getByLabel('Nombre de la institución').fill(institutionName);
+    await page.getByRole('button', { name: 'Crear institución' }).click();
+    await expect(page.getByText('Institución creada')).toBeVisible();
+    const createdInstitution = page.getByRole('link', {
+      name: 'Abrir la institución',
+    });
+    await expect(createdInstitution).toBeVisible();
+    await createdInstitution.click();
+    await expect(page).toHaveURL(/\/organizaciones\/[a-z0-9-]+$/, {
+      timeout: 45_000,
+    });
   });
 
   test('a verified public request is reviewed before it becomes a member', async ({
@@ -180,7 +208,7 @@ test.describe
       'owner@organizations.e2e.test',
       `/organizaciones/${organizationSlug}/configuracion`,
     );
-    const publicJoin = page.getByLabel('Permitir solicitudes públicas');
+    const publicJoin = page.getByLabel('Permitir solicitudes de membresía');
     if (!(await publicJoin.isChecked())) await publicJoin.check();
     const approval = page.getByLabel('Requerir aprobación');
     if (!(await approval.isChecked())) await approval.check();
@@ -224,7 +252,7 @@ test.describe
     await expect(applicantPage).toHaveURL('/estudiar', { timeout: 45_000 });
 
     await page.goto(`/organizaciones/${organizationSlug}/miembros/solicitudes`);
-    await expect(page.getByText(applicantEmail)).toBeVisible();
+    await expect(page.getByText(applicantEmail).first()).toBeVisible();
     await page.getByRole('button', { name: 'Aprobar' }).click();
     await expect(page.getByText('Aprobada')).toBeVisible();
     await applicantPage.goto('/organizaciones');

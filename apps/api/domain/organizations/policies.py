@@ -45,8 +45,6 @@ def has_capability(
     organization: Organization,
     capability: Capability,
 ) -> bool:
-    if is_active_platform_operator(actor):
-        return True
     return capability in capabilities_for_membership(
         active_membership(actor, organization)
     )
@@ -75,8 +73,6 @@ def can_manage_membership(
     organization = target_membership.organization
     if not has_capability(actor, organization, capability):
         return False
-    if is_active_platform_operator(actor):
-        return True
     if target_has_owner_role(target_membership):
         return has_capability(actor, organization, Capability.ROLE_ASSIGN_OWNER)
     return True

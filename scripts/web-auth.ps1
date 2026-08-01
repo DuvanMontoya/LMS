@@ -125,6 +125,12 @@ function Invoke-E2E([string]$Grep) {
     $nextDistDirectory = Join-Path $webDirectory $nextDistDirectoryName
     $tsconfigPath = Join-Path $webDirectory 'tsconfig.json'
     $tsconfigBefore = [IO.File]::ReadAllText($tsconfigPath)
+    $nextEnvPath = Join-Path $webDirectory 'next-env.d.ts'
+    $nextEnvBefore = if (Test-Path -LiteralPath $nextEnvPath) {
+        [IO.File]::ReadAllText($nextEnvPath)
+    } else {
+        $null
+    }
     $createDatabase = 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE {0}"' -f $databaseName
     $dropDatabase = 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS {0}"' -f $databaseName
     $savedEnvironment = @{}
@@ -270,6 +276,22 @@ function Invoke-E2E([string]$Grep) {
             } else {
                 Write-Warning 'tsconfig.json changed beyond the temporary Next E2E includes; preserving it for review.'
             }
+        }
+        $nextEnvAfter = if (Test-Path -LiteralPath $nextEnvPath) {
+            [IO.File]::ReadAllText($nextEnvPath)
+        } else {
+            $null
+        }
+        if ($nextEnvAfter -ne $nextEnvBefore -and $null -ne $nextEnvBefore) {
+            # Next rewrites this generated file to point at the temporary E2E
+            # dist directory. Restore the exact pre-run generated reference
+            # (normally .next/dev) so the isolated run cannot poison local
+            # route typechecking.
+            [IO.File]::WriteAllText(
+                $nextEnvPath,
+                $nextEnvBefore,
+                [Text.UTF8Encoding]::new($false)
+            )
         }
         if ($IsWindows -and $apiPort -and $webPort) {
             $leftovers = Get-NetTCPConnection -State Listen -LocalPort $apiPort,$webPort -ErrorAction SilentlyContinue

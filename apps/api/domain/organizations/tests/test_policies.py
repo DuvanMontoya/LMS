@@ -163,7 +163,9 @@ class OrganizationPolicyTests(TestCase):
             has_capability(instructor, first, Capability.ORGANIZATION_VIEW)
         )
 
-    def test_staff_is_not_a_bypass_and_superuser_is_explicit(self) -> None:
+    def test_staff_and_platform_operator_are_not_organization_role_bypasses(
+        self,
+    ) -> None:
         owner = self.verified_user("owner@example.test")
         organization = create_organization_with_owner(
             actor=owner, name="Institución", slug="institucion"
@@ -174,6 +176,9 @@ class OrganizationPolicyTests(TestCase):
         superuser.is_staff = True
         superuser.save(update_fields=["is_superuser", "is_staff"])
         self.assertFalse(has_capability(staff, organization, Capability.MEMBERSHIP_ADD))
-        self.assertTrue(
+        self.assertFalse(
             has_capability(superuser, organization, Capability.MEMBERSHIP_ADD)
+        )
+        self.assertFalse(
+            has_capability(superuser, organization, Capability.ASSESSMENT_ATTEMPT)
         )

@@ -45,6 +45,13 @@ export async function getAccessContext(): Promise<AccessContext> {
   )) as AccessContext;
 }
 
+export async function getPlatformOrganizations(): Promise<Organization[]> {
+  const client = await createPlatformServerClient();
+  return (await requirePayload(
+    client.GET('/api/v1/organizations/'),
+  )) as Organization[];
+}
+
 export function organizationInContext(
   context: AccessContext,
   slug: string,

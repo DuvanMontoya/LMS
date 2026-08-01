@@ -19,8 +19,6 @@ def organizations_visible_to(actor: User) -> QuerySet[Organization]:
 
 
 def organization_visible_to(actor: User, slug: str) -> Organization:
-    if actor.is_active and actor.is_superuser:
-        return get_object_or_404(Organization, slug=slug)
     return get_object_or_404(organizations_visible_to(actor), slug=slug)
 
 

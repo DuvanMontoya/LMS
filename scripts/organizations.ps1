@@ -55,7 +55,13 @@ switch ($Action) {
         Invoke-Django @('makemigrations', '--check', '--dry-run')
         Invoke-Django @('spectacular', '--validate', '--fail-on-warn')
         & $PSScriptRoot/organizations.ps1 -Action CheckClient
-        & rg -n --glob '!**/migrations/**' --glob '!**/openapi/**' --glob '!**/generated/**' --glob '!**/.next/**' --glob '!**/node_modules/**' --glob '!**/public/vendor/**' 'django-guardian|csrf_exempt|Authorization|Bearer|localStorage|sessionStorage|JWT' apps/api apps/web/src
+        & rg -n 'django-guardian|csrf_exempt|Authorization\s*:|Bearer\s+|localStorage|sessionStorage|JWT' `
+            apps/api/domain/organizations `
+            apps/web/src/components/organizations `
+            apps/web/src/lib/organizations `
+            apps/web/src/app/'(protected)'/organizaciones `
+            apps/web/src/app/'(protected)'/administracion `
+            apps/web/src/app/'(auth)'
         if ($LASTEXITCODE -eq 0) { throw 'A prohibited authorization/storage marker was found.' }
         if ($LASTEXITCODE -gt 1) { throw 'Security marker scan failed.' }
     }

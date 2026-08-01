@@ -11,7 +11,11 @@ export default async function StudyLayout({
   if (!session) redirect('/auth/iniciar-sesion?next=/estudiar');
   const context = await getAccessContext();
   return (
-    <PlatformShell email={session.email} organizations={context.organizations}>
+    <PlatformShell
+      email={session.email}
+      isPlatformOperator={context.is_platform_operator}
+      organizations={context.organizations}
+    >
       {children}
     </PlatformShell>
   );

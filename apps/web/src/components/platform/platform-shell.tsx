@@ -92,17 +92,19 @@ type NavigationChild = Omit<NavigationItem, 'children' | 'icon'> & {
 export function PlatformShell({
   children,
   email,
+  isPlatformOperator,
   organizations,
 }: Readonly<{
   children: React.ReactNode;
   email: string;
+  isPlatformOperator: boolean;
   organizations: readonly ShellOrganization[];
 }>) {
   const pathname = usePathname();
   const activeOrganization =
     organizations.find((organization) =>
       pathname.startsWith(`/organizaciones/${organization.slug}`),
-    ) ?? organizations[0];
+    ) ?? (pathname === '/estudiar' ? organizations[0] : undefined);
   const organizationBase = activeOrganization
     ? `/organizaciones/${activeOrganization.slug}`
     : undefined;
@@ -121,6 +123,7 @@ export function PlatformShell({
       <PlatformSidebar
         activeOrganization={activeOrganization}
         email={email}
+        isPlatformOperator={isPlatformOperator}
         organizations={organizations}
         pathname={pathname}
       />
@@ -151,11 +154,13 @@ export function PlatformShell({
 function PlatformSidebar({
   activeOrganization,
   email,
+  isPlatformOperator,
   organizations,
   pathname,
 }: Readonly<{
   activeOrganization?: ShellOrganization | undefined;
   email: string;
+  isPlatformOperator: boolean;
   organizations: readonly ShellOrganization[];
   pathname: string;
 }>) {
@@ -177,13 +182,17 @@ function PlatformSidebar({
       exact: true,
       visible: !learnerOnly,
     },
-    ...(organizations.length > 1
+    ...(organizations.length > 1 && organizationBase
       ? [
           {
             href: `${organizationBase}/buscar`,
             icon: Search,
             label: 'Buscar',
           },
+        ]
+      : []),
+    ...(organizations.length > 1
+      ? [
           {
             href: '/organizaciones',
             icon: Building2,
@@ -193,6 +202,23 @@ function PlatformSidebar({
         ]
       : []),
   ];
+  const platformAdministrationNavigation: NavigationItem[] = isPlatformOperator
+    ? [
+        {
+          href: '/administracion/organizaciones',
+          icon: Building2,
+          label: 'Instituciones',
+          exact: true,
+        },
+        {
+          activePrefixes: ['/administracion/configuracion/'],
+          href: '/administracion/configuracion',
+          icon: Settings2,
+          label: 'Registro y acceso',
+          exact: true,
+        },
+      ]
+    : [];
   const organizationNavigation: NavigationItem[] = organizationBase
     ? [
         {
@@ -591,6 +617,20 @@ function PlatformSidebar({
             <SidebarGroupLabel>Plataforma</SidebarGroupLabel>
             <SidebarGroupContent>
               <NavigationList items={generalNavigation} pathname={pathname} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
+
+        {platformAdministrationNavigation.some(
+          (item) => item.visible !== false,
+        ) ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Control de plataforma</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavigationList
+                items={platformAdministrationNavigation}
+                pathname={pathname}
+              />
             </SidebarGroupContent>
           </SidebarGroup>
         ) : null}

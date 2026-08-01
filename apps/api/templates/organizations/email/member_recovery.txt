@@ -7,6 +7,8 @@ Un administrador de {{ organization.name }} solicitó enviarte instrucciones par
 Por seguridad, inicia la recuperación desde tu propio navegador:
 {{ recovery_url }}
 
-Escribe el mismo correo en el que recibiste este mensaje. La plataforma te enviará un código temporal que solo funcionará en ese navegador.
+Este mensaje contiene el enlace de inicio, no el código de cambio. Al abrirlo, escribe el mismo correo en el que recibiste este mensaje. La plataforma te enviará un segundo correo con el código temporal y te mostrará inmediatamente dónde escribirlo junto con tu contraseña nueva.
+
+El código vence en 3 minutos y solo funcionará en el navegador que inició la recuperación.
 
 Si no esperabas este mensaje, ignóralo y comunícate con tu institución.

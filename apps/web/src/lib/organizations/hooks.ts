@@ -38,6 +38,24 @@ export function useOrganizations() {
   });
 }
 
+export function useProvisionPlatformOrganization() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) =>
+      requireData(
+        platformBrowserClient.POST('/api/v1/platform/organizations/', {
+          body: { name },
+        }),
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: organizationKeys.all(),
+      });
+      await queryClient.invalidateQueries({ queryKey: accessKeys.context() });
+    },
+  });
+}
+
 export function useOrganization(slug: string) {
   return useQuery({
     queryKey: organizationKeys.detail(slug),

@@ -331,7 +331,7 @@ export function MemberDetailPanel({
     try {
       await passwordRecovery.mutateAsync(member.membership_id);
       setNotice(
-        'Se enviaron instrucciones de recuperación al correo registrado.',
+        'Se enviaron instrucciones al correo registrado. La persona abrirá su propio enlace, solicitará allí el código temporal y verá el formulario para usarlo.',
       );
     } catch {
       // The mutation error is rendered below.
@@ -400,243 +400,290 @@ export function MemberDetailPanel({
               className="space-y-4"
               onSubmit={(event) => void saveProfile(event)}
             >
-              <div className="grid gap-4 sm:grid-cols-2">
-                <ProfileField
-                  disabled={!canEditProfile}
-                  label="Primer nombre"
-                  onChange={(value) => updateProfileField('first_name', value)}
-                  value={profile.first_name}
-                />
-                <ProfileField
-                  disabled={!canEditProfile}
-                  label="Segundo nombre"
-                  onChange={(value) => updateProfileField('middle_name', value)}
-                  value={profile.middle_name}
-                />
-                <ProfileField
-                  disabled={!canEditProfile}
-                  label="Primer apellido"
-                  onChange={(value) =>
-                    updateProfileField('first_surname', value)
-                  }
-                  value={profile.first_surname}
-                />
-                <ProfileField
-                  disabled={!canEditProfile}
-                  label="Segundo apellido"
-                  onChange={(value) =>
-                    updateProfileField('second_surname', value)
-                  }
-                  value={profile.second_surname}
-                />
-                <ProfileSelectField
-                  disabled={!canEditProfile}
-                  label="Tipo de miembro"
-                  onChange={(value) => updateProfileField('member_type', value)}
-                  options={[['', 'Sin seleccionar'], ...memberTypeOptions]}
-                  value={profile.member_type}
-                />
-                <ProfileField
-                  disabled={!canEditProfile}
-                  label="ID institucional"
-                  onChange={(value) =>
-                    updateProfileField('institutional_id', value)
-                  }
-                  value={profile.institutional_id}
-                />
-                <ProfileField
-                  disabled={!canEditProfile}
-                  label="Nombre visible"
-                  onChange={(value) =>
-                    updateProfileField('preferred_name', value)
-                  }
-                  value={profile.preferred_name}
-                />
-                <ProfileField
-                  disabled={!canEditProfile}
-                  label="WhatsApp"
-                  onChange={(value) => updateProfileField('whatsapp', value)}
-                  type="tel"
-                  value={profile.whatsapp}
-                />
-                <div className="space-y-2">
+              <fieldset className="space-y-4">
+                <legend className="text-sm font-medium">
+                  Datos principales
+                </legend>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Estos son los mismos datos mínimos que se solicitan al
+                  incorporar a una persona. Completa la información adicional
+                  sólo cuando sea necesaria para esta institución.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
                   <ProfileField
                     disabled={!canEditProfile}
-                    label="Fecha de nacimiento"
+                    label="Primer nombre"
+                    onChange={(value) =>
+                      updateProfileField('first_name', value)
+                    }
+                    value={profile.first_name}
+                  />
+                  <ProfileField
+                    disabled={!canEditProfile}
+                    label="Primer apellido"
+                    onChange={(value) =>
+                      updateProfileField('first_surname', value)
+                    }
+                    value={profile.first_surname}
+                  />
+                  <ProfileSelectField
+                    disabled={!canEditProfile}
+                    label="Tipo de miembro"
+                    onChange={(value) =>
+                      updateProfileField('member_type', value)
+                    }
+                    options={[['', 'Sin seleccionar'], ...memberTypeOptions]}
+                    value={profile.member_type}
+                  />
+                </div>
+              </fieldset>
+
+              <details className="rounded-lg border bg-muted/20 p-4">
+                <summary className="cursor-pointer text-sm font-medium marker:text-primary">
+                  Añadir identificación y datos personales
+                </summary>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  Son opcionales. Ábrelos únicamente si la operación
+                  institucional los necesita.
+                </p>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <ProfileField
+                    disabled={!canEditProfile}
+                    label="Segundo nombre"
+                    onChange={(value) =>
+                      updateProfileField('middle_name', value)
+                    }
+                    value={profile.middle_name}
+                  />
+                  <ProfileField
+                    disabled={!canEditProfile}
+                    label="Segundo apellido"
+                    onChange={(value) =>
+                      updateProfileField('second_surname', value)
+                    }
+                    value={profile.second_surname}
+                  />
+                  <ProfileField
+                    disabled={!canEditProfile}
+                    label="ID institucional"
+                    onChange={(value) =>
+                      updateProfileField('institutional_id', value)
+                    }
+                    value={profile.institutional_id}
+                  />
+                  <ProfileField
+                    disabled={!canEditProfile}
+                    label="Nombre visible"
+                    onChange={(value) =>
+                      updateProfileField('preferred_name', value)
+                    }
+                    value={profile.preferred_name}
+                  />
+                  <ProfileField
+                    disabled={!canEditProfile}
+                    label="WhatsApp"
+                    onChange={(value) => updateProfileField('whatsapp', value)}
+                    type="tel"
+                    value={profile.whatsapp}
+                  />
+                  <div className="space-y-2">
+                    <ProfileField
+                      disabled={!canEditProfile}
+                      label="Fecha de nacimiento"
+                      onChange={(value) => {
+                        const documentType = suggestedDocument(
+                          ageFromBirthDate(value),
+                        ) as DocumentType;
+                        setProfile((current) => ({
+                          ...current,
+                          date_of_birth: value,
+                          document_type: documentType,
+                        }));
+                      }}
+                      type="date"
+                      value={profile.date_of_birth}
+                    />
+                    {ageFromBirthDate(profile.date_of_birth) !== null ? (
+                      <p className="text-xs text-muted-foreground">
+                        Edad calculada:{' '}
+                        {ageFromBirthDate(profile.date_of_birth)} años
+                      </p>
+                    ) : null}
+                  </div>
+                  <ProfileSelectField
+                    disabled={!canEditProfile}
+                    label="Tipo de documento"
+                    onChange={(value) =>
+                      updateProfileField('document_type', value)
+                    }
+                    options={documentTypeOptions}
+                    value={profile.document_type}
+                  />
+                  <ProfileField
+                    disabled={!canEditProfile}
+                    label="Número de documento"
+                    onChange={(value) =>
+                      updateProfileField('document_number', value)
+                    }
+                    value={profile.document_number}
+                  />
+                  <ProfileSelectField
+                    disabled={!canEditProfile}
+                    label="Género"
+                    onChange={(value) => updateProfileField('gender', value)}
+                    options={genderOptions}
+                    value={profile.gender}
+                  />
+                </div>
+              </details>
+
+              <details className="rounded-lg border bg-muted/20 p-4">
+                <summary className="cursor-pointer text-sm font-medium marker:text-primary">
+                  Añadir contexto académico y de ubicación
+                </summary>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  Úsalo para organizar cursos, grupos o acompañamiento. No forma
+                  parte del acceso básico a la plataforma.
+                </p>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <ProfileSelectField
+                    disabled={!canEditProfile}
+                    label="Situación educativa"
                     onChange={(value) => {
-                      const documentType = suggestedDocument(
-                        ageFromBirthDate(value),
-                      ) as DocumentType;
                       setProfile((current) => ({
                         ...current,
-                        date_of_birth: value,
-                        document_type: documentType,
+                        education_stage: value as EducationStage,
+                        education_institution: educationInstitutionApplies(
+                          value,
+                        )
+                          ? current.education_institution
+                          : '',
                       }));
                     }}
-                    type="date"
-                    value={profile.date_of_birth}
+                    options={educationStageOptions}
+                    value={profile.education_stage}
                   />
-                  {ageFromBirthDate(profile.date_of_birth) !== null ? (
-                    <p className="text-xs text-muted-foreground">
-                      Edad calculada: {ageFromBirthDate(profile.date_of_birth)}{' '}
-                      años
-                    </p>
+                  {educationInstitutionApplies(profile.education_stage) ? (
+                    <ProfileField
+                      disabled={!canEditProfile}
+                      label="Institución educativa"
+                      onChange={(value) =>
+                        updateProfileField('education_institution', value)
+                      }
+                      value={profile.education_institution}
+                    />
                   ) : null}
+                  <ProfileSelectField
+                    disabled={!canEditProfile}
+                    label="Grado o nivel"
+                    onChange={(value) =>
+                      updateProfileField('education_level', value)
+                    }
+                    options={educationLevelOptions}
+                    value={profile.education_level}
+                  />
+                  <ProfileSelectField
+                    disabled={!canEditProfile}
+                    label="Departamento"
+                    onChange={(value) =>
+                      updateProfileField('department_code', value)
+                    }
+                    options={departmentOptions}
+                    value={profile.department_code}
+                  />
+                  <ProfileField
+                    disabled={!canEditProfile}
+                    label="Municipio o ciudad"
+                    onChange={(value) =>
+                      updateProfileField('municipality', value)
+                    }
+                    value={profile.municipality}
+                  />
+                  <ProfileField
+                    disabled={!canEditProfile}
+                    label="Dirección"
+                    onChange={(value) => updateProfileField('address', value)}
+                    value={profile.address}
+                  />
+                  <ProfileSelectField
+                    disabled={!canEditProfile}
+                    label="Estrato"
+                    onChange={(value) =>
+                      updateProfileField('socioeconomic_stratum', value)
+                    }
+                    options={socioeconomicStratumOptions}
+                    value={profile.socioeconomic_stratum}
+                  />
+                  <ProfileSelectField
+                    disabled={!canEditProfile}
+                    label="Motivo de registro"
+                    onChange={(value) => {
+                      setProfile((current) => ({
+                        ...current,
+                        registration_reason: value as RegistrationReason,
+                        registration_reason_detail:
+                          value === 'other'
+                            ? current.registration_reason_detail
+                            : '',
+                      }));
+                    }}
+                    options={registrationReasonOptions}
+                    value={profile.registration_reason}
+                  />
+                  {profile.registration_reason === 'other' ? (
+                    <ProfileField
+                      disabled={!canEditProfile}
+                      label="Detalle del motivo"
+                      onChange={(value) =>
+                        updateProfileField('registration_reason_detail', value)
+                      }
+                      value={profile.registration_reason_detail}
+                    />
+                  ) : null}
+                  <ProfileSelectField
+                    disabled={!canEditProfile}
+                    label="Idioma"
+                    onChange={(value) => updateProfileField('locale', value)}
+                    options={[
+                      ['es', 'Español'],
+                      ['es-CO', 'Español (Colombia)'],
+                    ]}
+                    value={profile.locale}
+                  />
+                  <ProfileSelectField
+                    disabled={!canEditProfile}
+                    label="Zona horaria"
+                    onChange={(value) => updateProfileField('timezone', value)}
+                    options={[
+                      ['America/Bogota', 'Colombia (Bogotá)'],
+                      ['UTC', 'UTC'],
+                    ]}
+                    value={profile.timezone}
+                  />
                 </div>
-                <ProfileSelectField
-                  disabled={!canEditProfile}
-                  label="Tipo de documento"
-                  onChange={(value) =>
-                    updateProfileField('document_type', value)
-                  }
-                  options={documentTypeOptions}
-                  value={profile.document_type}
-                />
-                <ProfileField
-                  disabled={!canEditProfile}
-                  label="Número de documento"
-                  onChange={(value) =>
-                    updateProfileField('document_number', value)
-                  }
-                  value={profile.document_number}
-                />
-                <ProfileSelectField
-                  disabled={!canEditProfile}
-                  label="Género"
-                  onChange={(value) => updateProfileField('gender', value)}
-                  options={genderOptions}
-                  value={profile.gender}
-                />
-                <ProfileSelectField
-                  disabled={!canEditProfile}
-                  label="Situación educativa"
-                  onChange={(value) => {
-                    setProfile((current) => ({
-                      ...current,
-                      education_stage: value as EducationStage,
-                      education_institution: educationInstitutionApplies(value)
-                        ? current.education_institution
-                        : '',
-                    }));
-                  }}
-                  options={educationStageOptions}
-                  value={profile.education_stage}
-                />
-                {educationInstitutionApplies(profile.education_stage) ? (
-                  <ProfileField
-                    disabled={!canEditProfile}
-                    label="Institución educativa"
-                    onChange={(value) =>
-                      updateProfileField('education_institution', value)
-                    }
-                    value={profile.education_institution}
-                  />
-                ) : null}
-                <ProfileSelectField
-                  disabled={!canEditProfile}
-                  label="Grado o nivel"
-                  onChange={(value) =>
-                    updateProfileField('education_level', value)
-                  }
-                  options={educationLevelOptions}
-                  value={profile.education_level}
-                />
-                <ProfileSelectField
-                  disabled={!canEditProfile}
-                  label="Departamento"
-                  onChange={(value) =>
-                    updateProfileField('department_code', value)
-                  }
-                  options={departmentOptions}
-                  value={profile.department_code}
-                />
-                <ProfileField
-                  disabled={!canEditProfile}
-                  label="Municipio o ciudad"
-                  onChange={(value) =>
-                    updateProfileField('municipality', value)
-                  }
-                  value={profile.municipality}
-                />
-                <ProfileField
-                  disabled={!canEditProfile}
-                  label="Dirección"
-                  onChange={(value) => updateProfileField('address', value)}
-                  value={profile.address}
-                />
-                <ProfileSelectField
-                  disabled={!canEditProfile}
-                  label="Estrato"
-                  onChange={(value) =>
-                    updateProfileField('socioeconomic_stratum', value)
-                  }
-                  options={socioeconomicStratumOptions}
-                  value={profile.socioeconomic_stratum}
-                />
-                <ProfileSelectField
-                  disabled={!canEditProfile}
-                  label="Motivo de registro"
-                  onChange={(value) => {
-                    setProfile((current) => ({
-                      ...current,
-                      registration_reason: value as RegistrationReason,
-                      registration_reason_detail:
-                        value === 'other'
-                          ? current.registration_reason_detail
-                          : '',
-                    }));
-                  }}
-                  options={registrationReasonOptions}
-                  value={profile.registration_reason}
-                />
-                {profile.registration_reason === 'other' ? (
-                  <ProfileField
-                    disabled={!canEditProfile}
-                    label="Detalle del motivo"
-                    onChange={(value) =>
-                      updateProfileField('registration_reason_detail', value)
-                    }
-                    value={profile.registration_reason_detail}
-                  />
-                ) : null}
-                <ProfileSelectField
-                  disabled={!canEditProfile}
-                  label="Idioma"
-                  onChange={(value) => updateProfileField('locale', value)}
-                  options={[
-                    ['es', 'Español'],
-                    ['es-CO', 'Español (Colombia)'],
-                  ]}
-                  value={profile.locale}
-                />
-                <ProfileSelectField
-                  disabled={!canEditProfile}
-                  label="Zona horaria"
-                  onChange={(value) => updateProfileField('timezone', value)}
-                  options={[
-                    ['America/Bogota', 'Colombia (Bogotá)'],
-                    ['UTC', 'UTC'],
-                  ]}
-                  value={profile.timezone}
-                />
-              </div>
+              </details>
               {canEditProfile ? (
-                <div className="space-y-2">
-                  <Label htmlFor="administrative-notes">
+                <details className="rounded-lg border bg-muted/20 p-4">
+                  <summary className="cursor-pointer text-sm font-medium marker:text-primary">
                     Notas administrativas
-                  </Label>
-                  <textarea
-                    className="min-h-24 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs"
-                    id="administrative-notes"
-                    onChange={(event) =>
-                      updateProfileField(
-                        'administrative_notes',
-                        event.target.value,
-                      )
-                    }
-                    value={profile.administrative_notes ?? ''}
-                  />
-                </div>
+                  </summary>
+                  <div className="mt-4 space-y-2">
+                    <Label htmlFor="administrative-notes">
+                      Notas internas de esta institución
+                    </Label>
+                    <textarea
+                      className="min-h-24 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs"
+                      id="administrative-notes"
+                      onChange={(event) =>
+                        updateProfileField(
+                          'administrative_notes',
+                          event.target.value,
+                        )
+                      }
+                      value={profile.administrative_notes ?? ''}
+                    />
+                  </div>
+                </details>
               ) : null}
               {canEditProfile ? (
                 <Button disabled={updateProfile.isPending} type="submit">
@@ -794,7 +841,7 @@ export function MemberDetailPanel({
                 variant="outline"
               >
                 <KeyRound />
-                Enviar instrucciones
+                Enviar instrucciones de recuperación
               </Button>
             ) : null}
           </CardContent>
