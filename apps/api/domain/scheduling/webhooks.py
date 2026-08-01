@@ -3,12 +3,15 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from livekit import api
+
+from domain.learning.contracts import complete_live_session_requirement
 
 from .choices import (
     AttendanceRole,
@@ -18,7 +21,12 @@ from .choices import (
 )
 from .exceptions import LiveKitWebhookInvalid
 from .livekit_gateway import LiveKitGateway
-from .models import AttendanceSegment, LiveKitWebhookEvent, LiveSession
+from .models import (
+    AcademicEventSeries,
+    AttendanceSegment,
+    LiveKitWebhookEvent,
+    LiveSession,
+)
 
 PARTICIPANT_END_EVENTS = frozenset(
     {"participant_left", "participant_connection_aborted"}
@@ -108,6 +116,37 @@ def _close_segment(
             "left_event",
             "updated_at",
         )
+    )
+    _complete_progress_requirement_if_eligible(segment, effective_left)
+
+
+def _complete_progress_requirement_if_eligible(
+    segment: AttendanceSegment, completed_at: datetime
+) -> None:
+    series = cast(AcademicEventSeries, segment.session.occurrence.series)
+    threshold = cast(int | None, series.attendance_threshold_minutes)
+    if (
+        segment.user is None
+        or segment.role != AttendanceRole.STUDENT
+        or not series.counts_toward_progress
+        or threshold is None
+    ):
+        return
+    duration_seconds = (
+        AttendanceSegment.objects.filter(
+            session=segment.session,
+            user=segment.user,
+            role=AttendanceRole.STUDENT,
+        ).aggregate(total=Sum("duration_seconds"))["total"]
+        or 0
+    )
+    if duration_seconds < threshold * 60:
+        return
+    complete_live_session_requirement(
+        actor=segment.user,
+        source_id=segment.session_id,
+        completed_at=completed_at,
+        evidence={"attendance_seconds": duration_seconds},
     )
 
 
@@ -261,10 +300,13 @@ def receive_and_process_webhook(
 ) -> tuple[LiveKitWebhookEvent, bool]:
     try:
         raw = body.decode("utf-8")
-        event = (
-            (gateway or LiveKitGateway()).webhook_receiver().receive(raw, authorization)
-        )
-        event_uuid = uuid.UUID(event.id)
+        token = authorization.strip()
+        if token.lower().startswith("bearer "):
+            token = token[7:].strip()
+        event = (gateway or LiveKitGateway()).webhook_receiver().receive(raw, token)
+        event_id = event.id.strip()
+        if not event_id or len(event_id) > 64:
+            raise ValueError("LiveKit webhook event id is missing or too long")
     except Exception as error:
         raise LiveKitWebhookInvalid(
             "La firma o el cuerpo LiveKit no son válidos."
@@ -274,7 +316,7 @@ def receive_and_process_webhook(
     processing_error: Exception | None = None
     with transaction.atomic():
         webhook, created = LiveKitWebhookEvent.objects.get_or_create(
-            event_id=event_uuid,
+            event_id=event_id,
             defaults={
                 "event_type": event.event,
                 "event_created_at": created_at,

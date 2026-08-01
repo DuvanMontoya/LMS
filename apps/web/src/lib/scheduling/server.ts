@@ -14,23 +14,30 @@ export async function getSchedulingPage(slug: string) {
   const canCreate =
     organization.access.capabilities.includes('scheduling.create');
   let courses: components['schemas']['CourseList'][] = [];
+  let participantOptions: components['schemas']['ParticipantOption'][] = [];
   if (canCreate) {
     const client = await createPlatformServerClient();
-    const { data, response } = await client.GET(
-      '/api/v1/organizations/{slug}/courses/',
-      {
+    const [courseRequest, participantRequest] = await Promise.all([
+      client.GET('/api/v1/organizations/{slug}/courses/', {
         params: {
           path: { slug },
           query: { page_size: 100, status: 'active' },
         },
         cache: 'no-store',
-      },
-    );
-    if (!response.ok || !data)
+      }),
+      client.GET(
+        '/api/v1/organizations/{slug}/scheduling/participant-options/',
+        { params: { path: { slug } }, cache: 'no-store' },
+      ),
+    ]);
+    if (!courseRequest.response.ok || !courseRequest.data)
       throw new Error('No fue posible consultar los cursos.');
-    courses = (data as CoursePage).results;
+    if (!participantRequest.response.ok || !participantRequest.data)
+      throw new Error('No fue posible consultar los participantes.');
+    courses = (courseRequest.data as CoursePage).results;
+    participantOptions = participantRequest.data;
   }
-  return { ...organization, canCreate, courses };
+  return { ...organization, canCreate, courses, participantOptions };
 }
 
 export async function getLiveSession(slug: string, sessionId: string) {

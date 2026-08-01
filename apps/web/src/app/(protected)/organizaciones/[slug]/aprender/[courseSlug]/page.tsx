@@ -149,6 +149,9 @@ export default async function LearningOutlinePage({
           <small>
             {data.outline.progress.completed_units} de{' '}
             {data.outline.progress.total_units} lecciones completadas
+            {data.outline.progress.total_required_activities
+              ? ` · ${data.outline.progress.completed_required_activities} de ${data.outline.progress.total_required_activities} clases en vivo requeridas`
+              : ''}
           </small>
         </aside>
       </section>

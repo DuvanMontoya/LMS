@@ -1428,15 +1428,17 @@
       },
       "CalendarExtendedProps": {
         "properties": {
+          "attendanceThresholdMinutes": { "nullable": true, "type": "integer" },
           "canDelete": { "type": "boolean" },
           "canEdit": { "type": "boolean" },
           "canJoin": { "type": "boolean" },
           "canModerate": { "type": "boolean" },
           "canShareScreen": { "type": "boolean" },
           "canStart": { "type": "boolean" },
-          "courseId": { "format": "uuid", "type": "string" },
+          "countsTowardProgress": { "type": "boolean" },
+          "courseId": { "format": "uuid", "nullable": true, "type": "string" },
           "courseName": { "type": "string" },
-          "courseSlug": { "type": "string" },
+          "courseSlug": { "nullable": true, "type": "string" },
           "description": { "type": "string" },
           "eventType": { "type": "string" },
           "hostName": { "type": "string" },
@@ -1447,12 +1449,14 @@
           "sessionId": { "format": "uuid", "nullable": true, "type": "string" }
         },
         "required": [
+          "attendanceThresholdMinutes",
           "canDelete",
           "canEdit",
           "canJoin",
           "canModerate",
           "canShareScreen",
           "canStart",
+          "countsTowardProgress",
           "courseId",
           "courseName",
           "courseSlug",
@@ -2680,7 +2684,20 @@
       },
       "EventCreate": {
         "properties": {
-          "course_slug": { "pattern": "^[-a-zA-Z0-9_]+$", "type": "string" },
+          "attendance_threshold_minutes": {
+            "maximum": 720,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "counts_toward_progress": { "default": false, "type": "boolean" },
+          "course_slug": {
+            "nullable": true,
+            "oneOf": [
+              { "pattern": "^[-a-zA-Z0-9_]+$", "type": "string" },
+              { "maxLength": 0, "type": "string" }
+            ]
+          },
           "description": { "maxLength": 2000, "type": "string" },
           "duration_minutes": {
             "maximum": 720,
@@ -2694,18 +2711,17 @@
             "default": "live_class"
           },
           "host_membership_id": { "format": "uuid", "type": "string" },
+          "participant_membership_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 100,
+            "type": "array"
+          },
           "rrule": { "maxLength": 1000, "type": "string" },
           "starts_at": { "format": "date-time", "type": "string" },
           "timezone_name": { "maxLength": 64, "type": "string" },
           "title": { "maxLength": 200, "type": "string" }
         },
-        "required": [
-          "course_slug",
-          "duration_minutes",
-          "starts_at",
-          "timezone_name",
-          "title"
-        ],
+        "required": ["duration_minutes", "starts_at", "timezone_name", "title"],
         "type": "object"
       },
       "EventCreateEventTypeEnum": {
@@ -3937,13 +3953,19 @@
       },
       "LiveSessionDetail": {
         "properties": {
+          "attendanceThresholdMinutes": { "nullable": true, "type": "integer" },
           "canDelete": { "type": "boolean" },
           "canEdit": { "type": "boolean" },
           "canJoin": { "type": "boolean" },
           "canModerate": { "type": "boolean" },
           "canShareScreen": { "type": "boolean" },
           "canStart": { "type": "boolean" },
-          "course": { "additionalProperties": {}, "type": "object" },
+          "countsTowardProgress": { "type": "boolean" },
+          "course": {
+            "additionalProperties": {},
+            "nullable": true,
+            "type": "object"
+          },
           "description": { "type": "string" },
           "hostName": { "type": "string" },
           "id": { "format": "uuid", "type": "string" },
@@ -3955,12 +3977,14 @@
           "title": { "type": "string" }
         },
         "required": [
+          "attendanceThresholdMinutes",
           "canDelete",
           "canEdit",
           "canJoin",
           "canModerate",
           "canShareScreen",
           "canStart",
+          "countsTowardProgress",
           "course",
           "description",
           "hostName",
@@ -4904,6 +4928,14 @@
         "required": ["count", "results"],
         "type": "object"
       },
+      "ParticipantOption": {
+        "properties": {
+          "display": { "type": "string" },
+          "membership_id": { "format": "uuid", "type": "string" }
+        },
+        "required": ["display", "membership_id"],
+        "type": "object"
+      },
       "ParticipantPermission": {
         "properties": {
           "can_publish_audio": { "type": "boolean" },
@@ -5152,6 +5184,7 @@
             "nullable": true,
             "type": "string"
           },
+          "completed_required_activities": { "type": "integer" },
           "completed_units": { "type": "integer" },
           "last_activity_at": {
             "format": "date-time",
@@ -5171,10 +5204,12 @@
             "type": "string"
           },
           "status": { "$ref": "#/components/schemas/LearningProgressStatus" },
+          "total_required_activities": { "type": "integer" },
           "total_units": { "type": "integer" }
         },
         "required": [
           "completed_at",
+          "completed_required_activities",
           "completed_units",
           "last_activity_at",
           "percent",
@@ -5182,6 +5217,7 @@
           "progress_version",
           "started_at",
           "status",
+          "total_required_activities",
           "total_units"
         ],
         "type": "object"
@@ -20831,6 +20867,34 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/participant-options/": {
+      "get": {
+        "operationId": "scheduling_participant_options_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/ParticipantOption" },
+                  "type": "array"
+                }
               }
             },
             "description": ""

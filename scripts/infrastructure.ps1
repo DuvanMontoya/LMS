@@ -70,6 +70,7 @@ function Get-ImageDigest([string]$Image, [string]$Repository) {
 function Write-ImageLock {
     $postgresDigest = Get-ImageDigest 'postgres:18.4-trixie' 'postgres'
     $redisDigest = Get-ImageDigest 'redis:8.8.1-trixie' 'redis'
+    $livekitDigest = Get-ImageDigest 'livekit/livekit-server:v1.13.1' 'livekit/livekit-server'
     $localstackDigest = Get-ImageDigest 'localstack/localstack:4.14.0' 'localstack/localstack'
     $clamavDigest = Get-ImageDigest 'clamav/clamav:1.5.3_base' 'clamav/clamav'
     $collectorDigest = Get-ImageDigest 'otel/opentelemetry-collector-contrib:0.157.0' 'otel/opentelemetry-collector-contrib'
@@ -85,6 +86,8 @@ services:
     image: postgres:18.4-trixie@$($postgresDigest.Split('@', 2)[1])
   redis:
     image: redis:8.8.1-trixie@$($redisDigest.Split('@', 2)[1])
+  livekit:
+    image: livekit/livekit-server:v1.13.1@$($livekitDigest.Split('@', 2)[1])
   assessment-worker:
     image: lms-assessment-worker:python-3.13.13
   localstack:
@@ -170,6 +173,9 @@ switch ($Action) {
         Assert-LastExitCode 'docker compose config --images'
         if (-not ($images | Where-Object { $_ -match '^postgres:18\.4-trixie@sha256:[0-9a-f]{64}$' })) { throw 'PostgreSQL image lock is not effective.' }
         if (-not ($images | Where-Object { $_ -match '^redis:8\.8\.1-trixie@sha256:[0-9a-f]{64}$' })) { throw 'Redis image lock is not effective.' }
+        $liveImages = & docker compose @lockedComposeArguments --profile live config --images
+        Assert-LastExitCode 'docker compose live config --images'
+        if (-not ($liveImages | Where-Object { $_ -match '^livekit/livekit-server:v1\.13\.1@sha256:[0-9a-f]{64}$' })) { throw 'LiveKit image lock is not effective.' }
         $mediaImages = & docker compose @lockedComposeArguments --profile media config --images
         Assert-LastExitCode 'docker compose media config --images'
         if (-not ($mediaImages | Where-Object { $_ -match '^localstack/localstack:4\.14\.0@sha256:[0-9a-f]{64}$' })) { throw 'LocalStack image lock is not effective.' }
@@ -190,11 +196,13 @@ switch ($Action) {
     'Pull' {
         Get-EnvironmentValues | Out-Null
         Invoke-Compose $baseComposeArguments @('pull')
+        Invoke-Compose $baseComposeArguments @('--profile', 'live', 'pull', 'livekit')
         Write-Host 'Approved exact image tags were pulled. Run Lock to review and record their current digests.'
     }
     'Lock' {
         Get-EnvironmentValues | Out-Null
         Invoke-Compose $baseComposeArguments @('pull')
+        Invoke-Compose $baseComposeArguments @('--profile', 'live', 'pull', 'livekit')
         Write-ImageLock
         Invoke-Compose $lockedComposeArguments @('config', '--quiet')
     }

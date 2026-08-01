@@ -1,13 +1,26 @@
 # LiveKit deployment and incidents
 
-## Recomendación de despliegue
+## Alcance actual
 
-Para el primer despliegue se recomienda LiveKit Cloud: el repositorio no posee
-todavía operación WebRTC multi-región, TURN, certificados, firewall UDP,
-capacidad ni on-call audiovisual. El adaptador conserva la opción self-hosted
-sin migrar datos. Elegir self-hosting exige otro ADR con región/residencia,
-SLO, capacidad, TLS público, TURN/TLS, puertos UDP/TCP, observabilidad, upgrades
-y recuperación ensayada.
+LiveKit OSS se ejecuta autohospedado en desarrollo local. Este runbook no
+autoriza desplegar ni modificar VPS, DNS, SSH o firewall. La futura operación
+pública se abre como una fase separada por decisión del usuario.
+
+## Inicio y smoke local
+
+```powershell
+pnpm infra:init
+pnpm livekit:up
+pnpm dev:start
+pnpm livekit:smoke
+pnpm livekit:status
+```
+
+La web queda en `http://localhost:3000`, Django en `127.0.0.1:8010` y LiveKit
+en `ws://127.0.0.1:7880`. El backend escucha `0.0.0.0:8010` sólo para que el
+contenedor entregue el webhook mediante `host.docker.internal`; el puerto
+público del navegador continúa siendo 3000. Las claves aleatorias viven sólo
+en `infrastructure/local/.env`, ignorado por Git.
 
 ## Configuración
 
@@ -15,7 +28,7 @@ Backend (secretos sólo en el gestor del entorno):
 
 ```text
 LIVEKIT_ENABLED=true
-LIVEKIT_URL=wss://<project>.livekit.cloud
+LIVEKIT_URL=wss://<livekit-public-host>
 LIVEKIT_API_KEY=<secret reference>
 LIVEKIT_API_SECRET=<secret reference>
 LIVEKIT_TOKEN_TTL_SECONDS=300
@@ -24,9 +37,9 @@ LIVEKIT_JOIN_AFTER_END_SECONDS=300
 LIVEKIT_EGRESS_ENABLED=false
 ```
 
-Frontend: `NEXT_PUBLIC_LIVEKIT_URL` debe contener el mismo origen WSS, sin
+En una fase pública futura, `NEXT_PUBLIC_LIVEKIT_URL` debe contener el mismo origen WSS, sin
 credenciales. Sólo sirve para el `connect-src` de la ruta de aula. Publicar el
-webhook HTTPS `POST /api/v1/livekit/webhook/` en la consola LiveKit con la misma
+webhook HTTPS `POST /api/v1/livekit/webhook/` en LiveKit con la misma
 API key firmante. El endpoint exige `application/webhook+json`, cuerpo crudo y
 `Authorization` válido.
 
@@ -34,7 +47,7 @@ API key firmante. El endpoint exige `application/webhook+json`, cuerpo crudo y
 
 1. Ejecutar `pnpm scheduling:check`, `pnpm scheduling:migrations`,
    `pnpm scheduling:test`, `pnpm web:build` y `pnpm scheduling:e2e`.
-2. En staging crear una clase próxima, iniciar con profesor y entrar con un
+2. Primero en localhost, y después en un staging autorizado, crear una clase próxima, iniciar con profesor y entrar con un
    estudiante matriculado desde dos navegadores reales HTTPS.
 3. Probar cámara, micrófono, pantalla sólo para host, audio remoto, salida,
    reconexión y expulsión. Confirmar que el estudiante no obtiene pantalla ni
@@ -48,8 +61,9 @@ API key firmante. El endpoint exige `application/webhook+json`, cuerpo crudo y
 - `503 livekit_unavailable`: feature flag apagado o configuración ausente.
 - `502 livekit_rejected`: revisar salud/cuota del proyecto, DNS/WSS y logs por
   request ID; nunca registrar token, secret o cuerpo completo.
-- Webhook 401: comprobar API key firmante, proxy que preserve cuerpo crudo y
-  `Authorization`. Webhook 500 deja el ledger `failed` para reintento seguro.
+- Webhook 401: comprobar API key firmante, proxy que preserve cuerpo crudo,
+  `Authorization` y que el ID opaco `EV_…` cabe en `event_id`. Webhook 500 deja
+  el ledger `failed` para reintento seguro.
 - Sin cámara/micrófono: confirmar que la URL es exactamente `/clases/<uuid>`,
   HTTPS, `Permissions-Policy` de esa respuesta y permiso del navegador.
 - Agenda vacía: validar rango menor de 93 días, organización, curso y matrícula

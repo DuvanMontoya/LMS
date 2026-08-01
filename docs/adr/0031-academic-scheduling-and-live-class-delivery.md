@@ -3,6 +3,7 @@
 - Estado: aceptada
 - Fecha: 2026-07-31
 - Responsables: plataforma académica
+- Nota: ADR 0032 modifica la decisión de despliegue, audiencia y progreso.
 
 ## Contexto
 
@@ -105,8 +106,7 @@ ruta de aula; las demás rutas continúan denegándolos.
   y webhook global autenticado criptográficamente.
 - Se añaden pins exactos de LiveKit, FullCalendar, temporal-polyfill y
   python-dateutil, con licencias permisivas y owners explícitos.
-- La prueba real audiovisual requiere credenciales LiveKit, HTTPS/WSS y dos
-  usuarios autorizados. Sin ellas sólo se aceptan pruebas deterministas con
-  gateway/SDK mockeado y se conserva la limitación explícita.
+- Desarrollo dispone de LiveKit OSS local real; producción self-hosted,
+  sesiones independientes y requisitos de progreso se definen en ADR 0032.
 - Cambiar proveedor audiovisual afecta el gateway y el aula, no los eventos,
   permisos, asistencia ni contratos académicos persistidos.

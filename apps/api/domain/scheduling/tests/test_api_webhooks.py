@@ -11,6 +11,8 @@ from django.utils import timezone
 from livekit import api
 from rest_framework.test import APIClient
 
+from domain.learning.contracts import register_live_session_requirement
+from domain.learning.models import ExternalRequirementCompletion
 from domain.scheduling.choices import LiveSessionStatus
 from domain.scheduling.livekit_gateway import LiveKitConfiguration, LiveKitGateway
 from domain.scheduling.models import AttendanceSegment, LiveKitWebhookEvent
@@ -76,6 +78,24 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
     def test_signed_webhooks_are_idempotent_and_track_segments(self) -> None:
         context = self.scheduling_context()
         session = context["session"]
+        series = context["series"]
+        series.counts_toward_progress = True
+        series.attendance_threshold_minutes = 1
+        series.full_clean()
+        series.save(
+            update_fields=(
+                "counts_toward_progress",
+                "attendance_threshold_minutes",
+                "updated_at",
+            )
+        )
+        register_live_session_requirement(
+            actor=context["owner"],
+            organization=context["organization"],
+            course=context["course"],
+            source_id=session.id,
+            title=series.title,
+        )
         session.status = LiveSessionStatus.LIVE
         session.actual_started_at = timezone.now()
         session.save(update_fields=("status", "actual_started_at", "updated_at"))
@@ -104,7 +124,7 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
             )
         )
         first, created = receive_and_process_webhook(
-            body=body, authorization=token, gateway=gateway
+            body=body, authorization=f"Bearer {token}", gateway=gateway
         )
         duplicate, created_again = receive_and_process_webhook(
             body=body, authorization=token, gateway=gateway
@@ -128,6 +148,11 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
         segment = AttendanceSegment.objects.get()
         self.assertEqual(segment.duration_seconds, 75)
         self.assertIsNotNone(segment.left_event_id)
+        self.assertEqual(ExternalRequirementCompletion.objects.count(), 1)
+        progress = context["enrollment"].current_release_assignment.progress
+        progress.refresh_from_db()
+        self.assertEqual(progress.total_required_activities, 1)
+        self.assertEqual(progress.completed_required_activities, 1)
 
     def test_invalid_webhook_signature_is_rejected_by_endpoint(self) -> None:
         client = APIClient()

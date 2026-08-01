@@ -51,6 +51,44 @@ services:
       retries: 20
       start_period: 10s
 
+  livekit:
+    profiles: ["live"]
+    image: livekit/livekit-server:v1.13.1
+    environment:
+      LIVEKIT_CONFIG: |
+        port: 7880
+        log_level: info
+        rtc:
+          tcp_port: 7881
+          udp_port: 7882
+          use_external_ip: false
+          node_ip: 127.0.0.1
+        keys:
+          ${LIVEKIT_API_KEY:?LIVEKIT_API_KEY is required}: ${LIVEKIT_API_SECRET:?LIVEKIT_API_SECRET is required}
+        webhook:
+          api_key: ${LIVEKIT_API_KEY:?LIVEKIT_API_KEY is required}
+          urls:
+            - ${LIVEKIT_WEBHOOK_URL:-http://host.docker.internal:8010/api/v1/livekit/webhook/}
+        prometheus:
+          port: 6789
+    ports:
+      - "127.0.0.1:7880:7880"
+      - "127.0.0.1:7881:7881"
+      - "127.0.0.1:7882:7882/udp"
+      - "127.0.0.1:6789:6789"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - lms_internal
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
   assessment-worker:
     profiles: ["async"]
     build:

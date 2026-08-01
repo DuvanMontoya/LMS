@@ -15,14 +15,16 @@ export function proxy(request: NextRequest) {
         : 'camera=(), microphone=(), display-capture=(), geolocation=()',
     );
     if (isLiveClass) {
+      const isDevelopment = process.env.NODE_ENV === 'development';
       const livekitOrigin = safeLiveKitOrigin(
         process.env.NEXT_PUBLIC_LIVEKIT_URL,
+        isDevelopment,
       );
       response.headers.set(
         'Content-Security-Policy',
         [
           "default-src 'self'",
-          "script-src 'self'",
+          `script-src 'self'${isDevelopment ? " 'unsafe-eval' 'unsafe-inline'" : ''}`,
           "style-src 'self' 'unsafe-inline'",
           "img-src 'self' data: blob:",
           "media-src 'self' blob:",
@@ -43,11 +45,14 @@ export function proxy(request: NextRequest) {
   return NextResponse.redirect(loginUrl);
 }
 
-function safeLiveKitOrigin(value: string | undefined) {
+function safeLiveKitOrigin(value: string | undefined, allowInsecure = false) {
   if (!value) return '';
   try {
     const url = new URL(value);
-    if (!['https:', 'wss:'].includes(url.protocol)) return '';
+    const protocols = allowInsecure
+      ? ['http:', 'https:', 'ws:', 'wss:']
+      : ['https:', 'wss:'];
+    if (!protocols.includes(url.protocol)) return '';
     return url.origin;
   } catch {
     return '';

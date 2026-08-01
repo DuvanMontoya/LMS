@@ -15,11 +15,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from domain.courses.models import Course
+from domain.organizations.choices import MembershipStatus
 from domain.organizations.models import Membership, Organization
 from domain.organizations.policies import active_membership
 from domain.organizations.selectors import organization_visible_to
 from domain.scheduling.exceptions import SchedulingDomainError
 from domain.scheduling.models import AcademicEventOccurrence, LiveSession
+from domain.scheduling.policies import can_create_schedule
 from domain.scheduling.selectors import (
     attendance_summary,
     live_session_detail,
@@ -49,6 +51,7 @@ from .serializers import (
     LiveConnectionSerializer,
     LiveSessionDetailSerializer,
     OperationAcceptedSerializer,
+    ParticipantOptionSerializer,
     ParticipantPermissionSerializer,
     SchedulingErrorSerializer,
     WebhookResultSerializer,
@@ -122,11 +125,30 @@ class CalendarEventListCreateView(APIView):
         serializer = EventCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        course = get_object_or_404(
-            Course.objects.select_related("organization"),
-            organization=organization,
-            slug=data["course_slug"],
+        course_slug = data.get("course_slug")
+        course = (
+            get_object_or_404(
+                Course.objects.select_related("organization"),
+                organization=organization,
+                slug=course_slug,
+            )
+            if course_slug
+            else None
         )
+        participant_ids = data.get("participant_membership_ids", [])
+        participants = list(
+            Membership.objects.select_related("organization", "user").filter(
+                organization=organization, pk__in=participant_ids
+            )
+        )
+        if len(participants) != len(set(participant_ids)):
+            return Response(
+                {
+                    "code": "participant_invalid",
+                    "detail": "Uno o más participantes no pertenecen a la organización.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         host = (
             get_object_or_404(
                 Membership.objects.select_related("organization", "user"),
@@ -147,6 +169,7 @@ class CalendarEventListCreateView(APIView):
                 organization=organization,
                 course=course,
                 host_membership=host,
+                participant_memberships=participants,
                 title=data["title"],
                 description=data.get("description", ""),
                 event_type=data["event_type"],
@@ -154,6 +177,8 @@ class CalendarEventListCreateView(APIView):
                 first_starts_at=data["starts_at"],
                 duration_minutes=data["duration_minutes"],
                 recurrence_rule=data.get("rrule", ""),
+                counts_toward_progress=data.get("counts_toward_progress", False),
+                attendance_threshold_minutes=data.get("attendance_threshold_minutes"),
             )
         )
         if isinstance(result, Response):
@@ -166,6 +191,35 @@ class CalendarEventListCreateView(APIView):
             CalendarEventSerializer(payload, many=True).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class ParticipantOptionListView(APIView):
+    @extend_schema(
+        operation_id="scheduling_participant_options_list",
+        responses={200: ParticipantOptionSerializer(many=True)},
+    )
+    def get(self, request: Request, slug: str) -> Response:
+        organization = _organization(request, slug)
+        if not can_create_schedule(request.user, organization):
+            return Response(
+                {"code": "permission_denied", "detail": "Acceso denegado."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        memberships = (
+            Membership.objects.filter(
+                organization=organization, status=MembershipStatus.ACTIVE
+            )
+            .select_related("user")
+            .order_by("user__email")[:500]
+        )
+        payload = [
+            {
+                "membership_id": membership.id,
+                "display": membership.user.get_full_name() or membership.user.email,
+            }
+            for membership in memberships
+        ]
+        return Response(ParticipantOptionSerializer(payload, many=True).data)
 
 
 class CalendarEventDetailView(APIView):

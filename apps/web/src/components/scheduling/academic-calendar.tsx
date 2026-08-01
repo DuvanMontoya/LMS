@@ -41,16 +41,19 @@ import {
 } from '@/lib/scheduling/api';
 
 type CourseOption = { slug: string; title: string };
+type ParticipantOption = { membershipId: string; display: string };
 type RecurrenceScope = 'occurrence' | 'following' | 'series';
 type MoveInfo = EventDropInfo | EventResizeDoneInfo;
 
 export function AcademicCalendar({
   canCreate,
   courses,
+  participantOptions,
   slug,
 }: Readonly<{
   canCreate: boolean;
   courses: CourseOption[];
+  participantOptions: ParticipantOption[];
   slug: string;
 }>) {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -233,6 +236,7 @@ export function AcademicCalendar({
       <CreateEventDialog
         canCreate={canCreate}
         courses={courses}
+        participantOptions={participantOptions}
         slug={slug}
         startsAt={createStart}
         timeZone={timeZone}
@@ -368,6 +372,7 @@ function CreateEventDialog({
   courses,
   onClose,
   onCreated,
+  participantOptions,
   slug,
   startsAt,
   timeZone,
@@ -376,10 +381,15 @@ function CreateEventDialog({
   courses: CourseOption[];
   onClose: () => void;
   onCreated: () => Promise<void>;
+  participantOptions: ParticipantOption[];
   slug: string;
   startsAt: string | null;
   timeZone: string;
 }>) {
+  const [courseSlug, setCourseSlug] = useState(courses[0]?.slug ?? '');
+  const [countsTowardProgress, setCountsTowardProgress] = useState(false);
+  const [submissionError, setSubmissionError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   if (!canCreate || !startsAt) return null;
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -389,8 +399,13 @@ function CreateEventDialog({
           onSubmit={(event) => {
             event.preventDefault();
             const data = new FormData(event.currentTarget);
+            setSubmissionError('');
+            setSubmitting(true);
             void createCalendarEvent(slug, {
-              course_slug: String(data.get('course')),
+              course_slug: courseSlug || null,
+              participant_membership_ids: courseSlug
+                ? []
+                : data.getAll('participants').map(String),
               title: String(data.get('title')),
               description: String(data.get('description') ?? ''),
               event_type: 'live_class',
@@ -398,7 +413,23 @@ function CreateEventDialog({
               starts_at: new Date(String(data.get('startsAt'))).toISOString(),
               duration_minutes: Number(data.get('duration')),
               rrule: String(data.get('rrule') ?? ''),
-            }).then(onCreated);
+              counts_toward_progress: Boolean(
+                courseSlug && countsTowardProgress,
+              ),
+              attendance_threshold_minutes:
+                courseSlug && countsTowardProgress
+                  ? Number(data.get('attendanceThreshold'))
+                  : null,
+            })
+              .then(onCreated)
+              .catch((caught) =>
+                setSubmissionError(
+                  caught instanceof Error
+                    ? caught.message
+                    : 'No fue posible crear la sesión.',
+                ),
+              )
+              .finally(() => setSubmitting(false));
           }}
         >
           <DialogHeader>
@@ -408,9 +439,24 @@ function CreateEventDialog({
               fechas.
             </DialogDescription>
           </DialogHeader>
+          {submissionError ? (
+            <Alert variant="destructive">
+              <AlertTitle>No se pudo programar la sesión</AlertTitle>
+              <AlertDescription>{submissionError}</AlertDescription>
+            </Alert>
+          ) : null}
           <Label>
-            Curso
-            <select className="academic-select" name="course" required>
+            Vinculación académica
+            <select
+              className="academic-select"
+              name="course"
+              value={courseSlug}
+              onChange={(event) => {
+                setCourseSlug(event.target.value);
+                if (!event.target.value) setCountsTowardProgress(false);
+              }}
+            >
+              <option value="">Sesión independiente (sin curso)</option>
               {courses.map((course) => (
                 <option key={course.slug} value={course.slug}>
                   {course.title}
@@ -418,6 +464,59 @@ function CreateEventDialog({
               ))}
             </select>
           </Label>
+          {!courseSlug ? (
+            <fieldset className="grid gap-2 rounded-lg border p-3">
+              <legend className="px-1 text-sm font-medium">
+                Participantes invitados
+              </legend>
+              <p className="text-xs text-muted-foreground">
+                Sólo las personas seleccionadas y el profesor podrán verla y
+                entrar.
+              </p>
+              <div className="max-h-40 space-y-2 overflow-y-auto">
+                {participantOptions.map((participant) => (
+                  <Label
+                    className="flex items-center gap-2 font-normal"
+                    key={participant.membershipId}
+                  >
+                    <input
+                      name="participants"
+                      type="checkbox"
+                      value={participant.membershipId}
+                    />
+                    {participant.display}
+                  </Label>
+                ))}
+              </div>
+            </fieldset>
+          ) : (
+            <fieldset className="grid gap-2 rounded-lg border p-3">
+              <legend className="px-1 text-sm font-medium">Progreso</legend>
+              <Label className="flex items-center gap-2 font-normal">
+                <input
+                  checked={countsTowardProgress}
+                  onChange={(event) =>
+                    setCountsTowardProgress(event.target.checked)
+                  }
+                  type="checkbox"
+                />
+                Esta clase es requisito para completar el curso
+              </Label>
+              {countsTowardProgress ? (
+                <Label>
+                  Asistencia mínima en minutos
+                  <Input
+                    name="attendanceThreshold"
+                    type="number"
+                    min={1}
+                    max={720}
+                    defaultValue={45}
+                    required
+                  />
+                </Label>
+              ) : null}
+            </fieldset>
+          )}
           <Label>
             Título
             <Input name="title" required maxLength={200} />
@@ -451,7 +550,9 @@ function CreateEventDialog({
             <Input name="description" maxLength={2000} />
           </Label>
           <DialogFooter>
-            <Button type="submit">Crear evento</Button>
+            <Button disabled={submitting} type="submit">
+              {submitting ? 'Creando…' : 'Crear evento'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -12,6 +12,10 @@ from django.utils import timezone
 
 from domain.courses.choices import CourseStatus
 from domain.courses.models import Course
+from domain.learning.contracts import (
+    deactivate_live_session_requirement,
+    register_live_session_requirement,
+)
 from domain.organizations.choices import MembershipStatus, RoleCode
 from domain.organizations.models import Membership, Organization
 from domain.organizations.policies import active_roles
@@ -32,7 +36,12 @@ from .exceptions import (
     SchedulingInvalid,
 )
 from .livekit_gateway import LiveKitGateway
-from .models import AcademicEventOccurrence, AcademicEventSeries, LiveSession
+from .models import (
+    AcademicEventOccurrence,
+    AcademicEventParticipant,
+    AcademicEventSeries,
+    LiveSession,
+)
 from .policies import (
     LiveAccess,
     actor_membership,
@@ -67,8 +76,9 @@ def create_event_series(
     *,
     actor: object,
     organization: Organization,
-    course: Course,
+    course: Course | None,
     host_membership: Membership,
+    participant_memberships: list[Membership] | None = None,
     title: str,
     description: str,
     event_type: str,
@@ -76,14 +86,53 @@ def create_event_series(
     first_starts_at: datetime,
     duration_minutes: int,
     recurrence_rule: str = "",
+    counts_toward_progress: bool = False,
+    attendance_threshold_minutes: int | None = None,
 ) -> AcademicEventSeries:
     if not can_create_schedule(actor, organization):
         raise SchedulingAccessDenied("No puedes crear eventos académicos.")
-    if (
+    if course is not None and (
         course.organization_id != organization.id
         or course.status != CourseStatus.ACTIVE
     ):
         raise SchedulingInvalid("El curso no está activo en esta organización.")
+    participants = participant_memberships or []
+    if course is None and not participants:
+        raise SchedulingInvalid(
+            "Una sesión independiente necesita al menos un participante invitado."
+        )
+    if course is not None and participants:
+        raise SchedulingInvalid(
+            "Las sesiones de curso usan las matrículas; no mezcles invitados explícitos."
+        )
+    if counts_toward_progress and course is None:
+        raise SchedulingInvalid(
+            "Sólo una sesión vinculada a un curso puede contar para el progreso."
+        )
+    if counts_toward_progress and (
+        attendance_threshold_minutes is None
+        or attendance_threshold_minutes < 1
+        or attendance_threshold_minutes > duration_minutes
+    ):
+        raise SchedulingInvalid(
+            "Define un umbral de asistencia entre 1 minuto y la duración de la clase."
+        )
+    if not counts_toward_progress and attendance_threshold_minutes is not None:
+        raise SchedulingInvalid(
+            "El umbral sólo aplica cuando la clase cuenta para el progreso."
+        )
+    participant_ids: set[uuid.UUID] = set()
+    for participant in participants:
+        if (
+            participant.organization_id != organization.id
+            or participant.status != MembershipStatus.ACTIVE
+        ):
+            raise SchedulingInvalid(
+                "Todos los participantes deben ser membresías activas de la organización."
+            )
+        if participant.id in participant_ids:
+            raise SchedulingInvalid("No repitas participantes invitados.")
+        participant_ids.add(participant.id)
     _validate_host(actor=actor, organization=organization, host=host_membership)
     windows = materialized_windows(
         first_starts_at=first_starts_at,
@@ -105,11 +154,23 @@ def create_event_series(
         rrule=normalized_rule,
         recurrence_count=len(windows),
         recurrence_until=rule_until(normalized_rule, windows),
+        counts_toward_progress=counts_toward_progress,
+        attendance_threshold_minutes=(
+            attendance_threshold_minutes if counts_toward_progress else None
+        ),
         created_by=actor,
         updated_by=actor,
     )
     series.full_clean()
     series.save()
+    AcademicEventParticipant.objects.bulk_create(
+        [
+            AcademicEventParticipant(
+                series=series, membership=participant, added_by=actor
+            )
+            for participant in participants
+        ]
+    )
     egress_status = (
         EgressStatus.IDLE if settings.LIVEKIT_EGRESS_ENABLED else EgressStatus.DISABLED
     )
@@ -121,11 +182,19 @@ def create_event_series(
             ends_at=ends_at,
         )
         if event_type == EventType.LIVE_CLASS:
-            LiveSession.objects.create(
+            live_session = LiveSession.objects.create(
                 occurrence=occurrence,
                 egress_status=egress_status,
                 created_by=actor,
             )
+            if counts_toward_progress and course is not None:
+                register_live_session_requirement(
+                    actor=actor,
+                    organization=organization,
+                    course=course,
+                    source_id=live_session.id,
+                    title=title,
+                )
     return series
 
 
@@ -234,6 +303,7 @@ def cancel_occurrence(
                     "updated_at",
                 )
             )
+            deactivate_live_session_requirement(actor=actor, source_id=session.id)
     if scope == RecurrenceScope.SERIES:
         occurrence.series.status = SeriesStatus.CANCELLED
         occurrence.series.lock_version += 1
@@ -249,7 +319,7 @@ def cancel_occurrence(
 def _session_with_context(session_id: uuid.UUID, *, lock: bool = False) -> LiveSession:
     queryset = LiveSession.objects
     if lock:
-        queryset = queryset.select_for_update()
+        queryset = queryset.select_for_update(of=("self",))
     return queryset.select_related(
         "occurrence__series__organization",
         "occurrence__series__course",

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from django.conf import settings
-from django.db.models import QuerySet, Sum
+from django.db.models import Q, QuerySet, Sum
 from django.utils import timezone
 
 from domain.learning.contracts import effective_course_ids_for_actor
@@ -43,7 +43,15 @@ def occurrences_visible_to_actor(
     ):
         return queryset
     course_ids = effective_course_ids_for_actor(actor=actor, organization=organization)
-    return queryset.filter(series__course_id__in=course_ids)
+    actor_id = getattr(actor, "id", None)
+    return queryset.filter(
+        Q(series__course_id__in=course_ids)
+        | Q(
+            series__course__isnull=True,
+            series__participants__membership__user_id=actor_id,
+            series__participants__membership__status="active",
+        )
+    ).distinct()
 
 
 def visible_occurrences_in_range(
@@ -115,9 +123,23 @@ def occurrence_payload(
     extended = _availability(occurrence, actor)
     extended.update(
         {
-            "courseId": str(occurrence.series.course_id),
-            "courseSlug": occurrence.series.course.slug,
-            "courseName": occurrence.series.title,
+            "courseId": (
+                str(occurrence.series.course_id)
+                if occurrence.series.course_id
+                else None
+            ),
+            "courseSlug": (
+                occurrence.series.course.slug if occurrence.series.course_id else None
+            ),
+            "courseName": (
+                occurrence.series.title
+                if occurrence.series.course_id
+                else "Sesión independiente"
+            ),
+            "countsTowardProgress": occurrence.series.counts_toward_progress,
+            "attendanceThresholdMinutes": (
+                occurrence.series.attendance_threshold_minutes
+            ),
             "eventType": occurrence.series.event_type,
             "occurrenceStatus": occurrence.status,
             "hostName": f"Participante {str(occurrence.series.host_membership.user_id)[:8]}",
@@ -167,10 +189,16 @@ def live_session_detail(
         "id": str(session.id),
         "title": occurrence.title_override or occurrence.series.title,
         "description": occurrence.description_override or occurrence.series.description,
-        "course": {
-            "id": str(occurrence.series.course_id),
-            "slug": occurrence.series.course.slug,
-        },
+        "course": (
+            {
+                "id": str(occurrence.series.course_id),
+                "slug": occurrence.series.course.slug,
+            }
+            if occurrence.series.course_id
+            else None
+        ),
+        "countsTowardProgress": occurrence.series.counts_toward_progress,
+        "attendanceThresholdMinutes": occurrence.series.attendance_threshold_minutes,
         "hostName": f"Participante {str(occurrence.series.host_membership.user_id)[:8]}",
         "scheduledStart": occurrence.starts_at,
         "scheduledEnd": occurrence.ends_at,

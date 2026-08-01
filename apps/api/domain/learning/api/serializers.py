@@ -64,6 +64,8 @@ class ProgressSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=ProgressStatus.choices)
     completed_units = serializers.IntegerField()
     total_units = serializers.IntegerField()
+    completed_required_activities = serializers.IntegerField()
+    total_required_activities = serializers.IntegerField()
     percent_basis_points = serializers.IntegerField()
     percent = serializers.DecimalField(max_digits=5, decimal_places=2)
     progress_version = serializers.IntegerField()

@@ -8,6 +8,11 @@ class SchedulingErrorSerializer(serializers.Serializer):
     detail = serializers.CharField()
 
 
+class ParticipantOptionSerializer(serializers.Serializer):
+    membership_id = serializers.UUIDField()
+    display = serializers.CharField()
+
+
 class CalendarRangeSerializer(serializers.Serializer):
     start = serializers.DateTimeField()
     end = serializers.DateTimeField()
@@ -16,8 +21,15 @@ class CalendarRangeSerializer(serializers.Serializer):
 
 
 class EventCreateSerializer(serializers.Serializer):
-    course_slug = serializers.SlugField()
+    course_slug = serializers.SlugField(
+        required=False, allow_null=True, allow_blank=True
+    )
     host_membership_id = serializers.UUIDField(required=False)
+    participant_membership_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        max_length=100,
+    )
     title = serializers.CharField(max_length=200)
     description = serializers.CharField(
         max_length=2_000, required=False, allow_blank=True
@@ -29,6 +41,10 @@ class EventCreateSerializer(serializers.Serializer):
     starts_at = serializers.DateTimeField()
     duration_minutes = serializers.IntegerField(min_value=5, max_value=720)
     rrule = serializers.CharField(max_length=1_000, required=False, allow_blank=True)
+    counts_toward_progress = serializers.BooleanField(default=False)
+    attendance_threshold_minutes = serializers.IntegerField(
+        min_value=1, max_value=720, required=False, allow_null=True
+    )
 
 
 class RecurrenceMutationSerializer(serializers.Serializer):
@@ -46,9 +62,11 @@ class EventCancelSerializer(RecurrenceMutationSerializer):
 
 
 class CalendarExtendedPropsSerializer(serializers.Serializer):
-    courseId = serializers.UUIDField()
-    courseSlug = serializers.CharField()
+    courseId = serializers.UUIDField(allow_null=True)
+    courseSlug = serializers.CharField(allow_null=True)
     courseName = serializers.CharField()
+    countsTowardProgress = serializers.BooleanField()
+    attendanceThresholdMinutes = serializers.IntegerField(allow_null=True)
     eventType = serializers.CharField()
     occurrenceStatus = serializers.CharField()
     sessionId = serializers.UUIDField(allow_null=True)
@@ -99,7 +117,9 @@ class LiveSessionDetailSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     title = serializers.CharField()
     description = serializers.CharField()
-    course = serializers.DictField()
+    course = serializers.DictField(allow_null=True)
+    countsTowardProgress = serializers.BooleanField()
+    attendanceThresholdMinutes = serializers.IntegerField(allow_null=True)
     hostName = serializers.CharField()
     scheduledStart = serializers.DateTimeField()
     scheduledEnd = serializers.DateTimeField()

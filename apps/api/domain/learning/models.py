@@ -356,6 +356,8 @@ class CourseProgress(NoPhysicalDeleteModel):
     )
     total_units = models.PositiveIntegerField()
     completed_units = models.PositiveIntegerField(default=0)
+    total_required_activities = models.PositiveIntegerField(default=0)
+    completed_required_activities = models.PositiveIntegerField(default=0)
     percent_basis_points = models.PositiveIntegerField(default=0)
     last_unit_id = models.UUIDField(null=True, blank=True)
     last_node_id = models.UUIDField(null=True, blank=True)
@@ -377,6 +379,11 @@ class CourseProgress(NoPhysicalDeleteModel):
                 name="learning_progress_completed_range",
             ),
             models.CheckConstraint(
+                condition=Q(completed_required_activities__gte=0)
+                & Q(completed_required_activities__lte=F("total_required_activities")),
+                name="learn_progress_required_range",
+            ),
+            models.CheckConstraint(
                 condition=Q(percent_basis_points__gte=0)
                 & Q(percent_basis_points__lte=10_000),
                 name="learning_progress_percent_range",
@@ -390,6 +397,7 @@ class CourseProgress(NoPhysicalDeleteModel):
                     Q(
                         status=ProgressStatus.NOT_STARTED,
                         completed_units=0,
+                        completed_required_activities=0,
                         percent_basis_points=0,
                         started_at__isnull=True,
                         completed_at__isnull=True,
@@ -402,6 +410,7 @@ class CourseProgress(NoPhysicalDeleteModel):
                     | Q(
                         status=ProgressStatus.COMPLETED,
                         completed_units=F("total_units"),
+                        completed_required_activities=F("total_required_activities"),
                         percent_basis_points=10_000,
                         started_at__isnull=False,
                         completed_at__isnull=False,
@@ -420,6 +429,120 @@ class CourseProgress(NoPhysicalDeleteModel):
 
     def __str__(self) -> str:
         return f"{self.release_assignment}:{self.status}"
+
+
+class ExternalLearningRequirement(NoPhysicalDeleteModel):
+    """Course progress requirement registered by another bounded domain."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.PROTECT,
+        related_name="external_learning_requirements",
+    )
+    course = models.ForeignKey(
+        Course, on_delete=models.PROTECT, related_name="external_learning_requirements"
+    )
+    source_type = models.CharField(max_length=48)
+    source_id = models.UUIDField()
+    title = models.CharField(max_length=200)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="external_learning_requirements_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    deactivated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="external_learning_requirements_deactivated",
+    )
+    deactivated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("source_type", "source_id"),
+                name="learn_external_requirement_source_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(title=Trim(F("title"))) & ~Q(title=""),
+                name="learn_external_requirement_title_trimmed",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        is_active=True,
+                        deactivated_by__isnull=True,
+                        deactivated_at__isnull=True,
+                    )
+                    | Q(
+                        is_active=False,
+                        deactivated_by__isnull=False,
+                        deactivated_at__isnull=False,
+                    )
+                ),
+                name="learn_external_requirement_lifecycle",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("course", "is_active"),
+                name="learn_external_req_course_ix",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.course_id}:{self.source_type}:{self.source_id}"
+
+    def clean(self) -> None:
+        super().clean()
+        self.title = self.title.strip()
+        self.source_type = self.source_type.strip()
+        if self.course_id and self.course.organization_id != self.organization_id:
+            raise ValidationError({"course": "El curso pertenece a otra organización."})
+
+
+class ExternalRequirementCompletion(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    requirement = models.ForeignKey(
+        ExternalLearningRequirement,
+        on_delete=models.PROTECT,
+        related_name="completions",
+    )
+    course_progress = models.ForeignKey(
+        CourseProgress,
+        on_delete=models.PROTECT,
+        related_name="external_requirement_completions",
+    )
+    completed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="external_requirement_completions",
+    )
+    completed_at = models.DateTimeField()
+    evidence = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("requirement", "course_progress"),
+                name="learn_external_completion_unique",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=("course_progress", "completed_at"),
+                name="learn_external_completion_ix",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.course_progress_id}:{self.requirement_id}"
 
 
 class UnitProgress(NoPhysicalDeleteModel):
@@ -494,6 +617,13 @@ class LearningEvent(NoPhysicalDeleteModel):
     )
     unit_id = models.UUIDField(null=True, blank=True)
     node_id = models.UUIDField(null=True, blank=True)
+    external_requirement = models.ForeignKey(
+        ExternalLearningRequirement,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="events",
+    )
     event_type = models.CharField(max_length=32, choices=LearningEventType.choices)
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,

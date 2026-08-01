@@ -20,6 +20,8 @@ $webLog = Join-Path $runtimeDirectory 'web.log'
 $webErrorLog = Join-Path $runtimeDirectory 'web.error.log'
 $pythonExecutable = Join-Path $apiDirectory '.venv/Scripts/python.exe'
 $nextExecutable = Join-Path $webDirectory 'node_modules/next/dist/bin/next'
+$apiPort = 8010
+$apiLoopbackOrigin = "http://127.0.0.1:$apiPort"
 
 function Import-LocalEnvironment {
     if (-not (Test-Path -LiteralPath $environmentFile)) {
@@ -42,7 +44,7 @@ function Import-LocalEnvironment {
     )
     [Environment]::SetEnvironmentVariable(
         'DJANGO_INTERNAL_ORIGIN',
-        'http://127.0.0.1:8000',
+        $apiLoopbackOrigin,
         'Process'
     )
     [Environment]::SetEnvironmentVariable(
@@ -93,7 +95,7 @@ function Test-ExpectedProcess([int]$ProcessId, [ValidateSet('api', 'web')][strin
     if ($Kind -eq 'api') {
         return (
             $process.ExecutablePath -eq $pythonExecutable -and
-            $process.CommandLine -like '*manage.py*runserver*127.0.0.1:8000*'
+            $process.CommandLine -like "*manage.py*runserver*0.0.0.0:$apiPort*"
         )
     }
     return (
@@ -104,25 +106,25 @@ function Test-ExpectedProcess([int]$ProcessId, [ValidateSet('api', 'web')][strin
 
 function Write-Status {
     $state = Get-SavedState
-    $apiReady = Test-Endpoint 'http://127.0.0.1:8000/health/live/'
+    $apiReady = Test-Endpoint "$apiLoopbackOrigin/health/live/"
     $webReady = Test-Endpoint 'http://127.0.0.1:3000/'
     $apiPid = if ($null -ne $state) { $state.apiPid } else { '-' }
     $webPid = if ($null -ne $state) { $state.webPid } else { '-' }
-    Write-Host "API   : $(if ($apiReady) { 'lista' } else { 'detenida' }) | PID $apiPid | http://127.0.0.1:8000"
+    Write-Host "API   : $(if ($apiReady) { 'lista' } else { 'detenida' }) | PID $apiPid | $apiLoopbackOrigin"
     Write-Host "Web   : $(if ($webReady) { 'lista' } else { 'detenida' }) | PID $webPid | http://127.0.0.1:3000"
     Write-Host "Estado: $stateFile"
 }
 
 function Start-Development {
-    if ((Test-Endpoint 'http://127.0.0.1:8000/health/live/') -and (Test-Endpoint 'http://127.0.0.1:3000/')) {
+    if ((Test-Endpoint "$apiLoopbackOrigin/health/live/") -and (Test-Endpoint 'http://127.0.0.1:3000/')) {
         Write-Host 'El entorno de desarrollo ya está disponible.'
         Write-Status
         return
     }
 
-    $listeners = Get-NetTCPConnection -State Listen -LocalPort 3000, 8000 -ErrorAction SilentlyContinue
+    $listeners = Get-NetTCPConnection -State Listen -LocalPort 3000, $apiPort -ErrorAction SilentlyContinue
     if ($listeners) {
-        throw 'Los puertos 3000 u 8000 están ocupados por un entorno incompleto. Revisa pnpm dev:status y pnpm dev:logs.'
+        throw "Los puertos 3000 o $apiPort están ocupados por un entorno incompleto. Revisa pnpm dev:status y pnpm dev:logs."
     }
 
     New-Item -ItemType Directory -Path $runtimeDirectory -Force | Out-Null
@@ -141,7 +143,7 @@ function Start-Development {
 
     $apiProcess = Start-Process `
         -FilePath $pythonExecutable `
-        -ArgumentList @('manage.py', 'runserver', '127.0.0.1:8000', '--noreload') `
+        -ArgumentList @('manage.py', 'runserver', "0.0.0.0:$apiPort", '--noreload') `
         -WorkingDirectory $apiDirectory `
         -PassThru `
         -WindowStyle Hidden `
@@ -157,7 +159,7 @@ function Start-Development {
         -RedirectStandardError $webErrorLog
 
     try {
-        Wait-Endpoint 'http://127.0.0.1:8000/health/live/' 'Django'
+        Wait-Endpoint "$apiLoopbackOrigin/health/live/" 'Django'
         Wait-Endpoint 'http://127.0.0.1:3000/' 'Next.js'
         @{
             apiPid = $apiProcess.Id

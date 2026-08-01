@@ -814,6 +814,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/start/': {
     post: operations['scheduling_live_session_start'];
   };
+  '/api/v1/organizations/{slug}/scheduling/participant-options/': {
+    get: operations['scheduling_participant_options_list'];
+  };
   '/api/v1/platform/email-deliveries/': {
     get: operations['platform_email_deliveries_list'];
   };
@@ -1568,16 +1571,18 @@ export interface components {
       title: string;
     };
     CalendarExtendedProps: {
+      attendanceThresholdMinutes: number | null;
       canDelete: boolean;
       canEdit: boolean;
       canJoin: boolean;
       canModerate: boolean;
       canShareScreen: boolean;
       canStart: boolean;
+      countsTowardProgress: boolean;
       /** Format: uuid */
-      courseId: string;
+      courseId: string | null;
       courseName: string;
-      courseSlug: string;
+      courseSlug: string | null;
       description: string;
       eventType: string;
       hostName: string;
@@ -2165,13 +2170,17 @@ export interface components {
     EventConsumerDeliveryStatusEnum:
       'pending' | 'processing' | 'completed' | 'failed' | 'dead';
     EventCreate: {
-      course_slug: string;
+      attendance_threshold_minutes?: number | null;
+      /** @default false */
+      counts_toward_progress?: boolean;
+      course_slug?: string | null;
       description?: string;
       duration_minutes: number;
       /** @default live_class */
       event_type?: components['schemas']['EventCreateEventTypeEnum'];
       /** Format: uuid */
       host_membership_id?: string;
+      participant_membership_ids?: string[];
       rrule?: string;
       /** Format: date-time */
       starts_at: string;
@@ -2715,15 +2724,17 @@ export interface components {
       token: string;
     };
     LiveSessionDetail: {
+      attendanceThresholdMinutes: number | null;
       canDelete: boolean;
       canEdit: boolean;
       canJoin: boolean;
       canModerate: boolean;
       canShareScreen: boolean;
       canStart: boolean;
+      countsTowardProgress: boolean;
       course: {
         [key: string]: unknown;
-      };
+      } | null;
       description: string;
       hostName: string;
       /** Format: uuid */
@@ -3206,6 +3217,11 @@ export interface components {
       previous?: string | null;
       results: components['schemas']['Membership'][];
     };
+    ParticipantOption: {
+      display: string;
+      /** Format: uuid */
+      membership_id: string;
+    };
     ParticipantPermission: {
       can_publish_audio: boolean;
       can_publish_video: boolean;
@@ -3322,6 +3338,7 @@ export interface components {
     Progress: {
       /** Format: date-time */
       completed_at: string | null;
+      completed_required_activities: number;
       completed_units: number;
       /** Format: date-time */
       last_activity_at: string | null;
@@ -3332,6 +3349,7 @@ export interface components {
       /** Format: date-time */
       started_at: string | null;
       status: components['schemas']['LearningProgressStatus'];
+      total_required_activities: number;
       total_units: number;
     };
     /** @description Expose the live browser decision without exposing administrative data. */
@@ -10895,6 +10913,20 @@ export interface operations {
       409: {
         content: {
           'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_participant_options_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ParticipantOption'][];
         };
       };
     };

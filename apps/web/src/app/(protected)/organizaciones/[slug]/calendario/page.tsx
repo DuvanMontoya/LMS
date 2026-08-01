@@ -24,6 +24,12 @@ export default async function CalendarPage({
           slug: courseSlug,
           title,
         }))}
+        participantOptions={data.participantOptions.map(
+          ({ membership_id: membershipId, display }) => ({
+            membershipId,
+            display,
+          }),
+        )}
         slug={slug}
       />
     </main>

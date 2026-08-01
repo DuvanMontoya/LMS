@@ -28,6 +28,17 @@ if (Test-Path -LiteralPath $environmentFile) {
             Add-Content -LiteralPath $environmentFile -Value "$($entry.Key)=$($entry.Value)" -Encoding utf8NoBOM
         }
     }
+    if (-not (Select-String -LiteralPath $environmentFile -Pattern '^LIVEKIT_API_KEY=' -Quiet)) {
+        Add-Content -LiteralPath $environmentFile -Value "`n# Self-hosted LiveKit development service.`nLIVEKIT_ENABLED=true`nLIVEKIT_URL=ws://127.0.0.1:7880`nNEXT_PUBLIC_LIVEKIT_URL=ws://127.0.0.1:7880`nLIVEKIT_API_KEY=$(New-CryptographicSecret)`nLIVEKIT_API_SECRET=$(New-CryptographicSecret)`nLIVEKIT_WEBHOOK_URL=http://host.docker.internal:8010/api/v1/livekit/webhook/" -Encoding utf8NoBOM
+    }
+    $existingEnvironment = Get-Content -LiteralPath $environmentFile -Raw
+    $upgradedEnvironment = $existingEnvironment.Replace(
+        'LIVEKIT_WEBHOOK_URL=http://host.docker.internal:8000/api/v1/livekit/webhook/',
+        'LIVEKIT_WEBHOOK_URL=http://host.docker.internal:8010/api/v1/livekit/webhook/'
+    )
+    if ($upgradedEnvironment -ne $existingEnvironment) {
+        Set-Content -LiteralPath $environmentFile -Value $upgradedEnvironment -Encoding utf8NoBOM -NoNewline
+    }
     Write-Host 'Local infrastructure environment already exists; keeping its secrets unchanged.'
     exit 0
 }
@@ -57,6 +68,13 @@ AWS_SECRET_ACCESS_KEY=test
 AWS_DEFAULT_REGION=us-east-1
 ASSET_QUARANTINE_BUCKET=lms-assets-quarantine
 ASSET_PRIVATE_BUCKET=lms-assets-private
+
+LIVEKIT_ENABLED=true
+LIVEKIT_URL=ws://127.0.0.1:7880
+NEXT_PUBLIC_LIVEKIT_URL=ws://127.0.0.1:7880
+LIVEKIT_API_KEY=$(New-CryptographicSecret)
+LIVEKIT_API_SECRET=$(New-CryptographicSecret)
+LIVEKIT_WEBHOOK_URL=http://host.docker.internal:8010/api/v1/livekit/webhook/
 "@
 
 Set-Content -LiteralPath $environmentFile -Value $content -Encoding utf8NoBOM

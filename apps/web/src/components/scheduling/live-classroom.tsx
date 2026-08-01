@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { Room, RoomEvent, Track } from 'livekit-client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -235,34 +235,56 @@ function ConnectedClassroom({
     [],
   );
   const [connectionError, setConnectionError] = useState('');
+  const [mediaError, setMediaError] = useState('');
+  const disconnectTimer = useRef<number | null>(null);
 
   useEffect(() => {
+    if (disconnectTimer.current !== null) {
+      window.clearTimeout(disconnectTimer.current);
+      disconnectTimer.current = null;
+    }
     const onDisconnected = () => undefined;
     room.on(RoomEvent.Disconnected, onDisconnected);
-    void room
-      .connect(connection.serverUrl, connection.token)
-      .then(async () => {
-        await Promise.all([
-          room.localParticipant.setMicrophoneEnabled(
-            true,
-            audioDeviceId ? { deviceId: audioDeviceId } : undefined,
-          ),
-          room.localParticipant.setCameraEnabled(
-            true,
-            videoDeviceId ? { deviceId: videoDeviceId } : undefined,
-          ),
-        ]);
-      })
-      .catch((caught: unknown) =>
+    void (async () => {
+      try {
+        await room.connect(connection.serverUrl, connection.token);
+      } catch (caught: unknown) {
         setConnectionError(
           caught instanceof Error
             ? caught.message
             : 'No fue posible conectar con LiveKit.',
-        ),
-      );
+        );
+        return;
+      }
+      try {
+        const tracks: Promise<unknown>[] = [];
+        if (audioDeviceId) {
+          tracks.push(
+            room.localParticipant.setMicrophoneEnabled(true, {
+              deviceId: audioDeviceId,
+            }),
+          );
+        }
+        if (videoDeviceId) {
+          tracks.push(
+            room.localParticipant.setCameraEnabled(true, {
+              deviceId: videoDeviceId,
+            }),
+          );
+        }
+        await Promise.all(tracks);
+      } catch {
+        setMediaError(
+          'Entraste a la sala, pero Chrome no permitió activar cámara o micrófono.',
+        );
+      }
+    })();
     return () => {
       room.off(RoomEvent.Disconnected, onDisconnected);
-      void room.disconnect();
+      disconnectTimer.current = window.setTimeout(() => {
+        void room.disconnect();
+        disconnectTimer.current = null;
+      }, 0);
     };
   }, [
     audioDeviceId,
@@ -279,6 +301,12 @@ function ConnectedClassroom({
           <Alert variant="destructive">
             <AlertTitle>Conexión interrumpida</AlertTitle>
             <AlertDescription>{connectionError}</AlertDescription>
+          </Alert>
+        ) : null}
+        {mediaError ? (
+          <Alert>
+            <AlertTitle>Dispositivos no disponibles</AlertTitle>
+            <AlertDescription>{mediaError}</AlertDescription>
           </Alert>
         ) : null}
         <ParticipantGrid />

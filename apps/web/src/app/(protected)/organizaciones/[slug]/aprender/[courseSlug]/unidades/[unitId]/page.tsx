@@ -60,6 +60,11 @@ export default async function LearningUnitPage({
     .flatMap((module) => module.units)
     .findIndex((unit) => unit.id === unitId);
   const totalUnits = outlineData.outline.progress.total_units;
+  const totalActivities =
+    totalUnits + outlineData.outline.progress.total_required_activities;
+  const completedActivities =
+    outlineData.outline.progress.completed_units +
+    outlineData.outline.progress.completed_required_activities;
 
   return (
     <main
@@ -106,14 +111,14 @@ export default async function LearningUnitPage({
           <ListTree />
           Contenido del curso
           <progress
-            aria-label={`${outlineData.outline.progress.completed_units} de ${totalUnits} unidades completadas, ${(
+            aria-label={`${completedActivities} de ${totalActivities} actividades completadas, ${(
               outlineData.outline.progress.percent_basis_points / 100
             ).toFixed(0)} %`}
-            max={totalUnits}
-            value={outlineData.outline.progress.completed_units}
+            max={totalActivities}
+            value={completedActivities}
           />
           <span>
-            {outlineData.outline.progress.completed_units}/{totalUnits}
+            {completedActivities}/{totalActivities}
           </span>
         </summary>
         <div>

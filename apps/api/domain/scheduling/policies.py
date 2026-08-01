@@ -27,6 +27,7 @@ class LiveAccess:
 
 
 def can_view_schedule(actor: object, organization: Organization) -> bool:
+    membership = active_membership(actor, organization)  # type: ignore[arg-type]
     return (
         has_capability(  # type: ignore[arg-type]
             actor, organization, Capability.SCHEDULING_VIEW
@@ -34,6 +35,12 @@ def can_view_schedule(actor: object, organization: Organization) -> bool:
         or effective_enrollments_for_actor(
             actor=actor, organization=organization
         ).exists()
+        or bool(
+            membership
+            and membership.scheduled_event_participations.filter(
+                series__status="active"
+            ).exists()
+        )
     )
 
 
@@ -85,13 +92,20 @@ def live_access(
             can_share_screen=True,
             can_moderate=True,
         )
-    enrollment = effective_course_enrollment(
-        actor=actor,
-        organization=organization,
-        course=session.occurrence.series.course,
-        at=at or timezone.now(),
-    )
-    if enrollment is None:
+    series = session.occurrence.series
+    if series.course_id:
+        enrollment = effective_course_enrollment(
+            actor=actor,
+            organization=organization,
+            course=series.course,
+            at=at or timezone.now(),
+        )
+        if enrollment is None:
+            return None
+    elif (
+        membership is None
+        or not series.participants.filter(membership=membership).exists()
+    ):
         return None
     return LiveAccess(
         role=AttendanceRole.STUDENT,

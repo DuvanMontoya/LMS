@@ -17,12 +17,14 @@ vi.mock('@/lib/scheduling/api', () => ({
 }));
 
 const detail: LiveSessionDetail = {
+  attendanceThresholdMinutes: null,
   canDelete: false,
   canEdit: false,
   canJoin: true,
   canModerate: false,
   canShareScreen: false,
   canStart: false,
+  countsTowardProgress: false,
   course: { slug: 'algebra' },
   description: 'Sesión de práctica',
   hostName: 'Participante 00000000',

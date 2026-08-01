@@ -42,6 +42,10 @@ class LearningEventType(models.TextChoices):
     UNIT_OPENED = "unit_opened", "Unidad abierta"
     UNIT_COMPLETED = "unit_completed", "Unidad completada"
     UNIT_REOPENED = "unit_reopened", "Unidad reabierta"
+    REQUIREMENT_COMPLETED = (
+        "requirement_completed",
+        "Requisito externo completado",
+    )
 
 
 class AccessState(models.TextChoices):

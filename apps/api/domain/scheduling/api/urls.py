@@ -8,6 +8,7 @@ SESSION = BASE + "live-sessions/<uuid:session_id>/"
 
 urlpatterns = [
     path(BASE + "calendar/events/", views.CalendarEventListCreateView.as_view()),
+    path(BASE + "participant-options/", views.ParticipantOptionListView.as_view()),
     path(EVENT, views.CalendarEventDetailView.as_view()),
     path(EVENT + "cancel/", views.CalendarEventCancelView.as_view()),
     path(SESSION, views.LiveSessionDetailView.as_view()),

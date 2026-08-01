@@ -42,7 +42,11 @@ class AcademicEventSeries(NoPhysicalDeleteModel):
         Organization, on_delete=models.PROTECT, related_name="academic_event_series"
     )
     course = models.ForeignKey(
-        Course, on_delete=models.PROTECT, related_name="academic_event_series"
+        Course,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="academic_event_series",
     )
     host_membership = models.ForeignKey(
         Membership, on_delete=models.PROTECT, related_name="hosted_event_series"
@@ -58,6 +62,10 @@ class AcademicEventSeries(NoPhysicalDeleteModel):
     rrule = models.CharField(max_length=1_000, blank=True)
     recurrence_count = models.PositiveSmallIntegerField(default=1)
     recurrence_until = models.DateTimeField(null=True, blank=True)
+    counts_toward_progress = models.BooleanField(default=False)
+    attendance_threshold_minutes = models.PositiveSmallIntegerField(
+        null=True, blank=True
+    )
     status = models.CharField(
         max_length=16, choices=SeriesStatus.choices, default=SeriesStatus.ACTIVE
     )
@@ -93,6 +101,21 @@ class AcademicEventSeries(NoPhysicalDeleteModel):
                 condition=Q(lock_version__gt=0),
                 name="sched_series_lock_positive",
             ),
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        counts_toward_progress=False,
+                        attendance_threshold_minutes__isnull=True,
+                    )
+                    | Q(
+                        counts_toward_progress=True,
+                        course__isnull=False,
+                        attendance_threshold_minutes__gte=1,
+                        attendance_threshold_minutes__lte=720,
+                    )
+                ),
+                name="sched_series_progress_configuration",
+            ),
         ]
         indexes = [
             models.Index(
@@ -121,6 +144,52 @@ class AcademicEventSeries(NoPhysicalDeleteModel):
         ):
             raise ValidationError(
                 {"host_membership": "El profesor pertenece a otra organización."}
+            )
+
+
+class AcademicEventParticipant(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    series = models.ForeignKey(
+        AcademicEventSeries, on_delete=models.PROTECT, related_name="participants"
+    )
+    membership = models.ForeignKey(
+        Membership,
+        on_delete=models.PROTECT,
+        related_name="scheduled_event_participations",
+    )
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="scheduled_event_participants_added",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("series", "membership"),
+                name="sched_series_participant_unique",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=("membership", "series"),
+                name="sched_participant_member_ix",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.series_id}:{self.membership_id}"
+
+    def clean(self) -> None:
+        super().clean()
+        if (
+            self.series_id
+            and self.membership_id
+            and self.series.organization_id != self.membership.organization_id
+        ):
+            raise ValidationError(
+                {"membership": "El participante pertenece a otra organización."}
             )
 
 
@@ -244,7 +313,7 @@ class LiveSession(NoPhysicalDeleteModel):
 
 class LiveKitWebhookEvent(NoPhysicalDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    event_id = models.UUIDField(unique=True)
+    event_id = models.CharField(max_length=64, unique=True)
     event_type = models.CharField(max_length=64)
     event_created_at = models.DateTimeField()
     received_at = models.DateTimeField(auto_now_add=True)

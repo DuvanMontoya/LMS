@@ -9,6 +9,7 @@ describe('LearningProgress', () => {
       <LearningProgress
         progress={{
           completed_at: null,
+          completed_required_activities: 0,
           completed_units: 3,
           last_activity_at: null,
           percent: '75.00',
@@ -16,6 +17,7 @@ describe('LearningProgress', () => {
           progress_version: 4,
           started_at: '2026-07-30T00:00:00Z',
           status: 'in_progress',
+          total_required_activities: 0,
           total_units: 4,
         }}
       />,

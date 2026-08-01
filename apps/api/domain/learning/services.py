@@ -5,7 +5,7 @@ import uuid
 from collections.abc import Iterable
 from datetime import datetime
 
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, models, transaction
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -45,6 +45,8 @@ from .models import (
     CourseEnrollment,
     CourseProgress,
     EnrollmentReleaseAssignment,
+    ExternalLearningRequirement,
+    ExternalRequirementCompletion,
     LearningCohort,
     LearningEvent,
     UnitProgress,
@@ -96,6 +98,7 @@ def _event(
     progress: CourseProgress | None = None,
     unit_id: uuid.UUID | None = None,
     node_id: uuid.UUID | None = None,
+    external_requirement: ExternalLearningRequirement | None = None,
     occurred_at: datetime | None = None,
 ) -> LearningEvent:
     event = LearningEvent.objects.create(
@@ -105,6 +108,7 @@ def _event(
         course_progress=progress,
         unit_id=unit_id,
         node_id=node_id,
+        external_requirement=external_requirement,
         event_type=event_type,
         actor=actor,
         occurred_at=occurred_at or timezone.now(),
@@ -285,6 +289,9 @@ def _create_enrollment_rows(
     progress = CourseProgress.objects.create(
         release_assignment=assignment,
         total_units=release.unit_count,
+        total_required_activities=ExternalLearningRequirement.objects.filter(
+            course=course, is_active=True
+        ).count(),
     )
     enrollment.current_release_assignment = assignment
     enrollment.save(update_fields=["current_release_assignment"])
@@ -590,6 +597,9 @@ def upgrade_enrollment_release(
     progress = CourseProgress.objects.create(
         release_assignment=assignment,
         total_units=target_release.unit_count,
+        total_required_activities=ExternalLearningRequirement.objects.filter(
+            course=enrollment.course, is_active=True
+        ).count(),
     )
     enrollment.current_release_assignment = assignment
     enrollment.lock_version += 1
@@ -622,18 +632,199 @@ def _recalculate_progress(progress: CourseProgress, now: datetime) -> None:
         status=UnitProgressStatus.COMPLETED,
     ).count()
     progress.completed_units = completed
+    completed_requirements = ExternalRequirementCompletion.objects.filter(
+        course_progress=progress,
+        requirement__is_active=True,
+    ).count()
+    total_requirements = ExternalLearningRequirement.objects.filter(
+        course=progress.release_assignment.enrollment.course,
+        is_active=True,
+    ).count()
+    progress.completed_required_activities = completed_requirements
+    progress.total_required_activities = total_requirements
+    completed_total = completed + completed_requirements
+    required_total = progress.total_units + total_requirements
     progress.percent_basis_points = (
         10_000
-        if completed == progress.total_units
-        else completed * 10_000 // progress.total_units
+        if completed_total == required_total
+        else completed_total * 10_000 // required_total
     )
-    if completed == progress.total_units:
+    if completed_total == required_total:
         progress.status = ProgressStatus.COMPLETED
         progress.completed_at = progress.completed_at or now
+    elif completed_total == 0 and progress.started_at is None:
+        progress.status = ProgressStatus.NOT_STARTED
+        progress.completed_at = None
     else:
         progress.status = ProgressStatus.IN_PROGRESS
         progress.completed_at = None
     progress.last_activity_at = now
+
+
+@transaction.atomic
+def register_external_requirement(
+    *,
+    actor: object,
+    organization: Organization,
+    course: Course,
+    source_type: str,
+    source_id: uuid.UUID,
+    title: str,
+) -> ExternalLearningRequirement:
+    """Register one active course requirement without importing its source domain."""
+    requirement, created = ExternalLearningRequirement.objects.get_or_create(
+        source_type=source_type,
+        source_id=source_id,
+        defaults={
+            "organization": organization,
+            "course": course,
+            "title": title,
+            "created_by": actor,
+        },
+    )
+    if not created:
+        if requirement.course_id != course.id or not requirement.is_active:
+            raise LearningProgressConflict(
+                "El requisito externo ya existe con otro estado."
+            )
+        return requirement
+    requirement.full_clean()
+    requirement.save()
+    now = timezone.now()
+    progresses = CourseProgress.objects.select_for_update().filter(
+        release_assignment__enrollment__course=course,
+        release_assignment__enrollment__current_release_assignment=models.F(
+            "release_assignment"
+        ),
+    )
+    for progress in progresses:
+        was_completed = progress.status == ProgressStatus.COMPLETED
+        _recalculate_progress(progress, now)
+        progress.lock_version += 1
+        progress.full_clean()
+        progress.save()
+        if was_completed and progress.status != ProgressStatus.COMPLETED:
+            enrollment = progress.release_assignment.enrollment
+            _event(
+                event_type=LearningEventType.COURSE_REOPENED,
+                enrollment=enrollment,
+                assignment=progress.release_assignment,
+                progress=progress,
+                external_requirement=requirement,
+                actor=actor,
+                occurred_at=now,
+            )
+    return requirement
+
+
+@transaction.atomic
+def deactivate_external_requirement(
+    *, actor: object, source_type: str, source_id: uuid.UUID
+) -> None:
+    requirement = (
+        ExternalLearningRequirement.objects.select_for_update()
+        .filter(source_type=source_type, source_id=source_id, is_active=True)
+        .first()
+    )
+    if requirement is None:
+        return
+    now = timezone.now()
+    requirement.is_active = False
+    requirement.deactivated_by = actor
+    requirement.deactivated_at = now
+    requirement.full_clean()
+    requirement.save(update_fields=("is_active", "deactivated_by", "deactivated_at"))
+    progresses = CourseProgress.objects.select_for_update().filter(
+        release_assignment__enrollment__course=requirement.course,
+        release_assignment__enrollment__current_release_assignment=models.F(
+            "release_assignment"
+        ),
+    )
+    for progress in progresses:
+        _recalculate_progress(progress, now)
+        progress.lock_version += 1
+        progress.full_clean()
+        progress.save()
+
+
+@transaction.atomic
+def complete_external_requirement(
+    *,
+    actor: object,
+    source_type: str,
+    source_id: uuid.UUID,
+    completed_at: datetime,
+    evidence: dict[str, object],
+) -> bool:
+    requirement = (
+        ExternalLearningRequirement.objects.select_related("organization", "course")
+        .filter(source_type=source_type, source_id=source_id, is_active=True)
+        .first()
+    )
+    if requirement is None:
+        return False
+    from .contracts import effective_course_enrollment
+
+    enrollment = effective_course_enrollment(
+        actor=actor,
+        organization=requirement.organization,
+        course=requirement.course,
+        at=completed_at,
+    )
+    if enrollment is None or enrollment.current_release_assignment_id is None:
+        return False
+    progress = CourseProgress.objects.select_for_update().get(
+        release_assignment=enrollment.current_release_assignment
+    )
+    _completion, created = ExternalRequirementCompletion.objects.get_or_create(
+        requirement=requirement,
+        course_progress=progress,
+        defaults={
+            "completed_by": actor,
+            "completed_at": completed_at,
+            "evidence": evidence,
+        },
+    )
+    if not created:
+        return False
+    was_completed = progress.status == ProgressStatus.COMPLETED
+    started = progress.started_at is None
+    now = completed_at
+    progress.started_at = progress.started_at or now
+    _recalculate_progress(progress, now)
+    progress.lock_version += 1
+    progress.full_clean()
+    progress.save()
+    if started:
+        _event(
+            event_type=LearningEventType.COURSE_STARTED,
+            enrollment=enrollment,
+            assignment=enrollment.current_release_assignment,
+            progress=progress,
+            external_requirement=requirement,
+            actor=actor,
+            occurred_at=now,
+        )
+    _event(
+        event_type=LearningEventType.REQUIREMENT_COMPLETED,
+        enrollment=enrollment,
+        assignment=enrollment.current_release_assignment,
+        progress=progress,
+        external_requirement=requirement,
+        actor=actor,
+        occurred_at=now,
+    )
+    if progress.status == ProgressStatus.COMPLETED and not was_completed:
+        _event(
+            event_type=LearningEventType.COURSE_COMPLETED,
+            enrollment=enrollment,
+            assignment=enrollment.current_release_assignment,
+            progress=progress,
+            external_requirement=requirement,
+            actor=actor,
+            occurred_at=now,
+        )
+    return True
 
 
 @transaction.atomic

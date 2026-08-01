@@ -125,6 +125,8 @@ def progress_payload(progress: CourseProgress) -> dict[str, Any]:
         "status": progress.status,
         "completed_units": progress.completed_units,
         "total_units": progress.total_units,
+        "completed_required_activities": progress.completed_required_activities,
+        "total_required_activities": progress.total_required_activities,
         "percent_basis_points": progress.percent_basis_points,
         "percent": progress.percent_basis_points / 100,
         "progress_version": progress.lock_version,

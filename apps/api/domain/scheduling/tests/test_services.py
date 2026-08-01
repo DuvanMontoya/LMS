@@ -4,10 +4,17 @@ import base64
 import json
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 
-from domain.scheduling.choices import AttendanceRole, LiveSessionStatus, RecurrenceScope
+from domain.organizations.models import Membership
+from domain.scheduling.choices import (
+    AttendanceRole,
+    EventType,
+    LiveSessionStatus,
+    RecurrenceScope,
+)
 from domain.scheduling.exceptions import (
     LiveSessionClosed,
     LiveSessionOutsideWindow,
@@ -18,6 +25,7 @@ from domain.scheduling.livekit_gateway import LiveKitGateway
 from domain.scheduling.policies import LiveAccess
 from domain.scheduling.services import (
     cancel_occurrence,
+    create_event_series,
     end_live_session,
     join_live_session,
     reschedule_occurrence,
@@ -28,6 +36,42 @@ from .support import FakeLiveKitGateway, SchedulingFixtureMixin
 
 
 class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
+    def test_standalone_session_is_visible_only_to_explicit_participants(self) -> None:
+        context = self.scheduling_context()
+        outsider = get_user_model().objects.create_user(
+            email="standalone-outsider@example.test", password="StrongPassword!42"
+        )
+        Membership.objects.create(
+            organization=context["organization"],
+            user=outsider,
+            status_changed_by=context["owner"],
+            status_changed_at=timezone.now(),
+        )
+        series = create_event_series(
+            actor=context["owner"],
+            organization=context["organization"],
+            course=None,
+            host_membership=context["series"].host_membership,
+            participant_memberships=[context["learner_membership"]],
+            title="Tutoría particular",
+            description="Tema independiente",
+            event_type=EventType.LIVE_CLASS,
+            timezone_name="America/Bogota",
+            first_starts_at=timezone.now() + timedelta(minutes=2),
+            duration_minutes=45,
+        )
+        session = series.occurrences.select_related("live_session").get().live_session
+        gateway = FakeLiveKitGateway()
+        start_live_session(
+            actor=context["owner"], session_id=session.id, gateway=gateway
+        )
+        payload = join_live_session(
+            actor=context["learner"], session_id=session.id, gateway=gateway
+        )
+        self.assertEqual(payload["session"]["role"], "student")
+        with self.assertRaises(SchedulingAccessDenied):
+            join_live_session(actor=outsider, session_id=session.id, gateway=gateway)
+
     def test_short_lived_token_has_pseudonymous_identity_and_least_privilege(
         self,
     ) -> None:

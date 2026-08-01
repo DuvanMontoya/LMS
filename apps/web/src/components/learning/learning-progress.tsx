@@ -4,8 +4,13 @@ import { percentLabel, progressStatusLabel } from '@/lib/learning/labels';
 export function LearningProgress({
   progress,
 }: Readonly<{ progress: components['schemas']['Progress'] }>) {
-  const description = `${progress.completed_units} de ${progress.total_units} unidades completadas, ${percentLabel(progress.percent_basis_points)} %`;
-  const compactDescription = `${progress.completed_units}/${progress.total_units} unidades · ${percentLabel(progress.percent_basis_points)} %`;
+  const completedActivities =
+    progress.completed_units + progress.completed_required_activities;
+  const totalActivities =
+    progress.total_units + progress.total_required_activities;
+  const noun = progress.total_required_activities ? 'actividades' : 'unidades';
+  const description = `${completedActivities} de ${totalActivities} ${noun} completadas, ${percentLabel(progress.percent_basis_points)} %`;
+  const compactDescription = `${completedActivities}/${totalActivities} ${noun} · ${percentLabel(progress.percent_basis_points)} %`;
   return (
     <div>
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
@@ -19,8 +24,8 @@ export function LearningProgress({
       <progress
         aria-label={description}
         className="mt-2 block h-2 w-full overflow-hidden rounded-full accent-primary"
-        max={progress.total_units}
-        value={progress.completed_units}
+        max={totalActivities}
+        value={completedActivities}
       >
         {progress.percent_basis_points / 100} %
       </progress>

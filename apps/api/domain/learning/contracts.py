@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 
 from django.db.models import Q, QuerySet
@@ -12,7 +13,57 @@ from domain.publishing.choices import PublicationStatus
 
 from .access import access_state
 from .choices import AccessState, EnrollmentStatus
-from .models import CourseEnrollment
+from .models import CourseEnrollment, ExternalLearningRequirement
+
+EXTERNAL_REQUIREMENT_LIVE_SESSION = "live_session"
+
+
+def register_live_session_requirement(
+    *,
+    actor: object,
+    organization: Organization,
+    course: Course,
+    source_id: uuid.UUID,
+    title: str,
+) -> ExternalLearningRequirement:
+    from .services import register_external_requirement
+
+    return register_external_requirement(
+        actor=actor,
+        organization=organization,
+        course=course,
+        source_type=EXTERNAL_REQUIREMENT_LIVE_SESSION,
+        source_id=source_id,
+        title=title,
+    )
+
+
+def deactivate_live_session_requirement(*, actor: object, source_id: uuid.UUID) -> None:
+    from .services import deactivate_external_requirement
+
+    deactivate_external_requirement(
+        actor=actor,
+        source_type=EXTERNAL_REQUIREMENT_LIVE_SESSION,
+        source_id=source_id,
+    )
+
+
+def complete_live_session_requirement(
+    *,
+    actor: object,
+    source_id: uuid.UUID,
+    completed_at: datetime,
+    evidence: dict[str, object],
+) -> bool:
+    from .services import complete_external_requirement
+
+    return complete_external_requirement(
+        actor=actor,
+        source_type=EXTERNAL_REQUIREMENT_LIVE_SESSION,
+        source_id=source_id,
+        completed_at=completed_at,
+        evidence=evidence,
+    )
 
 
 def effective_enrollments_for_actor(

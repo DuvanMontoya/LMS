@@ -1,57 +1,51 @@
 # Project status
 
-## Academic scheduling and live classes — complete locally
+## Academic scheduling and self-hosted live classes — complete locally
 
-- **Fecha y alcance:** 2026-07-31–2026-08-01; integración web end-to-end de
-  calendario académico, FullCalendar 7, LiveKit, asistencia y webhooks. No se
-  añadieron aplicación móvil, IA, transcripción, proveedor audiovisual
-  alternativo ni Scheduler/Premium.
-- **Decisión y arquitectura:** ADR 0031 crea `domain.scheduling` como dueño de
-  series, ocurrencias, sesiones y asistencia. PostgreSQL/Django son autoridad;
-  LiveKit es adaptador audiovisual y FullCalendar es vista. Los roles siguen
-  exclusivamente en `domain.organizations`; learner requiere tanto
-  `scheduling.view`/`live_session.join` como matrícula efectiva mediante el
-  contrato público de `domain.learning`.
-- **Implementación backend:** migración `scheduling.0001`, RRULE RFC 5545
-  acotada a 366 ocurrencias, zonas IANA, locks optimistas, salas aleatorias e
-  inmutables, tokens server-side con grants mínimos y TTL corto, inicio/fin y
-  moderación idempotentes, webhook firmado e idempotente y segmentos de
-  asistencia append-only. El feed nunca entrega room ni token y toda consulta
-  está aislada por organización.
-- **Implementación web:** rutas `/calendario` y `/clases/<sessionId>` integradas
-  en el shell; mes/semana/agenda, creación, recurrencia, drag/resize y ámbitos
-  `occurrence`/`following`/`series`; lobby con selección/prueba de dispositivos
-  y token solicitado sólo al confirmar; sala React con audio, cámara, pantalla,
-  grid y moderación. A 390 px el breakpoint cambia reactivamente a agenda y no
-  existe overflow del documento. CSP y Permissions-Policy habilitan cámara,
-  micrófono y display-capture sólo en la ruta exacta de clase.
-- **Versiones exactas:** `livekit-client@2.21.0`,
-  `@livekit/components-react@2.9.23`,
-  `@livekit/components-styles@1.2.0`, `livekit-api==1.2.0`,
-  `@fullcalendar/react@7.0.2`, `temporal-polyfill@1.0.2` y
-  `python-dateutil==2.9.0.post0`. Fuentes, licencias y compatibilidad están en
-  `docs/research` con consulta 2026-07-31.
-- **Evidencia final:** `pnpm check` PASS; build Next 16.2.12 PASS con ambas rutas;
-  `pnpm api:test` 292/292 y 75,54 % de cobertura; `pnpm web:test` 51/51;
-  `pnpm scheduling:test` 14/14; migración limpia en PostgreSQL PASS;
-  `pnpm scheduling:e2e` 1/1 en Chromium con login, creación, agenda móvil,
-  lobby, axe, headers y ausencia de token persistido; `pnpm audit --audit-level
-  high` sin vulnerabilidades conocidas; `uv lock --check` y `git diff --check`
-  PASS. La inspección visual autenticada comprobó calendario desktop y el
-  breakpoint móvil; un servicio Docker ajeno ocupaba 8000, por lo que se usaron
-  8010/3010 sin detenerlo. El runner E2E restaura ahora sólo su ruta temporal de
-  `tsconfig.json` y no deja cambios mecánicos.
-- **Límite honesto:** no existen credenciales LiveKit autorizadas en este
-  entorno. Por ello no se declara verificada una sesión A/V contra LiveKit
-  Cloud/self-hosted, TURN, WSS/HTTPS, webhook externo ni Egress. Egress queda
-  deliberadamente deshabilitado hasta decidir almacenamiento, retención,
-  privacidad y costos. La recomendación inicial es LiveKit Cloud; una futura
-  migración self-hosted requiere ADR y operación TURN/TLS/observabilidad.
-- **Siguiente paso exacto:** configurar en un entorno no local
-  `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` y
-  `LIVEKIT_WEBHOOK_URL`, registrar el webhook firmado, ejecutar el smoke real
-  profesor+estudiante en dos navegadores y conservar evidencia de red, audio,
-  cámara, pantalla, moderación y asistencia. No se hizo commit ni push.
+- **Fecha y alcance:** 2026-07-31–2026-08-01. ADR 0031 y ADR 0032 delimitan
+  `domain.scheduling`; LiveKit OSS es el adaptador audiovisual autohospedado y
+  PostgreSQL conserva agenda, permisos, asistencia y progreso como autoridad.
+  El despliegue a VPS está expresamente aplazado y fuera de este cierre local.
+- **Sesiones flexibles:** `AcademicEventSeries.course` puede ser nulo. Las
+  clases de curso derivan audiencia de matrículas efectivas y opcionalmente
+  cuentan para progreso con umbral de asistencia. Las sesiones independientes
+  exigen participantes institucionales explícitos y no alteran un curso.
+  `learning.0004` agrega requisitos externos y completitudes idempotentes;
+  `scheduling.0002` agrega audiencia/progreso y `scheduling.0003` acepta los
+  identificadores opacos `EV_…` que entrega LiveKit real.
+- **Operación local:** `livekit/livekit-server:v1.13.1` está fijado por digest
+  en el perfil Compose `live`, con señalización/API 7880, RTC/TCP 7881,
+  RTC/UDP 7882 y métricas 6789 sólo en loopback. `pnpm livekit:up|status|logs|
+  smoke|down` administra el servicio. Django usa 8010 para no interferir con
+  otro proyecto que ocupa 8000 y para recibir webhooks desde Docker; la web
+  permanece en `http://localhost:3000`.
+- **Implementación web:** calendario mes/semana/agenda, creación de sesiones de
+  curso o independientes, invitados explícitos, progreso/umbral, lobby y aula
+  con audio, video, pantalla y moderación. La CSP permite los requisitos de
+  Next sólo en desarrollo y conserva el origen LiveKit local; producción
+  mantiene la política estricta. Entrar sin permiso de cámara/micrófono deja la
+  sala operativa y separa el error de medios del estado de conexión.
+- **Evidencia real en navegador y datos:** en el Chrome autenticado del usuario
+  se crearon, abrieron y finalizaron una sesión independiente y una clase de
+  curso requerida. LiveKit confirmó transporte UDP y el aula mostró profesor y
+  alumno simultáneos como `Participantes (2)`, con moderación disponible. El
+  alumno permaneció 72 s en la conexión de aceptación; PostgreSQL agregó dos
+  segmentos de 31 s y 72 s, registró 103 s de asistencia, creó una sola
+  completitud y recalculó el progreso a 1/3 actividades (36,36 %). Dieciséis
+  webhooks de esa sala quedaron `processed`, cero `failed`.
+- **Validación automatizada:** las suites de scheduling y learning cubren
+  aislamiento, invitación independiente, umbral, reconexiones e idempotencia;
+  Vitest cubre la UI y la política CSP. Room Service create/list/delete se
+  comprobó contra el servidor local real. Las cifras finales de comandos están
+  registradas en el cierre de esta tarea.
+- **Límite deliberado:** no se probó ni modificó VPS, DNS, SSH, firewall,
+  HTTPS/WSS público, TURN público ni Egress. Egress, Ingress, grabación,
+  transcripción y Agents permanecen deshabilitados. Ese despliegue será una
+  actividad futura separada, ejecutada por el usuario.
+- **Siguiente paso exacto:** conservar el entorno local para revisión funcional.
+  Cuando el usuario abra una fase de despliegue distinta, ejecutar el preflight
+  público de DNS/TLS/TURN y puertos sin reutilizar esta evidencia local como
+  aceptación de producción. No se hizo commit ni push.
 
 ## Phase 16 — Identity, members, registration, configuration and integrations (in progress)
 
