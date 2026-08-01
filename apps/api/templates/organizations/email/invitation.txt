@@ -1,0 +1,12 @@
+Invitación a {{ platform_name }}
+
+{% if invitation.given_name %}Hola {{ invitation.given_name }}.{% else %}Hola.{% endif %}
+
+Has recibido una invitación para unirte a {{ invitation.organization.name }}.
+
+Activa tu acceso desde este enlace de un solo uso:
+{{ activation_url }}
+
+El enlace vence aproximadamente en {{ expiration_hours }} horas.
+
+Si no esperabas esta invitación, ignora este mensaje.

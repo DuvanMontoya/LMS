@@ -1,6 +1,135 @@
 {
   "components": {
     "schemas": {
+      "AcademicGroupCreate": {
+        "properties": {
+          "academic_year": {
+            "maximum": 2200,
+            "minimum": 2000,
+            "type": "integer"
+          },
+          "description": { "maxLength": 2000, "type": "string" },
+          "level": { "$ref": "#/components/schemas/AcademicGroupLevel" },
+          "name": { "maxLength": 200, "type": "string" },
+          "section": { "maxLength": 40, "type": "string" },
+          "slug": {
+            "maxLength": 100,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          }
+        },
+        "required": ["academic_year", "level", "name"],
+        "type": "object"
+      },
+      "AcademicGroupLevel": {
+        "description": "* `early_childhood` - Primera infancia\n* `preschool` - Preescolar\n* `transition` - Transición\n* `primary_1` - Primero\n* `primary_2` - Segundo\n* `primary_3` - Tercero\n* `primary_4` - Cuarto\n* `primary_5` - Quinto\n* `secondary_6` - Sexto\n* `secondary_7` - Séptimo\n* `secondary_8` - Octavo\n* `secondary_9` - Noveno\n* `secondary_10` - Décimo\n* `secondary_11` - Undécimo\n* `technical` - Técnico o tecnológico\n* `higher_education` - Educación superior\n* `continuing_education` - Educación continua\n* `other` - Otro",
+        "enum": [
+          "early_childhood",
+          "preschool",
+          "transition",
+          "primary_1",
+          "primary_2",
+          "primary_3",
+          "primary_4",
+          "primary_5",
+          "secondary_6",
+          "secondary_7",
+          "secondary_8",
+          "secondary_9",
+          "secondary_10",
+          "secondary_11",
+          "technical",
+          "higher_education",
+          "continuing_education",
+          "other"
+        ],
+        "type": "string"
+      },
+      "AcademicGroupMember": {
+        "properties": {
+          "email": { "format": "email", "type": "string" },
+          "membership_id": { "format": "uuid", "type": "string" },
+          "role": { "$ref": "#/components/schemas/AcademicGroupRole" },
+          "status": { "type": "string" }
+        },
+        "required": ["email", "membership_id", "role", "status"],
+        "type": "object"
+      },
+      "AcademicGroupRead": {
+        "properties": {
+          "academic_year": {
+            "maximum": 32767,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": { "maxLength": 2000, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "level": { "$ref": "#/components/schemas/AcademicGroupLevel" },
+          "linked_cohort_count": { "readOnly": true, "type": "integer" },
+          "name": { "maxLength": 200, "type": "string" },
+          "roster": {
+            "items": { "$ref": "#/components/schemas/AcademicGroupMember" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "section": { "maxLength": 40, "type": "string" },
+          "slug": {
+            "maxLength": 100,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AssessmentGradebookColumnStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "academic_year",
+          "created_at",
+          "id",
+          "level",
+          "linked_cohort_count",
+          "name",
+          "roster",
+          "slug",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "AcademicGroupRole": {
+        "description": "* `learner` - Estudiante\n* `instructor` - Docente\n* `assistant` - Acompañante",
+        "enum": ["learner", "instructor", "assistant"],
+        "type": "string"
+      },
+      "AcademicGroupRoster": {
+        "properties": {
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/AcademicGroupRosterEntry"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["members"],
+        "type": "object"
+      },
+      "AcademicGroupRosterEntry": {
+        "properties": {
+          "membership_id": { "format": "uuid", "type": "string" },
+          "role": { "$ref": "#/components/schemas/AcademicGroupRole" }
+        },
+        "required": ["membership_id", "role"],
+        "type": "object"
+      },
       "AccessContext": {
         "properties": {
           "organizations": {
@@ -1512,6 +1641,11 @@
       },
       "CohortCreate": {
         "properties": {
+          "academic_group_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
           "access_ends_at": {
             "format": "date-time",
             "nullable": true,
@@ -1576,6 +1710,17 @@
       },
       "CohortRead": {
         "properties": {
+          "academic_group_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "academic_group_name": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
           "access_ends_at": {
             "format": "date-time",
             "nullable": true,
@@ -1613,6 +1758,8 @@
           }
         },
         "required": [
+          "academic_group_id",
+          "academic_group_name",
           "course_slug",
           "course_title",
           "created_at",
@@ -2313,6 +2460,11 @@
         "required": ["area_id", "id", "name", "slug", "status"],
         "type": "object"
       },
+      "DocumentTypeEnum": {
+        "description": "* `RC` - Registro civil\n* `TI` - Tarjeta de identidad\n* `CC` - Cédula de ciudadanía\n* `CE` - Cédula de extranjería\n* `PPT` - Permiso por protección temporal\n* `PA` - Pasaporte\n* `DE` - Documento extranjero\n* `NONE` - Sin documento registrado",
+        "enum": ["RC", "TI", "CC", "CE", "PPT", "PA", "DE", "NONE"],
+        "type": "string"
+      },
       "DomainEventDetail": {
         "properties": {
           "aggregate_id": {
@@ -2429,6 +2581,44 @@
         },
         "required": ["lock_version", "revision_id", "revision_number"],
         "type": "object"
+      },
+      "EducationLevelEnum": {
+        "description": "* `preschool` - Preescolar\n* `grade_1` - 1.º\n* `grade_2` - 2.º\n* `grade_3` - 3.º\n* `grade_4` - 4.º\n* `grade_5` - 5.º\n* `grade_6` - 6.º\n* `grade_7` - 7.º\n* `grade_8` - 8.º\n* `grade_9` - 9.º\n* `grade_10` - 10.º\n* `grade_11` - 11.º\n* `technical` - Técnico profesional\n* `technologist` - Tecnólogo\n* `undergraduate` - Pregrado universitario\n* `specialization` - Especialización\n* `masters` - Maestría\n* `doctorate` - Doctorado\n* `not_applicable` - No aplica",
+        "enum": [
+          "preschool",
+          "grade_1",
+          "grade_2",
+          "grade_3",
+          "grade_4",
+          "grade_5",
+          "grade_6",
+          "grade_7",
+          "grade_8",
+          "grade_9",
+          "grade_10",
+          "grade_11",
+          "technical",
+          "technologist",
+          "undergraduate",
+          "specialization",
+          "masters",
+          "doctorate",
+          "not_applicable"
+        ],
+        "type": "string"
+      },
+      "EducationStageEnum": {
+        "description": "* `preschool` - Preescolar\n* `school` - Colegio\n* `technical` - Institución técnica o tecnológica\n* `university` - Universidad\n* `graduated` - Graduado\n* `not_studying` - Actualmente no estudia\n* `other` - Otra situación",
+        "enum": [
+          "preschool",
+          "school",
+          "technical",
+          "university",
+          "graduated",
+          "not_studying",
+          "other"
+        ],
+        "type": "string"
       },
       "EmailDelivery": {
         "properties": {
@@ -2846,6 +3036,11 @@
         },
         "required": ["expected_version"],
         "type": "object"
+      },
+      "GenderEnum": {
+        "description": "* `female` - Femenino\n* `male` - Masculino\n* `non_binary` - No binario\n* `other` - Otro\n* `prefer_not_to_say` - Prefiero no responder",
+        "enum": ["female", "male", "non_binary", "other", "prefer_not_to_say"],
+        "type": "string"
       },
       "GoogleOAuthStart": {
         "properties": {
@@ -3396,10 +3591,33 @@
             "readOnly": true,
             "type": "string"
           },
+          "address": { "readOnly": true, "type": "string" },
+          "age": { "nullable": true, "readOnly": true, "type": "integer" },
           "created_at": {
             "format": "date-time",
             "readOnly": true,
             "type": "string"
+          },
+          "date_of_birth": {
+            "format": "date",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "department_code": { "readOnly": true, "type": "string" },
+          "document_number": { "readOnly": true, "type": "string" },
+          "document_type": {
+            "allOf": [{ "$ref": "#/components/schemas/DocumentTypeEnum" }],
+            "readOnly": true
+          },
+          "education_institution": { "readOnly": true, "type": "string" },
+          "education_level": {
+            "allOf": [{ "$ref": "#/components/schemas/EducationLevelEnum" }],
+            "readOnly": true
+          },
+          "education_stage": {
+            "allOf": [{ "$ref": "#/components/schemas/EducationStageEnum" }],
+            "readOnly": true
           },
           "email": { "format": "email", "readOnly": true, "type": "string" },
           "expires_at": {
@@ -3408,6 +3626,10 @@
             "type": "string"
           },
           "family_name": { "readOnly": true, "type": "string" },
+          "gender": {
+            "allOf": [{ "$ref": "#/components/schemas/GenderEnum" }],
+            "readOnly": true
+          },
           "given_name": { "readOnly": true, "type": "string" },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
           "institutional_id": { "readOnly": true, "type": "string" },
@@ -3416,9 +3638,21 @@
             "readOnly": true
           },
           "locale": { "readOnly": true, "type": "string" },
-          "member_type": { "readOnly": true, "type": "string" },
+          "member_type": {
+            "allOf": [{ "$ref": "#/components/schemas/MemberTypeEnum" }],
+            "readOnly": true
+          },
+          "middle_name": { "readOnly": true, "type": "string" },
+          "municipality": { "readOnly": true, "type": "string" },
           "phone": { "readOnly": true, "type": "string" },
           "preferred_name": { "readOnly": true, "type": "string" },
+          "registration_reason": {
+            "allOf": [
+              { "$ref": "#/components/schemas/RegistrationReasonEnum" }
+            ],
+            "readOnly": true
+          },
+          "registration_reason_detail": { "readOnly": true, "type": "string" },
           "revoked_at": {
             "format": "date-time",
             "nullable": true,
@@ -3426,36 +3660,63 @@
             "type": "string"
           },
           "roles": { "items": {}, "readOnly": true, "type": "array" },
+          "second_family_name": { "readOnly": true, "type": "string" },
+          "socioeconomic_stratum": {
+            "allOf": [
+              { "$ref": "#/components/schemas/SocioeconomicStratumEnum" }
+            ],
+            "readOnly": true
+          },
           "status": {
             "allOf": [{ "$ref": "#/components/schemas/InvitationStatusEnum" }],
             "readOnly": true
           },
+          "suggested_document_type": { "readOnly": true, "type": "string" },
           "timezone_name": { "readOnly": true, "type": "string" },
           "updated_at": {
             "format": "date-time",
             "readOnly": true,
             "type": "string"
-          }
+          },
+          "whatsapp": { "readOnly": true, "type": "string" }
         },
         "required": [
           "accepted_at",
+          "address",
+          "age",
           "created_at",
+          "date_of_birth",
+          "department_code",
+          "document_number",
+          "document_type",
+          "education_institution",
+          "education_level",
+          "education_stage",
           "email",
           "expires_at",
           "family_name",
+          "gender",
           "given_name",
           "id",
           "institutional_id",
           "invitation_type",
           "locale",
           "member_type",
+          "middle_name",
+          "municipality",
           "phone",
           "preferred_name",
+          "registration_reason",
+          "registration_reason_detail",
           "revoked_at",
           "roles",
+          "second_family_name",
+          "socioeconomic_stratum",
           "status",
+          "suggested_document_type",
           "timezone_name",
-          "updated_at"
+          "updated_at",
+          "whatsapp"
         ],
         "type": "object"
       },
@@ -3483,23 +3744,78 @@
       },
       "InvitationCreate": {
         "properties": {
+          "address": { "maxLength": 240, "type": "string" },
+          "date_of_birth": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "department_code": { "maxLength": 2, "type": "string" },
+          "document_number": { "maxLength": 40, "type": "string" },
+          "document_type": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/DocumentTypeEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "education_institution": { "maxLength": 200, "type": "string" },
+          "education_level": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/EducationLevelEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "education_stage": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/EducationStageEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
           "email": { "format": "email", "type": "string" },
           "family_name": { "maxLength": 150, "type": "string" },
+          "gender": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/GenderEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
           "given_name": { "maxLength": 150, "type": "string" },
           "institutional_id": { "maxLength": 120, "type": "string" },
           "locale": { "default": "es", "maxLength": 16, "type": "string" },
-          "member_type": { "maxLength": 80, "type": "string" },
+          "member_type": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/MemberTypeEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "middle_name": { "maxLength": 150, "type": "string" },
+          "municipality": { "maxLength": 120, "type": "string" },
           "phone": { "maxLength": 64, "type": "string" },
           "preferred_name": { "maxLength": 150, "type": "string" },
+          "registration_reason": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/RegistrationReasonEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "registration_reason_detail": { "maxLength": 500, "type": "string" },
           "roles": {
             "items": { "$ref": "#/components/schemas/OrganizationRole" },
             "type": "array"
+          },
+          "second_family_name": { "maxLength": 150, "type": "string" },
+          "socioeconomic_stratum": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/SocioeconomicStratumEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
           },
           "timezone_name": {
             "default": "UTC",
             "maxLength": 64,
             "type": "string"
-          }
+          },
+          "whatsapp": { "maxLength": 32, "type": "string" }
         },
         "required": ["email", "roles"],
         "type": "object"
@@ -4023,23 +4339,73 @@
       },
       "ManagedAccountCreate": {
         "properties": {
+          "address": { "maxLength": 240, "type": "string" },
+          "date_of_birth": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "department_code": { "maxLength": 2, "type": "string" },
+          "document_number": { "maxLength": 40, "type": "string" },
+          "document_type": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/DocumentTypeEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "education_institution": { "maxLength": 200, "type": "string" },
+          "education_level": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/EducationLevelEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "education_stage": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/EducationStageEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
           "email": { "format": "email", "type": "string" },
           "family_name": { "maxLength": 150, "type": "string" },
+          "gender": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/GenderEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
           "given_name": { "maxLength": 150, "type": "string" },
           "institutional_id": { "maxLength": 120, "type": "string" },
           "locale": { "default": "es", "maxLength": 16, "type": "string" },
-          "member_type": { "maxLength": 80, "type": "string" },
+          "member_type": { "$ref": "#/components/schemas/MemberTypeEnum" },
+          "middle_name": { "maxLength": 150, "type": "string" },
+          "municipality": { "maxLength": 120, "type": "string" },
           "phone": { "maxLength": 64, "type": "string" },
           "preferred_name": { "maxLength": 150, "type": "string" },
+          "registration_reason": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/RegistrationReasonEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "registration_reason_detail": { "maxLength": 500, "type": "string" },
           "roles": {
             "items": { "$ref": "#/components/schemas/OrganizationRole" },
             "type": "array"
+          },
+          "second_family_name": { "maxLength": 150, "type": "string" },
+          "socioeconomic_stratum": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/SocioeconomicStratumEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
           },
           "timezone_name": {
             "default": "UTC",
             "maxLength": 64,
             "type": "string"
-          }
+          },
+          "whatsapp": { "maxLength": 32, "type": "string" }
         },
         "required": [
           "email",
@@ -4065,6 +4431,19 @@
           }
         },
         "required": ["password"],
+        "type": "object"
+      },
+      "ManagedManualActivation": {
+        "properties": {
+          "confirm_identity": { "type": "boolean" },
+          "temporary_password": {
+            "maxLength": 256,
+            "minLength": 12,
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": ["confirm_identity", "temporary_password"],
         "type": "object"
       },
       "ManualGrade": {
@@ -4113,33 +4492,161 @@
       },
       "MemberProfile": {
         "properties": {
+          "address": { "maxLength": 240, "type": "string" },
           "administrative_notes": { "maxLength": 4000, "type": "string" },
+          "age": { "readOnly": true, "type": "integer" },
+          "date_of_birth": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "department_code": { "maxLength": 2, "type": "string" },
+          "document_number": { "maxLength": 40, "type": "string" },
+          "document_type": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/DocumentTypeEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "education_institution": { "maxLength": 200, "type": "string" },
+          "education_level": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/EducationLevelEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "education_stage": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/EducationStageEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "first_name": { "maxLength": 150, "type": "string" },
+          "first_surname": { "maxLength": 150, "type": "string" },
+          "gender": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/GenderEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
           "institutional_id": { "maxLength": 120, "type": "string" },
           "locale": { "maxLength": 16, "type": "string" },
-          "member_type": { "maxLength": 80, "type": "string" },
+          "member_type": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/MemberTypeEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "middle_name": { "maxLength": 150, "type": "string" },
+          "municipality": { "maxLength": 120, "type": "string" },
           "phone": { "maxLength": 64, "type": "string" },
           "preferred_name": { "maxLength": 150, "type": "string" },
+          "registration_reason": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/RegistrationReasonEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "registration_reason_detail": { "maxLength": 500, "type": "string" },
+          "second_surname": { "maxLength": 150, "type": "string" },
+          "socioeconomic_stratum": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/SocioeconomicStratumEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "suggested_document_type": { "readOnly": true, "type": "string" },
           "timezone": { "maxLength": 64, "type": "string" },
           "updated_at": {
             "format": "date-time",
             "readOnly": true,
             "type": "string"
-          }
+          },
+          "whatsapp": { "maxLength": 32, "type": "string" }
         },
-        "required": ["updated_at"],
+        "required": ["age", "suggested_document_type", "updated_at"],
         "type": "object"
       },
       "MemberProfileUpdate": {
         "properties": {
+          "address": { "maxLength": 240, "type": "string" },
           "administrative_notes": { "maxLength": 4000, "type": "string" },
+          "date_of_birth": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "department_code": { "maxLength": 2, "type": "string" },
+          "document_number": { "maxLength": 40, "type": "string" },
+          "document_type": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/DocumentTypeEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "education_institution": { "maxLength": 200, "type": "string" },
+          "education_level": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/EducationLevelEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "education_stage": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/EducationStageEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "first_name": { "maxLength": 150, "type": "string" },
+          "first_surname": { "maxLength": 150, "type": "string" },
+          "gender": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/GenderEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
           "institutional_id": { "maxLength": 120, "type": "string" },
           "locale": { "maxLength": 16, "type": "string" },
-          "member_type": { "maxLength": 80, "type": "string" },
+          "member_type": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/MemberTypeEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "middle_name": { "maxLength": 150, "type": "string" },
+          "municipality": { "maxLength": 120, "type": "string" },
           "phone": { "maxLength": 64, "type": "string" },
           "preferred_name": { "maxLength": 150, "type": "string" },
-          "timezone": { "maxLength": 64, "type": "string" }
+          "registration_reason": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/RegistrationReasonEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "registration_reason_detail": { "maxLength": 500, "type": "string" },
+          "second_surname": { "maxLength": 150, "type": "string" },
+          "socioeconomic_stratum": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/SocioeconomicStratumEnum" },
+              { "$ref": "#/components/schemas/BlankEnum" }
+            ]
+          },
+          "timezone": { "maxLength": 64, "type": "string" },
+          "whatsapp": { "maxLength": 32, "type": "string" }
         },
         "type": "object"
+      },
+      "MemberTypeEnum": {
+        "description": "* `learner` - Estudiante\n* `instructor` - Docente\n* `guardian` - Acudiente\n* `administrative` - Personal administrativo\n* `support` - Personal de apoyo\n* `other` - Otro",
+        "enum": [
+          "learner",
+          "instructor",
+          "guardian",
+          "administrative",
+          "support",
+          "other"
+        ],
+        "type": "string"
       },
       "Membership": {
         "properties": {
@@ -4211,7 +4718,7 @@
         "type": "object"
       },
       "MembershipEventEventTypeEnum": {
-        "description": "* `membership_created` - Membresía creada\n* `membership_suspended` - Membresía suspendida\n* `membership_reactivated` - Membresía reactivada\n* `membership_revoked` - Membresía revocada\n* `role_assigned` - Rol asignado\n* `role_revoked` - Rol revocado\n* `invitation_created` - Invitación creada\n* `invitation_updated` - Invitación actualizada\n* `invitation_resent` - Invitación reenviada\n* `invitation_revoked` - Invitación revocada\n* `invitation_accepted` - Invitación aceptada\n* `join_requested` - Solicitud de ingreso creada\n* `join_approved` - Solicitud de ingreso aprobada\n* `join_rejected` - Solicitud de ingreso rechazada\n* `managed_account_created` - Cuenta administrada creada\n* `managed_account_activated` - Cuenta administrada activada\n* `profile_updated` - Perfil institucional actualizado\n* `roles_replaced` - Roles sustituidos\n* `sessions_revoked` - Sesiones revocadas\n* `membership_settings_updated` - Configuración de membresías actualizada",
+        "description": "* `membership_created` - Membresía creada\n* `membership_suspended` - Membresía suspendida\n* `membership_reactivated` - Membresía reactivada\n* `membership_revoked` - Membresía revocada\n* `role_assigned` - Rol asignado\n* `role_revoked` - Rol revocado\n* `invitation_created` - Invitación creada\n* `invitation_updated` - Invitación actualizada\n* `invitation_resent` - Invitación reenviada\n* `invitation_revoked` - Invitación revocada\n* `invitation_accepted` - Invitación aceptada\n* `join_requested` - Solicitud de ingreso creada\n* `join_approved` - Solicitud de ingreso aprobada\n* `join_rejected` - Solicitud de ingreso rechazada\n* `managed_account_created` - Cuenta administrada creada\n* `managed_account_activated` - Cuenta administrada activada\n* `profile_updated` - Perfil institucional actualizado\n* `roles_replaced` - Roles sustituidos\n* `sessions_revoked` - Sesiones revocadas\n* `password_recovery_sent` - Recuperación de contraseña enviada\n* `membership_settings_updated` - Configuración de membresías actualizada",
         "enum": [
           "membership_created",
           "membership_suspended",
@@ -4232,6 +4739,7 @@
           "profile_updated",
           "roles_replaced",
           "sessions_revoked",
+          "password_recovery_sent",
           "membership_settings_updated"
         ],
         "type": "string"
@@ -4794,6 +5302,19 @@
           "topics",
           "updated_at"
         ],
+        "type": "object"
+      },
+      "PaginatedAcademicGroup": {
+        "properties": {
+          "count": { "type": "integer" },
+          "next": { "format": "uri", "nullable": true, "type": "string" },
+          "previous": { "format": "uri", "nullable": true, "type": "string" },
+          "results": {
+            "items": { "$ref": "#/components/schemas/AcademicGroupRead" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "next", "previous", "results"],
         "type": "object"
       },
       "PaginatedCohort": {
@@ -5710,6 +6231,19 @@
         "required": ["checksum_sha256", "etag", "size_bytes"],
         "type": "object"
       },
+      "RegistrationReasonEnum": {
+        "description": "* `course` - Tomar un curso\n* `school_support` - Refuerzo escolar\n* `exam_preparation` - Preparación para una evaluación\n* `professional_development` - Formación profesional\n* `teaching` - Enseñar o acompañar estudiantes\n* `institutional` - Vinculación institucional\n* `other` - Otro motivo",
+        "enum": [
+          "course",
+          "school_support",
+          "exam_preparation",
+          "professional_development",
+          "teaching",
+          "institutional",
+          "other"
+        ],
+        "type": "string"
+      },
       "RegistrationSettings": {
         "properties": {
           "default_locale": { "maxLength": 16, "type": "string" },
@@ -6537,6 +7071,11 @@
         },
         "required": ["highlighted", "text"],
         "type": "object"
+      },
+      "SocioeconomicStratumEnum": {
+        "description": "* `not_reported` - Prefiere no informar\n* `rural` - Rural o sin estratificación\n* `1` - Estrato 1\n* `2` - Estrato 2\n* `3` - Estrato 3\n* `4` - Estrato 4\n* `5` - Estrato 5\n* `6` - Estrato 6",
+        "enum": ["not_reported", "rural", "1", "2", "3", "4", "5", "6"],
+        "type": "string"
       },
       "SourceTypeEnum": {
         "description": "* `course_release` - Release de curso\n* `course_unit` - Unidad de curso\n* `catalog_subject` - Asignatura\n* `catalog_topic` - Tema\n* `catalog_concept` - Concepto\n* `learning_objective` - Objetivo\n* `asset_version` - Versión de asset\n* `question_version` - Versión de pregunta\n* `assessment_version` - Versión de evaluación",
@@ -18275,6 +18814,57 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/invitations/{invitation_id}/manual-activation/": {
+      "post": {
+        "operationId": "organizations_invitations_manual_activation_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedManualActivation"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedManualActivation"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedManualActivation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Membership" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/invitations/{invitation_id}/resend/": {
       "post": {
         "operationId": "organizations_invitations_resend_create",
@@ -18438,6 +19028,137 @@
           "202": { "description": "No response body" }
         },
         "security": [{ "cookieAuth": [] }, {}],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/academic-groups/": {
+      "get": {
+        "operationId": "learning_academic_groups_list",
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer" } },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedAcademicGroup"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "learning_academic_groups_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AcademicGroupCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/AcademicGroupCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/AcademicGroupCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AcademicGroupRead" }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/academic-groups/{group_id}/roster/": {
+      "put": {
+        "operationId": "learning_academic_group_roster_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AcademicGroupRoster" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/AcademicGroupRoster" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/AcademicGroupRoster" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AcademicGroupRead" }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
         "tags": ["organizations"]
       }
     },
@@ -20090,6 +20811,37 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/memberships/{membership_id}/password-recovery/": {
+      "post": {
+        "operationId": "organizations_memberships_password_recovery_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "additionalProperties": {}, "type": "object" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/memberships/{membership_id}/profile/": {
       "get": {
         "operationId": "organizations_memberships_profile_retrieve",
@@ -20573,6 +21325,55 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/live-sessions/": {
+      "get": {
+        "operationId": "scheduling_live_sessions_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "course_slug",
+            "schema": {
+              "oneOf": [
+                { "pattern": "^[-a-zA-Z0-9_]+$", "type": "string" },
+                { "maxLength": 0, "type": "string" }
+              ]
+            }
+          },
+          {
+            "description": "* `upcoming` - upcoming\n* `past` - past\n* `all` - all",
+            "in": "query",
+            "name": "scope",
+            "schema": {
+              "default": "upcoming",
+              "enum": ["upcoming", "past", "all"],
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/LiveSessionDetail" },
+                  "type": "array"
+                }
               }
             },
             "description": ""

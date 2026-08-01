@@ -1,6 +1,13 @@
 'use client';
 
-import { Ban, MailCheck, Plus, RotateCcw, UserRound } from 'lucide-react';
+import {
+  Ban,
+  KeyRound,
+  MailCheck,
+  Plus,
+  RotateCcw,
+  UserRound,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
@@ -20,6 +27,7 @@ import {
 import type { components, operations } from '@/lib/api/generated/platform';
 import {
   useCorrectManagedAccountEmail,
+  useManuallyActivateManagedAccount,
   useOrganizationInvitationsWithFilters,
   useResendInvitation,
   useRevokeInvitation,
@@ -89,9 +97,14 @@ export function InvitationManagement({
   const resend = useResendInvitation(slug);
   const revoke = useRevokeInvitation(slug);
   const correctEmail = useCorrectManagedAccountEmail(slug);
+  const manualActivation = useManuallyActivateManagedAccount(slug);
   const invitations =
     (query.data as unknown as InvitationList | undefined) ?? initial;
-  const error = resend.error ?? revoke.error ?? correctEmail.error;
+  const error =
+    resend.error ??
+    revoke.error ??
+    correctEmail.error ??
+    manualActivation.error;
   const totalPages = Math.max(1, Math.ceil(invitations.count / 25));
 
   function resetPage() {
@@ -179,10 +192,20 @@ export function InvitationManagement({
                   invitationId: invitation.id,
                 })
               }
+              onManualActivation={(temporaryPassword) =>
+                manualActivation.mutateAsync({
+                  confirmIdentity: true,
+                  invitationId: invitation.id,
+                  temporaryPassword,
+                })
+              }
               onResend={() => resend.mutateAsync(invitation.id)}
               onRevoke={() => revoke.mutateAsync(invitation.id)}
               pending={
-                resend.isPending || revoke.isPending || correctEmail.isPending
+                resend.isPending ||
+                revoke.isPending ||
+                correctEmail.isPending ||
+                manualActivation.isPending
               }
             />
           ))}
@@ -236,17 +259,21 @@ export function InvitationManagement({
 function InvitationCard({
   invitation,
   onCorrectEmail,
+  onManualActivation,
   onResend,
   onRevoke,
   pending,
 }: Readonly<{
   invitation: Invitation;
   onCorrectEmail: (email: string) => Promise<unknown>;
+  onManualActivation: (temporaryPassword: string) => Promise<unknown>;
   onResend: () => Promise<unknown>;
   onRevoke: () => Promise<unknown>;
   pending: boolean;
 }>) {
   const [replacementEmail, setReplacementEmail] = useState(invitation.email);
+  const [temporaryPassword, setTemporaryPassword] = useState('');
+  const [identityConfirmed, setIdentityConfirmed] = useState(false);
   const pendingInvitation = invitation.status === 'pending';
   const display =
     invitation.preferred_name ||
@@ -321,38 +348,101 @@ function InvitationCard({
               Revocar invitación
             </Button>
             {invitation.invitation_type === 'managed_account' ? (
-              <form
-                className="basis-full rounded-md border bg-muted/20 p-3 sm:flex sm:items-end sm:gap-3"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void onCorrectEmail(replacementEmail.trim());
-                }}
-              >
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Label htmlFor={`managed-email-${invitation.id}`}>
-                    Corregir correo antes de activar
-                  </Label>
-                  <Input
-                    id={`managed-email-${invitation.id}`}
-                    onChange={(event) =>
-                      setReplacementEmail(event.target.value)
-                    }
-                    required
-                    type="email"
-                    value={replacementEmail}
-                  />
-                </div>
-                <Button
-                  disabled={
-                    pending || replacementEmail.trim() === invitation.email
-                  }
-                  size="sm"
-                  type="submit"
-                  variant="outline"
+              <div className="basis-full space-y-3">
+                <form
+                  className="rounded-md border bg-muted/20 p-3 sm:flex sm:items-end sm:gap-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void onCorrectEmail(replacementEmail.trim());
+                  }}
                 >
-                  Guardar y reenviar
-                </Button>
-              </form>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Label htmlFor={`managed-email-${invitation.id}`}>
+                      Corregir correo antes de activar
+                    </Label>
+                    <Input
+                      id={`managed-email-${invitation.id}`}
+                      onChange={(event) =>
+                        setReplacementEmail(event.target.value)
+                      }
+                      required
+                      type="email"
+                      value={replacementEmail}
+                    />
+                  </div>
+                  <Button
+                    disabled={
+                      pending || replacementEmail.trim() === invitation.email
+                    }
+                    size="sm"
+                    type="submit"
+                    variant="outline"
+                  >
+                    Guardar y reenviar
+                  </Button>
+                </form>
+                <form
+                  className="space-y-3 rounded-md border border-amber-600/20 bg-amber-500/5 p-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void onManualActivation(temporaryPassword).then(() => {
+                      setTemporaryPassword('');
+                      setIdentityConfirmed(false);
+                    });
+                  }}
+                >
+                  <div>
+                    <p className="text-sm font-medium">
+                      Activación administrativa
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Úsala sólo después de verificar presencialmente la
+                      identidad. La contraseña temporal debe entregarse por un
+                      canal seguro.
+                    </p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                    <div className="space-y-2">
+                      <Label htmlFor={`temporary-password-${invitation.id}`}>
+                        Contraseña temporal
+                      </Label>
+                      <Input
+                        id={`temporary-password-${invitation.id}`}
+                        minLength={12}
+                        onChange={(event) =>
+                          setTemporaryPassword(event.target.value)
+                        }
+                        required
+                        type="password"
+                        value={temporaryPassword}
+                      />
+                    </div>
+                    <Button
+                      disabled={
+                        pending ||
+                        !identityConfirmed ||
+                        temporaryPassword.length < 12
+                      }
+                      size="sm"
+                      type="submit"
+                    >
+                      <KeyRound /> Activar manualmente
+                    </Button>
+                  </div>
+                  <label className="flex items-start gap-2 text-xs">
+                    <input
+                      checked={identityConfirmed}
+                      className="mt-0.5 size-4 accent-primary"
+                      onChange={(event) =>
+                        setIdentityConfirmed(event.target.checked)
+                      }
+                      type="checkbox"
+                    />
+                    Confirmo que la institución verificó la identidad y autoriza
+                    marcar el correo como verificado.
+                  </label>
+                </form>
+              </div>
             ) : null}
           </div>
         ) : null}

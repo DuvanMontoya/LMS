@@ -6,6 +6,38 @@ class CohortStatus(models.TextChoices):
     ARCHIVED = "archived", "Archivada"
 
 
+class AcademicGroupLevel(models.TextChoices):
+    EARLY_CHILDHOOD = "early_childhood", "Primera infancia"
+    PRESCHOOL = "preschool", "Preescolar"
+    TRANSITION = "transition", "Transición"
+    PRIMARY_1 = "primary_1", "Primero"
+    PRIMARY_2 = "primary_2", "Segundo"
+    PRIMARY_3 = "primary_3", "Tercero"
+    PRIMARY_4 = "primary_4", "Cuarto"
+    PRIMARY_5 = "primary_5", "Quinto"
+    SECONDARY_6 = "secondary_6", "Sexto"
+    SECONDARY_7 = "secondary_7", "Séptimo"
+    SECONDARY_8 = "secondary_8", "Octavo"
+    SECONDARY_9 = "secondary_9", "Noveno"
+    SECONDARY_10 = "secondary_10", "Décimo"
+    SECONDARY_11 = "secondary_11", "Undécimo"
+    TECHNICAL = "technical", "Técnico o tecnológico"
+    HIGHER_EDUCATION = "higher_education", "Educación superior"
+    CONTINUING_EDUCATION = "continuing_education", "Educación continua"
+    OTHER = "other", "Otro"
+
+
+class AcademicGroupRole(models.TextChoices):
+    LEARNER = "learner", "Estudiante"
+    INSTRUCTOR = "instructor", "Docente"
+    ASSISTANT = "assistant", "Acompañante"
+
+
+class AcademicGroupMemberStatus(models.TextChoices):
+    ACTIVE = "active", "Activo"
+    INACTIVE = "inactive", "Inactivo"
+
+
 class EnrollmentStatus(models.TextChoices):
     ACTIVE = "active", "Activa"
     SUSPENDED = "suspended", "Suspendida"

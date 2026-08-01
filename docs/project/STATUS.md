@@ -982,3 +982,38 @@ warnings, drift checks, `pip-audit` y `pnpm audit --prod` quedaron verdes.
 Siguiente paso:
 
 > **Prompt 12 — Matrículas y entrega del aprendizaje: acceso por curso, cohortes, progreso, continuidad, completitud y experiencia del estudiante.**
+
+## Cierre local de correo, miembros, grupos y clases — 2026-08-01
+
+- Sin tocar VPS ni producción, Hostinger recibió los registros exactos de
+  Resend para `papyros.pro` y el dominio quedó `verified`. Se conservaron los
+  registros web preexistentes. La clave completa existe sólo en el `.env` local
+  ignorado y nunca se imprimió, copió a frontend ni incorporó al repositorio.
+- Django admite SMTP Resend en desarrollo mediante `EMAIL_DELIVERY_MODE=smtp`,
+  timeout y TLS/SSL excluyentes. Producción conserva validación fail-closed. Los
+  envíos existentes reutilizan django-allauth y `domain.notifications`; las
+  invitaciones ahora tienen alternativas texto/HTML e idempotencia, sin sistema
+  de tokens paralelo.
+- `organizations.0005` amplía invitaciones y perfiles con datos colombianos,
+  edad calculada, sugerencia documental, WhatsApp, situación/nivel educativo,
+  departamento, municipio, dirección, estrato y motivo. `User` no cambió.
+- Las cuentas administradas pueden activarse manualmente sólo tras confirmar
+  identidad y definir una contraseña temporal válida; la operación verifica el
+  email, activa la cuenta, crea membresía y audita el método.
+- ADR 0033 y `learning.0005` incorporan grupos académicos intercurso con roster
+  de estudiantes, docentes y acompañantes. Las cohortes siguen siendo la unidad
+  release-pinned y pueden vincular un grupo sin conceder acceso implícito. El
+  formulario de cohorte permite escogerlo y el roster se guarda atómicamente en
+  una sola solicitud y transacción.
+- Se agregó `/clases`, con clases de curso y sesiones independientes filtradas
+  por los permisos existentes. El aula del curso incluye una pestaña de clases
+  en vivo y conserva el cálculo de progreso de asistencia en Django.
+- Evidencia local: migraciones reales en PostgreSQL, Django check, Ruff,
+  TypeScript, OpenAPI sincronizado, build optimizado de Next.js, learning 19/19,
+  scheduling 16/16, organizations 30/30, notifications 7/7, auth-email 6/6 y
+  frontend 51/51. Chrome real verificó Resend `verified`, el directorio con dos
+  clases, el selector grupo-cohorte y, bajo identidad de estudiante matriculado,
+  las dos clases dentro del curso y su contribución al progreso. El smoke real
+  negoció STARTTLS y autenticó Django en `smtp.resend.com:587` sin enviar correo.
+- Pendiente explícito: obtener autorización y destinatario para transmitir un
+  único correo real y comprobar su recepción. No se realizó ningún despliegue.

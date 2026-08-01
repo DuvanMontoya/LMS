@@ -25,6 +25,7 @@ from domain.scheduling.policies import can_create_schedule
 from domain.scheduling.selectors import (
     attendance_summary,
     live_session_detail,
+    live_sessions_visible_to_actor,
     occurrence_payload,
     occurrences_visible_to_actor,
     visible_occurrences_in_range,
@@ -50,6 +51,7 @@ from .serializers import (
     EventRescheduleSerializer,
     LiveConnectionSerializer,
     LiveSessionDetailSerializer,
+    LiveSessionListQuerySerializer,
     OperationAcceptedSerializer,
     ParticipantOptionSerializer,
     ParticipantPermissionSerializer,
@@ -311,6 +313,25 @@ class LiveSessionDetailView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
         return Response(LiveSessionDetailSerializer(payload).data)
+
+
+class LiveSessionListView(APIView):
+    @extend_schema(
+        operation_id="scheduling_live_sessions_list",
+        parameters=[LiveSessionListQuerySerializer],
+        responses={200: LiveSessionDetailSerializer(many=True)},
+    )
+    def get(self, request: Request, slug: str) -> Response:
+        organization = _organization(request, slug)
+        serializer = LiveSessionListQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        payload = live_sessions_visible_to_actor(
+            actor=request.user,
+            organization=organization,
+            course_slug=serializer.validated_data.get("course_slug", ""),
+            scope=serializer.validated_data["scope"],
+        )
+        return Response(LiveSessionDetailSerializer(payload, many=True).data)
 
 
 class LiveSessionStartView(APIView):

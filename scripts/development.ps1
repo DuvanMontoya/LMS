@@ -104,19 +104,83 @@ function Test-ExpectedProcess([int]$ProcessId, [ValidateSet('api', 'web')][strin
     )
 }
 
+function Test-LmsProcess([int]$ProcessId, [ValidateSet('api', 'web')][string]$Kind) {
+    $process = Get-CimInstance Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction SilentlyContinue
+    if ($null -eq $process) {
+        return $false
+    }
+    if ($Kind -eq 'api') {
+        return (
+            $process.ExecutablePath -eq $pythonExecutable -and
+            $process.CommandLine -like "*manage.py*runserver*0.0.0.0:$apiPort*"
+        )
+    }
+    return (
+        $process.CommandLine -like "*$repositoryRoot*" -and
+        (
+            $process.CommandLine -like "*$nextExecutable*" -or
+            $process.CommandLine -like '*next*start-server.js*'
+        )
+    )
+}
+
+function Get-ProcessTreeIds([int]$RootProcessId) {
+    $ids = @()
+    $children = Get-CimInstance Win32_Process -Filter "ParentProcessId = $RootProcessId" -ErrorAction SilentlyContinue
+    foreach ($child in $children) {
+        $ids += @(Get-ProcessTreeIds -RootProcessId ([int]$child.ProcessId))
+    }
+    $ids += $RootProcessId
+    return $ids
+}
+
+function Get-ListenerProcessIds([int]$Port) {
+    return @(
+        Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty OwningProcess -Unique
+    )
+}
+
+function Test-RegisteredDevelopment {
+    $state = Get-SavedState
+    if ($null -eq $state) {
+        return $false
+    }
+    if (
+        -not (Test-ExpectedProcess -ProcessId ([int]$state.apiPid) -Kind 'api') -or
+        -not (Test-ExpectedProcess -ProcessId ([int]$state.webPid) -Kind 'web')
+    ) {
+        return $false
+    }
+    $apiListeners = @(Get-ListenerProcessIds -Port $apiPort)
+    $webListeners = @(Get-ListenerProcessIds -Port 3000)
+    return (
+        $apiListeners.Count -gt 0 -and
+        $webListeners.Count -gt 0 -and
+        -not ($apiListeners | Where-Object { -not (Test-LmsProcess -ProcessId $_ -Kind 'api') }) -and
+        -not ($webListeners | Where-Object { -not (Test-LmsProcess -ProcessId $_ -Kind 'web') })
+    )
+}
+
 function Write-Status {
     $state = Get-SavedState
     $apiReady = Test-Endpoint "$apiLoopbackOrigin/health/live/"
     $webReady = Test-Endpoint 'http://127.0.0.1:3000/'
-    $apiPid = if ($null -ne $state) { $state.apiPid } else { '-' }
-    $webPid = if ($null -ne $state) { $state.webPid } else { '-' }
+    $apiPid = @(Get-ListenerProcessIds -Port $apiPort) -join ','
+    $webPid = @(Get-ListenerProcessIds -Port 3000) -join ','
+    if (-not $apiPid) { $apiPid = '-' }
+    if (-not $webPid) { $webPid = '-' }
     Write-Host "API   : $(if ($apiReady) { 'lista' } else { 'detenida' }) | PID $apiPid | $apiLoopbackOrigin"
     Write-Host "Web   : $(if ($webReady) { 'lista' } else { 'detenida' }) | PID $webPid | http://127.0.0.1:3000"
     Write-Host "Estado: $stateFile"
 }
 
 function Start-Development {
-    if ((Test-Endpoint "$apiLoopbackOrigin/health/live/") -and (Test-Endpoint 'http://127.0.0.1:3000/')) {
+    if (
+        (Test-Endpoint "$apiLoopbackOrigin/health/live/") -and
+        (Test-Endpoint 'http://127.0.0.1:3000/') -and
+        (Test-RegisteredDevelopment)
+    ) {
         Write-Host 'El entorno de desarrollo ya está disponible.'
         Write-Status
         return
@@ -181,17 +245,41 @@ function Start-Development {
 
 function Stop-Development {
     $state = Get-SavedState
-    if ($null -eq $state) {
-        Write-Host 'No hay un entorno persistente registrado.'
-        return
-    }
-    foreach ($entry in @(
-        @{ id = [int]$state.apiPid; kind = 'api' },
-        @{ id = [int]$state.webPid; kind = 'web' }
-    )) {
-        if (Test-ExpectedProcess -ProcessId $entry.id -Kind $entry.kind) {
-            Stop-Process -Id $entry.id -Force
+    $processIds = @()
+    if ($null -ne $state) {
+        foreach ($entry in @(
+            @{ id = [int]$state.apiPid; kind = 'api' },
+            @{ id = [int]$state.webPid; kind = 'web' }
+        )) {
+            if (Test-ExpectedProcess -ProcessId $entry.id -Kind $entry.kind) {
+                $processIds += @(Get-ProcessTreeIds -RootProcessId $entry.id)
+            }
         }
+    }
+    foreach ($processId in @(Get-ListenerProcessIds -Port $apiPort)) {
+        if (Test-LmsProcess -ProcessId $processId -Kind 'api') {
+            $processIds += @(Get-ProcessTreeIds -RootProcessId $processId)
+        }
+    }
+    foreach ($processId in @(Get-ListenerProcessIds -Port 3000)) {
+        if (Test-LmsProcess -ProcessId $processId -Kind 'web') {
+            $processIds += @(Get-ProcessTreeIds -RootProcessId $processId)
+        }
+    }
+    foreach ($processId in @($processIds | Select-Object -Unique)) {
+        Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+    }
+    $deadline = (Get-Date).AddSeconds(8)
+    while ((Get-Date) -lt $deadline) {
+        if (-not (Get-NetTCPConnection -State Listen -LocalPort 3000, $apiPort -ErrorAction SilentlyContinue)) {
+            break
+        }
+        Start-Sleep -Milliseconds 200
+    }
+    $remaining = Get-NetTCPConnection -State Listen -LocalPort 3000, $apiPort -ErrorAction SilentlyContinue
+    if ($remaining) {
+        $summary = ($remaining | ForEach-Object { "$($_.LocalPort):PID $($_.OwningProcess)" }) -join ', '
+        throw "No se detuvieron procesos ajenos al LMS en sus puertos: $summary"
     }
     Remove-Item -LiteralPath $stateFile -Force -ErrorAction SilentlyContinue
     Write-Host 'Frontend y backend persistentes detenidos. PostgreSQL y Redis permanecen activos.'

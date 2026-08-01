@@ -3,6 +3,7 @@ export type AuthErrorKind =
   | 'network'
   | 'rate_limited'
   | 'session_expired'
+  | 'already_authenticated'
   | 'pending_flow'
   | 'invalid_response'
   | 'validation'
@@ -75,6 +76,8 @@ export function mapAllauthErrorToSpanish(
     return 'No fue posible conectar con la plataforma. Comprueba tu conexión e inténtalo nuevamente.';
   if (kind === 'session_expired')
     return 'Tu sesión ya no está disponible. Inicia sesión nuevamente.';
+  if (kind === 'already_authenticated')
+    return 'Ya hay una sesión iniciada en este navegador. Ciérrala antes de ingresar con otra cuenta.';
   if (code === 'email_password_mismatch' || code === 'incorrect_password') {
     return 'El correo o la contraseña no son correctos.';
   }

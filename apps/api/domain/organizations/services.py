@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import TYPE_CHECKING
+from urllib.parse import urljoin
 
 from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from django.contrib.sessions.models import Session
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.db import IntegrityError, transaction
 from django.http import HttpRequest
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .capabilities import Capability
@@ -22,6 +25,7 @@ from .choices import (
     MembershipEventType,
     MembershipStatus,
     RoleCode,
+    normalize_member_type,
 )
 from .exceptions import (
     InvalidMembershipTransition,
@@ -429,23 +433,36 @@ def _create_profile_from_invitation(
     *, membership: Membership, invitation: MembershipInvitation
 ) -> OrganizationMemberProfile:
     profile, _ = OrganizationMemberProfile.objects.get_or_create(membership=membership)
-    profile.member_type = invitation.member_type
-    profile.institutional_id = invitation.institutional_id
-    profile.preferred_name = invitation.preferred_name
-    profile.phone = invitation.phone
+    copied_fields = {
+        "first_name": invitation.given_name,
+        "middle_name": invitation.middle_name,
+        "first_surname": invitation.family_name,
+        "second_surname": invitation.second_family_name,
+        "member_type": invitation.member_type,
+        "institutional_id": invitation.institutional_id,
+        "preferred_name": invitation.preferred_name,
+        "phone": invitation.phone,
+        "whatsapp": invitation.whatsapp,
+        "date_of_birth": invitation.date_of_birth,
+        "document_type": invitation.document_type,
+        "document_number": invitation.document_number,
+        "gender": invitation.gender,
+        "education_stage": invitation.education_stage,
+        "education_institution": invitation.education_institution,
+        "education_level": invitation.education_level,
+        "department_code": invitation.department_code,
+        "municipality": invitation.municipality,
+        "address": invitation.address,
+        "socioeconomic_stratum": invitation.socioeconomic_stratum,
+        "registration_reason": invitation.registration_reason,
+        "registration_reason_detail": invitation.registration_reason_detail,
+    }
+    for field_name, value in copied_fields.items():
+        setattr(profile, field_name, value)
     profile.locale = invitation.locale
     profile.timezone = invitation.timezone_name
-    profile.save(
-        update_fields=(
-            "member_type",
-            "institutional_id",
-            "preferred_name",
-            "phone",
-            "locale",
-            "timezone",
-            "updated_at",
-        )
-    )
+    profile.full_clean()
+    profile.save(update_fields=(*copied_fields, "locale", "timezone", "updated_at"))
     return profile
 
 
@@ -490,16 +507,61 @@ def _send_invitation_email(*, invitation: MembershipInvitation, token: str) -> N
     """Send after commit; token remains only in this closure and mail content."""
 
     activation_url = f"{settings.FRONTEND_ORIGIN}/invitaciones/activar?token={token}"
-    send_mail(
-        subject="Invitación a la plataforma académica",
-        message=(
-            "Recibiste una invitación institucional. Abre este enlace una sola vez: "
-            f"{activation_url}"
+    context = {
+        "activation_url": activation_url,
+        "expiration_hours": int(
+            (invitation.expires_at - timezone.now()).total_seconds() // 3600
         ),
-        from_email=None,
-        recipient_list=[invitation.email],
-        fail_silently=False,
+        "invitation": invitation,
+        "platform_name": "Plataforma Académica",
+    }
+    message = EmailMultiAlternatives(
+        subject="Invitación a la plataforma académica",
+        body=render_to_string("organizations/email/invitation.txt", context),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[invitation.email],
+        headers={
+            "Resend-Idempotency-Key": (
+                f"membership-invitation-{invitation.id}-{int(invitation.updated_at.timestamp())}"
+            )
+        },
     )
+    message.attach_alternative(
+        render_to_string("organizations/email/invitation.html", context), "text/html"
+    )
+    message.send(fail_silently=False)
+
+
+def _send_member_recovery_email(*, membership: Membership, event_id: str) -> None:
+    """Invite the member to start allauth's recovery flow in their own browser."""
+
+    recovery_url = urljoin(
+        f"{settings.FRONTEND_ORIGIN.rstrip('/')}/", "auth/recuperar-contrasena"
+    )
+    profile = getattr(membership, "institutional_profile", None)
+    context = {
+        "membership": membership,
+        "member_name": (
+            getattr(profile, "preferred_name", "")
+            or getattr(profile, "first_name", "")
+            or membership.user.email
+        ),
+        "organization": membership.organization,
+        "platform_name": "Plataforma Académica",
+        "recovery_url": recovery_url,
+    }
+    message = EmailMultiAlternatives(
+        subject="Recupera tu acceso a la plataforma académica",
+        body=render_to_string("organizations/email/member_recovery.txt", context),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[membership.user.email],
+        headers={"Resend-Idempotency-Key": f"member-recovery-{event_id}"},
+    )
+    message.attach_alternative(
+        render_to_string("organizations/email/member_recovery.html", context),
+        "text/html",
+    )
+    message.send(fail_silently=False)
 
 
 @transaction.atomic
@@ -585,6 +647,22 @@ def create_invitation(
     phone: str = "",
     locale: str = "es",
     timezone_name: str = "UTC",
+    middle_name: str = "",
+    second_family_name: str = "",
+    whatsapp: str = "",
+    date_of_birth: date | None = None,
+    document_type: str = "",
+    document_number: str = "",
+    gender: str = "",
+    education_stage: str = "",
+    education_institution: str = "",
+    education_level: str = "",
+    department_code: str = "",
+    municipality: str = "",
+    address: str = "",
+    socioeconomic_stratum: str = "",
+    registration_reason: str = "",
+    registration_reason_detail: str = "",
 ) -> tuple[MembershipInvitation, str]:
     locked_organization = _locked_organization(organization)
     _require_capability(actor, locked_organization, Capability.MEMBERSHIP_INVITE)
@@ -614,11 +692,27 @@ def create_invitation(
         expires_at=timezone.now() + timedelta(hours=settings.invitation_expiry_hours),
         invited_by=actor,
         given_name=given_name.strip(),
+        middle_name=middle_name.strip(),
         family_name=family_name.strip(),
+        second_family_name=second_family_name.strip(),
         preferred_name=preferred_name.strip(),
-        member_type=member_type.strip(),
+        member_type=normalize_member_type(member_type),
         institutional_id=institutional_id.strip(),
         phone=phone.strip(),
+        whatsapp=whatsapp.strip(),
+        date_of_birth=date_of_birth,
+        document_type=document_type,
+        document_number=document_number.strip(),
+        gender=gender,
+        education_stage=education_stage,
+        education_institution=education_institution.strip(),
+        education_level=education_level,
+        department_code=department_code,
+        municipality=municipality.strip(),
+        address=address.strip(),
+        socioeconomic_stratum=socioeconomic_stratum,
+        registration_reason=registration_reason,
+        registration_reason_detail=registration_reason_detail.strip(),
         locale=locale.strip() or "es",
         timezone_name=timezone_name.strip() or "UTC",
     )
@@ -651,6 +745,22 @@ def invite_person(
     phone: str = "",
     locale: str = "es",
     timezone_name: str = "UTC",
+    middle_name: str = "",
+    second_family_name: str = "",
+    whatsapp: str = "",
+    date_of_birth: date | None = None,
+    document_type: str = "",
+    document_number: str = "",
+    gender: str = "",
+    education_stage: str = "",
+    education_institution: str = "",
+    education_level: str = "",
+    department_code: str = "",
+    municipality: str = "",
+    address: str = "",
+    socioeconomic_stratum: str = "",
+    registration_reason: str = "",
+    registration_reason_detail: str = "",
 ) -> MembershipInvitation:
     """Create the correct invitation without exposing a token to callers."""
 
@@ -674,6 +784,22 @@ def invite_person(
         phone=phone,
         locale=locale,
         timezone_name=timezone_name,
+        middle_name=middle_name,
+        second_family_name=second_family_name,
+        whatsapp=whatsapp,
+        date_of_birth=date_of_birth,
+        document_type=document_type,
+        document_number=document_number,
+        gender=gender,
+        education_stage=education_stage,
+        education_institution=education_institution,
+        education_level=education_level,
+        department_code=department_code,
+        municipality=municipality,
+        address=address,
+        socioeconomic_stratum=socioeconomic_stratum,
+        registration_reason=registration_reason,
+        registration_reason_detail=registration_reason_detail,
     )
     return invitation
 
@@ -687,12 +813,28 @@ def create_managed_account(
     roles: set[RoleCode],
     given_name: str,
     family_name: str,
-    preferred_name: str,
-    member_type: str,
-    institutional_id: str,
-    phone: str,
-    locale: str,
-    timezone_name: str,
+    preferred_name: str = "",
+    member_type: str = "",
+    institutional_id: str = "",
+    phone: str = "",
+    locale: str = "es",
+    timezone_name: str = "America/Bogota",
+    middle_name: str = "",
+    second_family_name: str = "",
+    whatsapp: str = "",
+    date_of_birth: date | None = None,
+    document_type: str = "",
+    document_number: str = "",
+    gender: str = "",
+    education_stage: str = "",
+    education_institution: str = "",
+    education_level: str = "",
+    department_code: str = "",
+    municipality: str = "",
+    address: str = "",
+    socioeconomic_stratum: str = "",
+    registration_reason: str = "",
+    registration_reason_detail: str = "",
 ) -> tuple[MembershipInvitation, str]:
     clean_email = email.strip().lower()
     user_model = get_user_model()
@@ -701,7 +843,11 @@ def create_managed_account(
     user = user_model(
         email=clean_email,
         first_name=given_name.strip(),
-        last_name=family_name.strip(),
+        last_name=" ".join(
+            value
+            for value in (family_name.strip(), second_family_name.strip())
+            if value
+        ),
         is_active=False,
     )
     user.set_unusable_password()
@@ -724,6 +870,22 @@ def create_managed_account(
         phone=phone,
         locale=locale,
         timezone_name=timezone_name,
+        middle_name=middle_name,
+        second_family_name=second_family_name,
+        whatsapp=whatsapp,
+        date_of_birth=date_of_birth,
+        document_type=document_type,
+        document_number=document_number,
+        gender=gender,
+        education_stage=education_stage,
+        education_institution=education_institution,
+        education_level=education_level,
+        department_code=department_code,
+        municipality=municipality,
+        address=address,
+        socioeconomic_stratum=socioeconomic_stratum,
+        registration_reason=registration_reason,
+        registration_reason_detail=registration_reason_detail,
     )
     _record_event(
         organization=organization,
@@ -1066,6 +1228,66 @@ def activate_managed_account(*, request: HttpRequest, password: str) -> Membersh
     return membership
 
 
+@transaction.atomic
+def manually_activate_managed_account(
+    *,
+    actor: User,
+    invitation: MembershipInvitation,
+    temporary_password: str,
+    confirm_identity: bool,
+) -> Membership:
+    """Activate an institution-managed account after an in-person identity check."""
+
+    locked = (
+        MembershipInvitation.objects.select_for_update(of=("self",))
+        .select_related("existing_user", "organization")
+        .get(pk=invitation.pk)
+    )
+    _require_capability(
+        actor, locked.organization, Capability.MEMBERSHIP_INVITATION_MANAGE
+    )
+    _assert_invitation_available(locked)
+    if not confirm_identity:
+        raise InvitationUnavailable(
+            "Confirma que la institución verificó presencialmente la identidad."
+        )
+    if (
+        locked.invitation_type != InvitationType.MANAGED_ACCOUNT
+        or locked.existing_user is None
+    ):
+        raise InvitationUnavailable(
+            "Sólo las cuentas administradas pueden activarse manualmente."
+        )
+    user = locked.existing_user
+    validate_password(temporary_password, user=user)
+    user.set_password(temporary_password)
+    user.is_active = True
+    user.save(update_fields=("password", "is_active"))
+    EmailAddress.objects.update_or_create(
+        user=user,
+        email=user.email,
+        defaults={"primary": True, "verified": True},
+    )
+    membership = _create_active_membership(
+        organization=locked.organization,
+        user=user,
+        actor=actor,
+        roles={RoleCode(role) for role in locked.invited_roles},
+        invitation=locked,
+    )
+    locked.status = InvitationStatus.ACCEPTED
+    locked.accepted_at = timezone.now()
+    locked.save(update_fields=("status", "accepted_at", "updated_at"))
+    _record_event(
+        organization=locked.organization,
+        membership=membership,
+        actor=actor,
+        event_type=MembershipEventType.MANAGED_ACCOUNT_ACTIVATED,
+        details={"activation_method": "administrator_identity_check"},
+    )
+    return membership
+
+
 def begin_public_join(*, request: HttpRequest, organization: Organization) -> None:
     settings = OrganizationMembershipSettings.objects.get(organization=organization)
     if not settings.public_join_enabled:
@@ -1174,6 +1396,7 @@ def update_member_profile(
     locale: str,
     timezone_name: str,
     administrative_notes: str | None = None,
+    profile_values: dict[str, object] | None = None,
 ) -> OrganizationMemberProfile:
     locked = _locked_membership(membership)
     is_self = locked.user_id == actor.pk
@@ -1199,12 +1422,37 @@ def update_member_profile(
         raise OrganizationAccessDenied(
             "Solo la institución puede modificar los datos administrativos."
         )
-    profile.member_type = member_type.strip()
+    profile.member_type = normalize_member_type(member_type)
     profile.institutional_id = institutional_id.strip()
     profile.preferred_name = preferred_name.strip()
     profile.phone = phone.strip()
     profile.locale = locale.strip() or "es"
     profile.timezone = timezone_name.strip() or "UTC"
+    editable_fields = {
+        "first_name",
+        "middle_name",
+        "first_surname",
+        "second_surname",
+        "whatsapp",
+        "date_of_birth",
+        "document_type",
+        "document_number",
+        "gender",
+        "education_stage",
+        "education_institution",
+        "education_level",
+        "department_code",
+        "municipality",
+        "address",
+        "socioeconomic_stratum",
+        "registration_reason",
+        "registration_reason_detail",
+    }
+    for field_name, raw_value in (profile_values or {}).items():
+        if field_name not in editable_fields:
+            continue
+        value = raw_value.strip() if isinstance(raw_value, str) else raw_value
+        setattr(profile, field_name, value)
     if administrative_notes is not None:
         if not can_manage:
             raise OrganizationAccessDenied(
@@ -1240,3 +1488,27 @@ def revoke_user_sessions(*, actor: User, membership: Membership) -> int:
         event_type=MembershipEventType.SESSIONS_REVOKED,
     )
     return deleted
+
+
+@transaction.atomic
+def send_member_password_recovery(*, actor: User, membership: Membership) -> None:
+    """Send recovery instructions without binding a flow to the administrator session."""
+
+    locked = _locked_membership(membership)
+    _require_capability(actor, locked.organization, Capability.MEMBERSHIP_RECOVERY_SEND)
+    if locked.status != MembershipStatus.ACTIVE.value or not locked.user.is_active:
+        raise MembershipNotActive(
+            "La recuperación solo está disponible para cuentas activas."
+        )
+    event = _record_event(
+        organization=locked.organization,
+        membership=locked,
+        actor=actor,
+        event_type=MembershipEventType.PASSWORD_RECOVERY_SENT,
+    )
+    transaction.on_commit(
+        lambda: _send_member_recovery_email(
+            membership=locked,
+            event_id=str(event.pk),
+        )
+    )

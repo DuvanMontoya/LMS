@@ -13,9 +13,10 @@ from rest_framework.test import APIClient
 
 from domain.learning.contracts import register_live_session_requirement
 from domain.learning.models import ExternalRequirementCompletion
-from domain.scheduling.choices import LiveSessionStatus
+from domain.scheduling.choices import EventType, LiveSessionStatus
 from domain.scheduling.livekit_gateway import LiveKitConfiguration, LiveKitGateway
 from domain.scheduling.models import AttendanceSegment, LiveKitWebhookEvent
+from domain.scheduling.services import create_event_series
 from domain.scheduling.webhooks import receive_and_process_webhook
 
 from .support import SchedulingFixtureMixin
@@ -44,6 +45,47 @@ def signed_webhook(payload: dict[str, object]) -> tuple[bytes, str]:
 
 @override_settings(**LIVEKIT_SETTINGS)
 class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
+    def test_live_session_directory_includes_standalone_and_filters_course(self) -> None:
+        context = self.scheduling_context()
+        standalone = create_event_series(
+            actor=context["owner"],
+            organization=context["organization"],
+            course=None,
+            host_membership=context["series"].host_membership,
+            participant_memberships=[context["learner_membership"]],
+            title="Tutoría particular",
+            description="Sesión independiente",
+            event_type=EventType.LIVE_CLASS,
+            timezone_name="America/Bogota",
+            first_starts_at=timezone.now() + timedelta(hours=2),
+            duration_minutes=45,
+        )
+        client = APIClient()
+        client.force_authenticate(context["learner"])
+        base = (
+            f"/api/v1/organizations/{context['organization'].slug}"
+            "/scheduling/live-sessions/"
+        )
+
+        listing = client.get(base, {"scope": "all"})
+        self.assertEqual(listing.status_code, 200)
+        by_title = {row["title"]: row for row in listing.json()}
+        self.assertIsNone(by_title[standalone.title]["course"])
+        self.assertIn(context["series"].title, by_title)
+
+        filtered = client.get(
+            base,
+            {"course_slug": context["course"].slug, "scope": "all"},
+        )
+        self.assertEqual(filtered.status_code, 200)
+        self.assertTrue(filtered.json())
+        self.assertTrue(
+            all(
+                row["course"]["slug"] == context["course"].slug
+                for row in filtered.json()
+            )
+        )
+
     def test_calendar_feed_is_scoped_and_never_leaks_room_or_token(self) -> None:
         context = self.scheduling_context()
         client = APIClient()

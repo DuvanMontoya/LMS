@@ -25,6 +25,7 @@ import {
   Tags,
   Target,
   Users,
+  Video,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -206,13 +207,20 @@ function PlatformSidebar({
   const academicNavigation: NavigationItem[] = organizationBase
     ? [
         {
-          activePrefixes: [`${organizationBase}/clases/`],
           href: `${organizationBase}/calendario`,
           icon: CalendarDays,
           label: 'Calendario',
           visible:
             capabilities.has('scheduling.view') ||
             capabilities.has('assessment.attempt'),
+        },
+        {
+          activePrefixes: [`${organizationBase}/clases/`],
+          exact: true,
+          href: `${organizationBase}/clases`,
+          icon: Video,
+          label: 'Clases en vivo',
+          visible: capabilities.has('scheduling.view'),
         },
         {
           activePrefixes: [`${organizationBase}/aprender/`],
@@ -424,8 +432,16 @@ function PlatformSidebar({
   const administrationNavigation: NavigationItem[] = organizationBase
     ? [
         {
-          activePrefixes: [`${organizationBase}/aprendizaje/matriculas`],
+          activePrefixes: [
+            `${organizationBase}/aprendizaje/matriculas`,
+            `${organizationBase}/aprendizaje/grupos`,
+          ],
           children: [
+            {
+              href: `${organizationBase}/aprendizaje/grupos`,
+              label: 'Grupos académicos',
+              visible: capabilities.has('learning.cohort.view'),
+            },
             {
               href: `${organizationBase}/aprendizaje/cohortes`,
               label: 'Cohortes',

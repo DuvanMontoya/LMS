@@ -54,12 +54,16 @@ def send_email_delivery(delivery_id: str) -> None:
         context = {"notification": delivery.notification, "action_url": action_url}
         text_body = render_to_string("notifications/email.txt", context)
         html_body = render_to_string("notifications/email.html", context)
-        message_id = f"<{delivery.id}@lms.invalid>"
+        message_id = f"<{delivery.id}@{settings.EMAIL_MESSAGE_ID_DOMAIN}>"
         message = EmailMultiAlternatives(
             subject=delivery.notification.title,
             body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
             to=[address],
-            headers={"Message-ID": message_id},
+            headers={
+                "Message-ID": message_id,
+                "Resend-Idempotency-Key": f"notification-{delivery.id}",
+            },
         )
         message.attach_alternative(html_body, "text/html")
         message.send(fail_silently=False)

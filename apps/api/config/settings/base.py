@@ -141,6 +141,9 @@ ACCOUNT_LOGOUT_ON_GET = False
 ACCOUNT_EMAIL_NOTIFICATIONS = True
 ACCOUNT_PHONE_VERIFICATION_ENABLED = False
 ACCOUNT_ADAPTER = "domain.identity.adapters.LMSAccountAdapter"
+ACCOUNT_EMAIL_SUBJECT_PREFIX = os.environ.get(
+    "ACCOUNT_EMAIL_SUBJECT_PREFIX", "[Plataforma Académica] "
+)
 
 HEADLESS_ONLY = True
 HEADLESS_CLIENTS = ("browser",)
@@ -352,6 +355,8 @@ CSRF_COOKIE_SECURE = False
 DEFAULT_FROM_EMAIL = "Plataforma académica <no-reply@lms.invalid>"
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 EMAIL_SUBJECT_PREFIX = "[Plataforma académica] "
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "15"))
+EMAIL_MESSAGE_ID_DOMAIN = os.environ.get("EMAIL_MESSAGE_ID_DOMAIN", "lms.invalid")
 NOTIFICATION_EMAIL_HMAC_KEY = os.environ.get("NOTIFICATION_EMAIL_HMAC_KEY", SECRET_KEY)
 INTEGRATIONS_MASTER_KEYS = os.environ.get("INTEGRATIONS_MASTER_KEYS", "")
 INTEGRATIONS_ACTIVE_KEY_ID = os.environ.get("INTEGRATIONS_ACTIVE_KEY_ID", "")
@@ -416,6 +421,8 @@ SPECTACULAR_SETTINGS = {
         "LearningUnitProgressStatus": "domain.learning.choices.UnitProgressStatus",
         "LearningEventType": "domain.learning.choices.LearningEventType",
         "LearningAccessState": "domain.learning.choices.AccessState",
+        "AcademicGroupRole": "domain.learning.choices.AcademicGroupRole",
+        "AcademicGroupLevel": "domain.learning.choices.AcademicGroupLevel",
         "AssessmentAuthoringStatus": "domain.assessments.choices.AuthoringStatus",
         "AssessmentQuestionType": "domain.assessments.choices.QuestionType",
         "AssessmentFeedbackMode": "domain.assessments.choices.FeedbackMode",

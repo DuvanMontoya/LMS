@@ -16,4 +16,10 @@ describe('allauth error mapping', () => {
       'No fue posible completar la solicitud. Inténtalo nuevamente.',
     );
   });
+
+  it('explains that a different account cannot replace an active session', () => {
+    expect(mapAllauthErrorToSpanish('already_authenticated', null)).toBe(
+      'Ya hay una sesión iniciada en este navegador. Ciérrala antes de ingresar con otra cuenta.',
+    );
+  });
 });

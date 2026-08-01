@@ -3,11 +3,13 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from domain.learning.choices import (
+    AcademicGroupLevel,
+    AcademicGroupRole,
     AccessState,
     EnrollmentStatus,
     ProgressStatus,
 )
-from domain.learning.models import CourseEnrollment, LearningCohort
+from domain.learning.models import AcademicGroup, CourseEnrollment, LearningCohort
 
 
 class ErrorSerializer(serializers.Serializer):
@@ -16,11 +18,83 @@ class ErrorSerializer(serializers.Serializer):
     current_version = serializers.IntegerField(required=False)
 
 
+class AcademicGroupMemberSerializer(serializers.Serializer):
+    membership_id = serializers.UUIDField(source="membership.id")
+    email = serializers.EmailField(source="membership.user.email")
+    role = serializers.ChoiceField(choices=AcademicGroupRole.choices)
+    status = serializers.CharField()
+
+
+class AcademicGroupReadSerializer(serializers.ModelSerializer):
+    roster = AcademicGroupMemberSerializer(many=True, read_only=True)
+    linked_cohort_count = serializers.IntegerField(read_only=True, required=False)
+
+    class Meta:
+        model = AcademicGroup
+        fields = (
+            "id",
+            "name",
+            "slug",
+            "academic_year",
+            "level",
+            "section",
+            "description",
+            "status",
+            "roster",
+            "linked_cohort_count",
+            "created_at",
+            "updated_at",
+        )
+
+
+class AcademicGroupCreateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=200)
+    slug = serializers.SlugField(max_length=100, required=False)
+    academic_year = serializers.IntegerField(min_value=2000, max_value=2200)
+    level = serializers.ChoiceField(choices=AcademicGroupLevel.choices)
+    section = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    description = serializers.CharField(
+        max_length=2_000, required=False, allow_blank=True
+    )
+
+
+class AcademicGroupRosterEntrySerializer(serializers.Serializer):
+    membership_id = serializers.UUIDField()
+    role = serializers.ChoiceField(choices=AcademicGroupRole.choices)
+
+
+class AcademicGroupRosterSerializer(serializers.Serializer):
+    members = AcademicGroupRosterEntrySerializer(many=True, allow_empty=True)
+
+    def validate_members(self, value: list[dict[str, object]]) -> list[dict[str, object]]:
+        membership_ids = [entry["membership_id"] for entry in value]
+        if len(membership_ids) != len(set(membership_ids)):
+            raise serializers.ValidationError(
+                "Una persona no puede aparecer más de una vez en el grupo."
+            )
+        if len(value) > 200:
+            raise serializers.ValidationError(
+                "El grupo no puede superar 200 integrantes."
+            )
+        return value
+
+
+class PaginatedAcademicGroupSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = AcademicGroupReadSerializer(many=True)
+
+
 class CohortReadSerializer(serializers.ModelSerializer):
     course_slug = serializers.CharField(source="course.slug")
     course_title = serializers.CharField(source="release.title")
     release_number = serializers.IntegerField(source="release.number")
     enrollment_count = serializers.IntegerField(read_only=True, required=False)
+    academic_group_id = serializers.UUIDField(read_only=True, allow_null=True)
+    academic_group_name = serializers.CharField(
+        source="academic_group.name", read_only=True, allow_null=True
+    )
 
     class Meta:
         model = LearningCohort
@@ -33,6 +107,8 @@ class CohortReadSerializer(serializers.ModelSerializer):
             "course_slug",
             "course_title",
             "release_number",
+            "academic_group_id",
+            "academic_group_name",
             "access_starts_at",
             "access_ends_at",
             "enrollment_count",
@@ -44,6 +120,7 @@ class CohortReadSerializer(serializers.ModelSerializer):
 class CohortCreateSerializer(serializers.Serializer):
     course_slug = serializers.SlugField()
     release_number = serializers.IntegerField(min_value=1)
+    academic_group_id = serializers.UUIDField(required=False, allow_null=True)
     name = serializers.CharField(max_length=200)
     slug = serializers.SlugField(max_length=80, required=False)
     description = serializers.CharField(

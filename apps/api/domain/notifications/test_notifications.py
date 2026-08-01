@@ -1,13 +1,16 @@
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportAttributeAccessIssue=false
 import uuid
-from unittest.mock import patch
+from io import StringIO
+from unittest.mock import MagicMock, patch
 
 from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.db import IntegrityError, transaction
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -35,6 +38,52 @@ from .tasks import send_email_delivery
 
 
 class NotificationTests(TestCase):
+    @patch(
+        "domain.notifications.management.commands.check_smtp_connection.get_connection"
+    )
+    @override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
+        EMAIL_HOST="smtp.example.test",
+        EMAIL_PORT=587,
+    )
+    def test_smtp_check_authenticates_without_sending(
+        self, connection_factory: MagicMock
+    ) -> None:
+        connection = connection_factory.return_value
+        output = StringIO()
+
+        call_command("check_smtp_connection", stdout=output)
+
+        connection.open.assert_called_once_with()
+        connection.close.assert_called_once_with()
+        self.assertIn("no se envió ningún correo", output.getvalue())
+
+    @patch(
+        "domain.notifications.management.commands.send_smtp_test_email."
+        "EmailMultiAlternatives.send",
+        return_value=1,
+    )
+    @override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
+        DEFAULT_FROM_EMAIL="Plataforma Académica <cuentas@example.test>",
+    )
+    def test_smtp_send_requires_confirmation_and_builds_message(
+        self, send: MagicMock
+    ) -> None:
+        with self.assertRaisesMessage(CommandError, "Se requiere --confirm"):
+            call_command("send_smtp_test_email", to="recipient@example.test")
+
+        output = StringIO()
+        call_command(
+            "send_smtp_test_email",
+            to="recipient@example.test",
+            confirm=True,
+            stdout=output,
+        )
+
+        send.assert_called_once_with(fail_silently=False)
+        self.assertIn("Correo de prueba transmitido", output.getvalue())
+
     def setUp(self) -> None:
         self.user = get_user_model().objects.create_user(
             email="notification-owner@example.test",

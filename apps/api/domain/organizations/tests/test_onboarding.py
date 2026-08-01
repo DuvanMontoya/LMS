@@ -5,13 +5,23 @@ from datetime import timedelta
 from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import RequestFactory, TestCase
 from django.utils import timezone
 
-from domain.organizations.choices import InvitationStatus, InvitationType, RoleCode
+from domain.organizations.choices import (
+    InvitationStatus,
+    InvitationType,
+    MembershipEventType,
+    RoleCode,
+)
 from domain.organizations.exceptions import RevisionConflict
-from domain.organizations.models import Membership, MembershipInvitation
+from domain.organizations.models import (
+    Membership,
+    MembershipEvent,
+    MembershipInvitation,
+)
 from domain.organizations.services import (
     accept_session_invitation,
     add_existing_member_with_roles,
@@ -128,15 +138,95 @@ class OnboardingApiTests(TestCase):
             actor=owner, name="Institución", slug="institucion"
         )
         self.client.force_login(owner)
-        response = self.client.post(
-            f"/api/v1/organizations/{organization.slug}/invitations/",
-            {"email": "invitee@example.test", "roles": [RoleCode.LEARNER]},
-            content_type="application/json",
-        )
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"/api/v1/organizations/{organization.slug}/invitations/",
+                {"email": "invitee@example.test", "roles": [RoleCode.LEARNER]},
+                content_type="application/json",
+            )
         self.assertEqual(response.status_code, 201)
         self.assertNotIn("token", response.json())
         self.assertNotIn("token_digest", response.json())
         self.assertEqual(MembershipInvitation.objects.count(), 1)
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        self.assertEqual(message.to, ["invitee@example.test"])
+        self.assertIn("/invitaciones/activar?token=", message.body)
+        self.assertEqual(message.alternatives[0].mimetype, "text/html")
+        self.assertIn("Activar mi acceso", message.alternatives[0].content)
+        self.assertTrue(
+            message.extra_headers["Resend-Idempotency-Key"].startswith(
+                "membership-invitation-"
+            )
+        )
+
+    def test_administrator_recovery_email_does_not_bind_flow_to_its_session(
+        self,
+    ) -> None:
+        owner = self.verified_user("owner@example.test")
+        organization = create_organization_with_owner(
+            actor=owner, name="Institución", slug="institucion"
+        )
+        learner = self.verified_user("learner@example.test")
+        membership = add_existing_member_with_roles(
+            actor=owner,
+            organization=organization,
+            user=learner,
+            roles={RoleCode.LEARNER},
+        )
+        self.client.force_login(owner)
+        session_key = self.client.session.session_key
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                f"/api/v1/organizations/{organization.slug}/memberships/"
+                f"{membership.pk}/password-recovery/"
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"sent": True})
+        self.assertEqual(self.client.session.session_key, session_key)
+        self.assertNotIn("account_password_reset_verification", self.client.session)
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        self.assertEqual(message.to, [learner.email])
+        self.assertIn("/auth/recuperar-contrasena", message.body)
+        self.assertNotIn("password_reset", message.body)
+        self.assertEqual(message.alternatives[0].mimetype, "text/html")
+        self.assertTrue(
+            message.extra_headers["Resend-Idempotency-Key"].startswith(
+                "member-recovery-"
+            )
+        )
+        self.assertTrue(
+            MembershipEvent.objects.filter(
+                membership=membership,
+                event_type=MembershipEventType.PASSWORD_RECOVERY_SENT,
+                actor=owner,
+            ).exists()
+        )
+
+    def test_learner_cannot_send_recovery_for_another_member(self) -> None:
+        owner = self.verified_user("owner@example.test")
+        organization = create_organization_with_owner(
+            actor=owner, name="Institución", slug="institucion"
+        )
+        learner = self.verified_user("learner@example.test")
+        membership = add_existing_member_with_roles(
+            actor=owner,
+            organization=organization,
+            user=learner,
+            roles={RoleCode.LEARNER},
+        )
+        self.client.force_login(learner)
+
+        response = self.client.post(
+            f"/api/v1/organizations/{organization.slug}/memberships/"
+            f"{membership.pk}/password-recovery/"
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_member_directory_filters_are_remote_and_combinable(self) -> None:
         owner = self.verified_user("owner@example.test")

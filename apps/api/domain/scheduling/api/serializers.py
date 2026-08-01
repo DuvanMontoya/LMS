@@ -134,6 +134,13 @@ class LiveSessionDetailSerializer(serializers.Serializer):
     canDelete = serializers.BooleanField()
 
 
+class LiveSessionListQuerySerializer(serializers.Serializer):
+    course_slug = serializers.SlugField(required=False, allow_blank=True)
+    scope = serializers.ChoiceField(
+        choices=("upcoming", "past", "all"), default="upcoming"
+    )
+
+
 class ParticipantPermissionSerializer(serializers.Serializer):
     can_publish_audio = serializers.BooleanField()
     can_publish_video = serializers.BooleanField()

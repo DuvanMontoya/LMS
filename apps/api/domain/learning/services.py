@@ -19,6 +19,7 @@ from domain.publishing.models import CoursePublication, CourseRelease
 
 from .access import require_learning_access
 from .choices import (
+    AcademicGroupMemberStatus,
     AssignmentReason,
     CohortStatus,
     EnrollmentStatus,
@@ -42,6 +43,8 @@ from .exceptions import (
     LearningUnitNotCompleted,
 )
 from .models import (
+    AcademicGroup,
+    AcademicGroupMember,
     CourseEnrollment,
     CourseProgress,
     EnrollmentReleaseAssignment,
@@ -87,6 +90,92 @@ def _active_publication(course: Course) -> CoursePublication:
     if publication is None or publication.status != PublicationStatus.ACTIVE:
         raise LearningReleaseInvalid("El curso no tiene publicación activa.")
     return publication
+
+
+@transaction.atomic
+def create_academic_group(
+    *,
+    actor: object,
+    organization: Organization,
+    name: str,
+    academic_year: int,
+    level: str,
+    section: str = "",
+    description: str = "",
+    slug: str | None = None,
+) -> AcademicGroup:
+    if not can_manage_cohorts(actor, organization):  # type: ignore[arg-type]
+        raise LearningPermissionDenied("No puede administrar grupos académicos.")
+    group = AcademicGroup(
+        organization=organization,
+        name=name,
+        slug=slugify(slug or f"{name}-{academic_year}")[:100],
+        academic_year=academic_year,
+        level=level,
+        section=section,
+        description=description,
+        created_by=actor,
+    )
+    group.full_clean()
+    group.save()
+    return group
+
+
+@transaction.atomic
+def replace_academic_group_roster(
+    *,
+    actor: object,
+    group: AcademicGroup,
+    members: list[dict[str, object]],
+) -> AcademicGroup:
+    group = AcademicGroup.objects.select_for_update().get(pk=group.pk)
+    if not can_manage_cohorts(actor, group.organization):  # type: ignore[arg-type]
+        raise LearningPermissionDenied("No puede administrar grupos académicos.")
+    requested_roles = {
+        entry["membership_id"]: str(entry["role"]) for entry in members
+    }
+    membership_ids = list(requested_roles)
+    memberships = list(
+        Membership.objects.filter(
+            organization=group.organization,
+            status=MembershipStatus.ACTIVE,
+            pk__in=membership_ids,
+        )
+    )
+    if len(memberships) != len(set(membership_ids)):
+        raise LearningPermissionDenied(
+            "Una o más personas no son miembros activos de la organización."
+        )
+    now = timezone.now()
+    existing = {
+        row.membership_id: row
+        for row in AcademicGroupMember.objects.select_for_update().filter(group=group)
+    }
+    requested = set(membership_ids)
+    for membership_id, row in existing.items():
+        if membership_id not in requested and row.status == AcademicGroupMemberStatus.ACTIVE:
+            row.status = AcademicGroupMemberStatus.INACTIVE
+            row.ended_at = now
+            row.save(update_fields=["status", "ended_at"])
+    for membership in memberships:
+        role = requested_roles[membership.id]
+        row = existing.get(membership.id)
+        if row is None:
+            AcademicGroupMember.objects.create(
+                group=group,
+                membership=membership,
+                role=role,
+                added_by=actor,
+            )
+        elif row.status != AcademicGroupMemberStatus.ACTIVE:
+            row.status = AcademicGroupMemberStatus.ACTIVE
+            row.ended_at = None
+            row.role = role
+            row.save(update_fields=["status", "ended_at", "role"])
+        elif row.role != role:
+            row.role = role
+            row.save(update_fields=["role"])
+    return group
 
 
 def _event(
@@ -155,6 +244,7 @@ def create_cohort(
     organization: Organization,
     course: Course,
     release: CourseRelease,
+    academic_group: AcademicGroup | None = None,
     name: str,
     slug: str | None = None,
     description: str = "",
@@ -166,10 +256,13 @@ def create_cohort(
     _validate_window(access_starts_at, access_ends_at)
     _active_publication(course)
     _validate_release(organization=organization, course=course, release=release)
+    if academic_group and academic_group.organization_id != organization.id:
+        raise LearningPermissionDenied("El grupo pertenece a otra organización.")
     cohort = LearningCohort(
         organization=organization,
         course=course,
         release=release,
+        academic_group=academic_group,
         name=name,
         slug=slugify(slug or name),
         description=description,

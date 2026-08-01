@@ -1,6 +1,10 @@
 import { browserClient } from '@/lib/api/browser-client';
 import { csrfFetch } from '@/lib/api/csrf';
-import { toAuthApiError, toNetworkAuthError } from '@/lib/auth/errors';
+import {
+  AuthApiError,
+  toAuthApiError,
+  toNetworkAuthError,
+} from '@/lib/auth/errors';
 
 import type { components } from '@/lib/api/generated/allauth';
 
@@ -117,13 +121,15 @@ export function resendVerification(): Promise<unknown> {
 }
 
 export function login(email: string, password: string): Promise<unknown> {
-  return browserRequest(
-    () =>
-      browserClient.POST('/_allauth/browser/v1/auth/login', {
-        body: { email, password },
-      }),
-    [200],
-  );
+  return browserRequest(async () => {
+    const result = await browserClient.POST('/_allauth/browser/v1/auth/login', {
+      body: { email, password },
+    });
+    if (result.response.status === 409) {
+      throw new AuthApiError('already_authenticated', 409, null, {});
+    }
+    return result;
+  }, [200]);
 }
 
 export function logout(): Promise<unknown> {

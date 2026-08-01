@@ -3,7 +3,7 @@ from __future__ import annotations
 # DRF request/serializer/pagination objects are dynamically typed by upstream.
 # Domain policies and services remain in strictly checked modules.
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportIndexIssue=false, reportOptionalSubscript=false, reportAttributeAccessIssue=false, reportOptionalMemberAccess=false, reportPrivateUsage=false, reportCallIssue=false
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q, QuerySet
@@ -71,6 +71,7 @@ from domain.organizations.services import (
     create_public_join_request,
     expire_due_invitations,
     invite_person,
+    manually_activate_managed_account,
     reactivate_membership,
     replace_membership_roles,
     resend_invitation,
@@ -78,6 +79,7 @@ from domain.organizations.services import (
     revoke_invitation,
     revoke_membership,
     revoke_user_sessions,
+    send_member_password_recovery,
     suspend_membership,
     update_member_profile,
     update_membership_settings,
@@ -101,6 +103,7 @@ from .serializers import (
     ManagedAccountCreateSerializer,
     ManagedAccountEmailCorrectionSerializer,
     ManagedActivationSerializer,
+    ManagedManualActivationSerializer,
     MemberProfileSerializer,
     MemberProfileUpdateSerializer,
     MembershipEventSerializer,
@@ -113,6 +116,54 @@ from .serializers import (
     ReplaceRolesSerializer,
     UserSummarySerializer,
     access_organization_payload,
+)
+
+ONBOARDING_PROFILE_FIELDS = (
+    "given_name",
+    "middle_name",
+    "family_name",
+    "second_family_name",
+    "preferred_name",
+    "member_type",
+    "institutional_id",
+    "phone",
+    "whatsapp",
+    "date_of_birth",
+    "document_type",
+    "document_number",
+    "gender",
+    "education_stage",
+    "education_institution",
+    "education_level",
+    "department_code",
+    "municipality",
+    "address",
+    "socioeconomic_stratum",
+    "registration_reason",
+    "registration_reason_detail",
+    "locale",
+    "timezone_name",
+)
+
+MEMBER_PROFILE_FIELDS = (
+    "first_name",
+    "middle_name",
+    "first_surname",
+    "second_surname",
+    "whatsapp",
+    "date_of_birth",
+    "document_type",
+    "document_number",
+    "gender",
+    "education_stage",
+    "education_institution",
+    "education_level",
+    "department_code",
+    "municipality",
+    "address",
+    "socioeconomic_stratum",
+    "registration_reason",
+    "registration_reason_detail",
 )
 
 if TYPE_CHECKING:
@@ -566,24 +617,17 @@ class InvitationListCreateView(APIView):
         organization = _organization_or_404(_actor(request), slug)
         serializer = InvitationCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        values = cast(dict[str, Any], serializer.validated_data)
         try:
             invitation = invite_person(
                 actor=_actor(request),
                 organization=organization,
-                email=serializer.validated_data["email"],
-                roles={RoleCode(role) for role in serializer.validated_data["roles"]},
+                email=values["email"],
+                roles={RoleCode(role) for role in values["roles"]},
                 **{
-                    field: serializer.validated_data.get(field, "")
-                    for field in (
-                        "given_name",
-                        "family_name",
-                        "preferred_name",
-                        "member_type",
-                        "institutional_id",
-                        "phone",
-                        "locale",
-                        "timezone_name",
-                    )
+                    field: values[field]
+                    for field in ONBOARDING_PROFILE_FIELDS
+                    if field in values
                 },
             )
         except OrganizationDomainError as error:
@@ -642,24 +686,17 @@ class ManagedAccountCreateView(APIView):
         organization = _organization_or_404(_actor(request), slug)
         serializer = ManagedAccountCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        values = cast(dict[str, Any], serializer.validated_data)
         try:
             invitation, _ = create_managed_account(
                 actor=_actor(request),
                 organization=organization,
-                email=serializer.validated_data["email"],
-                roles={RoleCode(role) for role in serializer.validated_data["roles"]},
+                email=values["email"],
+                roles={RoleCode(role) for role in values["roles"]},
                 **{
-                    field: serializer.validated_data.get(field, "")
-                    for field in (
-                        "given_name",
-                        "family_name",
-                        "preferred_name",
-                        "member_type",
-                        "institutional_id",
-                        "phone",
-                        "locale",
-                        "timezone_name",
-                    )
+                    field: values[field]
+                    for field in ONBOARDING_PROFILE_FIELDS
+                    if field in values
                 },
             )
         except OrganizationDomainError as error:
@@ -720,6 +757,32 @@ class ManagedAccountEmailCorrectionView(APIView):
         except OrganizationDomainError as error:
             return _domain_error_response(error)
         return Response(InvitationSerializer(updated).data)
+
+
+class ManagedAccountManualActivationView(APIView):
+    @extend_schema(
+        request=ManagedManualActivationSerializer,
+        responses={201: MembershipSerializer},
+    )
+    def post(self, request: Request, slug: str, invitation_id: str) -> Response:
+        organization = _organization_or_404(_actor(request), slug)
+        invitation = get_object_or_404(
+            MembershipInvitation, pk=invitation_id, organization=organization
+        )
+        serializer = ManagedManualActivationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            membership = manually_activate_managed_account(
+                actor=_actor(request),
+                invitation=invitation,
+                temporary_password=serializer.validated_data["temporary_password"],
+                confirm_identity=serializer.validated_data["confirm_identity"],
+            )
+        except OrganizationDomainError as error:
+            return _domain_error_response(error)
+        return Response(
+            MembershipSerializer(membership).data, status=status.HTTP_201_CREATED
+        )
 
 
 class InvitationActivationView(APIView):
@@ -881,7 +944,7 @@ class MemberProfileView(APIView):
         current, _ = OrganizationMemberProfile.objects.get_or_create(
             membership=membership
         )
-        values = serializer.validated_data
+        values = cast(dict[str, Any], serializer.validated_data)
         try:
             profile = update_member_profile(
                 actor=_actor(request),
@@ -895,6 +958,11 @@ class MemberProfileView(APIView):
                 locale=values.get("locale", current.locale),
                 timezone_name=values.get("timezone", current.timezone),
                 administrative_notes=values.get("administrative_notes"),
+                profile_values={
+                    field: values[field]
+                    for field in MEMBER_PROFILE_FIELDS
+                    if field in values
+                },
             )
         except OrganizationDomainError as error:
             return _domain_error_response(error)
@@ -916,3 +984,15 @@ class RevokeMemberSessionsView(APIView):
         except OrganizationDomainError as error:
             return _domain_error_response(error)
         return Response({"revoked_sessions": deleted})
+
+
+class SendMemberPasswordRecoveryView(APIView):
+    @extend_schema(request=None, responses={200: OpenApiTypes.OBJECT})
+    def post(self, request: Request, slug: str, membership_id: str) -> Response:
+        organization = _organization_or_404(_actor(request), slug)
+        membership = _membership_or_404(_actor(request), organization, membership_id)
+        try:
+            send_member_password_recovery(actor=_actor(request), membership=membership)
+        except OrganizationDomainError as error:
+            return _domain_error_response(error)
+        return Response({"sent": True})

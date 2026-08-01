@@ -23,6 +23,7 @@ class Capability(StrEnum):
     MEMBERSHIP_SETTINGS_VIEW = "membership.settings.view"
     MEMBERSHIP_SETTINGS_MANAGE = "membership.settings.manage"
     MEMBERSHIP_SESSIONS_REVOKE = "membership.sessions.revoke"
+    MEMBERSHIP_RECOVERY_SEND = "membership.recovery.send"
     INTEGRATION_VIEW = "integration.view"
     INTEGRATION_MANAGE = "integration.manage"
     CATALOG_VIEW = "catalog.view"

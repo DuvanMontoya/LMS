@@ -39,6 +39,10 @@ class MembershipEventType(models.TextChoices):
     PROFILE_UPDATED = "profile_updated", "Perfil institucional actualizado"
     ROLES_REPLACED = "roles_replaced", "Roles sustituidos"
     SESSIONS_REVOKED = "sessions_revoked", "Sesiones revocadas"
+    PASSWORD_RECOVERY_SENT = (
+        "password_recovery_sent",
+        "Recuperación de contraseña enviada",
+    )
     SETTINGS_UPDATED = (
         "membership_settings_updated",
         "Configuración de membresías actualizada",
@@ -63,3 +67,97 @@ class JoinRequestStatus(models.TextChoices):
     APPROVED = "approved", "Aprobada"
     REJECTED = "rejected", "Rechazada"
     CANCELLED = "cancelled", "Cancelada"
+
+
+class MemberType(models.TextChoices):
+    LEARNER = "learner", "Estudiante"
+    INSTRUCTOR = "instructor", "Docente"
+    GUARDIAN = "guardian", "Acudiente"
+    ADMINISTRATIVE = "administrative", "Personal administrativo"
+    SUPPORT = "support", "Personal de apoyo"
+    OTHER = "other", "Otro"
+
+
+def normalize_member_type(value: str) -> str:
+    normalized = value.strip().lower()
+    aliases = {
+        "student": MemberType.LEARNER,
+        "estudiante": MemberType.LEARNER,
+        "teacher": MemberType.INSTRUCTOR,
+        "profesor": MemberType.INSTRUCTOR,
+        "docente": MemberType.INSTRUCTOR,
+        "staff": MemberType.ADMINISTRATIVE,
+    }
+    return str(aliases.get(normalized, normalized))
+
+
+class DocumentType(models.TextChoices):
+    CIVIL_REGISTRY = "RC", "Registro civil"
+    IDENTITY_CARD = "TI", "Tarjeta de identidad"
+    CITIZENSHIP_CARD = "CC", "Cédula de ciudadanía"
+    FOREIGNER_CARD = "CE", "Cédula de extranjería"
+    TEMPORARY_PROTECTION = "PPT", "Permiso por protección temporal"
+    PASSPORT = "PA", "Pasaporte"
+    FOREIGN_DOCUMENT = "DE", "Documento extranjero"
+    NONE = "NONE", "Sin documento registrado"
+
+
+class Gender(models.TextChoices):
+    FEMALE = "female", "Femenino"
+    MALE = "male", "Masculino"
+    NON_BINARY = "non_binary", "No binario"
+    OTHER = "other", "Otro"
+    PREFER_NOT_TO_SAY = "prefer_not_to_say", "Prefiero no responder"
+
+
+class EducationStage(models.TextChoices):
+    PRESCHOOL = "preschool", "Preescolar"
+    SCHOOL = "school", "Colegio"
+    TECHNICAL = "technical", "Institución técnica o tecnológica"
+    UNIVERSITY = "university", "Universidad"
+    GRADUATED = "graduated", "Graduado"
+    NOT_STUDYING = "not_studying", "Actualmente no estudia"
+    OTHER = "other", "Otra situación"
+
+
+class EducationLevel(models.TextChoices):
+    PRESCHOOL = "preschool", "Preescolar"
+    GRADE_1 = "grade_1", "1.º"
+    GRADE_2 = "grade_2", "2.º"
+    GRADE_3 = "grade_3", "3.º"
+    GRADE_4 = "grade_4", "4.º"
+    GRADE_5 = "grade_5", "5.º"
+    GRADE_6 = "grade_6", "6.º"
+    GRADE_7 = "grade_7", "7.º"
+    GRADE_8 = "grade_8", "8.º"
+    GRADE_9 = "grade_9", "9.º"
+    GRADE_10 = "grade_10", "10.º"
+    GRADE_11 = "grade_11", "11.º"
+    TECHNICAL = "technical", "Técnico profesional"
+    TECHNOLOGIST = "technologist", "Tecnólogo"
+    UNDERGRADUATE = "undergraduate", "Pregrado universitario"
+    SPECIALIZATION = "specialization", "Especialización"
+    MASTERS = "masters", "Maestría"
+    DOCTORATE = "doctorate", "Doctorado"
+    NOT_APPLICABLE = "not_applicable", "No aplica"
+
+
+class SocioeconomicStratum(models.TextChoices):
+    NOT_REPORTED = "not_reported", "Prefiere no informar"
+    RURAL = "rural", "Rural o sin estratificación"
+    ONE = "1", "Estrato 1"
+    TWO = "2", "Estrato 2"
+    THREE = "3", "Estrato 3"
+    FOUR = "4", "Estrato 4"
+    FIVE = "5", "Estrato 5"
+    SIX = "6", "Estrato 6"
+
+
+class RegistrationReason(models.TextChoices):
+    COURSE = "course", "Tomar un curso"
+    SCHOOL_SUPPORT = "school_support", "Refuerzo escolar"
+    EXAM_PREPARATION = "exam_preparation", "Preparación para una evaluación"
+    PROFESSIONAL_DEVELOPMENT = "professional_development", "Formación profesional"
+    TEACHING = "teaching", "Enseñar o acompañar estudiantes"
+    INSTITUTIONAL = "institutional", "Vinculación institucional"
+    OTHER = "other", "Otro motivo"

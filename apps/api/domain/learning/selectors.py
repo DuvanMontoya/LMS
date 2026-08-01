@@ -13,6 +13,7 @@ from domain.organizations.models import Organization
 from .access import access_state
 from .choices import EnrollmentStatus, ProgressStatus
 from .models import (
+    AcademicGroup,
     CourseEnrollment,
     CourseProgress,
     LearningCohort,
@@ -29,7 +30,17 @@ def cohorts_visible_to_actor(
     if not can_view_cohorts(actor, organization):  # type: ignore[arg-type]
         return LearningCohort.objects.none()
     return LearningCohort.objects.filter(organization=organization).select_related(
-        "course", "release", "created_by", "updated_by"
+        "course", "release", "academic_group", "created_by", "updated_by"
+    )
+
+
+def academic_groups_visible_to_actor(
+    actor: object, organization: Organization
+) -> QuerySet[AcademicGroup]:
+    if not can_view_cohorts(actor, organization):  # type: ignore[arg-type]
+        return AcademicGroup.objects.none()
+    return AcademicGroup.objects.filter(organization=organization).prefetch_related(
+        "roster__membership__user", "course_cohorts__course"
     )
 
 

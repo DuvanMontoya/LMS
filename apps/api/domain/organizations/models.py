@@ -12,12 +12,19 @@ from django.db.models.functions import Lower, Trim
 from django.utils import timezone
 
 from .choices import (
+    DocumentType,
+    EducationLevel,
+    EducationStage,
+    Gender,
     InvitationStatus,
     InvitationType,
     JoinRequestStatus,
     MembershipEventType,
     MembershipStatus,
+    MemberType,
+    RegistrationReason,
     RoleCode,
+    SocioeconomicStratum,
 )
 
 # New Django relations retain runtime validation; django-stubs cannot infer them
@@ -189,11 +196,39 @@ class MembershipInvitation(models.Model):  # noqa: DJ012
         related_name="membership_invitations_created",
     )
     given_name = models.CharField(max_length=150, blank=True)
+    middle_name = models.CharField(max_length=150, blank=True)
     family_name = models.CharField(max_length=150, blank=True)
+    second_family_name = models.CharField(max_length=150, blank=True)
     preferred_name = models.CharField(max_length=150, blank=True)
-    member_type = models.CharField(max_length=80, blank=True)
+    member_type = models.CharField(
+        max_length=32, choices=MemberType.choices, blank=True
+    )
     institutional_id = models.CharField(max_length=120, blank=True)
     phone = models.CharField(max_length=64, blank=True)
+    whatsapp = models.CharField(max_length=32, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    document_type = models.CharField(
+        max_length=8, choices=DocumentType.choices, blank=True
+    )
+    document_number = models.CharField(max_length=40, blank=True)
+    gender = models.CharField(max_length=24, choices=Gender.choices, blank=True)
+    education_stage = models.CharField(
+        max_length=24, choices=EducationStage.choices, blank=True
+    )
+    education_institution = models.CharField(max_length=200, blank=True)
+    education_level = models.CharField(
+        max_length=32, choices=EducationLevel.choices, blank=True
+    )
+    department_code = models.CharField(max_length=2, blank=True)
+    municipality = models.CharField(max_length=120, blank=True)
+    address = models.CharField(max_length=240, blank=True)
+    socioeconomic_stratum = models.CharField(
+        max_length=16, choices=SocioeconomicStratum.choices, blank=True
+    )
+    registration_reason = models.CharField(
+        max_length=32, choices=RegistrationReason.choices, blank=True
+    )
+    registration_reason_detail = models.CharField(max_length=500, blank=True)
     locale = models.CharField(max_length=16, default="es")
     timezone_name = models.CharField(max_length=64, default="UTC")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -240,6 +275,23 @@ class MembershipInvitation(models.Model):  # noqa: DJ012
         if RoleCode.OWNER in roles:
             raise ValidationError({"invited_roles": "Owner no puede ser invitado."})
         self.invited_roles = sorted(role.value for role in roles)
+        if self.date_of_birth and self.date_of_birth > timezone.localdate():
+            raise ValidationError(
+                {"date_of_birth": "La fecha no puede estar en el futuro."}
+            )
+        if (
+            self.education_stage
+            in {
+                EducationStage.PRESCHOOL,
+                EducationStage.SCHOOL,
+                EducationStage.TECHNICAL,
+                EducationStage.UNIVERSITY,
+            }
+            and not self.education_institution.strip()
+        ):
+            raise ValidationError(
+                {"education_institution": "Indica la institución educativa."}
+            )
 
 
 class OrganizationJoinRequest(models.Model):
@@ -289,10 +341,40 @@ class OrganizationMemberProfile(models.Model):
     membership = models.OneToOneField(
         "Membership", on_delete=models.PROTECT, related_name="institutional_profile"
     )
-    member_type = models.CharField(max_length=80, blank=True)
+    first_name = models.CharField(max_length=150, blank=True)
+    middle_name = models.CharField(max_length=150, blank=True)
+    first_surname = models.CharField(max_length=150, blank=True)
+    second_surname = models.CharField(max_length=150, blank=True)
+    member_type = models.CharField(
+        max_length=32, choices=MemberType.choices, blank=True
+    )
     institutional_id = models.CharField(max_length=120, blank=True)
     preferred_name = models.CharField(max_length=150, blank=True)
     phone = models.CharField(max_length=64, blank=True)
+    whatsapp = models.CharField(max_length=32, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    document_type = models.CharField(
+        max_length=8, choices=DocumentType.choices, blank=True
+    )
+    document_number = models.CharField(max_length=40, blank=True)
+    gender = models.CharField(max_length=24, choices=Gender.choices, blank=True)
+    education_stage = models.CharField(
+        max_length=24, choices=EducationStage.choices, blank=True
+    )
+    education_institution = models.CharField(max_length=200, blank=True)
+    education_level = models.CharField(
+        max_length=32, choices=EducationLevel.choices, blank=True
+    )
+    department_code = models.CharField(max_length=2, blank=True)
+    municipality = models.CharField(max_length=120, blank=True)
+    address = models.CharField(max_length=240, blank=True)
+    socioeconomic_stratum = models.CharField(
+        max_length=16, choices=SocioeconomicStratum.choices, blank=True
+    )
+    registration_reason = models.CharField(
+        max_length=32, choices=RegistrationReason.choices, blank=True
+    )
+    registration_reason_detail = models.CharField(max_length=500, blank=True)
     locale = models.CharField(max_length=16, default="es")
     timezone = models.CharField(max_length=64, default="UTC")
     administrative_notes = models.TextField(max_length=4000, blank=True)
@@ -301,6 +383,64 @@ class OrganizationMemberProfile(models.Model):
 
     def __str__(self) -> str:
         return f"profile:{self.membership_id}"
+
+    @property
+    def age(self) -> int | None:
+        if self.date_of_birth is None:
+            return None
+        today = timezone.localdate()
+        return (
+            today.year
+            - self.date_of_birth.year
+            - (
+                (today.month, today.day)
+                < (self.date_of_birth.month, self.date_of_birth.day)
+            )
+        )
+
+    @property
+    def suggested_document_type(self) -> str:
+        if self.age is None:
+            return ""
+        if self.age < 7:
+            return DocumentType.CIVIL_REGISTRY
+        if self.age < 18:
+            return DocumentType.IDENTITY_CARD
+        return DocumentType.CITIZENSHIP_CARD
+
+    def clean(self) -> None:
+        super().clean()
+        if self.date_of_birth and self.date_of_birth > timezone.localdate():
+            raise ValidationError(
+                {"date_of_birth": "La fecha no puede estar en el futuro."}
+            )
+        if (
+            self.education_stage
+            in {
+                EducationStage.PRESCHOOL,
+                EducationStage.SCHOOL,
+                EducationStage.TECHNICAL,
+                EducationStage.UNIVERSITY,
+            }
+            and not self.education_institution.strip()
+        ):
+            raise ValidationError(
+                {"education_institution": "Indica la institución educativa."}
+            )
+        for field_name in (
+            "first_name",
+            "middle_name",
+            "first_surname",
+            "second_surname",
+            "preferred_name",
+            "institutional_id",
+            "document_number",
+            "education_institution",
+            "municipality",
+            "address",
+            "registration_reason_detail",
+        ):
+            setattr(self, field_name, getattr(self, field_name).strip())
 
 
 class Membership(models.Model):

@@ -649,6 +649,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/invitations/{invitation_id}/managed-email/': {
     patch: operations['organizations_invitations_managed_email_partial_update'];
   };
+  '/api/v1/organizations/{slug}/invitations/{invitation_id}/manual-activation/': {
+    post: operations['organizations_invitations_manual_activation_create'];
+  };
   '/api/v1/organizations/{slug}/invitations/{invitation_id}/resend/': {
     post: operations['organizations_invitations_resend_create'];
   };
@@ -663,6 +666,13 @@ export interface paths {
   };
   '/api/v1/organizations/{slug}/join/': {
     post: operations['organizations_join_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/academic-groups/': {
+    get: operations['learning_academic_groups_list'];
+    post: operations['learning_academic_groups_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/academic-groups/{group_id}/roster/': {
+    put: operations['learning_academic_group_roster_update'];
   };
   '/api/v1/organizations/{slug}/learning/cohorts/': {
     get: operations['learning_cohorts_list'];
@@ -763,6 +773,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/memberships/{membership_id}/events/': {
     get: operations['organizations_memberships_events_list'];
   };
+  '/api/v1/organizations/{slug}/memberships/{membership_id}/password-recovery/': {
+    post: operations['organizations_memberships_password_recovery_create'];
+  };
   '/api/v1/organizations/{slug}/memberships/{membership_id}/profile/': {
     get: operations['organizations_memberships_profile_retrieve'];
     patch: operations['organizations_memberships_profile_partial_update'];
@@ -792,6 +805,9 @@ export interface paths {
   };
   '/api/v1/organizations/{slug}/scheduling/events/{occurrence_id}/cancel/': {
     post: operations['scheduling_calendar_event_cancel'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/live-sessions/': {
+    get: operations['scheduling_live_sessions_list'];
   };
   '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/': {
     get: operations['scheduling_live_session_retrieve'];
@@ -869,6 +885,94 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    AcademicGroupCreate: {
+      academic_year: number;
+      description?: string;
+      level: components['schemas']['AcademicGroupLevel'];
+      name: string;
+      section?: string;
+      slug?: string;
+    };
+    /**
+     * @description * `early_childhood` - Primera infancia
+     * * `preschool` - Preescolar
+     * * `transition` - Transición
+     * * `primary_1` - Primero
+     * * `primary_2` - Segundo
+     * * `primary_3` - Tercero
+     * * `primary_4` - Cuarto
+     * * `primary_5` - Quinto
+     * * `secondary_6` - Sexto
+     * * `secondary_7` - Séptimo
+     * * `secondary_8` - Octavo
+     * * `secondary_9` - Noveno
+     * * `secondary_10` - Décimo
+     * * `secondary_11` - Undécimo
+     * * `technical` - Técnico o tecnológico
+     * * `higher_education` - Educación superior
+     * * `continuing_education` - Educación continua
+     * * `other` - Otro
+     * @enum {string}
+     */
+    AcademicGroupLevel:
+      | 'early_childhood'
+      | 'preschool'
+      | 'transition'
+      | 'primary_1'
+      | 'primary_2'
+      | 'primary_3'
+      | 'primary_4'
+      | 'primary_5'
+      | 'secondary_6'
+      | 'secondary_7'
+      | 'secondary_8'
+      | 'secondary_9'
+      | 'secondary_10'
+      | 'secondary_11'
+      | 'technical'
+      | 'higher_education'
+      | 'continuing_education'
+      | 'other';
+    AcademicGroupMember: {
+      /** Format: email */
+      email: string;
+      /** Format: uuid */
+      membership_id: string;
+      role: components['schemas']['AcademicGroupRole'];
+      status: string;
+    };
+    AcademicGroupRead: {
+      academic_year: number;
+      /** Format: date-time */
+      created_at: string;
+      description?: string;
+      /** Format: uuid */
+      id: string;
+      level: components['schemas']['AcademicGroupLevel'];
+      linked_cohort_count: number;
+      name: string;
+      roster: readonly components['schemas']['AcademicGroupMember'][];
+      section?: string;
+      slug: string;
+      status?: components['schemas']['AssessmentGradebookColumnStatus'];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    /**
+     * @description * `learner` - Estudiante
+     * * `instructor` - Docente
+     * * `assistant` - Acompañante
+     * @enum {string}
+     */
+    AcademicGroupRole: 'learner' | 'instructor' | 'assistant';
+    AcademicGroupRoster: {
+      members: components['schemas']['AcademicGroupRosterEntry'][];
+    };
+    AcademicGroupRosterEntry: {
+      /** Format: uuid */
+      membership_id: string;
+      role: components['schemas']['AcademicGroupRole'];
+    };
     AccessContext: {
       organizations: readonly components['schemas']['AccessOrganization'][];
       user: components['schemas']['UserSummary'];
@@ -1639,6 +1743,8 @@ export interface components {
       cohort_id: string;
     };
     CohortCreate: {
+      /** Format: uuid */
+      academic_group_id?: string | null;
       /** Format: date-time */
       access_ends_at?: string | null;
       /** Format: date-time */
@@ -1664,6 +1770,9 @@ export interface components {
       total_enrollments: number;
     };
     CohortRead: {
+      /** Format: uuid */
+      academic_group_id: string | null;
+      academic_group_name: string | null;
       /** Format: date-time */
       access_ends_at?: string | null;
       /** Format: date-time */
@@ -2010,6 +2119,18 @@ export interface components {
       slug: string;
       status: string;
     };
+    /**
+     * @description * `RC` - Registro civil
+     * * `TI` - Tarjeta de identidad
+     * * `CC` - Cédula de ciudadanía
+     * * `CE` - Cédula de extranjería
+     * * `PPT` - Permiso por protección temporal
+     * * `PA` - Pasaporte
+     * * `DE` - Documento extranjero
+     * * `NONE` - Sin documento registrado
+     * @enum {string}
+     */
+    DocumentTypeEnum: 'RC' | 'TI' | 'CC' | 'CE' | 'PPT' | 'PA' | 'DE' | 'NONE';
     DomainEventDetail: {
       /** Format: uuid */
       aggregate_id: string;
@@ -2055,6 +2176,66 @@ export interface components {
       revision_id: string;
       revision_number: number;
     };
+    /**
+     * @description * `preschool` - Preescolar
+     * * `grade_1` - 1.º
+     * * `grade_2` - 2.º
+     * * `grade_3` - 3.º
+     * * `grade_4` - 4.º
+     * * `grade_5` - 5.º
+     * * `grade_6` - 6.º
+     * * `grade_7` - 7.º
+     * * `grade_8` - 8.º
+     * * `grade_9` - 9.º
+     * * `grade_10` - 10.º
+     * * `grade_11` - 11.º
+     * * `technical` - Técnico profesional
+     * * `technologist` - Tecnólogo
+     * * `undergraduate` - Pregrado universitario
+     * * `specialization` - Especialización
+     * * `masters` - Maestría
+     * * `doctorate` - Doctorado
+     * * `not_applicable` - No aplica
+     * @enum {string}
+     */
+    EducationLevelEnum:
+      | 'preschool'
+      | 'grade_1'
+      | 'grade_2'
+      | 'grade_3'
+      | 'grade_4'
+      | 'grade_5'
+      | 'grade_6'
+      | 'grade_7'
+      | 'grade_8'
+      | 'grade_9'
+      | 'grade_10'
+      | 'grade_11'
+      | 'technical'
+      | 'technologist'
+      | 'undergraduate'
+      | 'specialization'
+      | 'masters'
+      | 'doctorate'
+      | 'not_applicable';
+    /**
+     * @description * `preschool` - Preescolar
+     * * `school` - Colegio
+     * * `technical` - Institución técnica o tecnológica
+     * * `university` - Universidad
+     * * `graduated` - Graduado
+     * * `not_studying` - Actualmente no estudia
+     * * `other` - Otra situación
+     * @enum {string}
+     */
+    EducationStageEnum:
+      | 'preschool'
+      | 'school'
+      | 'technical'
+      | 'university'
+      | 'graduated'
+      | 'not_studying'
+      | 'other';
     EmailDelivery: {
       attempt_count: number;
       /** Format: date-time */
@@ -2248,6 +2429,16 @@ export interface components {
     ExpectedVersion: {
       expected_version: number;
     };
+    /**
+     * @description * `female` - Femenino
+     * * `male` - Masculino
+     * * `non_binary` - No binario
+     * * `other` - Otro
+     * * `prefer_not_to_say` - Prefiero no responder
+     * @enum {string}
+     */
+    GenderEnum:
+      'female' | 'male' | 'non_binary' | 'other' | 'prefer_not_to_say';
     GoogleOAuthStart: {
       capabilities: components['schemas']['CapabilitiesEnum'][];
     };
@@ -2455,29 +2646,48 @@ export interface components {
     Invitation: {
       /** Format: date-time */
       accepted_at: string | null;
+      address: string;
+      age: number | null;
       /** Format: date-time */
       created_at: string;
+      /** Format: date */
+      date_of_birth: string | null;
+      department_code: string;
+      document_number: string;
+      document_type: components['schemas']['DocumentTypeEnum'];
+      education_institution: string;
+      education_level: components['schemas']['EducationLevelEnum'];
+      education_stage: components['schemas']['EducationStageEnum'];
       /** Format: email */
       email: string;
       /** Format: date-time */
       expires_at: string;
       family_name: string;
+      gender: components['schemas']['GenderEnum'];
       given_name: string;
       /** Format: uuid */
       id: string;
       institutional_id: string;
       invitation_type: components['schemas']['InvitationTypeEnum'];
       locale: string;
-      member_type: string;
+      member_type: components['schemas']['MemberTypeEnum'];
+      middle_name: string;
+      municipality: string;
       phone: string;
       preferred_name: string;
+      registration_reason: components['schemas']['RegistrationReasonEnum'];
+      registration_reason_detail: string;
       /** Format: date-time */
       revoked_at: string | null;
       roles: readonly unknown[];
+      second_family_name: string;
+      socioeconomic_stratum: components['schemas']['SocioeconomicStratumEnum'];
       status: components['schemas']['InvitationStatusEnum'];
+      suggested_document_type: string;
       timezone_name: string;
       /** Format: date-time */
       updated_at: string;
+      whatsapp: string;
     };
     InvitationActivation: {
       token: string;
@@ -2486,19 +2696,50 @@ export interface components {
       invitation_type: components['schemas']['InvitationTypeEnum'];
     };
     InvitationCreate: {
+      address?: string;
+      /** Format: date */
+      date_of_birth?: string | null;
+      department_code?: string;
+      document_number?: string;
+      document_type?:
+        | components['schemas']['DocumentTypeEnum']
+        | components['schemas']['BlankEnum'];
+      education_institution?: string;
+      education_level?:
+        | components['schemas']['EducationLevelEnum']
+        | components['schemas']['BlankEnum'];
+      education_stage?:
+        | components['schemas']['EducationStageEnum']
+        | components['schemas']['BlankEnum'];
       /** Format: email */
       email: string;
       family_name?: string;
+      gender?:
+        | components['schemas']['GenderEnum']
+        | components['schemas']['BlankEnum'];
       given_name?: string;
       institutional_id?: string;
       /** @default es */
       locale?: string;
-      member_type?: string;
+      member_type?:
+        | components['schemas']['MemberTypeEnum']
+        | components['schemas']['BlankEnum'];
+      middle_name?: string;
+      municipality?: string;
       phone?: string;
       preferred_name?: string;
+      registration_reason?:
+        | components['schemas']['RegistrationReasonEnum']
+        | components['schemas']['BlankEnum'];
+      registration_reason_detail?: string;
       roles: components['schemas']['OrganizationRole'][];
+      second_family_name?: string;
+      socioeconomic_stratum?:
+        | components['schemas']['SocioeconomicStratumEnum']
+        | components['schemas']['BlankEnum'];
       /** @default UTC */
       timezone_name?: string;
+      whatsapp?: string;
     };
     /**
      * @description * `pending` - Pendiente
@@ -2763,19 +3004,48 @@ export interface components {
       title: string;
     };
     ManagedAccountCreate: {
+      address?: string;
+      /** Format: date */
+      date_of_birth?: string | null;
+      department_code?: string;
+      document_number?: string;
+      document_type?:
+        | components['schemas']['DocumentTypeEnum']
+        | components['schemas']['BlankEnum'];
+      education_institution?: string;
+      education_level?:
+        | components['schemas']['EducationLevelEnum']
+        | components['schemas']['BlankEnum'];
+      education_stage?:
+        | components['schemas']['EducationStageEnum']
+        | components['schemas']['BlankEnum'];
       /** Format: email */
       email: string;
       family_name: string;
+      gender?:
+        | components['schemas']['GenderEnum']
+        | components['schemas']['BlankEnum'];
       given_name: string;
       institutional_id?: string;
       /** @default es */
       locale?: string;
-      member_type: string;
+      member_type: components['schemas']['MemberTypeEnum'];
+      middle_name?: string;
+      municipality?: string;
       phone?: string;
       preferred_name?: string;
+      registration_reason?:
+        | components['schemas']['RegistrationReasonEnum']
+        | components['schemas']['BlankEnum'];
+      registration_reason_detail?: string;
       roles: components['schemas']['OrganizationRole'][];
+      second_family_name?: string;
+      socioeconomic_stratum?:
+        | components['schemas']['SocioeconomicStratumEnum']
+        | components['schemas']['BlankEnum'];
       /** @default UTC */
       timezone_name?: string;
+      whatsapp?: string;
     };
     ManagedAccountEmailCorrection: {
       /** Format: email */
@@ -2783,6 +3053,10 @@ export interface components {
     };
     ManagedActivation: {
       password: string;
+    };
+    ManagedManualActivation: {
+      confirm_identity: boolean;
+      temporary_password: string;
     };
     ManualGrade: {
       feedback?: string;
@@ -2802,25 +3076,109 @@ export interface components {
       sequence: number;
     };
     MemberProfile: {
+      address?: string;
       administrative_notes?: string;
+      age: number;
+      /** Format: date */
+      date_of_birth?: string | null;
+      department_code?: string;
+      document_number?: string;
+      document_type?:
+        | components['schemas']['DocumentTypeEnum']
+        | components['schemas']['BlankEnum'];
+      education_institution?: string;
+      education_level?:
+        | components['schemas']['EducationLevelEnum']
+        | components['schemas']['BlankEnum'];
+      education_stage?:
+        | components['schemas']['EducationStageEnum']
+        | components['schemas']['BlankEnum'];
+      first_name?: string;
+      first_surname?: string;
+      gender?:
+        | components['schemas']['GenderEnum']
+        | components['schemas']['BlankEnum'];
       institutional_id?: string;
       locale?: string;
-      member_type?: string;
+      member_type?:
+        | components['schemas']['MemberTypeEnum']
+        | components['schemas']['BlankEnum'];
+      middle_name?: string;
+      municipality?: string;
       phone?: string;
       preferred_name?: string;
+      registration_reason?:
+        | components['schemas']['RegistrationReasonEnum']
+        | components['schemas']['BlankEnum'];
+      registration_reason_detail?: string;
+      second_surname?: string;
+      socioeconomic_stratum?:
+        | components['schemas']['SocioeconomicStratumEnum']
+        | components['schemas']['BlankEnum'];
+      suggested_document_type: string;
       timezone?: string;
       /** Format: date-time */
       updated_at: string;
+      whatsapp?: string;
     };
     MemberProfileUpdate: {
+      address?: string;
       administrative_notes?: string;
+      /** Format: date */
+      date_of_birth?: string | null;
+      department_code?: string;
+      document_number?: string;
+      document_type?:
+        | components['schemas']['DocumentTypeEnum']
+        | components['schemas']['BlankEnum'];
+      education_institution?: string;
+      education_level?:
+        | components['schemas']['EducationLevelEnum']
+        | components['schemas']['BlankEnum'];
+      education_stage?:
+        | components['schemas']['EducationStageEnum']
+        | components['schemas']['BlankEnum'];
+      first_name?: string;
+      first_surname?: string;
+      gender?:
+        | components['schemas']['GenderEnum']
+        | components['schemas']['BlankEnum'];
       institutional_id?: string;
       locale?: string;
-      member_type?: string;
+      member_type?:
+        | components['schemas']['MemberTypeEnum']
+        | components['schemas']['BlankEnum'];
+      middle_name?: string;
+      municipality?: string;
       phone?: string;
       preferred_name?: string;
+      registration_reason?:
+        | components['schemas']['RegistrationReasonEnum']
+        | components['schemas']['BlankEnum'];
+      registration_reason_detail?: string;
+      second_surname?: string;
+      socioeconomic_stratum?:
+        | components['schemas']['SocioeconomicStratumEnum']
+        | components['schemas']['BlankEnum'];
       timezone?: string;
+      whatsapp?: string;
     };
+    /**
+     * @description * `learner` - Estudiante
+     * * `instructor` - Docente
+     * * `guardian` - Acudiente
+     * * `administrative` - Personal administrativo
+     * * `support` - Personal de apoyo
+     * * `other` - Otro
+     * @enum {string}
+     */
+    MemberTypeEnum:
+      | 'learner'
+      | 'instructor'
+      | 'guardian'
+      | 'administrative'
+      | 'support'
+      | 'other';
     Membership: {
       /** Format: date-time */
       joined_at: string;
@@ -2860,6 +3218,7 @@ export interface components {
      * * `profile_updated` - Perfil institucional actualizado
      * * `roles_replaced` - Roles sustituidos
      * * `sessions_revoked` - Sesiones revocadas
+     * * `password_recovery_sent` - Recuperación de contraseña enviada
      * * `membership_settings_updated` - Configuración de membresías actualizada
      * @enum {string}
      */
@@ -2883,6 +3242,7 @@ export interface components {
       | 'profile_updated'
       | 'roles_replaced'
       | 'sessions_revoked'
+      | 'password_recovery_sent'
       | 'membership_settings_updated';
     Module: {
       /** Format: date-time */
@@ -3131,6 +3491,14 @@ export interface components {
       topics: readonly components['schemas']['UnitTopic'][];
       /** Format: date-time */
       updated_at: string;
+    };
+    PaginatedAcademicGroup: {
+      count: number;
+      /** Format: uri */
+      next: string | null;
+      /** Format: uri */
+      previous: string | null;
+      results: components['schemas']['AcademicGroupRead'][];
     };
     PaginatedCohort: {
       count: number;
@@ -3555,6 +3923,24 @@ export interface components {
       etag: string;
       size_bytes: number;
     };
+    /**
+     * @description * `course` - Tomar un curso
+     * * `school_support` - Refuerzo escolar
+     * * `exam_preparation` - Preparación para una evaluación
+     * * `professional_development` - Formación profesional
+     * * `teaching` - Enseñar o acompañar estudiantes
+     * * `institutional` - Vinculación institucional
+     * * `other` - Otro motivo
+     * @enum {string}
+     */
+    RegistrationReasonEnum:
+      | 'course'
+      | 'school_support'
+      | 'exam_preparation'
+      | 'professional_development'
+      | 'teaching'
+      | 'institutional'
+      | 'other';
     RegistrationSettings: {
       default_locale?: string;
       default_timezone?: string;
@@ -3911,6 +4297,19 @@ export interface components {
       highlighted: boolean;
       text: string;
     };
+    /**
+     * @description * `not_reported` - Prefiere no informar
+     * * `rural` - Rural o sin estratificación
+     * * `1` - Estrato 1
+     * * `2` - Estrato 2
+     * * `3` - Estrato 3
+     * * `4` - Estrato 4
+     * * `5` - Estrato 5
+     * * `6` - Estrato 6
+     * @enum {string}
+     */
+    SocioeconomicStratumEnum:
+      'not_reported' | 'rural' | '1' | '2' | '3' | '4' | '5' | '6';
     /**
      * @description * `course_release` - Release de curso
      * * `course_unit` - Unidad de curso
@@ -9613,6 +10012,28 @@ export interface operations {
       };
     };
   };
+  organizations_invitations_manual_activation_create: {
+    parameters: {
+      path: {
+        invitation_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ManagedManualActivation'];
+        'application/x-www-form-urlencoded': components['schemas']['ManagedManualActivation'];
+        'multipart/form-data': components['schemas']['ManagedManualActivation'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Membership'];
+        };
+      };
+    };
+  };
   organizations_invitations_resend_create: {
     parameters: {
       path: {
@@ -9694,6 +10115,77 @@ export interface operations {
       /** @description No response body */
       202: {
         content: never;
+      };
+    };
+  };
+  learning_academic_groups_list: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PaginatedAcademicGroup'];
+        };
+      };
+    };
+  };
+  learning_academic_groups_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicGroupCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['AcademicGroupCreate'];
+        'multipart/form-data': components['schemas']['AcademicGroupCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['AcademicGroupRead'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  learning_academic_group_roster_update: {
+    parameters: {
+      path: {
+        group_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicGroupRoster'];
+        'application/x-www-form-urlencoded': components['schemas']['AcademicGroupRoster'];
+        'multipart/form-data': components['schemas']['AcademicGroupRoster'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AcademicGroupRead'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
       };
     };
   };
@@ -10527,6 +11019,23 @@ export interface operations {
       };
     };
   };
+  organizations_memberships_password_recovery_create: {
+    parameters: {
+      path: {
+        membership_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+    };
+  };
   organizations_memberships_profile_retrieve: {
     parameters: {
       path: {
@@ -10769,6 +11278,29 @@ export interface operations {
       409: {
         content: {
           'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_live_sessions_list: {
+    parameters: {
+      query?: {
+        course_slug?: string;
+        /**
+         * @description * `upcoming` - upcoming
+         * * `past` - past
+         * * `all` - all
+         */
+        scope?: 'upcoming' | 'past' | 'all';
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LiveSessionDetail'][];
         };
       };
     };

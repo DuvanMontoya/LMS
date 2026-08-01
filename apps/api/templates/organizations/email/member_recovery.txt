@@ -1,0 +1,12 @@
+Recupera tu acceso a {{ platform_name }}
+
+Hola {{ member_name }}.
+
+Un administrador de {{ organization.name }} solicitó enviarte instrucciones para recuperar tu acceso.
+
+Por seguridad, inicia la recuperación desde tu propio navegador:
+{{ recovery_url }}
+
+Escribe el mismo correo en el que recibiste este mensaje. La plataforma te enviará un código temporal que solo funcionará en ese navegador.
+
+Si no esperabas este mensaje, ignóralo y comunícate con tu institución.

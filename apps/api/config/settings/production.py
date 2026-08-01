@@ -60,9 +60,13 @@ EMAIL_PORT = int(os.environ["EMAIL_PORT"])
 EMAIL_HOST_USER = os.environ["EMAIL_HOST_USER"]
 EMAIL_HOST_PASSWORD = os.environ["EMAIL_HOST_PASSWORD"]
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() == "true"
-EMAIL_USE_SSL = False
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "false").lower() == "true"
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise RuntimeError("EMAIL_USE_TLS and EMAIL_USE_SSL cannot both be true.")
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "15"))
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "")
 SERVER_EMAIL = os.environ.get("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+EMAIL_MESSAGE_ID_DOMAIN = os.environ.get("EMAIL_MESSAGE_ID_DOMAIN", "papyros.pro")
 DATABASES["default"]["CONN_MAX_AGE"] = int(  # noqa: F405
     os.environ.get("POSTGRES_CONN_MAX_AGE", "60")
 )

@@ -56,3 +56,28 @@ export async function getLiveSession(slug: string, sessionId: string) {
       data as operations['scheduling_live_session_retrieve']['responses'][200]['content']['application/json'],
   };
 }
+
+export async function getLiveSessions(
+  slug: string,
+  options: { courseSlug?: string; scope?: 'all' | 'past' | 'upcoming' } = {},
+) {
+  const organization = await getOrganizationForPage(slug);
+  const client = await createPlatformServerClient();
+  const { data, response } = await client.GET(
+    '/api/v1/organizations/{slug}/scheduling/live-sessions/',
+    {
+      params: {
+        path: { slug },
+        query: {
+          course_slug: options.courseSlug ?? '',
+          scope: options.scope ?? 'upcoming',
+        },
+      },
+      cache: 'no-store',
+    },
+  );
+  if (response.status === 403 || response.status === 404) notFound();
+  if (!response.ok || !data)
+    throw new Error('No fue posible consultar las clases en vivo.');
+  return { ...organization, sessions: data };
+}

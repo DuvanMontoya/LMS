@@ -25,13 +25,13 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useRequestPasswordReset } from '@/lib/auth/hooks';
 import type { components, operations } from '@/lib/api/generated/platform';
 import {
   useReactivateMembership,
   useReplaceMembershipRoles,
   useRevokeMemberSessions,
   useRevokeMembership,
+  useSendMemberPasswordRecovery,
   useSuspendMembership,
   useUpdateMemberProfile,
 } from '@/lib/organizations/hooks';
@@ -49,14 +49,40 @@ type MembershipEventList =
   operations['organizations_memberships_events_list']['responses'][200]['content']['application/json'];
 type MembershipEvent = MembershipEventList['results'][number];
 type Role = components['schemas']['OrganizationRole'];
+type DocumentType = '' | components['schemas']['DocumentTypeEnum'];
+type EducationLevel = '' | components['schemas']['EducationLevelEnum'];
+type EducationStage = '' | components['schemas']['EducationStageEnum'];
+type Gender = '' | components['schemas']['GenderEnum'];
+type MemberType = '' | components['schemas']['MemberTypeEnum'];
+type RegistrationReason = '' | components['schemas']['RegistrationReasonEnum'];
+type SocioeconomicStratum =
+  '' | components['schemas']['SocioeconomicStratumEnum'];
 type ProfileValues = {
+  address: string;
   administrative_notes: string;
+  date_of_birth: string;
+  department_code: string;
+  document_number: string;
+  document_type: DocumentType;
+  education_institution: string;
+  education_level: EducationLevel;
+  education_stage: EducationStage;
+  first_name: string;
+  first_surname: string;
+  gender: Gender;
   institutional_id: string;
   locale: string;
-  member_type: string;
+  member_type: MemberType;
+  middle_name: string;
+  municipality: string;
   phone: string;
   preferred_name: string;
+  registration_reason: RegistrationReason;
+  registration_reason_detail: string;
+  second_surname: string;
+  socioeconomic_stratum: SocioeconomicStratum;
   timezone: string;
+  whatsapp: string;
 };
 
 const assignableRoles: Role[] = [
@@ -82,15 +108,46 @@ function statusLabel(status: string | undefined) {
   return status ? (labels[status] ?? status) : 'Sin estado';
 }
 
+function ageFromBirthDate(value: string) {
+  if (!value) return null;
+  const birth = new Date(`${value}T00:00:00`);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  if (
+    today.getMonth() < birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
+  )
+    age -= 1;
+  return age;
+}
+
 function profileValues(profile: MemberProfile): ProfileValues {
   return {
+    address: profile.address ?? '',
     administrative_notes: profile.administrative_notes ?? '',
+    date_of_birth: profile.date_of_birth ?? '',
+    department_code: profile.department_code ?? '',
+    document_number: profile.document_number ?? '',
+    document_type: profile.document_type ?? '',
+    education_institution: profile.education_institution ?? '',
+    education_level: profile.education_level ?? '',
+    education_stage: profile.education_stage ?? '',
+    first_name: profile.first_name ?? '',
+    first_surname: profile.first_surname ?? '',
+    gender: profile.gender ?? '',
     institutional_id: profile.institutional_id ?? '',
     locale: profile.locale ?? '',
     member_type: profile.member_type ?? '',
+    middle_name: profile.middle_name ?? '',
+    municipality: profile.municipality ?? '',
     phone: profile.phone ?? '',
     preferred_name: profile.preferred_name ?? '',
+    registration_reason: profile.registration_reason ?? '',
+    registration_reason_detail: profile.registration_reason_detail ?? '',
+    second_surname: profile.second_surname ?? '',
+    socioeconomic_stratum: profile.socioeconomic_stratum ?? '',
     timezone: profile.timezone ?? '',
+    whatsapp: profile.whatsapp ?? '',
   };
 }
 
@@ -122,7 +179,7 @@ export function MemberDetailPanel({
   const reactivate = useReactivateMembership(slug);
   const revoke = useRevokeMembership(slug);
   const revokeSessions = useRevokeMemberSessions(slug);
-  const passwordReset = useRequestPasswordReset();
+  const passwordRecovery = useSendMemberPasswordRecovery(slug);
   const canEditProfile = hasCapability(
     capabilities,
     'membership.profile.manage',
@@ -135,13 +192,23 @@ export function MemberDetailPanel({
     capabilities,
     'membership.sessions.revoke',
   );
+  const canSendRecovery = hasCapability(
+    capabilities,
+    'membership.recovery.send',
+  );
   const canManageOwner = hasCapability(capabilities, 'role.assign_owner');
   const targetIsOwner = member.roles.includes('owner');
   const canManageTarget = !targetIsOwner || canManageOwner;
   const [notice, setNotice] = useState('');
 
-  function updateProfileField(field: keyof ProfileValues, value: string) {
-    setProfile((current) => ({ ...current, [field]: value }));
+  function updateProfileField<K extends keyof ProfileValues>(
+    field: K,
+    value: string,
+  ) {
+    setProfile((current) => ({
+      ...current,
+      [field]: value as ProfileValues[K],
+    }));
   }
 
   function toggleRole(role: Role, checked: boolean) {
@@ -161,10 +228,28 @@ export function MemberDetailPanel({
       const saved = await updateProfile.mutateAsync({
         membershipId: member.membership_id,
         profile: {
+          address: profile.address,
+          date_of_birth: profile.date_of_birth || null,
+          department_code: profile.department_code,
+          document_number: profile.document_number,
+          document_type: profile.document_type,
+          education_institution: profile.education_institution,
+          education_level: profile.education_level,
+          education_stage: profile.education_stage,
+          first_name: profile.first_name,
+          first_surname: profile.first_surname,
+          gender: profile.gender,
           member_type: profile.member_type,
           institutional_id: profile.institutional_id,
           preferred_name: profile.preferred_name,
           phone: profile.phone,
+          middle_name: profile.middle_name,
+          municipality: profile.municipality,
+          registration_reason: profile.registration_reason,
+          registration_reason_detail: profile.registration_reason_detail,
+          second_surname: profile.second_surname,
+          socioeconomic_stratum: profile.socioeconomic_stratum,
+          whatsapp: profile.whatsapp,
           locale: profile.locale,
           timezone: profile.timezone,
           ...(canEditProfile
@@ -244,9 +329,9 @@ export function MemberDetailPanel({
   async function requestRecovery() {
     setNotice('');
     try {
-      await passwordReset.mutateAsync({ email: member.user.email });
+      await passwordRecovery.mutateAsync(member.membership_id);
       setNotice(
-        'Se solicitó la recuperación de contraseña al correo registrado.',
+        'Se enviaron instrucciones de recuperación al correo registrado.',
       );
     } catch {
       // The mutation error is rendered below.
@@ -260,7 +345,7 @@ export function MemberDetailPanel({
     reactivate.error ??
     revoke.error ??
     revokeSessions.error ??
-    passwordReset.error;
+    passwordRecovery.error;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
@@ -318,6 +403,34 @@ export function MemberDetailPanel({
               <div className="grid gap-4 sm:grid-cols-2">
                 <ProfileField
                   disabled={!canEditProfile}
+                  label="Primer nombre"
+                  onChange={(value) => updateProfileField('first_name', value)}
+                  value={profile.first_name}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Segundo nombre"
+                  onChange={(value) => updateProfileField('middle_name', value)}
+                  value={profile.middle_name}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Primer apellido"
+                  onChange={(value) =>
+                    updateProfileField('first_surname', value)
+                  }
+                  value={profile.first_surname}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Segundo apellido"
+                  onChange={(value) =>
+                    updateProfileField('second_surname', value)
+                  }
+                  value={profile.second_surname}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
                   label="Tipo de miembro"
                   onChange={(value) => updateProfileField('member_type', value)}
                   value={profile.member_type}
@@ -340,9 +453,118 @@ export function MemberDetailPanel({
                 />
                 <ProfileField
                   disabled={!canEditProfile}
-                  label="Teléfono"
-                  onChange={(value) => updateProfileField('phone', value)}
-                  value={profile.phone}
+                  label="WhatsApp"
+                  onChange={(value) => updateProfileField('whatsapp', value)}
+                  value={profile.whatsapp}
+                />
+                <div className="space-y-2">
+                  <ProfileField
+                    disabled={!canEditProfile}
+                    label="Fecha de nacimiento"
+                    onChange={(value) =>
+                      updateProfileField('date_of_birth', value)
+                    }
+                    type="date"
+                    value={profile.date_of_birth}
+                  />
+                  {ageFromBirthDate(profile.date_of_birth) !== null ? (
+                    <p className="text-xs text-muted-foreground">
+                      Edad calculada: {ageFromBirthDate(profile.date_of_birth)}{' '}
+                      años
+                    </p>
+                  ) : null}
+                </div>
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Tipo de documento"
+                  onChange={(value) =>
+                    updateProfileField('document_type', value)
+                  }
+                  value={profile.document_type}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Número de documento"
+                  onChange={(value) =>
+                    updateProfileField('document_number', value)
+                  }
+                  value={profile.document_number}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Género"
+                  onChange={(value) => updateProfileField('gender', value)}
+                  value={profile.gender}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Situación educativa"
+                  onChange={(value) =>
+                    updateProfileField('education_stage', value)
+                  }
+                  value={profile.education_stage}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Institución educativa"
+                  onChange={(value) =>
+                    updateProfileField('education_institution', value)
+                  }
+                  value={profile.education_institution}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Grado o nivel"
+                  onChange={(value) =>
+                    updateProfileField('education_level', value)
+                  }
+                  value={profile.education_level}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Departamento (código DANE)"
+                  onChange={(value) =>
+                    updateProfileField('department_code', value)
+                  }
+                  value={profile.department_code}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Municipio o ciudad"
+                  onChange={(value) =>
+                    updateProfileField('municipality', value)
+                  }
+                  value={profile.municipality}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Dirección"
+                  onChange={(value) => updateProfileField('address', value)}
+                  value={profile.address}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Estrato"
+                  onChange={(value) =>
+                    updateProfileField('socioeconomic_stratum', value)
+                  }
+                  value={profile.socioeconomic_stratum}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Motivo de registro"
+                  onChange={(value) =>
+                    updateProfileField('registration_reason', value)
+                  }
+                  value={profile.registration_reason}
+                />
+                <ProfileField
+                  disabled={!canEditProfile}
+                  label="Detalle del motivo"
+                  onChange={(value) =>
+                    updateProfileField('registration_reason_detail', value)
+                  }
+                  value={profile.registration_reason_detail}
                 />
                 <ProfileField
                   disabled={!canEditProfile}
@@ -523,9 +745,9 @@ export function MemberDetailPanel({
                 Cerrar sesiones
               </Button>
             ) : null}
-            {canEditProfile ? (
+            {canSendRecovery ? (
               <Button
-                disabled={passwordReset.isPending}
+                disabled={passwordRecovery.isPending}
                 onClick={() => void requestRecovery()}
                 type="button"
                 variant="outline"
@@ -550,11 +772,13 @@ function ProfileField({
   disabled,
   label,
   onChange,
+  type = 'text',
   value,
 }: Readonly<{
   disabled: boolean;
   label: string;
   onChange: (value: string) => void;
+  type?: React.HTMLInputTypeAttribute;
   value: string;
 }>) {
   const id = `profile-${label.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-')}`;
@@ -565,6 +789,7 @@ function ProfileField({
         disabled={disabled}
         id={id}
         onChange={(event) => onChange(event.target.value)}
+        type={type}
         value={value}
       />
     </div>

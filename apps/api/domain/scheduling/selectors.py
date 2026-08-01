@@ -183,6 +183,10 @@ def live_session_detail(
     )
     if session is None:
         raise LiveSession.DoesNotExist
+    return _live_session_payload(session=session, actor=actor)
+
+
+def _live_session_payload(*, session: LiveSession, actor: object) -> dict[str, Any]:
     occurrence = session.occurrence
     availability = _availability(occurrence, actor)
     return {
@@ -205,6 +209,38 @@ def live_session_detail(
         "status": session.status,
         **availability,
     }
+
+
+def live_sessions_visible_to_actor(
+    *,
+    actor: object,
+    organization: Organization,
+    course_slug: str = "",
+    scope: str = "upcoming",
+) -> list[dict[str, Any]]:
+    occurrences = occurrences_visible_to_actor(
+        actor=actor, organization=organization
+    ).filter(live_session__isnull=False)
+    if course_slug:
+        occurrences = occurrences.filter(series__course__slug=course_slug)
+    now = timezone.now()
+    if scope == "upcoming":
+        occurrences = occurrences.filter(ends_at__gte=now).order_by("starts_at")
+    elif scope == "past":
+        occurrences = occurrences.filter(ends_at__lt=now).order_by("-starts_at")
+    else:
+        occurrences = occurrences.order_by("-starts_at")
+    sessions = LiveSession.objects.filter(occurrence__in=occurrences).select_related(
+        "occurrence__series__organization",
+        "occurrence__series__course",
+        "occurrence__series__host_membership__user",
+    )
+    sessions = sessions.order_by(
+        "-occurrence__starts_at"
+        if scope in {"past", "all"}
+        else "occurrence__starts_at"
+    )[:100]
+    return [_live_session_payload(session=session, actor=actor) for session in sessions]
 
 
 def attendance_summary(session: LiveSession) -> list[dict[str, Any]]:

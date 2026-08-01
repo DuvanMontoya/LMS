@@ -9,6 +9,7 @@ import {
   Play,
   Sparkles,
   Users,
+  Video,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -16,6 +17,7 @@ import { LearnerDeliveryList } from '@/components/assessments/learner-deliveries
 import { CourseCurriculum } from '@/components/learning/course-curriculum';
 import { CourseGradebook } from '@/components/learning/course-gradebook';
 import { LearningProgress } from '@/components/learning/learning-progress';
+import { LiveSessionList } from '@/components/scheduling/live-session-list';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,6 +28,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { getMyAssessmentDeliveries } from '@/lib/assessments/server';
+import { getLiveSessions } from '@/lib/scheduling/server';
 import {
   getEnrollmentForCourse,
   getLearningOutline,
@@ -36,6 +39,7 @@ const tabs = [
   { icon: Sparkles, id: 'resumen', label: 'Resumen' },
   { icon: Layers3, id: 'contenido', label: 'Contenido' },
   { icon: ClipboardCheck, id: 'evaluaciones', label: 'Evaluaciones' },
+  { icon: Video, id: 'clases', label: 'Clases en vivo' },
   { icon: Award, id: 'calificaciones', label: 'Calificaciones' },
 ] as const;
 
@@ -53,9 +57,10 @@ export default async function LearningOutlinePage({
     searchParams,
   ]);
   const { enrollment } = await getEnrollmentForCourse(slug, courseSlug);
-  const [data, assessmentData] = await Promise.all([
+  const [data, assessmentData, liveData] = await Promise.all([
     getLearningOutline(slug, enrollment.enrollment_id),
     getMyAssessmentDeliveries(slug),
+    getLiveSessions(slug, { courseSlug }),
   ]);
   const activeTab = isCourseTab(query.tab) ? query.tab : 'resumen';
   const courseDeliveries = assessmentData.deliveries.filter(
@@ -211,6 +216,22 @@ export default async function LearningOutlinePage({
               <span>{courseDeliveries.length}</span>
             </header>
             <LearnerDeliveryList deliveries={courseDeliveries} slug={slug} />
+          </section>
+        ) : null}
+        {activeTab === 'clases' ? (
+          <section aria-labelledby="clases-curso">
+            <header className="course-tab-heading">
+              <div>
+                <p className="academic-kicker">Encuentros sincrónicos</p>
+                <h2 id="clases-curso">Clases en vivo del curso</h2>
+                <p>
+                  Sesiones vinculadas a este curso. Las clases marcadas como
+                  obligatorias se incorporan al cálculo del progreso.
+                </p>
+              </div>
+              <span>{liveData.sessions.length}</span>
+            </header>
+            <LiveSessionList sessions={liveData.sessions} slug={slug} />
           </section>
         ) : null}
         {activeTab === 'calificaciones' ? (

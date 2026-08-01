@@ -93,6 +93,11 @@ urlpatterns = [
         name="managed-account-email-correction",
     ),
     path(
+        "organizations/<slug:slug>/invitations/<uuid:invitation_id>/manual-activation/",
+        views.ManagedAccountManualActivationView.as_view(),
+        name="managed-account-manual-activation",
+    ),
+    path(
         "public/invitations/activate/",
         views.InvitationActivationView.as_view(),
         name="invitation-activation",
@@ -131,5 +136,10 @@ urlpatterns = [
         "organizations/<slug:slug>/memberships/<uuid:membership_id>/revoke-sessions/",
         views.RevokeMemberSessionsView.as_view(),
         name="member-sessions-revoke",
+    ),
+    path(
+        "organizations/<slug:slug>/memberships/<uuid:membership_id>/password-recovery/",
+        views.SendMemberPasswordRecoveryView.as_view(),
+        name="member-password-recovery",
     ),
 ]

@@ -14,6 +14,8 @@ export type LearningUnit =
   operations['organizations_learning_me_enrollments_units_retrieve']['responses'][200]['content']['application/json'];
 export type CohortPage =
   operations['learning_cohorts_list']['responses'][200]['content']['application/json'];
+export type AcademicGroupPage =
+  operations['learning_academic_groups_list']['responses'][200]['content']['application/json'];
 export type EnrollmentPage =
   operations['learning_enrollments_list']['responses'][200]['content']['application/json'];
 export type Cohort =
@@ -56,7 +58,16 @@ export type LearningCohortOption = {
   releaseNumber: number;
 };
 
+export type LearningAcademicGroupOption = {
+  academicYear: number;
+  id: string;
+  level: components['schemas']['AcademicGroupLevel'];
+  name: string;
+  section: string;
+};
+
 export type LearningAdminOptions = {
+  academicGroups: LearningAcademicGroupOption[];
   cohorts: LearningCohortOption[];
   courses: LearningCourseOption[];
   members: LearningMemberOption[];
@@ -90,6 +101,40 @@ export async function getMyLearning(slug: string) {
     'No fue posible consultar Mi aprendizaje.',
   )) as MyLearning[];
   return { ...organization, enrollments };
+}
+
+export async function getAcademicGroups(slug: string) {
+  const organization = await getOrganizationForPage(slug);
+  const client = await createPlatformServerClient();
+  const canManage = organization.access.capabilities.includes(
+    'learning.cohort.manage',
+  );
+  const [groups, members] = await Promise.all([
+    required(
+      client.GET('/api/v1/organizations/{slug}/learning/academic-groups/', {
+        params: { path: { slug }, query: { page_size: 100 } },
+        cache: 'no-store',
+      }),
+      'No fue posible consultar los grupos académicos.',
+    ) as Promise<AcademicGroupPage>,
+    canManage
+      ? (required(
+          client.GET('/api/v1/organizations/{slug}/memberships/', {
+            params: { path: { slug }, query: { page_size: 100 } },
+            cache: 'no-store',
+          }),
+          'No fue posible consultar las membresías disponibles.',
+        ) as Promise<MemberPage>)
+      : Promise.resolve({ results: [] } as unknown as MemberPage),
+  ]);
+  return {
+    ...organization,
+    groups,
+    members: members.results.map((membership) => ({
+      email: membership.user.email,
+      id: membership.membership_id,
+    })),
+  };
 }
 
 export async function getLearningOutline(slug: string, enrollmentId: string) {
@@ -282,7 +327,7 @@ async function getLearningAdminOptionsFromClient(
   client: PlatformServerClient,
   slug: string,
 ): Promise<LearningAdminOptions> {
-  const [courses, members, cohorts] = await Promise.all([
+  const [courses, members, cohorts, academicGroups] = await Promise.all([
     required(
       client.GET('/api/v1/organizations/{slug}/courses/', {
         params: {
@@ -310,6 +355,13 @@ async function getLearningAdminOptionsFromClient(
       }),
       'No fue posible consultar las cohortes disponibles.',
     ) as Promise<CohortPage>,
+    required(
+      client.GET('/api/v1/organizations/{slug}/learning/academic-groups/', {
+        params: { path: { slug }, query: { page_size: 100 } },
+        cache: 'no-store',
+      }),
+      'No fue posible consultar los grupos académicos disponibles.',
+    ) as Promise<AcademicGroupPage>,
   ]);
 
   const courseOptions = await Promise.all(
@@ -345,6 +397,15 @@ async function getLearningAdminOptionsFromClient(
   );
 
   return {
+    academicGroups: academicGroups.results
+      .filter((group) => group.status === 'active')
+      .map((group) => ({
+        academicYear: group.academic_year,
+        id: group.id,
+        level: group.level,
+        name: group.name,
+        section: group.section ?? '',
+      })),
     cohorts: cohorts.results.map((cohort) => ({
       courseSlug: cohort.course_slug,
       courseTitle: cohort.course_title,
@@ -365,5 +426,5 @@ async function getLearningAdminOptionsFromClient(
 }
 
 function emptyAdminOptions(): LearningAdminOptions {
-  return { cohorts: [], courses: [], members: [] };
+  return { academicGroups: [], cohorts: [], courses: [], members: [] };
 }

@@ -19,8 +19,9 @@ from rest_framework.views import APIView
 from domain.courses.models import Course
 from domain.learning.assets import learning_asset_descriptors
 from domain.learning.exceptions import LearningDomainError
-from domain.learning.models import CourseEnrollment, LearningCohort
+from domain.learning.models import AcademicGroup, CourseEnrollment, LearningCohort
 from domain.learning.selectors import (
+    academic_groups_visible_to_actor,
     cohort_progress_summary,
     cohort_visible_to_actor,
     cohorts_visible_to_actor,
@@ -37,12 +38,14 @@ from domain.learning.selectors import (
 from domain.learning.services import (
     archive_cohort,
     complete_unit,
+    create_academic_group,
     create_cohort,
     enroll_cohort_members,
     enroll_member,
     open_unit,
     reactivate_enrollment,
     reopen_unit,
+    replace_academic_group_roster,
     revoke_enrollment,
     suspend_enrollment,
     update_cohort,
@@ -55,6 +58,9 @@ from domain.publishing.models import CourseRelease
 
 from .filters import CohortFilter, EnrollmentFilter
 from .serializers import (
+    AcademicGroupCreateSerializer,
+    AcademicGroupReadSerializer,
+    AcademicGroupRosterSerializer,
     CohortCreateSerializer,
     CohortEnrollmentBatchSerializer,
     CohortReadSerializer,
@@ -70,6 +76,7 @@ from .serializers import (
     LearningOutlineSerializer,
     LearningUnitSerializer,
     MyLearningSerializer,
+    PaginatedAcademicGroupSerializer,
     PaginatedCohortProgressSerializer,
     PaginatedCohortSerializer,
     PaginatedEnrollmentSerializer,
@@ -103,6 +110,71 @@ class PositionThrottle(SimpleRateThrottle):
             return super().allow_request(request, view)
         except Exception:
             return True
+
+
+class AcademicGroupListCreateView(APIView):
+    @extend_schema(
+        operation_id="learning_academic_groups_list",
+        parameters=[OpenApiParameter("page", int), OpenApiParameter("page_size", int)],
+        responses={200: PaginatedAcademicGroupSerializer},
+    )
+    def get(self, request: Request, slug: str) -> Response:
+        organization = _organization(request, slug)
+        queryset = academic_groups_visible_to_actor(
+            request.user, organization
+        ).annotate(linked_cohort_count=Count("course_cohorts"))
+        return _paginate(
+            request,
+            queryset.order_by("-academic_year", "level", "name"),
+            AcademicGroupReadSerializer,
+            self,
+        )
+
+    @extend_schema(
+        operation_id="learning_academic_groups_create",
+        request=AcademicGroupCreateSerializer,
+        responses={201: AcademicGroupReadSerializer, 403: ErrorSerializer},
+    )
+    def post(self, request: Request, slug: str) -> Response:
+        organization = _organization(request, slug)
+        serializer = AcademicGroupCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = _domain_call(
+            lambda: create_academic_group(
+                actor=request.user,
+                organization=organization,
+                **serializer.validated_data,
+            )
+        )
+        if isinstance(result, Response):
+            return result
+        return Response(
+            AcademicGroupReadSerializer(result).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AcademicGroupRosterView(APIView):
+    @extend_schema(
+        operation_id="learning_academic_group_roster_update",
+        request=AcademicGroupRosterSerializer,
+        responses={200: AcademicGroupReadSerializer, 403: ErrorSerializer},
+    )
+    def put(self, request: Request, slug: str, group_id: uuid.UUID) -> Response:
+        organization = _organization(request, slug)
+        group = get_object_or_404(AcademicGroup, organization=organization, pk=group_id)
+        serializer = AcademicGroupRosterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = _domain_call(
+            lambda: replace_academic_group_roster(
+                actor=request.user, group=group, **serializer.validated_data
+            )
+        )
+        return (
+            result
+            if isinstance(result, Response)
+            else Response(AcademicGroupReadSerializer(result).data)
+        )
 
 
 def _organization(request: Request, slug: str) -> Organization:
@@ -196,12 +268,22 @@ class CohortListCreateView(APIView):
             course=course,
             number=data["release_number"],
         )
+        academic_group = (
+            get_object_or_404(
+                AcademicGroup,
+                organization=organization,
+                pk=data["academic_group_id"],
+            )
+            if data.get("academic_group_id")
+            else None
+        )
         result = _domain_call(
             lambda: create_cohort(
                 actor=request.user,
                 organization=organization,
                 course=course,
                 release=release,
+                academic_group=academic_group,
                 name=data["name"],
                 slug=data.get("slug"),
                 description=data.get("description", ""),

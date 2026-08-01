@@ -15,6 +15,7 @@ import {
   useEnrollCohort,
 } from '@/lib/learning/hooks';
 import type {
+  LearningAcademicGroupOption,
   LearningCohortOption,
   LearningCourseOption,
   LearningMemberOption,
@@ -27,6 +28,7 @@ const cohortSchema = z
   .object({
     access_ends_at: optionalDate,
     access_starts_at: optionalDate,
+    academic_group_id: z.string().uuid().or(z.literal('')),
     course_slug: z.string().trim().min(1, 'Selecciona un curso.'),
     description: z.string().trim().max(2000),
     name: z.string().trim().min(1, 'Escribe el nombre.').max(200),
@@ -51,9 +53,14 @@ const cohortSchema = z
 type CohortValues = z.infer<typeof cohortSchema>;
 
 export function CohortCreateForm({
+  academicGroups,
   courses,
   slug,
-}: Readonly<{ courses: LearningCourseOption[]; slug: string }>) {
+}: Readonly<{
+  academicGroups: LearningAcademicGroupOption[];
+  courses: LearningCourseOption[];
+  slug: string;
+}>) {
   const router = useRouter();
   const mutation = useCreateCohort(slug);
   const initialCourse = courses[0];
@@ -62,6 +69,7 @@ export function CohortCreateForm({
     defaultValues: {
       access_ends_at: '',
       access_starts_at: '',
+      academic_group_id: '',
       course_slug: initialCourse?.slug ?? '',
       description: '',
       name: '',
@@ -87,6 +95,7 @@ export function CohortCreateForm({
       access_starts_at: parsed.access_starts_at
         ? new Date(parsed.access_starts_at).toISOString()
         : null,
+      academic_group_id: parsed.academic_group_id || null,
       course_slug: parsed.course_slug,
       description: parsed.description,
       name: parsed.name,
@@ -165,6 +174,26 @@ export function CohortCreateForm({
               Release {release.number}
               {release.current ? ' · actual' : ''} · {release.unitCount}{' '}
               unidades
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field
+        error={form.formState.errors.academic_group_id?.message}
+        hint="Opcional. Organiza la cohorte institucionalmente; no matricula integrantes por sí solo."
+        label="Grupo académico"
+        name="cohort-academic-group"
+      >
+        <select
+          className="academic-control"
+          id="cohort-academic-group"
+          {...form.register('academic_group_id')}
+        >
+          <option value="">Sin grupo académico</option>
+          {academicGroups.map((group) => (
+            <option key={group.id} value={group.id}>
+              {group.name} · {group.academicYear}
+              {group.section ? ` · ${group.section}` : ''}
             </option>
           ))}
         </select>

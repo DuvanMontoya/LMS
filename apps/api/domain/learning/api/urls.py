@@ -9,6 +9,11 @@ ME = BASE + "me/enrollments/<uuid:enrollment_id>/"
 UNIT = ME + "units/<uuid:unit_id>/"
 
 urlpatterns = [
+    path(BASE + "academic-groups/", views.AcademicGroupListCreateView.as_view()),
+    path(
+        BASE + "academic-groups/<uuid:group_id>/roster/",
+        views.AcademicGroupRosterView.as_view(),
+    ),
     path(BASE + "cohorts/", views.CohortListCreateView.as_view()),
     path(COHORT, views.CohortDetailView.as_view()),
     path(COHORT + "archive/", views.CohortArchiveView.as_view()),

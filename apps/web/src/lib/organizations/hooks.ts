@@ -270,6 +270,41 @@ export function useCorrectManagedAccountEmail(slug: string) {
   });
 }
 
+export function useManuallyActivateManagedAccount(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      confirmIdentity,
+      invitationId,
+      temporaryPassword,
+    }: {
+      confirmIdentity: boolean;
+      invitationId: string;
+      temporaryPassword: string;
+    }) =>
+      requireData(
+        platformBrowserClient.POST(
+          '/api/v1/organizations/{slug}/invitations/{invitation_id}/manual-activation/',
+          {
+            params: { path: { slug, invitation_id: invitationId } },
+            body: {
+              confirm_identity: confirmIdentity,
+              temporary_password: temporaryPassword,
+            },
+          },
+        ),
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: organizationKeys.invitations(slug),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: organizationKeys.membersRoot(slug),
+      });
+    },
+  });
+}
+
 export function useBulkMembershipTransition(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -633,6 +668,18 @@ export function useRevokeMemberSessions(slug: string) {
       requireData(
         platformBrowserClient.POST(
           '/api/v1/organizations/{slug}/memberships/{membership_id}/revoke-sessions/',
+          { params: { path: { slug, membership_id: membershipId } } },
+        ),
+      ),
+  });
+}
+
+export function useSendMemberPasswordRecovery(slug: string) {
+  return useMutation({
+    mutationFn: (membershipId: string) =>
+      requireData(
+        platformBrowserClient.POST(
+          '/api/v1/organizations/{slug}/memberships/{membership_id}/password-recovery/',
           { params: { path: { slug, membership_id: membershipId } } },
         ),
       ),

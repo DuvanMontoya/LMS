@@ -15,6 +15,9 @@ from domain.organizations.models import Membership, Organization
 from domain.publishing.models import CourseRelease
 
 from .choices import (
+    AcademicGroupLevel,
+    AcademicGroupMemberStatus,
+    AcademicGroupRole,
     AssignmentReason,
     CohortStatus,
     EnrollmentStatus,
@@ -32,6 +35,111 @@ class NoPhysicalDeleteModel(models.Model):
         raise ValidationError("Este historial no se elimina físicamente.")
 
 
+class AcademicGroup(NoPhysicalDeleteModel):
+    """Grupo institucional reutilizable entre cursos, años y cohortes."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, related_name="academic_groups"
+    )
+    name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=100)
+    academic_year = models.PositiveSmallIntegerField()
+    level = models.CharField(max_length=32, choices=AcademicGroupLevel.choices)
+    section = models.CharField(max_length=40, blank=True)
+    description = models.TextField(max_length=2_000, blank=True)
+    status = models.CharField(
+        max_length=16, choices=CohortStatus.choices, default=CohortStatus.ACTIVE
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="academic_groups_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                Lower("slug"), "organization", name="learning_group_org_slug_ci"
+            ),
+            models.CheckConstraint(
+                condition=Q(slug=Lower(F("slug"))),
+                name="learning_group_slug_lowercase",
+            ),
+            models.CheckConstraint(
+                condition=Q(academic_year__gte=2000, academic_year__lte=2200),
+                name="learning_group_academic_year",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["organization", "academic_year", "status"],
+                name="learn_group_org_year_ix",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.organization}:{self.academic_year}:{self.slug}"
+
+    def clean(self) -> None:
+        super().clean()
+        self.name = self.name.strip()
+        self.slug = self.slug.strip().lower()
+        self.section = self.section.strip()
+        self.description = self.description.strip()
+
+
+class AcademicGroupMember(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    group = models.ForeignKey(
+        AcademicGroup, on_delete=models.PROTECT, related_name="roster"
+    )
+    membership = models.ForeignKey(
+        Membership, on_delete=models.PROTECT, related_name="academic_groups"
+    )
+    role = models.CharField(max_length=16, choices=AcademicGroupRole.choices)
+    status = models.CharField(
+        max_length=16,
+        choices=AcademicGroupMemberStatus.choices,
+        default=AcademicGroupMemberStatus.ACTIVE,
+    )
+    joined_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="academic_group_members_added",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["group", "membership"], name="learning_group_member_unique"
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=["group", "role", "status"], name="learn_group_roster_ix"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.group}:{self.membership}:{self.role}"
+
+    def clean(self) -> None:
+        super().clean()
+        if (
+            self.group_id
+            and self.membership_id
+            and self.group.organization_id != self.membership.organization_id
+        ):
+            raise ValidationError(
+                {"membership": "La persona pertenece a otra organización."}
+            )
+
+
 class LearningCohort(NoPhysicalDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
@@ -42,6 +150,13 @@ class LearningCohort(NoPhysicalDeleteModel):
     )
     release = models.ForeignKey(
         CourseRelease, on_delete=models.PROTECT, related_name="learning_cohorts"
+    )
+    academic_group = models.ForeignKey(
+        AcademicGroup,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="course_cohorts",
     )
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=80)
@@ -127,6 +242,13 @@ class LearningCohort(NoPhysicalDeleteModel):
         self.description = self.description.strip()
         if self.course_id and self.course.organization_id != self.organization_id:
             raise ValidationError({"course": "El curso pertenece a otra organización."})
+        if (
+            self.academic_group_id
+            and self.academic_group.organization_id != self.organization_id
+        ):
+            raise ValidationError(
+                {"academic_group": "El grupo pertenece a otra organización."}
+            )
         if self.release_id and (
             self.release.course_id != self.course_id
             or self.release.course.organization_id != self.organization_id

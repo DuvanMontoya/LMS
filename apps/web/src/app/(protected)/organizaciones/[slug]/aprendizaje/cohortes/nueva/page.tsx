@@ -24,7 +24,11 @@ export default async function NewCohortPage({
         eyebrow="Aprendizaje"
         title="Nueva cohorte"
       />
-      <CohortCreateForm courses={data.options.courses} slug={slug} />
+      <CohortCreateForm
+        academicGroups={data.options.academicGroups}
+        courses={data.options.courses}
+        slug={slug}
+      />
     </main>
   );
 }
