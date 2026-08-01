@@ -6,6 +6,7 @@ requires-python = ">=3.13.13"
 dependencies = [
     "boto3==1.43.61",
     "celery[redis]==5.6.3",
+    "cryptography==49.0.0",
     "django-allauth[headless-spec]==65.18.0",
     "django-filter==26.1",
     "django-treebeard==6.0.0",
@@ -13,10 +14,15 @@ dependencies = [
     "djangorestframework==3.17.1",
     "drf-spectacular==0.30.0",
     "jsonschema==4.26.0",
+    "opentelemetry-api==1.44.0",
+    "opentelemetry-exporter-otlp-proto-grpc==1.44.0",
+    "opentelemetry-sdk==1.44.0",
     "pillow==12.3.0",
     "psycopg[binary]==3.3.4",
     "pypdf==6.14.2",
     "redis==6.4.0",
+    "sentry-sdk==2.66.1",
+    "structlog==26.1.0",
     "sympy==1.14.0",
 ]
 
@@ -33,7 +39,7 @@ dev = [
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.test"
 python_files = ["test_*.py", "*_test.py"]
-testpaths = ["tests", "domain"]
+testpaths = ["tests", "domain", "config"]
 addopts = "--strict-config --strict-markers --cov=config --cov=domain --cov-report=term-missing --cov-fail-under=75"
 
 [tool.coverage.run]

@@ -16,6 +16,7 @@ from domain.catalog.models import (
     Subject,
     Topic,
 )
+from domain.events.services import record_domain_event
 from domain.organizations.models import Organization
 
 from .choices import (
@@ -964,6 +965,23 @@ def _transition(
         actor=actor,
         note=note,
     )
+    action = {
+        AuthoringStatus.IN_REVIEW: "submitted",
+        AuthoringStatus.CHANGES_REQUESTED: "changes_requested",
+        AuthoringStatus.APPROVED: "approved",
+    }.get(to_status)
+    if action:
+        record_domain_event(
+            event_type=f"courses.revision.{action}.v1",
+            organization=revision.course.organization,
+            aggregate_type="revision",
+            aggregate_id=revision.id,
+            actor=actor,
+            payload={
+                "revision_id": str(revision.id),
+                "course_id": str(revision.course_id),
+            },
+        )
     return _finish(revision, actor)
 
 

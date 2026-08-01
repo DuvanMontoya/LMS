@@ -168,3 +168,21 @@ terceros como autoridad.
 PyPI, repositorios oficiales, registries e imágenes publicadas confirmaron pins
 y licencias. `django-storages` 1.14.6 fue rechazado por no declarar Django 6 ni
 Python 3.13; MinIO fue rechazado tras el archivado de su repositorio comunitario.
+
+## Prompt 16 consultation — 2026-07-31
+
+| Tema | Fuente oficial | Evidencia aplicada |
+| --- | --- | --- |
+| PostgreSQL FTS y trigram | https://www.postgresql.org/docs/18/textsearch.html ; https://www.postgresql.org/docs/18/pgtrgm.html | `websearch_to_tsquery`, ranking, headline, GIN y trigram acotado. |
+| Django PostgreSQL search | https://docs.djangoproject.com/en/6.0/ref/contrib/postgres/search/ ; https://docs.djangoproject.com/en/6.0/ref/contrib/postgres/operations/ | `SearchVectorField`, `SearchRank`, `SearchHeadline` y `TrigramExtension`. |
+| Django transacciones | https://docs.djangoproject.com/en/6.0/topics/db/transactions/ | `transaction.on_commit` y tests de commit/rollback. |
+| Celery 5.6.3 | https://docs.celeryq.dev/en/stable/django/first-steps-with-django.html ; https://docs.celeryq.dev/en/stable/userguide/tasks.html | `delay_on_commit`, task IDs, retry y workers idempotentes. |
+| OpenTelemetry Python/OTLP | https://opentelemetry.io/docs/languages/python/ ; https://opentelemetry.io/docs/languages/python/exporters/ | Traces/metrics estables, logs development, OTLP y batching. |
+| Collector 0.157.0 | https://opentelemetry.io/docs/collector/ ; https://github.com/open-telemetry/opentelemetry-collector-releases/releases/tag/v0.157.0 | Contrib por filelog, pipelines y release estable. |
+| Sentry Python/Next | https://docs.sentry.io/platforms/python/ ; https://docs.sentry.io/platforms/javascript/guides/nextjs/ | Scrubbing, `before_send`, PII off y setup manual sin Replay. |
+| Prometheus | https://prometheus.io/docs/practices/naming/ ; https://prometheus.io/docs/practices/instrumentation/ | Nombres, labels acotados y cardinalidad. |
+| Grafana/Loki/Jaeger | https://grafana.com/docs/grafana/latest/administration/provisioning/ ; https://grafana.com/docs/loki/latest/send-data/otel/ ; https://www.jaegertracing.io/docs/2.20/ | Provisioning, OTLP logs y Jaeger v2 OTLP. |
+| Registros | https://pypi.org/ ; https://registry.npmjs.org/ | Pins: sentry-sdk 2.66.1, structlog 26.1.0, OTel 1.44.0 y @sentry/nextjs 10.69.0. Las instrumentaciones `0.65b0` se rechazaron. |
+| Imágenes oficiales | Docker Hub y releases oficiales | Collector 0.157.0, Prometheus 3.13.2, Jaeger 2.20.0, Loki 3.7.4 y Grafana 13.1.1, todos con digest linux/amd64 verificado. |
+
+No se usaron blogs, tutoriales, previews ni tags flotantes como autoridad.

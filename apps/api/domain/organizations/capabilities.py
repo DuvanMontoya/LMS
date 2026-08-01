@@ -16,6 +16,15 @@ class Capability(StrEnum):
     ROLE_ASSIGN = "role.assign"
     ROLE_ASSIGN_OWNER = "role.assign_owner"
     MEMBERSHIP_EVENT_VIEW = "membership_event.view"
+    MEMBERSHIP_INVITE = "membership.invite"
+    MEMBERSHIP_INVITATION_MANAGE = "membership.invitation.manage"
+    MEMBERSHIP_JOIN_REQUEST_MANAGE = "membership.join_request.manage"
+    MEMBERSHIP_PROFILE_MANAGE = "membership.profile.manage"
+    MEMBERSHIP_SETTINGS_VIEW = "membership.settings.view"
+    MEMBERSHIP_SETTINGS_MANAGE = "membership.settings.manage"
+    MEMBERSHIP_SESSIONS_REVOKE = "membership.sessions.revoke"
+    INTEGRATION_VIEW = "integration.view"
+    INTEGRATION_MANAGE = "integration.manage"
     CATALOG_VIEW = "catalog.view"
     CATALOG_MANAGE = "catalog.manage"
     CATALOG_MANAGE_PREREQUISITES = "catalog.manage_prerequisites"
@@ -67,6 +76,15 @@ class Capability(StrEnum):
     ASSET_ORIGINAL_DOWNLOAD = "asset.original.download"
     ASSET_REPROCESS = "asset.reprocess"
     ASSET_SECURITY_VIEW = "asset.security.view"
+    PLATFORM_EVENTS_VIEW = "platform.events.view"
+    PLATFORM_EVENTS_REPLAY = "platform.events.replay"
+    PLATFORM_OPERATIONS_VIEW = "platform.operations.view"
+    PLATFORM_OPERATIONS_MANAGE = "platform.operations.manage"
+    SEARCH_AUTHORING_USE = "search.authoring.use"
+    SEARCH_INSTITUTIONAL_USE = "search.institutional.use"
+    SEARCH_INDEX_VIEW = "search.index.view"
+    SEARCH_INDEX_REBUILD = "search.index.rebuild"
+    NOTIFICATION_PREFERENCES_MANAGE_OWN = "notification.preferences.manage_own"
 
 
 _ALL_CAPABILITIES = frozenset(Capability)
@@ -74,6 +92,7 @@ _ALL_ADMIN_CAPABILITIES = _ALL_CAPABILITIES - frozenset({Capability.ASSESSMENT_A
 _MEMBER_READ_CAPABILITIES = frozenset(
     {
         Capability.ORGANIZATION_VIEW,
+        Capability.NOTIFICATION_PREFERENCES_MANAGE_OWN,
     }
 )
 _CATALOG_MANAGER_CAPABILITIES = frozenset(
@@ -114,6 +133,7 @@ _COURSE_AUTHOR_CAPABILITIES = frozenset(
         Capability.ASSET_UPLOAD,
         Capability.ASSET_ORIGINAL_DOWNLOAD,
         Capability.ASSET_REPROCESS,
+        Capability.SEARCH_AUTHORING_USE,
     }
 )
 
@@ -145,6 +165,7 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.ASSESSMENT_REGRADING_VIEW,
                 Capability.ASSESSMENT_ANALYTICS_VIEW,
                 Capability.ASSET_LIBRARY_VIEW,
+                Capability.SEARCH_AUTHORING_USE,
             }
         ),
         RoleCode.INSTRUCTOR: _MEMBER_READ_CAPABILITIES
@@ -170,6 +191,7 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.ASSESSMENT_ANALYTICS_VIEW,
                 Capability.ASSESSMENT_ANALYTICS_REFRESH,
                 Capability.ASSET_LIBRARY_VIEW,
+                Capability.SEARCH_INSTITUTIONAL_USE,
             }
         ),
         RoleCode.LEARNER: _MEMBER_READ_CAPABILITIES

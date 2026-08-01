@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from domain.courses.models import Course
+from domain.events.services import record_domain_event
 from domain.organizations.choices import MembershipStatus
 from domain.organizations.models import Membership, Organization
 from domain.publishing.choices import PublicationStatus
@@ -97,7 +98,7 @@ def _event(
     node_id: uuid.UUID | None = None,
     occurred_at: datetime | None = None,
 ) -> LearningEvent:
-    return LearningEvent.objects.create(
+    event = LearningEvent.objects.create(
         organization=enrollment.organization,
         enrollment=enrollment,
         release_assignment=assignment,
@@ -108,6 +109,39 @@ def _event(
         actor=actor,
         occurred_at=occurred_at or timezone.now(),
     )
+    domain_types = {
+        LearningEventType.ENROLLMENT_CREATED: "learning.enrollment.created.v1",
+        LearningEventType.ENROLLMENT_SUSPENDED: "learning.enrollment.suspended.v1",
+        LearningEventType.ENROLLMENT_REACTIVATED: "learning.enrollment.reactivated.v1",
+        LearningEventType.ENROLLMENT_REVOKED: "learning.enrollment.revoked.v1",
+        LearningEventType.COURSE_COMPLETED: "learning.course_progress.completed.v1",
+    }
+    domain_type = domain_types.get(event_type)
+    if domain_type:
+        aggregate_id = (
+            progress.id
+            if event_type == LearningEventType.COURSE_COMPLETED and progress
+            else enrollment.id
+        )
+        aggregate_type = (
+            "course_progress"
+            if progress and event_type == LearningEventType.COURSE_COMPLETED
+            else "enrollment"
+        )
+        record_domain_event(
+            event_type=domain_type,
+            organization=enrollment.organization,
+            aggregate_type=aggregate_type,
+            aggregate_id=aggregate_id,
+            actor=actor,
+            payload={
+                f"{aggregate_type}_id": str(aggregate_id),
+                "membership_id": str(enrollment.membership_id),
+                "course_id": str(enrollment.course_id),
+                "release_id": str(assignment.release_id),
+            },
+        )
+    return event
 
 
 @transaction.atomic

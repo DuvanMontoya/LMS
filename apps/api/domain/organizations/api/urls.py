@@ -38,6 +38,11 @@ urlpatterns = [
         name="membership-revoke",
     ),
     path(
+        "organizations/<slug:slug>/memberships/bulk-transition/",
+        views.BulkMembershipTransitionView.as_view(),
+        name="membership-bulk-transition",
+    ),
+    path(
         "organizations/<slug:slug>/memberships/<uuid:membership_id>/roles/",
         views.ReplaceRolesView.as_view(),
         name="membership-roles",
@@ -46,5 +51,85 @@ urlpatterns = [
         "organizations/<slug:slug>/memberships/<uuid:membership_id>/events/",
         views.MembershipEventsView.as_view(),
         name="membership-events",
+    ),
+    path(
+        "organizations/<slug:slug>/membership-settings/",
+        views.MembershipSettingsView.as_view(),
+        name="membership-settings",
+    ),
+    path(
+        "organizations/<slug:slug>/invitations/",
+        views.InvitationListCreateView.as_view(),
+        name="invitation-list",
+    ),
+    path(
+        "organizations/<slug:slug>/invitations/bulk/preview/",
+        views.BulkInvitationPreviewView.as_view(),
+        name="invitation-bulk-preview",
+    ),
+    path(
+        "organizations/<slug:slug>/invitations/bulk/confirm/",
+        views.BulkInvitationConfirmView.as_view(),
+        name="invitation-bulk-confirm",
+    ),
+    path(
+        "organizations/<slug:slug>/managed-accounts/",
+        views.ManagedAccountCreateView.as_view(),
+        name="managed-account-create",
+    ),
+    path(
+        "organizations/<slug:slug>/invitations/<uuid:invitation_id>/resend/",
+        views.ResendInvitationView.as_view(),
+        name="invitation-resend",
+    ),
+    path(
+        "organizations/<slug:slug>/invitations/<uuid:invitation_id>/revoke/",
+        views.RevokeInvitationView.as_view(),
+        name="invitation-revoke",
+    ),
+    path(
+        "organizations/<slug:slug>/invitations/<uuid:invitation_id>/managed-email/",
+        views.ManagedAccountEmailCorrectionView.as_view(),
+        name="managed-account-email-correction",
+    ),
+    path(
+        "public/invitations/activate/",
+        views.InvitationActivationView.as_view(),
+        name="invitation-activation",
+    ),
+    path(
+        "public/invitations/accept/",
+        views.AcceptInvitationView.as_view(),
+        name="invitation-accept",
+    ),
+    path(
+        "public/managed-accounts/activate/",
+        views.ManagedAccountActivationView.as_view(),
+        name="managed-account-activation",
+    ),
+    path(
+        "organizations/<slug:slug>/join/",
+        views.PublicJoinView.as_view(),
+        name="public-join",
+    ),
+    path(
+        "organizations/<slug:slug>/join-requests/",
+        views.JoinRequestListView.as_view(),
+        name="join-request-list",
+    ),
+    path(
+        "organizations/<slug:slug>/join-requests/<uuid:join_request_id>/<str:action>/",
+        views.JoinRequestReviewView.as_view(),
+        name="join-request-review",
+    ),
+    path(
+        "organizations/<slug:slug>/memberships/<uuid:membership_id>/profile/",
+        views.MemberProfileView.as_view(),
+        name="member-profile",
+    ),
+    path(
+        "organizations/<slug:slug>/memberships/<uuid:membership_id>/revoke-sessions/",
+        views.RevokeMemberSessionsView.as_view(),
+        name="member-sessions-revoke",
     ),
 ]

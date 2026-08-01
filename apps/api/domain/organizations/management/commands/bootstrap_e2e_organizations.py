@@ -49,6 +49,19 @@ class Command(BaseCommand):
             )
             return created
 
+        def superuser(email: str) -> User:
+            existing = cast(
+                "User | None", get_user_model().objects.filter(email=email).first()
+            )
+            if existing is not None:
+                return existing
+            manager = cast("UserManager", get_user_model().objects)
+            created = manager.create_superuser(email=email, password=password)
+            EmailAddress.objects.create(
+                user=created, email=email, primary=True, verified=True
+            )
+            return created
+
         owner = user("owner@organizations.e2e.test")
         administrator = user("administrator@organizations.e2e.test")
         author = user("author@organizations.e2e.test")
@@ -56,6 +69,7 @@ class Command(BaseCommand):
         learner = user("learner@organizations.e2e.test")
         reviewer = user("reviewer@organizations.e2e.test")
         external_owner = user("external@organizations.e2e.test")
+        superuser("platform-admin@organizations.e2e.test")
         user("candidate@organizations.e2e.test")
         user("rejoin@organizations.e2e.test")
 

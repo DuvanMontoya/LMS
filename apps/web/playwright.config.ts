@@ -31,7 +31,7 @@ export default defineConfig({
       command: 'node scripts/e2e-next-server.mjs',
       url: `${webOrigin}/`,
       reuseExistingServer: false,
-      timeout: 45_000,
+      timeout: 120_000,
     },
   ],
 });

@@ -8,6 +8,28 @@ export interface paths {
   '/api/v1/access/context/': {
     get: operations['access_context_retrieve'];
   };
+  '/api/v1/notifications/': {
+    get: operations['notifications_list'];
+  };
+  '/api/v1/notifications/preferences/': {
+    get: operations['notification_preferences_retrieve'];
+    put: operations['notification_preferences_update'];
+  };
+  '/api/v1/notifications/read-all/': {
+    post: operations['notifications_mark_all_read'];
+  };
+  '/api/v1/notifications/unread-count/': {
+    get: operations['notifications_unread_count'];
+  };
+  '/api/v1/notifications/{notification_id}/archive/': {
+    post: operations['notifications_archive'];
+  };
+  '/api/v1/notifications/{notification_id}/read/': {
+    post: operations['notifications_mark_read'];
+  };
+  '/api/v1/notifications/{notification_id}/unread/': {
+    post: operations['notifications_mark_unread'];
+  };
   '/api/v1/organizations/': {
     get: operations['organizations_list'];
   };
@@ -63,6 +85,12 @@ export interface paths {
   };
   '/api/v1/organizations/{organization_slug}/processing-jobs/{job_id}/': {
     get: operations['organizations_processing_jobs_retrieve'];
+  };
+  '/api/v1/organizations/{organization_slug}/search/': {
+    get: operations['organizations_discovery_search'];
+  };
+  '/api/v1/organizations/{organization_slug}/search/suggestions/': {
+    get: operations['organizations_discovery_search_suggestions'];
   };
   '/api/v1/organizations/{organization_slug}/uploads/': {
     post: operations['organizations_uploads_create'];
@@ -586,6 +614,56 @@ export interface paths {
     get: operations['organizations_courses_revisions_units_topics_list'];
     put: operations['organizations_courses_revisions_units_topics_update'];
   };
+  '/api/v1/organizations/{slug}/integrations/': {
+    get: operations['organizations_integrations_list'];
+  };
+  '/api/v1/organizations/{slug}/integrations/api-key/': {
+    post: operations['organizations_integrations_api_key_create'];
+  };
+  '/api/v1/organizations/{slug}/integrations/google/authorize/': {
+    post: operations['organizations_integrations_google_authorize_create'];
+  };
+  '/api/v1/organizations/{slug}/integrations/{connection_id}/disconnect/': {
+    post: operations['organizations_integrations_disconnect_create'];
+  };
+  '/api/v1/organizations/{slug}/integrations/{connection_id}/health-checks/': {
+    get: operations['organizations_integrations_health_checks_list'];
+    post: operations['organizations_integrations_health_checks_create'];
+  };
+  '/api/v1/organizations/{slug}/integrations/{connection_id}/rotate-key/': {
+    post: operations['organizations_integrations_rotate_key_create'];
+  };
+  '/api/v1/organizations/{slug}/integrations/{connection_id}/test-meeting/': {
+    post: operations['organizations_integrations_test_meeting_create'];
+  };
+  '/api/v1/organizations/{slug}/invitations/': {
+    get: operations['organizations_invitations_list'];
+    post: operations['organizations_invitations_create'];
+  };
+  '/api/v1/organizations/{slug}/invitations/bulk/confirm/': {
+    post: operations['organizations_invitations_bulk_confirm_create'];
+  };
+  '/api/v1/organizations/{slug}/invitations/bulk/preview/': {
+    post: operations['organizations_invitations_bulk_preview_create'];
+  };
+  '/api/v1/organizations/{slug}/invitations/{invitation_id}/managed-email/': {
+    patch: operations['organizations_invitations_managed_email_partial_update'];
+  };
+  '/api/v1/organizations/{slug}/invitations/{invitation_id}/resend/': {
+    post: operations['organizations_invitations_resend_create'];
+  };
+  '/api/v1/organizations/{slug}/invitations/{invitation_id}/revoke/': {
+    post: operations['organizations_invitations_revoke_create'];
+  };
+  '/api/v1/organizations/{slug}/join-requests/': {
+    get: operations['organizations_join_requests_list'];
+  };
+  '/api/v1/organizations/{slug}/join-requests/{join_request_id}/{action}/': {
+    post: operations['organizations_join_requests_create'];
+  };
+  '/api/v1/organizations/{slug}/join/': {
+    post: operations['organizations_join_create'];
+  };
   '/api/v1/organizations/{slug}/learning/cohorts/': {
     get: operations['learning_cohorts_list'];
     post: operations['learning_cohorts_create'];
@@ -665,9 +743,19 @@ export interface paths {
   '/api/v1/organizations/{slug}/library/courses/{course_slug}/units/{unit_id}/': {
     get: operations['organizations_library_courses_units_retrieve'];
   };
+  '/api/v1/organizations/{slug}/managed-accounts/': {
+    post: operations['organizations_managed_accounts_create'];
+  };
+  '/api/v1/organizations/{slug}/membership-settings/': {
+    get: operations['organizations_membership_settings_retrieve'];
+    put: operations['organizations_membership_settings_update'];
+  };
   '/api/v1/organizations/{slug}/memberships/': {
     get: operations['organizations_memberships_list'];
     post: operations['organizations_memberships_create'];
+  };
+  '/api/v1/organizations/{slug}/memberships/bulk-transition/': {
+    post: operations['organizations_memberships_bulk_transition_create'];
   };
   '/api/v1/organizations/{slug}/memberships/{membership_id}/': {
     get: operations['organizations_memberships_retrieve'];
@@ -675,8 +763,15 @@ export interface paths {
   '/api/v1/organizations/{slug}/memberships/{membership_id}/events/': {
     get: operations['organizations_memberships_events_list'];
   };
+  '/api/v1/organizations/{slug}/memberships/{membership_id}/profile/': {
+    get: operations['organizations_memberships_profile_retrieve'];
+    patch: operations['organizations_memberships_profile_partial_update'];
+  };
   '/api/v1/organizations/{slug}/memberships/{membership_id}/reactivate/': {
     post: operations['organizations_memberships_reactivate_create'];
+  };
+  '/api/v1/organizations/{slug}/memberships/{membership_id}/revoke-sessions/': {
+    post: operations['organizations_memberships_revoke_sessions_create'];
   };
   '/api/v1/organizations/{slug}/memberships/{membership_id}/revoke/': {
     post: operations['organizations_memberships_revoke_create'];
@@ -686,6 +781,52 @@ export interface paths {
   };
   '/api/v1/organizations/{slug}/memberships/{membership_id}/suspend/': {
     post: operations['organizations_memberships_suspend_create'];
+  };
+  '/api/v1/platform/email-deliveries/': {
+    get: operations['platform_email_deliveries_list'];
+  };
+  '/api/v1/platform/email-deliveries/{delivery_id}/retry/': {
+    post: operations['platform_email_delivery_retry'];
+  };
+  '/api/v1/platform/events/': {
+    get: operations['platform_events_list'];
+  };
+  '/api/v1/platform/events/replays/': {
+    post: operations['platform_event_replays_create'];
+  };
+  '/api/v1/platform/events/replays/{replay_id}/': {
+    get: operations['platform_event_replays_detail'];
+  };
+  '/api/v1/platform/events/{event_id}/': {
+    get: operations['platform_events_detail'];
+  };
+  '/api/v1/platform/events/{event_id}/deliveries/': {
+    get: operations['platform_event_deliveries_list'];
+  };
+  '/api/v1/platform/registration-settings/': {
+    get: operations['platform_registration_settings_retrieve'];
+    put: operations['platform_registration_settings_update'];
+  };
+  '/api/v1/platform/registration-settings/public/': {
+    get: operations['platform_registration_settings_public_retrieve'];
+  };
+  '/api/v1/platform/search-index/': {
+    get: operations['platform_search_generations_list'];
+  };
+  '/api/v1/platform/search-index/jobs/': {
+    get: operations['platform_search_index_jobs_list'];
+  };
+  '/api/v1/platform/search-index/rebuild/': {
+    post: operations['platform_search_rebuild_create'];
+  };
+  '/api/v1/public/invitations/accept/': {
+    post: operations['public_invitations_accept_create'];
+  };
+  '/api/v1/public/invitations/activate/': {
+    post: operations['public_invitations_activate_create'];
+  };
+  '/api/v1/public/managed-accounts/activate/': {
+    post: operations['public_managed_accounts_activate_create'];
   };
 }
 
@@ -708,6 +849,13 @@ export interface components {
       roles: readonly components['schemas']['OrganizationRole'][];
       slug: string;
     };
+    /**
+     * @description * `suspend` - suspend
+     * * `reactivate` - reactivate
+     * * `revoke` - revoke
+     * @enum {string}
+     */
+    ActionEnum: 'suspend' | 'reactivate' | 'revoke';
     AddMember: {
       /** Format: email */
       email: string;
@@ -758,6 +906,22 @@ export interface components {
       p75_percent_basis_points: number | null;
       pass_rate_basis_points: number | null;
       sample_size: number;
+    };
+    ApiKeyConnect: {
+      api_key: string;
+      expected_version?: number;
+      provider: components['schemas']['ApiKeyConnectProviderEnum'];
+    };
+    /**
+     * @description * `openai` - openai
+     * * `gemini` - gemini
+     * * `deepseek` - deepseek
+     * @enum {string}
+     */
+    ApiKeyConnectProviderEnum: 'openai' | 'gemini' | 'deepseek';
+    ApiKeyRotate: {
+      api_key: string;
+      expected_version: number;
     };
     Area: {
       description?: string;
@@ -1317,14 +1481,67 @@ export interface components {
       previous: string | null;
       results: components['schemas']['AttemptResult'][];
     };
+    /**
+     * @description * `oauth2_user` - OAuth 2.0 de usuario
+     * * `api_key` - Clave API
+     * @enum {string}
+     */
+    AuthTypeEnum: 'oauth2_user' | 'api_key';
     /** @enum {unknown} */
     BlankEnum: '';
+    BulkInvitationConfirm: {
+      /** Format: uuid */
+      preview_id: string;
+    };
+    BulkInvitationIssue: {
+      field: string;
+      message: string;
+      row: number;
+    };
+    BulkInvitationPreview: {
+      /** Format: uri */
+      file: string;
+    };
+    BulkInvitationPreviewResponse: {
+      issues: readonly components['schemas']['BulkInvitationIssue'][];
+      /** Format: uuid */
+      preview_id: string;
+      valid_count: number;
+    };
+    BulkMembershipTransition: {
+      action: components['schemas']['ActionEnum'];
+      membership_ids: string[];
+    };
+    /**
+     * @description * `calendar` - calendar
+     * * `meet` - meet
+     * * `drive` - drive
+     * * `youtube` - youtube
+     * @enum {string}
+     */
+    CapabilitiesEnum: 'calendar' | 'meet' | 'drive' | 'youtube';
     /**
      * @description * `required` - Obligatorio
      * * `recommended` - Recomendado
      * @enum {string}
      */
     CatalogPrerequisiteKind: 'required' | 'recommended';
+    /**
+     * @description * `learning` - Aprendizaje
+     * * `assessment` - Evaluación
+     * * `authoring` - Autoría
+     * * `asset` - Recurso
+     * * `publication` - Publicación
+     * * `system` - Sistema
+     * @enum {string}
+     */
+    CategoryEnum:
+      | 'learning'
+      | 'assessment'
+      | 'authoring'
+      | 'asset'
+      | 'publication'
+      | 'system';
     /**
      * @description * `remember` - Recordar
      * * `understand` - Comprender
@@ -1481,6 +1698,9 @@ export interface components {
       content: unknown;
       expected_document_version: number;
       schema_version: number;
+    };
+    Count: {
+      count: number;
     };
     Course: {
       /** Format: date-time */
@@ -1709,12 +1929,81 @@ export interface components {
       slug: string;
       status: string;
     };
+    DomainEventDetail: {
+      /** Format: uuid */
+      aggregate_id: string;
+      aggregate_type: string;
+      /** Format: uuid */
+      causation_id: string | null;
+      /** Format: uuid */
+      correlation_id: string;
+      /** Format: date-time */
+      created_at: string;
+      event_type: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      occurred_at: string;
+      /** Format: uuid */
+      organization_id: string | null;
+      payload: unknown;
+      schema_version: number;
+    };
+    DomainEventSummary: {
+      /** Format: uuid */
+      aggregate_id: string;
+      aggregate_type: string;
+      /** Format: uuid */
+      causation_id: string | null;
+      /** Format: uuid */
+      correlation_id: string;
+      /** Format: date-time */
+      created_at: string;
+      event_type: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      occurred_at: string;
+      /** Format: uuid */
+      organization_id: string | null;
+      schema_version: number;
+    };
     DraftResult: {
       lock_version: number;
       /** Format: uuid */
       revision_id: string;
       revision_number: number;
     };
+    EmailDelivery: {
+      attempt_count: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      failed_at: string | null;
+      /** Format: uuid */
+      id: string;
+      last_error_code: string;
+      message_id: string;
+      /** Format: date-time */
+      next_attempt_at: string | null;
+      /** Format: uuid */
+      notification_id: string;
+      /** Format: date-time */
+      sent_at: string | null;
+      /** Format: date-time */
+      started_at: string | null;
+      status: components['schemas']['EmailDeliveryStatusEnum'];
+      template_key: string;
+    };
+    /**
+     * @description * `queued` - En cola
+     * * `sending` - Enviando
+     * * `sent` - Enviado
+     * * `failed` - Fallido
+     * * `dead` - Terminal
+     * @enum {string}
+     */
+    EmailDeliveryStatusEnum: 'queued' | 'sending' | 'sent' | 'failed' | 'dead';
     EnrollmentCreate: {
       /** Format: date-time */
       access_ends_at?: string | null;
@@ -1763,6 +2052,79 @@ export interface components {
       current_version?: number;
       detail: string;
     };
+    EventConsumerDelivery: {
+      attempt_count: number;
+      /** Format: date-time */
+      claimed_at: string | null;
+      consumer_name: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      event_id: string;
+      /** Format: uuid */
+      id: string;
+      last_error_code: string;
+      /** Format: date-time */
+      lease_expires_at: string | null;
+      /** Format: date-time */
+      next_attempt_at: string | null;
+      /** Format: date-time */
+      processed_at: string | null;
+      status: components['schemas']['EventConsumerDeliveryStatusEnum'];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    /**
+     * @description * `pending` - Pendiente
+     * * `processing` - Procesando
+     * * `completed` - Completada
+     * * `failed` - Fallida
+     * * `dead` - Terminal
+     * @enum {string}
+     */
+    EventConsumerDeliveryStatusEnum:
+      'pending' | 'processing' | 'completed' | 'failed' | 'dead';
+    EventReplay: {
+      /** Format: date-time */
+      completed_at: string | null;
+      consumer_name: string;
+      /** Format: date-time */
+      created_at: string;
+      event_type: string;
+      failed_events: number;
+      /** Format: uuid */
+      from_event_id: string | null;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      organization_id: string;
+      processed_events: number;
+      reason: string;
+      /** Format: date-time */
+      started_at: string | null;
+      status: components['schemas']['EventReplayStatusEnum'];
+      /** Format: uuid */
+      to_event_id: string | null;
+      total_events: number;
+    };
+    EventReplayCreate: {
+      consumer_name: string;
+      event_type?: string;
+      /** Format: uuid */
+      from_event_id?: string | null;
+      organization_slug: string;
+      reason: string;
+      /** Format: uuid */
+      to_event_id?: string | null;
+    };
+    /**
+     * @description * `pending` - Pendiente
+     * * `processing` - Procesando
+     * * `completed` - Completada
+     * * `failed` - Fallida
+     * @enum {string}
+     */
+    EventReplayStatusEnum: 'pending' | 'processing' | 'completed' | 'failed';
     /**
      * @description * `membership_created` - Membresía creada
      * * `membership_suspended` - Membresía suspendida
@@ -1770,6 +2132,20 @@ export interface components {
      * * `membership_revoked` - Membresía revocada
      * * `role_assigned` - Rol asignado
      * * `role_revoked` - Rol revocado
+     * * `invitation_created` - Invitación creada
+     * * `invitation_updated` - Invitación actualizada
+     * * `invitation_resent` - Invitación reenviada
+     * * `invitation_revoked` - Invitación revocada
+     * * `invitation_accepted` - Invitación aceptada
+     * * `join_requested` - Solicitud de ingreso creada
+     * * `join_approved` - Solicitud de ingreso aprobada
+     * * `join_rejected` - Solicitud de ingreso rechazada
+     * * `managed_account_created` - Cuenta administrada creada
+     * * `managed_account_activated` - Cuenta administrada activada
+     * * `profile_updated` - Perfil institucional actualizado
+     * * `roles_replaced` - Roles sustituidos
+     * * `sessions_revoked` - Sesiones revocadas
+     * * `membership_settings_updated` - Configuración de membresías actualizada
      * @enum {string}
      */
     EventTypeEnum:
@@ -1778,12 +2154,33 @@ export interface components {
       | 'membership_reactivated'
       | 'membership_revoked'
       | 'role_assigned'
-      | 'role_revoked';
+      | 'role_revoked'
+      | 'invitation_created'
+      | 'invitation_updated'
+      | 'invitation_resent'
+      | 'invitation_revoked'
+      | 'invitation_accepted'
+      | 'join_requested'
+      | 'join_approved'
+      | 'join_rejected'
+      | 'managed_account_created'
+      | 'managed_account_activated'
+      | 'profile_updated'
+      | 'roles_replaced'
+      | 'sessions_revoked'
+      | 'membership_settings_updated';
     ExpectedLock: {
       expected_lock_version: number;
     };
     ExpectedVersion: {
       expected_version: number;
+    };
+    GoogleOAuthStart: {
+      capabilities: components['schemas']['CapabilitiesEnum'][];
+    };
+    GoogleOAuthStartResponse: {
+      /** Format: uri */
+      authorization_url: string;
     };
     Gradebook: {
       /** Format: date-time */
@@ -1919,6 +2316,132 @@ export interface components {
       snapshot_digest: string;
       source: components['schemas']['AssessmentGradingRevisionSource'];
     };
+    HealthCheck: {
+      capabilities: unknown;
+      /** Format: date-time */
+      completed_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      error_code: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      started_at: string | null;
+      status: components['schemas']['HealthCheckStatusEnum'];
+      /** Format: uuid */
+      task_id: string | null;
+    };
+    /**
+     * @description * `queued` - En cola
+     * * `running` - En ejecución
+     * * `succeeded` - Exitosa
+     * * `failed` - Fallida
+     * @enum {string}
+     */
+    HealthCheckStatusEnum: 'queued' | 'running' | 'succeeded' | 'failed';
+    IntegrationConnection: {
+      account_label: string;
+      allowed_models: unknown;
+      auth_type: components['schemas']['AuthTypeEnum'];
+      capabilities: unknown;
+      /** Format: date-time */
+      created_at: string;
+      granted_scopes: unknown;
+      /** Format: uuid */
+      id: string;
+      last_error_code: string;
+      /** @default */
+      last_four: string;
+      /** Format: date-time */
+      last_validated_at: string | null;
+      lock_version: number;
+      provider: components['schemas']['IntegrationConnectionProviderEnum'];
+      status: components['schemas']['IntegrationConnectionStatusEnum'];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    /**
+     * @description * `google_workspace` - Google Workspace
+     * * `openai` - OpenAI
+     * * `gemini` - Gemini
+     * * `deepseek` - DeepSeek
+     * @enum {string}
+     */
+    IntegrationConnectionProviderEnum:
+      'google_workspace' | 'openai' | 'gemini' | 'deepseek';
+    /**
+     * @description * `disconnected` - Desconectada
+     * * `connecting` - Conectando
+     * * `connected` - Conectada
+     * * `degraded` - Degradada
+     * * `revoked` - Revocada
+     * @enum {string}
+     */
+    IntegrationConnectionStatusEnum:
+      'disconnected' | 'connecting' | 'connected' | 'degraded' | 'revoked';
+    Invitation: {
+      /** Format: date-time */
+      accepted_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: email */
+      email: string;
+      /** Format: date-time */
+      expires_at: string;
+      family_name: string;
+      given_name: string;
+      /** Format: uuid */
+      id: string;
+      institutional_id: string;
+      invitation_type: components['schemas']['InvitationTypeEnum'];
+      locale: string;
+      member_type: string;
+      phone: string;
+      preferred_name: string;
+      /** Format: date-time */
+      revoked_at: string | null;
+      roles: readonly unknown[];
+      status: components['schemas']['InvitationStatusEnum'];
+      timezone_name: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    InvitationActivation: {
+      token: string;
+    };
+    InvitationActivationResponse: {
+      invitation_type: components['schemas']['InvitationTypeEnum'];
+    };
+    InvitationCreate: {
+      /** Format: email */
+      email: string;
+      family_name?: string;
+      given_name?: string;
+      institutional_id?: string;
+      /** @default es */
+      locale?: string;
+      member_type?: string;
+      phone?: string;
+      preferred_name?: string;
+      roles: components['schemas']['OrganizationRole'][];
+      /** @default UTC */
+      timezone_name?: string;
+    };
+    /**
+     * @description * `pending` - Pendiente
+     * * `accepted` - Aceptada
+     * * `revoked` - Revocada
+     * * `expired` - Expirada
+     * @enum {string}
+     */
+    InvitationStatusEnum: 'pending' | 'accepted' | 'revoked' | 'expired';
+    /**
+     * @description * `existing_user` - Usuario existente
+     * * `new_user` - Usuario nuevo
+     * * `managed_account` - Cuenta administrada
+     * @enum {string}
+     */
+    InvitationTypeEnum: 'existing_user' | 'new_user' | 'managed_account';
     Item: {
       /** Format: date-time */
       created_at: string;
@@ -1983,6 +2506,26 @@ export interface components {
      * @enum {string}
      */
     JobTypeEnum: 'initial_processing' | 'reprocess_variants';
+    JoinRequest: {
+      /** Format: date-time */
+      created_at: string;
+      /** Format: email */
+      email: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      reviewed_at: string | null;
+      status: components['schemas']['JoinRequestStatusEnum'];
+      user: components['schemas']['UserSummary'];
+    };
+    /**
+     * @description * `pending` - Pendiente
+     * * `approved` - Aprobada
+     * * `rejected` - Rechazada
+     * * `cancelled` - Cancelada
+     * @enum {string}
+     */
+    JoinRequestStatusEnum: 'pending' | 'approved' | 'rejected' | 'cancelled';
     LearnerDelivery: {
       /** Format: date-time */
       assigned_at: string;
@@ -2102,6 +2645,28 @@ export interface components {
       unit_count: number;
       word_count: number;
     };
+    ManagedAccountCreate: {
+      /** Format: email */
+      email: string;
+      family_name: string;
+      given_name: string;
+      institutional_id?: string;
+      /** @default es */
+      locale?: string;
+      member_type: string;
+      phone?: string;
+      preferred_name?: string;
+      roles: components['schemas']['OrganizationRole'][];
+      /** @default UTC */
+      timezone_name?: string;
+    };
+    ManagedAccountEmailCorrection: {
+      /** Format: email */
+      email: string;
+    };
+    ManagedActivation: {
+      password: string;
+    };
     ManualGrade: {
       feedback?: string;
       /** Format: decimal */
@@ -2118,6 +2683,26 @@ export interface components {
       /** Format: decimal */
       score: string;
       sequence: number;
+    };
+    MemberProfile: {
+      administrative_notes?: string;
+      institutional_id?: string;
+      locale?: string;
+      member_type?: string;
+      phone?: string;
+      preferred_name?: string;
+      timezone?: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    MemberProfileUpdate: {
+      administrative_notes?: string;
+      institutional_id?: string;
+      locale?: string;
+      member_type?: string;
+      phone?: string;
+      preferred_name?: string;
+      timezone?: string;
     };
     Membership: {
       /** Format: date-time */
@@ -2211,6 +2796,32 @@ export interface components {
       resume: components['schemas']['Resume'];
       status: components['schemas']['OrganizationMembershipStatus'];
     };
+    Notification: {
+      action_url: string;
+      /** Format: date-time */
+      archived_at: string | null;
+      body: string;
+      category: components['schemas']['CategoryEnum'];
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      organization_id: string;
+      /** Format: date-time */
+      read_at: string | null;
+      template_key: string;
+      title: string;
+    };
+    NotificationPage: {
+      pagination: components['schemas']['NotificationPagination'];
+      results: components['schemas']['Notification'][];
+    };
+    NotificationPagination: {
+      page: number;
+      page_size: number;
+      total: number;
+    };
     /** @enum {unknown} */
     NullEnum: '';
     Objective: {
@@ -2239,6 +2850,13 @@ export interface components {
       /** Format: uuid */
       subject_id: string;
     };
+    /**
+     * @description * `upsert` - Actualizar
+     * * `deactivate` - Desactivar
+     * * `rebuild` - Reconstruir
+     * @enum {string}
+     */
+    OperationEnum: 'upsert' | 'deactivate' | 'rebuild';
     OptionAnalytics: {
       option_id: string;
       selected_count: number;
@@ -2253,6 +2871,28 @@ export interface components {
       id: string;
       name: string;
       slug: string;
+    };
+    OrganizationMembershipSettings: {
+      allow_admin_managed_accounts?: boolean;
+      allow_bulk_invitations?: boolean;
+      allowed_email_domains?: unknown;
+      default_role?: components['schemas']['OrganizationRole'];
+      invitation_expiry_hours?: number;
+      join_requires_approval?: boolean;
+      lock_version: number;
+      public_join_enabled?: boolean;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    OrganizationMembershipSettingsUpdate: {
+      allow_admin_managed_accounts: boolean;
+      allow_bulk_invitations: boolean;
+      allowed_email_domains?: string[];
+      default_role: components['schemas']['OrganizationRole'];
+      expected_version: number;
+      invitation_expiry_hours: number;
+      join_requires_approval: boolean;
+      public_join_enabled: boolean;
     };
     /**
      * @description * `active` - Activa
@@ -2353,6 +2993,36 @@ export interface components {
       previous: string | null;
       results: components['schemas']['EnrollmentRead'][];
     };
+    PaginatedInvitationList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next?: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous?: string | null;
+      results: components['schemas']['Invitation'][];
+    };
+    PaginatedJoinRequestList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next?: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous?: string | null;
+      results: components['schemas']['JoinRequest'][];
+    };
     PaginatedMembershipEventList: {
       /** @example 123 */
       count: number;
@@ -2439,6 +3109,17 @@ export interface components {
      */
     PositionEnum:
       'left' | 'right' | 'first-child' | 'last-child' | 'sorted-child';
+    PreferenceValue: {
+      category: components['schemas']['CategoryEnum'];
+      email_enabled: boolean;
+      in_app_enabled: boolean;
+    };
+    PreferencesResponse: {
+      preferences: components['schemas']['PreferenceValue'][];
+    };
+    PreferencesUpdate: {
+      preferences: components['schemas']['PreferenceValue'][];
+    };
     PrerequisiteGraphEntry: {
       /** Format: uuid */
       entity_id: string;
@@ -2494,6 +3175,14 @@ export interface components {
       started_at: string | null;
       status: components['schemas']['LearningProgressStatus'];
       total_units: number;
+    };
+    /** @description Expose the live browser decision without exposing administrative data. */
+    PublicRegistrationSettings: {
+      default_locale: string;
+      default_timezone: string;
+      require_email_verification: boolean;
+      signup_available: boolean;
+      signup_mode: components['schemas']['SignupModeEnum'];
     };
     PublicationState: {
       /** Format: uuid */
@@ -2655,6 +3344,13 @@ export interface components {
       source_revision_id: string;
       type: string;
     };
+    /**
+     * @description * `high` - high
+     * * `medium` - medium
+     * * `low` - low
+     * @enum {string}
+     */
+    RankBucketEnum: 'high' | 'medium' | 'low';
     ReaderNavigation: {
       next: components['schemas']['ReaderNavigationItem'] | null;
       position: number;
@@ -2682,6 +3378,22 @@ export interface components {
       checksum_sha256: string;
       etag: string;
       size_bytes: number;
+    };
+    RegistrationSettings: {
+      default_locale?: string;
+      default_timezone?: string;
+      lock_version: number;
+      public_signup_enabled: boolean;
+      require_email_verification: boolean;
+      signup_mode?: components['schemas']['SignupModeEnum'];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    RegistrationSettingsUpdate: {
+      default_locale: string;
+      default_timezone: string;
+      expected_version: number;
+      signup_mode: components['schemas']['SignupModeEnum'];
     };
     RegradeJob: {
       assessment_title: string;
@@ -2888,6 +3600,88 @@ export interface components {
       };
       reason: string;
     };
+    SearchGeneration: {
+      /** Format: date-time */
+      completed_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      document_count: number;
+      failure_code: string;
+      /** Format: uuid */
+      id: string;
+      number: number;
+      /** Format: uuid */
+      organization_id: string;
+      /** Format: date-time */
+      started_at: string | null;
+      status: components['schemas']['SearchGenerationStatusEnum'];
+    };
+    /**
+     * @description * `building` - Construyendo
+     * * `active` - Activa
+     * * `failed` - Fallida
+     * * `superseded` - Reemplazada
+     * @enum {string}
+     */
+    SearchGenerationStatusEnum: 'building' | 'active' | 'failed' | 'superseded';
+    SearchIndexJob: {
+      attempt_count: number;
+      /** Format: date-time */
+      completed_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      generation_id: string | null;
+      /** Format: uuid */
+      id: string;
+      last_error_code: string;
+      operation: components['schemas']['OperationEnum'];
+      /** Format: uuid */
+      organization_id: string;
+      source_type: components['schemas']['SourceTypeEnum'];
+      /** Format: date-time */
+      started_at: string | null;
+      status: components['schemas']['SearchIndexJobStatusEnum'];
+    };
+    /**
+     * @description * `pending` - Pendiente
+     * * `processing` - Procesando
+     * * `completed` - Completado
+     * * `failed` - Fallido
+     * @enum {string}
+     */
+    SearchIndexJobStatusEnum: 'pending' | 'processing' | 'completed' | 'failed';
+    SearchPagination: {
+      page: number;
+      page_size: number;
+      total: number;
+    };
+    SearchRebuild: {
+      organization_slug: string;
+    };
+    SearchResponse: {
+      filters: string[];
+      pagination: components['schemas']['SearchPagination'];
+      query: string;
+      results: components['schemas']['SearchResult'][];
+      timing_bucket: string;
+    };
+    SearchResult: {
+      metadata: unknown;
+      rank_bucket: components['schemas']['RankBucketEnum'];
+      snippet_segments: components['schemas']['SnippetSegment'][];
+      /** Format: uuid */
+      source_id: string;
+      source_type: string;
+      subtitle: string;
+      title: string;
+      url_path: string;
+    };
+    SearchSuggestion: {
+      source_type: string;
+      title: string;
+      url_path: string;
+    };
     Section: {
       /** Format: date-time */
       created_at: string;
@@ -2919,6 +3713,39 @@ export interface components {
       /** Format: uri */
       url: string;
     };
+    /**
+     * @description * `closed` - Cerrado
+     * * `invite_only` - Sólo invitación
+     * * `open` - Abierto
+     * @enum {string}
+     */
+    SignupModeEnum: 'closed' | 'invite_only' | 'open';
+    SnippetSegment: {
+      highlighted: boolean;
+      text: string;
+    };
+    /**
+     * @description * `course_release` - Release de curso
+     * * `course_unit` - Unidad de curso
+     * * `catalog_subject` - Asignatura
+     * * `catalog_topic` - Tema
+     * * `catalog_concept` - Concepto
+     * * `learning_objective` - Objetivo
+     * * `asset_version` - Versión de asset
+     * * `question_version` - Versión de pregunta
+     * * `assessment_version` - Versión de evaluación
+     * @enum {string}
+     */
+    SourceTypeEnum:
+      | 'course_release'
+      | 'course_unit'
+      | 'catalog_subject'
+      | 'catalog_topic'
+      | 'catalog_concept'
+      | 'learning_objective'
+      | 'asset_version'
+      | 'question_version'
+      | 'assessment_version';
     /**
      * @description * `queued` - En cola
      * * `downloading` - Descargando
@@ -3098,6 +3925,9 @@ export interface components {
       description?: string;
       title?: string;
     };
+    Updated: {
+      updated: number;
+    };
     UploadInitialize: {
       /** Format: uuid */
       asset_id?: string | null;
@@ -3211,6 +4041,105 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['AccessContext'];
+        };
+      };
+    };
+  };
+  notifications_list: {
+    parameters: {
+      query?: {
+        page?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['NotificationPage'];
+        };
+      };
+    };
+  };
+  notification_preferences_retrieve: {
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PreferencesResponse'];
+        };
+      };
+    };
+  };
+  notification_preferences_update: {
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PreferencesUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['PreferencesUpdate'];
+        'multipart/form-data': components['schemas']['PreferencesUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PreferencesResponse'];
+        };
+      };
+    };
+  };
+  notifications_mark_all_read: {
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Updated'];
+        };
+      };
+    };
+  };
+  notifications_unread_count: {
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Count'];
+        };
+      };
+    };
+  };
+  notifications_archive: {
+    parameters: {
+      path: {
+        notification_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Notification'];
+        };
+      };
+    };
+  };
+  notifications_mark_read: {
+    parameters: {
+      path: {
+        notification_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Notification'];
+        };
+      };
+    };
+  };
+  notifications_mark_unread: {
+    parameters: {
+      path: {
+        notification_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Notification'];
         };
       };
     };
@@ -4167,6 +5096,43 @@ export interface operations {
       429: {
         content: {
           'application/json': components['schemas']['AssetError'];
+        };
+      };
+    };
+  };
+  organizations_discovery_search: {
+    parameters: {
+      query: {
+        page?: number;
+        page_size?: number;
+        q: string;
+        types?: string;
+      };
+      path: {
+        organization_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['SearchResponse'];
+        };
+      };
+    };
+  };
+  organizations_discovery_search_suggestions: {
+    parameters: {
+      query: {
+        q: string;
+      };
+      path: {
+        organization_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['SearchSuggestion'][];
         };
       };
     };
@@ -8213,6 +9179,337 @@ export interface operations {
       };
     };
   };
+  organizations_integrations_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['IntegrationConnection'][];
+        };
+      };
+    };
+  };
+  organizations_integrations_api_key_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ApiKeyConnect'];
+        'application/x-www-form-urlencoded': components['schemas']['ApiKeyConnect'];
+        'multipart/form-data': components['schemas']['ApiKeyConnect'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['IntegrationConnection'];
+        };
+      };
+    };
+  };
+  organizations_integrations_google_authorize_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GoogleOAuthStart'];
+        'application/x-www-form-urlencoded': components['schemas']['GoogleOAuthStart'];
+        'multipart/form-data': components['schemas']['GoogleOAuthStart'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GoogleOAuthStartResponse'];
+        };
+      };
+    };
+  };
+  organizations_integrations_disconnect_create: {
+    parameters: {
+      path: {
+        connection_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['IntegrationConnection'];
+        };
+      };
+    };
+  };
+  organizations_integrations_health_checks_list: {
+    parameters: {
+      path: {
+        connection_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['HealthCheck'][];
+        };
+      };
+    };
+  };
+  organizations_integrations_health_checks_create: {
+    parameters: {
+      path: {
+        connection_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          'application/json': components['schemas']['HealthCheck'];
+        };
+      };
+    };
+  };
+  organizations_integrations_rotate_key_create: {
+    parameters: {
+      path: {
+        connection_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ApiKeyRotate'];
+        'application/x-www-form-urlencoded': components['schemas']['ApiKeyRotate'];
+        'multipart/form-data': components['schemas']['ApiKeyRotate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['IntegrationConnection'];
+        };
+      };
+    };
+  };
+  organizations_integrations_test_meeting_create: {
+    parameters: {
+      path: {
+        connection_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+    };
+  };
+  organizations_invitations_list: {
+    parameters: {
+      query?: {
+        /** @description Un número de página dentro del conjunto de resultados paginado. */
+        page?: number;
+        /** @description Número de resultados a devolver por página. */
+        page_size?: number;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PaginatedInvitationList'];
+        };
+      };
+    };
+  };
+  organizations_invitations_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['InvitationCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['InvitationCreate'];
+        'multipart/form-data': components['schemas']['InvitationCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Invitation'];
+        };
+      };
+    };
+  };
+  organizations_invitations_bulk_confirm_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BulkInvitationConfirm'];
+        'application/x-www-form-urlencoded': components['schemas']['BulkInvitationConfirm'];
+        'multipart/form-data': components['schemas']['BulkInvitationConfirm'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
+        };
+      };
+    };
+  };
+  organizations_invitations_bulk_preview_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BulkInvitationPreview'];
+        'application/x-www-form-urlencoded': components['schemas']['BulkInvitationPreview'];
+        'multipart/form-data': components['schemas']['BulkInvitationPreview'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['BulkInvitationPreviewResponse'];
+        };
+      };
+    };
+  };
+  organizations_invitations_managed_email_partial_update: {
+    parameters: {
+      path: {
+        invitation_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ManagedAccountEmailCorrection'];
+        'application/x-www-form-urlencoded': components['schemas']['ManagedAccountEmailCorrection'];
+        'multipart/form-data': components['schemas']['ManagedAccountEmailCorrection'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Invitation'];
+        };
+      };
+    };
+  };
+  organizations_invitations_resend_create: {
+    parameters: {
+      path: {
+        invitation_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Invitation'];
+        };
+      };
+    };
+  };
+  organizations_invitations_revoke_create: {
+    parameters: {
+      path: {
+        invitation_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Invitation'];
+        };
+      };
+    };
+  };
+  organizations_join_requests_list: {
+    parameters: {
+      query?: {
+        /** @description Un número de página dentro del conjunto de resultados paginado. */
+        page?: number;
+        /** @description Número de resultados a devolver por página. */
+        page_size?: number;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PaginatedJoinRequestList'];
+        };
+      };
+    };
+  };
+  organizations_join_requests_create: {
+    parameters: {
+      path: {
+        action: string;
+        join_request_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['JoinRequest'];
+        };
+      };
+    };
+  };
+  organizations_join_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['JoinRequest'];
+        };
+      };
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+    };
+  };
   learning_cohorts_list: {
     parameters: {
       query?: {
@@ -8859,13 +10156,99 @@ export interface operations {
       };
     };
   };
+  organizations_managed_accounts_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ManagedAccountCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['ManagedAccountCreate'];
+        'multipart/form-data': components['schemas']['ManagedAccountCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Invitation'];
+        };
+      };
+    };
+  };
+  organizations_membership_settings_retrieve: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['OrganizationMembershipSettings'];
+        };
+      };
+    };
+  };
+  organizations_membership_settings_update: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['OrganizationMembershipSettingsUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['OrganizationMembershipSettingsUpdate'];
+        'multipart/form-data': components['schemas']['OrganizationMembershipSettingsUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['OrganizationMembershipSettings'];
+        };
+      };
+    };
+  };
   organizations_memberships_list: {
     parameters: {
       query?: {
+        member_type?: string;
+        /**
+         * @description * `email` - email
+         * * `-email` - -email
+         * * `joined_at` - joined_at
+         * * `-joined_at` - -joined_at
+         */
+        ordering?: 'email' | '-email' | 'joined_at' | '-joined_at';
         /** @description Un número de página dentro del conjunto de resultados paginado. */
         page?: number;
         /** @description Número de resultados a devolver por página. */
         page_size?: number;
+        q?: string;
+        /**
+         * @description * `owner` - Propietario
+         * * `administrator` - Administrador
+         * * `author` - Autor
+         * * `reviewer` - Revisor
+         * * `instructor` - Docente
+         * * `learner` - Estudiante
+         */
+        role?:
+          | 'owner'
+          | 'administrator'
+          | 'author'
+          | 'reviewer'
+          | 'instructor'
+          | 'learner';
+        /**
+         * @description * `active` - Activa
+         * * `suspended` - Suspendida
+         * * `revoked` - Revocada
+         */
+        status?: 'active' | 'suspended' | 'revoked';
       };
       path: {
         slug: string;
@@ -8896,6 +10279,27 @@ export interface operations {
       201: {
         content: {
           'application/json': components['schemas']['Membership'];
+        };
+      };
+    };
+  };
+  organizations_memberships_bulk_transition_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BulkMembershipTransition'];
+        'application/x-www-form-urlencoded': components['schemas']['BulkMembershipTransition'];
+        'multipart/form-data': components['schemas']['BulkMembershipTransition'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Membership'][];
         };
       };
     };
@@ -8936,6 +10340,43 @@ export interface operations {
       };
     };
   };
+  organizations_memberships_profile_retrieve: {
+    parameters: {
+      path: {
+        membership_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MemberProfile'];
+        };
+      };
+    };
+  };
+  organizations_memberships_profile_partial_update: {
+    parameters: {
+      path: {
+        membership_id: string;
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['MemberProfileUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['MemberProfileUpdate'];
+        'multipart/form-data': components['schemas']['MemberProfileUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MemberProfile'];
+        };
+      };
+    };
+  };
   organizations_memberships_reactivate_create: {
     parameters: {
       path: {
@@ -8947,6 +10388,23 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['Membership'];
+        };
+      };
+    };
+  };
+  organizations_memberships_revoke_sessions_create: {
+    parameters: {
+      path: {
+        membership_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
         };
       };
     };
@@ -8997,6 +10455,205 @@ export interface operations {
     };
     responses: {
       200: {
+        content: {
+          'application/json': components['schemas']['Membership'];
+        };
+      };
+    };
+  };
+  platform_email_deliveries_list: {
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['EmailDelivery'][];
+        };
+      };
+    };
+  };
+  platform_email_delivery_retry: {
+    parameters: {
+      path: {
+        delivery_id: string;
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          'application/json': components['schemas']['EmailDelivery'];
+        };
+      };
+    };
+  };
+  platform_events_list: {
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['DomainEventSummary'][];
+        };
+      };
+    };
+  };
+  platform_event_replays_create: {
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EventReplayCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['EventReplayCreate'];
+        'multipart/form-data': components['schemas']['EventReplayCreate'];
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          'application/json': components['schemas']['EventReplay'];
+        };
+      };
+    };
+  };
+  platform_event_replays_detail: {
+    parameters: {
+      path: {
+        replay_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['EventReplay'];
+        };
+      };
+    };
+  };
+  platform_events_detail: {
+    parameters: {
+      path: {
+        event_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['DomainEventDetail'];
+        };
+      };
+    };
+  };
+  platform_event_deliveries_list: {
+    parameters: {
+      path: {
+        event_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['EventConsumerDelivery'][];
+        };
+      };
+    };
+  };
+  platform_registration_settings_retrieve: {
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['RegistrationSettings'];
+        };
+      };
+    };
+  };
+  platform_registration_settings_update: {
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegistrationSettingsUpdate'];
+        'application/x-www-form-urlencoded': components['schemas']['RegistrationSettingsUpdate'];
+        'multipart/form-data': components['schemas']['RegistrationSettingsUpdate'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['RegistrationSettings'];
+        };
+      };
+    };
+  };
+  platform_registration_settings_public_retrieve: {
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PublicRegistrationSettings'];
+        };
+      };
+    };
+  };
+  platform_search_generations_list: {
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['SearchGeneration'][];
+        };
+      };
+    };
+  };
+  platform_search_index_jobs_list: {
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['SearchIndexJob'][];
+        };
+      };
+    };
+  };
+  platform_search_rebuild_create: {
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SearchRebuild'];
+        'application/x-www-form-urlencoded': components['schemas']['SearchRebuild'];
+        'multipart/form-data': components['schemas']['SearchRebuild'];
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          'application/json': components['schemas']['SearchIndexJob'];
+        };
+      };
+    };
+  };
+  public_invitations_accept_create: {
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['Membership'];
+        };
+      };
+    };
+  };
+  public_invitations_activate_create: {
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['InvitationActivation'];
+        'application/x-www-form-urlencoded': components['schemas']['InvitationActivation'];
+        'multipart/form-data': components['schemas']['InvitationActivation'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['InvitationActivationResponse'];
+        };
+      };
+    };
+  };
+  public_managed_accounts_activate_create: {
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ManagedActivation'];
+        'application/x-www-form-urlencoded': components['schemas']['ManagedActivation'];
+        'multipart/form-data': components['schemas']['ManagedActivation'];
+      };
+    };
+    responses: {
+      201: {
         content: {
           'application/json': components['schemas']['Membership'];
         };

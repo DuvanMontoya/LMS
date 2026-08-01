@@ -9,6 +9,7 @@ from django.db import transaction
 from django.db.models import Count
 from django.utils import timezone
 
+from domain.events.services import record_domain_event
 from domain.organizations.models import Organization
 
 from .choices import (
@@ -264,6 +265,15 @@ def _recalculate_job(job_id: object, *, complete: bool) -> RegradeJob:
                 "lock_version",
             ]
         )
+        if complete:
+            record_domain_event(
+                event_type="assessments.regrade.completed.v1",
+                organization=job.organization,
+                aggregate_type="regrade",
+                aggregate_id=job.id,
+                actor=job.created_by,
+                payload={"regrade_id": str(job.id)},
+            )
         return job
 
 

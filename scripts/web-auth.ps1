@@ -128,6 +128,7 @@ function Invoke-E2E([string]$Grep) {
     $createDatabase = 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE {0}"' -f $databaseName
     $dropDatabase = 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS {0}"' -f $databaseName
     $savedEnvironment = @{}
+    $integrationWorkerProcess = $null
     foreach ($name in @('POSTGRES_DB', 'DJANGO_SETTINGS_MODULE', 'E2E_REDIS_PREFIX', 'E2E_MAIL_PATH', 'E2E_ORGANIZATIONS_PASSWORD', 'E2E_API_PORT', 'E2E_WEB_PORT', 'DJANGO_INTERNAL_ORIGIN', 'FRONTEND_ORIGIN', 'NEXT_DIST_DIR', 'ASSESSMENT_TASK_QUEUE_PREFIX', 'ASSESSMENT_TASK_COUNTDOWN_SECONDS')) {
         $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
     }
@@ -153,6 +154,15 @@ function Invoke-E2E([string]$Grep) {
         Assert-LastExitCode 'E2E migrations'
         & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_organizations
         Assert-LastExitCode 'E2E organization fixture creation'
+        $integrationWorkerProcess = Start-Process -FilePath $pythonExecutable -ArgumentList @(
+            '-m', 'celery', '-A', 'config', 'worker', '--loglevel=WARNING',
+            '--pool=solo', '--queues', "$redisPrefix-integrations",
+            '--hostname', "$redisPrefix-integration-worker"
+        ) -WorkingDirectory $apiDirectory -PassThru -WindowStyle Hidden
+        Start-Sleep -Milliseconds 750
+        if ($integrationWorkerProcess.HasExited) {
+            throw 'The isolated E2E integration worker did not start.'
+        }
         & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_publication
         Assert-LastExitCode 'E2E publication source fixture creation'
         if ($Grep -match 'learning delivery|assessment phase 1[34]') {
@@ -188,6 +198,29 @@ function Invoke-E2E([string]$Grep) {
             } while (-not $workerRunning -and (Get-Date) -lt $workerDeadline)
             if (-not $workerRunning) { throw 'The isolated E2E assessment worker did not start.' }
         }
+        if ($Grep -match 'platform operations') {
+            & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_e2e_platform_operations
+            Assert-LastExitCode 'platform operations E2E fixture creation'
+            & docker compose @composeArguments build assessment-worker
+            Assert-LastExitCode 'platform operations E2E worker build'
+            $workerQueues = "$redisPrefix-events,$redisPrefix-notifications"
+            & docker compose @composeArguments run -d --no-deps --name $workerName `
+                -e "DJANGO_SETTINGS_MODULE=config.settings.e2e" `
+                -e "POSTGRES_DB=$databaseName" `
+                -e "E2E_REDIS_PREFIX=$redisPrefix" `
+                -e "E2E_MAIL_PATH=/workspace/apps/api/.local/e2e-mail" `
+                -e "FRONTEND_ORIGIN=http://127.0.0.1:$webPort" `
+                assessment-worker celery -A config worker --loglevel=INFO `
+                --pool=prefork --concurrency=2 --prefetch-multiplier=1 `
+                --max-tasks-per-child=100 --queues=$workerQueues --hostname=$workerName
+            Assert-LastExitCode 'isolated platform operations E2E worker startup'
+            $workerDeadline = (Get-Date).AddSeconds(30)
+            do {
+                Start-Sleep -Milliseconds 500
+                $workerRunning = (& docker inspect --format '{{.State.Running}}' $workerName 2>$null) -eq 'true'
+            } while (-not $workerRunning -and (Get-Date) -lt $workerDeadline)
+            if (-not $workerRunning) { throw 'The isolated platform operations E2E worker did not start.' }
+        }
         $playwrightArguments = @('test')
         if (-not [string]::IsNullOrWhiteSpace($Grep)) {
             $playwrightArguments += @('--grep', $Grep)
@@ -196,6 +229,9 @@ function Invoke-E2E([string]$Grep) {
         Assert-LastExitCode 'isolated Playwright suite'
     }
     finally {
+        if ($null -ne $integrationWorkerProcess -and -not $integrationWorkerProcess.HasExited) {
+            Stop-Process -Id $integrationWorkerProcess.Id -Force
+        }
         if ($workerName -and $workerName.StartsWith('lms-e2e-')) {
             & docker rm -f $workerName 2>$null | Out-Null
         }

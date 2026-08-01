@@ -72,6 +72,11 @@ function Write-ImageLock {
     $redisDigest = Get-ImageDigest 'redis:8.8.1-trixie' 'redis'
     $localstackDigest = Get-ImageDigest 'localstack/localstack:4.14.0' 'localstack/localstack'
     $clamavDigest = Get-ImageDigest 'clamav/clamav:1.5.3_base' 'clamav/clamav'
+    $collectorDigest = Get-ImageDigest 'otel/opentelemetry-collector-contrib:0.157.0' 'otel/opentelemetry-collector-contrib'
+    $prometheusDigest = Get-ImageDigest 'prom/prometheus:v3.13.2' 'prom/prometheus'
+    $jaegerDigest = Get-ImageDigest 'jaegertracing/jaeger:2.20.0' 'jaegertracing/jaeger'
+    $lokiDigest = Get-ImageDigest 'grafana/loki:3.7.4' 'grafana/loki'
+    $grafanaDigest = Get-ImageDigest 'grafana/grafana:13.1.1' 'grafana/grafana'
     $content = @"
 # Generated from approved image manifests for linux/amd64. Review before committing.
 # Regenerate intentionally with: pnpm infra:lock
@@ -88,6 +93,16 @@ services:
     image: clamav/clamav:1.5.3_base@$($clamavDigest.Split('@', 2)[1])
   media-worker:
     image: lms-media-worker:ffmpeg-8.1.2
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.157.0@$($collectorDigest.Split('@', 2)[1])
+  prometheus:
+    image: prom/prometheus:v3.13.2@$($prometheusDigest.Split('@', 2)[1])
+  jaeger:
+    image: jaegertracing/jaeger:2.20.0@$($jaegerDigest.Split('@', 2)[1])
+  loki:
+    image: grafana/loki:3.7.4@$($lokiDigest.Split('@', 2)[1])
+  grafana:
+    image: grafana/grafana:13.1.1@$($grafanaDigest.Split('@', 2)[1])
 "@
     Set-Content -LiteralPath $lockFile -Value $content -Encoding utf8NoBOM
     Write-Host 'Updated compose.lock.yaml from locally pulled official image digests.'
@@ -159,6 +174,17 @@ switch ($Action) {
         Assert-LastExitCode 'docker compose media config --images'
         if (-not ($mediaImages | Where-Object { $_ -match '^localstack/localstack:4\.14\.0@sha256:[0-9a-f]{64}$' })) { throw 'LocalStack image lock is not effective.' }
         if (-not ($mediaImages | Where-Object { $_ -match '^clamav/clamav:1\.5\.3_base@sha256:[0-9a-f]{64}$' })) { throw 'ClamAV image lock is not effective.' }
+        $observabilityImages = & docker compose @lockedComposeArguments --profile observability config --images
+        Assert-LastExitCode 'docker compose observability config --images'
+        foreach ($expected in @(
+            '^otel/opentelemetry-collector-contrib:0\.157\.0@sha256:[0-9a-f]{64}$',
+            '^prom/prometheus:v3\.13\.2@sha256:[0-9a-f]{64}$',
+            '^jaegertracing/jaeger:2\.20\.0@sha256:[0-9a-f]{64}$',
+            '^grafana/loki:3\.7\.4@sha256:[0-9a-f]{64}$',
+            '^grafana/grafana:13\.1\.1@sha256:[0-9a-f]{64}$'
+        )) {
+            if (-not ($observabilityImages | Where-Object { $_ -match $expected })) { throw "Observability image lock is not effective: $expected" }
+        }
         Write-Host 'Compose configuration, required variables, and approved image locks validate.'
     }
     'Pull' {

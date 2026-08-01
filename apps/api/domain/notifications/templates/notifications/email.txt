@@ -1,0 +1,7 @@
+{{ notification.title }}
+
+{{ notification.body }}
+
+Consulta el detalle: {{ action_url }}
+
+Este mensaje no contiene respuestas ni datos de calificación.

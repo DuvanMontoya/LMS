@@ -19,6 +19,7 @@ from domain.courses.exceptions import (
 from domain.courses.models import Course, CourseRevision
 from domain.courses.readiness import revision_readiness_issues
 from domain.courses.services import clone_approved_revision_structure
+from domain.events.services import record_domain_event
 from domain.organizations.models import Organization
 
 from .choices import PublicationEventType, PublicationStatus
@@ -216,6 +217,18 @@ def publish_approved_revision(
         event_type=PublicationEventType.RELEASE_PUBLISHED,
         actor=actor,
     )
+    record_domain_event(
+        event_type="publishing.course_release.published.v1",
+        organization=organization,
+        aggregate_type="course_release",
+        aggregate_id=release.id,
+        actor=actor,
+        payload={
+            "course_release_id": str(release.id),
+            "course_id": str(locked_course.id),
+            "release_id": str(release.id),
+        },
+    )
     return PublishResult(publication, release, False, True)
 
 
@@ -284,6 +297,18 @@ def withdraw_publication(
         event_type=PublicationEventType.PUBLICATION_WITHDRAWN,
         actor=actor,
         note=cleaned_note,
+    )
+    record_domain_event(
+        event_type="publishing.course_publication.withdrawn.v1",
+        organization=organization,
+        aggregate_type="course_publication",
+        aggregate_id=publication.id,
+        actor=actor,
+        payload={
+            "course_publication_id": str(publication.id),
+            "course_id": str(locked_course.id),
+            "release_id": str(publication.current_release_id),
+        },
     )
     return publication
 

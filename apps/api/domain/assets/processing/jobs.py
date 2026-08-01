@@ -12,6 +12,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from config.observability.tracing import traced_domain_operation
 from domain.assets.choices import (
     AssetEventType,
     AssetKind,
@@ -38,6 +39,7 @@ from domain.assets.models import (
 from domain.assets.storage.boto3_gateway import storage_gateway
 from domain.assets.storage.gateway import ObjectStorageGateway
 from domain.assets.storage.keys import private_original_key, private_variant_key
+from domain.events.services import record_domain_event
 
 from .antivirus import ClamAVClient
 from .audio import process_audio
@@ -182,6 +184,7 @@ def _source_location(
     return session.quarantine_bucket, session.quarantine_key, session
 
 
+@traced_domain_operation("assets.process_version")
 def process_asset_version(
     job_id: uuid.UUID, *, gateway: ObjectStorageGateway | None = None
 ) -> None:
@@ -365,6 +368,13 @@ def _reject_infected(job_id: uuid.UUID, *, sha256: str, signature: str) -> None:
         processing_job=job,
         event_type=AssetEventType.MALWARE_DETECTED,
     )
+    record_domain_event(
+        event_type="assets.asset_version.rejected.v1",
+        organization=job.asset_version.asset.organization,
+        aggregate_type="asset_version",
+        aggregate_id=version.id,
+        payload={"asset_version_id": str(version.id)},
+    )
 
 
 @transaction.atomic
@@ -449,6 +459,14 @@ def _finalize_ready(
         processing_job=job,
         event_type=AssetEventType.PROCESSING_COMPLETED,
     )
+    record_domain_event(
+        event_type="assets.asset_version.ready.v1",
+        organization=asset.organization,
+        aggregate_type="asset_version",
+        aggregate_id=version.id,
+        actor=version.created_by,
+        payload={"asset_version_id": str(version.id)},
+    )
 
 
 @transaction.atomic
@@ -489,4 +507,12 @@ def _fail_job(job_id: uuid.UUID, error: Exception) -> None:
         asset_version=version,
         processing_job=job,
         event_type=AssetEventType.PROCESSING_FAILED,
+    )
+    record_domain_event(
+        event_type="assets.asset_version.failed.v1",
+        organization=job.asset_version.asset.organization,
+        aggregate_type="asset_version",
+        aggregate_id=version.id,
+        actor=version.created_by,
+        payload={"asset_version_id": str(version.id)},
     )

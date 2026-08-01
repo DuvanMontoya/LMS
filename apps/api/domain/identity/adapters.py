@@ -3,8 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import cast
 
+from allauth.account.adapter import DefaultAccountAdapter
+from allauth.account.models import EmailAddress
 from allauth.headless.adapter import DefaultHeadlessAdapter
 from django.contrib.auth.base_user import AbstractBaseUser
+from django.http import HttpRequest
+
+# allauth's request adapter boundary is untyped by the upstream package.
+# pyright: reportUnknownMemberType=false
 
 
 @dataclass
@@ -48,3 +54,38 @@ class LMSHeadlessAdapter(DefaultHeadlessAdapter):
             display=email or "",
             has_usable_password=user.has_usable_password(),
         )
+
+
+class LMSAccountAdapter(DefaultAccountAdapter):
+    """Keep allauth authoritative while evaluating live registration policy."""
+
+    def is_open_for_signup(self, request: HttpRequest) -> bool:
+        from domain.organizations.services import session_has_valid_signup_invitation
+
+        from .models import PlatformRegistrationSettings
+
+        registration = PlatformRegistrationSettings.current()
+        if (
+            registration.signup_mode
+            == PlatformRegistrationSettings.SignupMode.OPEN.value
+        ):
+            return True
+        if (
+            registration.signup_mode
+            == PlatformRegistrationSettings.SignupMode.INVITE_ONLY.value
+        ):
+            return session_has_valid_signup_invitation(request)
+        return False
+
+    def confirm_email(self, request: HttpRequest, email_address: EmailAddress) -> bool:
+        confirmed = super().confirm_email(request, email_address)
+        if confirmed:
+            from domain.organizations.services import (
+                complete_onboarding_after_email_verification,
+            )
+
+            complete_onboarding_after_email_verification(
+                request=request,
+                user=cast("AbstractBaseUser", email_address.user),  # type: ignore[arg-type]
+            )
+        return confirmed

@@ -14,6 +14,8 @@ import {
   LayoutDashboard,
   LibraryBig,
   ListTree,
+  Search,
+  Settings2,
   NotebookTabs,
   Plus,
   RefreshCcw,
@@ -27,6 +29,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { LogoutButton } from '@/components/auth/logout-button';
+import { NotificationBadge } from '@/components/notifications/notification-badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -131,6 +134,11 @@ export function PlatformShell({
             <p>{activeOrganization?.name ?? 'Plataforma académica'}</p>
           </div>
           <span className="platform-topbar__status">Entorno seguro</span>
+          {activeOrganization ? (
+            <NotificationBadge
+              href={`/organizaciones/${activeOrganization.slug}/notificaciones`}
+            />
+          ) : null}
         </header>
         <div className="platform-content min-w-0 flex-1">{children}</div>
       </SidebarInset>
@@ -169,6 +177,11 @@ function PlatformSidebar({
     },
     ...(organizations.length > 1
       ? [
+          {
+            href: `${organizationBase}/buscar`,
+            icon: Search,
+            label: 'Buscar',
+          },
           {
             href: '/organizaciones',
             icon: Building2,
@@ -426,6 +439,14 @@ function PlatformSidebar({
           icon: Users,
           label: 'Miembros',
           visible: capabilities.has('membership.view'),
+        },
+        {
+          href: `${organizationBase}/configuracion`,
+          icon: Settings2,
+          label: 'Configuración',
+          visible:
+            capabilities.has('membership.settings.view') ||
+            capabilities.has('integration.view'),
         },
         {
           children: [

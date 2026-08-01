@@ -5,6 +5,7 @@ import {
   CircleAlert,
   CircleCheck,
   Copy,
+  FileUp,
   LoaderCircle,
   Mail,
   RotateCcw,
@@ -15,8 +16,9 @@ import {
   UserRoundX,
   UsersRound,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 import {
@@ -45,8 +47,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { components, operations } from '@/lib/api/generated/platform';
+import { csrfFetch } from '@/lib/api/csrf';
 import {
-  useAddOrganizationMember,
+  useConfirmBulkInvitations,
+  useBulkMembershipTransition,
+  useCreateManagedAccount,
+  useCreateOrganizationInvitation,
   useOrganizationMembers,
   useReactivateMembership,
   useReplaceMembershipRoles,
@@ -74,8 +80,15 @@ const roles: Role[] = [
 ];
 
 const addMemberSchema = z.object({
+  mode: z.enum(['invitation', 'managed']),
   email: z.string().email('Escribe un correo válido.'),
   roles: z.array(z.enum(roles)).min(1, 'Selecciona al menos un rol.'),
+  given_name: z.string(),
+  family_name: z.string(),
+  preferred_name: z.string(),
+  member_type: z.string(),
+  institutional_id: z.string(),
+  phone: z.string(),
 });
 type AddMemberValues = z.infer<typeof addMemberSchema>;
 
@@ -119,30 +132,65 @@ function RolesFieldset({
   );
 }
 
-function AddMemberDialog({
+export function AddMemberDialog({
   slug,
-  capabilities,
   onAdded,
 }: Readonly<{
   slug: string;
-  capabilities: readonly string[];
   onAdded: (email: string) => void;
 }>) {
   const [open, setOpen] = useState(false);
   const [registrationCopied, setRegistrationCopied] = useState(false);
   const [registrationCopyError, setRegistrationCopyError] = useState(false);
-  const addMember = useAddOrganizationMember(slug);
-  const canAssignOwner = hasCapability(capabilities, 'role.assign_owner');
+  const invitation = useCreateOrganizationInvitation(slug);
+  const managedAccount = useCreateManagedAccount(slug);
   const form = useForm<AddMemberValues>({
     resolver: zodResolver(addMemberSchema),
-    defaultValues: { email: '', roles: ['learner'] },
+    defaultValues: {
+      mode: 'invitation',
+      email: '',
+      roles: ['learner'],
+      given_name: '',
+      family_name: '',
+      preferred_name: '',
+      member_type: '',
+      institutional_id: '',
+      phone: '',
+    },
   });
+  const mode = useWatch({ control: form.control, name: 'mode' });
 
   async function onSubmit(values: AddMemberValues) {
     try {
-      await addMember.mutateAsync(values);
+      if (values.mode === 'managed') {
+        if (
+          !values.given_name.trim() ||
+          !values.family_name.trim() ||
+          !values.member_type.trim()
+        ) {
+          form.setError('member_type', {
+            message: 'Nombres, apellidos y tipo de miembro son obligatorios.',
+          });
+          return;
+        }
+        await managedAccount.mutateAsync({
+          email: values.email,
+          roles: values.roles,
+          given_name: values.given_name,
+          family_name: values.family_name,
+          preferred_name: values.preferred_name,
+          member_type: values.member_type,
+          institutional_id: values.institutional_id,
+          phone: values.phone,
+        });
+      } else {
+        await invitation.mutateAsync({
+          email: values.email,
+          roles: values.roles,
+        });
+      }
       onAdded(values.email);
-      form.reset({ email: '', roles: ['learner'] });
+      form.reset();
       setOpen(false);
     } catch {
       // The mutation exposes the structured API message inside the dialog.
@@ -155,7 +203,8 @@ function AddMemberDialog({
         setOpen(nextOpen);
         if (!nextOpen) {
           form.clearErrors();
-          addMember.reset();
+          invitation.reset();
+          managedAccount.reset();
           setRegistrationCopied(false);
           setRegistrationCopyError(false);
         }
@@ -165,24 +214,26 @@ function AddMemberDialog({
       <DialogTrigger asChild>
         <Button>
           <UserPlus data-icon="inline-start" />
-          Añadir miembro
+          Invitar persona
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Añadir miembro existente</DialogTitle>
+          <DialogTitle>Invitar a una persona</DialogTitle>
           <DialogDescription>
-            Vincula una cuenta verificada y define su acceso institucional.
+            El acceso se creará únicamente cuando acepte y complete su
+            verificación.
           </DialogDescription>
         </DialogHeader>
         <div className="rounded-lg border bg-muted/25 px-3 py-2.5 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="font-medium">
-                La persona debe tener una cuenta activa.
+                No se crea una membresía anticipada.
               </p>
               <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-                Su correo debe estar registrado y verificado.
+                Si ya tiene cuenta recibirá la invitación; si no, podrá
+                registrarse desde el enlace de un solo uso.
               </p>
             </div>
             <Button
@@ -216,6 +267,41 @@ function AddMemberDialog({
           noValidate
           onSubmit={form.handleSubmit(onSubmit)}
         >
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium">
+              Tipo de incorporación
+            </legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm">
+                <input
+                  checked={mode === 'invitation'}
+                  type="radio"
+                  value="invitation"
+                  {...form.register('mode')}
+                />
+                <span>
+                  <span className="block font-medium">Invitación</span>
+                  <span className="block text-xs text-muted-foreground">
+                    La persona usa una cuenta existente o crea la suya.
+                  </span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm">
+                <input
+                  checked={mode === 'managed'}
+                  type="radio"
+                  value="managed"
+                  {...form.register('mode')}
+                />
+                <span>
+                  <span className="block font-medium">Cuenta administrada</span>
+                  <span className="block text-xs text-muted-foreground">
+                    La institución no conoce la contraseña; la persona la crea.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
           <div className="space-y-2">
             <Label htmlFor="member-email">Correo electrónico</Label>
             <div className="relative">
@@ -236,20 +322,73 @@ function AddMemberDialog({
               </p>
             ) : null}
           </div>
+          {mode === 'managed' ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="managed-given-name">Nombres</Label>
+                <Input
+                  id="managed-given-name"
+                  {...form.register('given_name')}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="managed-family-name">Apellidos</Label>
+                <Input
+                  id="managed-family-name"
+                  {...form.register('family_name')}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="managed-member-type">Tipo de miembro</Label>
+                <Input
+                  id="managed-member-type"
+                  {...form.register('member_type')}
+                />
+                {form.formState.errors.member_type?.message ? (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.member_type.message}
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="managed-preferred-name">Nombre visible</Label>
+                <Input
+                  id="managed-preferred-name"
+                  {...form.register('preferred_name')}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="managed-institutional-id">
+                  ID institucional
+                </Label>
+                <Input
+                  id="managed-institutional-id"
+                  {...form.register('institutional_id')}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="managed-phone">Teléfono</Label>
+                <Input id="managed-phone" {...form.register('phone')} />
+              </div>
+            </div>
+          ) : null}
           <RolesFieldset
-            canAssignOwner={canAssignOwner}
+            canAssignOwner={false}
             error={form.formState.errors.roles?.message}
             register={form.register}
           />
-          {addMember.error instanceof Error ? (
+          {invitation.error instanceof Error ||
+          managedAccount.error instanceof Error ? (
             <Alert aria-live="polite" variant="destructive">
               <CircleAlert />
-              <AlertTitle>No se pudo añadir la membresía</AlertTitle>
+              <AlertTitle>No se pudo completar la incorporación</AlertTitle>
               <AlertDescription>
-                <p>{addMember.error.message}</p>
                 <p>
-                  Comprueba que la cuenta esté activa, tenga el correo
-                  verificado y no conserve otra membresía vigente aquí.
+                  {invitation.error instanceof Error
+                    ? invitation.error.message
+                    : managedAccount.error instanceof Error
+                      ? managedAccount.error.message
+                      : ''}
                 </p>
               </AlertDescription>
             </Alert>
@@ -262,16 +401,177 @@ function AddMemberDialog({
             >
               Cancelar
             </Button>
-            <Button disabled={addMember.isPending} type="submit">
-              {addMember.isPending ? (
+            <Button
+              disabled={invitation.isPending || managedAccount.isPending}
+              type="submit"
+            >
+              {invitation.isPending || managedAccount.isPending ? (
                 <LoaderCircle className="animate-spin" />
               ) : (
                 <UserPlus />
               )}
-              Crear membresía
+              {mode === 'managed' ? 'Crear activación' : 'Enviar invitación'}
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function BulkInvitationDialog({
+  slug,
+  onCompleted,
+}: Readonly<{
+  slug: string;
+  onCompleted: (count: number) => void;
+}>) {
+  const [open, setOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<
+    components['schemas']['BulkInvitationPreviewResponse'] | undefined
+  >();
+  const [error, setError] = useState('');
+  const confirm = useConfirmBulkInvitations(slug);
+
+  async function createPreview() {
+    if (!file) {
+      setError('Selecciona un archivo CSV antes de continuar.');
+      return;
+    }
+    setError('');
+    const data = new FormData();
+    data.set('file', file);
+    const response = await csrfFetch(
+      `/api/v1/organizations/${slug}/invitations/bulk/preview/`,
+      { method: 'POST', body: data },
+    );
+    const payload: unknown = await response.json();
+    if (!response.ok || !payload || typeof payload !== 'object') {
+      setError('No fue posible validar el archivo.');
+      return;
+    }
+    if (!('preview_id' in payload) || !('issues' in payload)) {
+      setError('El servidor no devolvió una vista previa válida.');
+      return;
+    }
+    setPreview(
+      payload as components['schemas']['BulkInvitationPreviewResponse'],
+    );
+  }
+
+  async function confirmPreview() {
+    if (!preview) return;
+    try {
+      const result = await confirm.mutateAsync(preview.preview_id);
+      const count =
+        result && typeof result === 'object' && 'created' in result
+          ? Number(result.created)
+          : preview.valid_count;
+      onCompleted(count);
+      setOpen(false);
+      setFile(null);
+      setPreview(undefined);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : 'No fue posible confirmar las invitaciones.',
+      );
+    }
+  }
+
+  return (
+    <Dialog
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) {
+          setError('');
+          setPreview(undefined);
+        }
+      }}
+      open={open}
+    >
+      <DialogTrigger asChild>
+        <Button type="button" variant="outline">
+          <FileUp data-icon="inline-start" />
+          Importar CSV
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Importar invitaciones</DialogTitle>
+          <DialogDescription>
+            Usa UTF-8 y las columnas email, given_name, family_name,
+            member_type, institutional_id y roles. Los roles se separan con |.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="invitation-csv">
+              Archivo CSV (máximo 500 filas)
+            </Label>
+            <Input
+              accept=".csv,text/csv"
+              id="invitation-csv"
+              onChange={(event) => {
+                setFile(event.target.files?.[0] ?? null);
+                setPreview(undefined);
+                setError('');
+              }}
+              type="file"
+            />
+          </div>
+          {preview ? (
+            <div className="rounded-lg border p-3 text-sm">
+              <p className="font-medium">
+                {preview.valid_count} invitación
+                {preview.valid_count === 1 ? '' : 'es'} válida
+                {preview.valid_count === 1 ? '' : 's'}.
+              </p>
+              {preview.issues.length ? (
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-destructive">
+                  {preview.issues.map((issue) => (
+                    <li key={`${issue.row}-${issue.field}`}>
+                      Fila {issue.row}, {issue.field}: {issue.message}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  La confirmación creará todas las invitaciones en una sola
+                  transacción. No se crea ninguna membresía anticipada.
+                </p>
+              )}
+            </div>
+          ) : null}
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        </div>
+        <DialogFooter>
+          <Button
+            onClick={() => setOpen(false)}
+            type="button"
+            variant="outline"
+          >
+            Cancelar
+          </Button>
+          {preview && preview.issues.length === 0 ? (
+            <Button
+              disabled={confirm.isPending}
+              onClick={() => void confirmPreview()}
+              type="button"
+            >
+              {confirm.isPending ? (
+                <LoaderCircle className="animate-spin" />
+              ) : null}
+              Confirmar invitaciones
+            </Button>
+          ) : (
+            <Button onClick={() => void createPreview()} type="button">
+              Validar archivo
+            </Button>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -490,16 +790,78 @@ export function MemberManagement({
   members: MemberList;
 }>) {
   const [search, setSearch] = useState('');
-  const [success, setSuccess] = useState('');
-  const normalizedSearch = search.trim();
-  const memberQuery = useOrganizationMembers(
-    slug,
-    normalizedSearch ? { email: normalizedSearch, page: 1 } : { page: 1 },
+  const [status, setStatus] = useState<'active' | 'suspended' | 'revoked' | ''>(
+    '',
   );
-  const visibleMembers = memberQuery.data ?? members;
+  const [role, setRole] = useState<Role | ''>('');
+  const [memberType, setMemberType] = useState('');
+  const [ordering, setOrdering] = useState<
+    'email' | '-email' | 'joined_at' | '-joined_at'
+  >('email');
+  const [success, setSuccess] = useState('');
+  const [page, setPage] = useState(1);
+  const [selectedMembershipIds, setSelectedMembershipIds] = useState<string[]>(
+    [],
+  );
+  const bulkTransition = useBulkMembershipTransition(slug);
+  const canAssignOwner = hasCapability(capabilities, 'role.assign_owner');
+  const canSuspend = hasCapability(capabilities, 'membership.suspend');
+  const canReactivate = hasCapability(capabilities, 'membership.reactivate');
+  const canRevoke = hasCapability(capabilities, 'membership.revoke');
+  const normalizedSearch = search.trim();
+  const memberQuery = useOrganizationMembers(slug, {
+    ...(normalizedSearch ? { q: normalizedSearch } : {}),
+    ...(status ? { status } : {}),
+    ...(role ? { role } : {}),
+    ...(memberType.trim() ? { member_type: memberType.trim() } : {}),
+    ordering,
+    page,
+  });
+  const visibleMembers =
+    (memberQuery.data as MemberList | undefined) ?? members;
   const activeCount = visibleMembers.results.filter(
     (membership) => membership.status === 'active',
   ).length;
+  const selectableMembers = visibleMembers.results.filter(
+    (membership) => !membership.roles.includes('owner') || canAssignOwner,
+  );
+  const selectableIds = selectableMembers.map(
+    (membership) => membership.membership_id,
+  );
+  const allVisibleSelected =
+    selectableIds.length > 0 &&
+    selectableIds.every((membershipId) =>
+      selectedMembershipIds.includes(membershipId),
+    );
+  const totalPages = Math.max(1, Math.ceil(visibleMembers.count / 25));
+
+  function resetPage() {
+    setPage(1);
+    setSelectedMembershipIds([]);
+  }
+
+  function toggleMembership(membershipId: string, checked: boolean) {
+    setSelectedMembershipIds((current) =>
+      checked
+        ? current.includes(membershipId)
+          ? current
+          : [...current, membershipId]
+        : current.filter((currentId) => currentId !== membershipId),
+    );
+  }
+
+  async function transitionSelected(
+    action: 'reactivate' | 'revoke' | 'suspend',
+  ) {
+    await bulkTransition.mutateAsync({
+      action,
+      membershipIds: selectedMembershipIds,
+    });
+    setSuccess(
+      `${selectedMembershipIds.length} membresías fueron actualizadas.`,
+    );
+    setSelectedMembershipIds([]);
+  }
 
   return (
     <section aria-labelledby="directory-title">
@@ -514,44 +876,196 @@ export function MemberManagement({
             {activeCount} {activeCount === 1 ? 'activa' : 'activas'}
           </p>
         </div>
-        {hasCapability(capabilities, 'membership.add') ? (
-          <AddMemberDialog
-            capabilities={capabilities}
-            onAdded={(email) => {
-              setSearch('');
-              setSuccess(`Se añadió ${email} y sus roles ya están activos.`);
-            }}
-            slug={slug}
-          />
+        {hasCapability(capabilities, 'membership.invite') ? (
+          <div className="flex flex-wrap gap-2">
+            <Button asChild>
+              <Link href={`/organizaciones/${slug}/miembros/nuevo?rol=learner`}>
+                <UserPlus data-icon="inline-start" />
+                Registrar estudiante
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`/organizaciones/${slug}/miembros/nuevo`}>
+                Registrar persona
+              </Link>
+            </Button>
+            <BulkInvitationDialog
+              onCompleted={(count) => {
+                setSearch('');
+                setSuccess(`${count} invitaciones fueron creadas.`);
+              }}
+              slug={slug}
+            />
+            <Button asChild size="sm" variant="ghost">
+              <Link
+                href={`/organizaciones/${slug}/miembros/invitaciones?status=pending`}
+              >
+                Invitaciones
+              </Link>
+            </Button>
+            {hasCapability(capabilities, 'membership.join_request.manage') ? (
+              <Button asChild size="sm" variant="ghost">
+                <Link href={`/organizaciones/${slug}/miembros/solicitudes`}>
+                  Solicitudes
+                </Link>
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
       {success ? (
         <Alert className="mt-4 border-emerald-600/20 bg-emerald-500/5">
           <CircleCheck className="text-emerald-700" />
-          <AlertTitle>Membresía creada</AlertTitle>
+          <AlertTitle>Invitación enviada</AlertTitle>
           <AlertDescription>{success}</AlertDescription>
         </Alert>
       ) : null}
 
-      <div className="relative mt-4 max-w-sm">
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          aria-label="Buscar miembro por correo"
-          className="pl-9"
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(15rem,1.3fr)_minmax(9rem,.7fr)_minmax(9rem,.7fr)_minmax(10rem,.8fr)_minmax(11rem,.8fr)]">
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            aria-label="Buscar persona"
+            className="pl-9"
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setSuccess('');
+              resetPage();
+            }}
+            placeholder="Nombre, correo o nombre visible"
+            type="search"
+            value={search}
+          />
+        </div>
+        <select
+          aria-label="Filtrar por estado"
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
           onChange={(event) => {
-            setSearch(event.target.value);
-            setSuccess('');
+            setStatus(event.target.value as typeof status);
+            resetPage();
           }}
-          placeholder="Buscar por correo"
-          type="search"
-          value={search}
+          value={status}
+        >
+          <option value="">Todos los estados</option>
+          <option value="active">Activas</option>
+          <option value="suspended">Suspendidas</option>
+          <option value="revoked">Revocadas</option>
+        </select>
+        <select
+          aria-label="Filtrar por rol"
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+          onChange={(event) => {
+            setRole(event.target.value as Role | '');
+            resetPage();
+          }}
+          value={role}
+        >
+          <option value="">Todos los roles</option>
+          {roles.map((candidate) => (
+            <option key={candidate} value={candidate}>
+              {roleLabel(candidate)}
+            </option>
+          ))}
+        </select>
+        <Input
+          aria-label="Filtrar por tipo institucional"
+          onChange={(event) => {
+            setMemberType(event.target.value);
+            resetPage();
+          }}
+          placeholder="Tipo institucional"
+          value={memberType}
         />
+        <select
+          aria-label="Ordenar miembros"
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+          onChange={(event) => {
+            setOrdering(event.target.value as typeof ordering);
+            resetPage();
+          }}
+          value={ordering}
+        >
+          <option value="email">Correo A–Z</option>
+          <option value="-email">Correo Z–A</option>
+          <option value="-joined_at">Más recientes</option>
+          <option value="joined_at">Más antiguos</option>
+        </select>
       </div>
+
+      {selectedMembershipIds.length ? (
+        <div
+          aria-label="Acciones para miembros seleccionados"
+          className="mt-4 flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="text-sm">
+            <span className="font-medium">{selectedMembershipIds.length}</span>{' '}
+            {selectedMembershipIds.length === 1
+              ? 'membresía seleccionada'
+              : 'membresías seleccionadas'}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {canSuspend ? (
+              <ConfirmAction
+                description="Suspenderás las membresías seleccionadas. La operación es atómica: si una no puede cambiar, ninguna se modifica."
+                label="Suspender seleccionadas"
+                onConfirm={() => transitionSelected('suspend')}
+                pending={bulkTransition.isPending}
+              />
+            ) : null}
+            {canReactivate ? (
+              <ConfirmAction
+                description="Reactivarás las membresías seleccionadas de forma atómica."
+                label="Reactivar seleccionadas"
+                onConfirm={() => transitionSelected('reactivate')}
+                pending={bulkTransition.isPending}
+              />
+            ) : null}
+            {canRevoke ? (
+              <ConfirmAction
+                description="Revocarás las membresías seleccionadas de forma atómica. Sus roles activos dejarán de tener efecto."
+                label="Revocar seleccionadas"
+                onConfirm={() => transitionSelected('revoke')}
+                pending={bulkTransition.isPending}
+                variant="destructive"
+              />
+            ) : null}
+            <Button
+              onClick={() => setSelectedMembershipIds([])}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              Limpiar selección
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {visibleMembers.results.length ? (
         <div className="mt-4 overflow-hidden rounded-lg border bg-card">
-          <div className="hidden grid-cols-[minmax(15rem,1.2fr)_minmax(13rem,1fr)_7rem_minmax(15rem,auto)] gap-4 border-b bg-muted/30 px-5 py-2.5 text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase lg:grid">
+          <div className="hidden grid-cols-[2rem_minmax(15rem,1.2fr)_minmax(13rem,1fr)_7rem_minmax(15rem,auto)] gap-4 border-b bg-muted/30 px-5 py-2.5 text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase lg:grid">
+            <label
+              className="flex items-center"
+              title="Seleccionar resultados visibles"
+            >
+              <input
+                aria-label="Seleccionar resultados visibles"
+                checked={allVisibleSelected}
+                disabled={selectableIds.length === 0}
+                onChange={(event) =>
+                  setSelectedMembershipIds((current) =>
+                    event.target.checked
+                      ? Array.from(new Set([...current, ...selectableIds]))
+                      : current.filter(
+                          (membershipId) =>
+                            !selectableIds.includes(membershipId),
+                        ),
+                  )
+                }
+                type="checkbox"
+              />
+            </label>
             <span>Persona</span>
             <span>Responsabilidad</span>
             <span>Estado</span>
@@ -560,9 +1074,27 @@ export function MemberManagement({
           <ul className="divide-y">
             {visibleMembers.results.map((membership) => (
               <li
-                className="grid gap-4 px-5 py-4 lg:grid-cols-[minmax(15rem,1.2fr)_minmax(13rem,1fr)_7rem_minmax(15rem,auto)] lg:items-center"
+                className="grid gap-4 px-5 py-4 lg:grid-cols-[2rem_minmax(15rem,1.2fr)_minmax(13rem,1fr)_7rem_minmax(15rem,auto)] lg:items-center"
                 key={membership.membership_id}
               >
+                <div className="flex items-center">
+                  <input
+                    aria-label={`Seleccionar ${membership.user.display}`}
+                    checked={selectedMembershipIds.includes(
+                      membership.membership_id,
+                    )}
+                    disabled={
+                      membership.roles.includes('owner') && !canAssignOwner
+                    }
+                    onChange={(event) =>
+                      toggleMembership(
+                        membership.membership_id,
+                        event.target.checked,
+                      )
+                    }
+                    type="checkbox"
+                  />
+                </div>
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar className="size-9">
                     <AvatarFallback className="bg-primary/5 text-xs font-semibold text-primary">
@@ -570,9 +1102,12 @@ export function MemberManagement({
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">
+                    <Link
+                      className="block truncate text-sm font-semibold hover:underline"
+                      href={`/organizaciones/${slug}/miembros/${membership.membership_id}`}
+                    >
                       {membership.user.display}
-                    </p>
+                    </Link>
                     {membership.user.display !== membership.user.email ? (
                       <p className="truncate text-xs text-muted-foreground">
                         {membership.user.email}
@@ -588,12 +1123,21 @@ export function MemberManagement({
                   ))}
                 </div>
                 <StatusBadge status={membership.status} />
-                <MemberActions
-                  capabilities={capabilities}
-                  membership={membership as Membership}
-                  organizationName={organizationName}
-                  slug={slug}
-                />
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button asChild size="sm" variant="ghost">
+                    <Link
+                      href={`/organizaciones/${slug}/miembros/${membership.membership_id}`}
+                    >
+                      Ver ficha
+                    </Link>
+                  </Button>
+                  <MemberActions
+                    capabilities={capabilities}
+                    membership={membership as Membership}
+                    organizationName={organizationName}
+                    slug={slug}
+                  />
+                </div>
               </li>
             ))}
           </ul>
@@ -602,12 +1146,19 @@ export function MemberManagement({
         <div className="mt-4 rounded-lg border border-dashed p-10 text-center">
           <UsersRound className="mx-auto size-6 text-muted-foreground" />
           <p className="mt-3 font-medium">
-            {search ? 'No hay coincidencias' : 'No hay membresías para mostrar'}
+            {search || status || role || memberType
+              ? 'No hay coincidencias'
+              : 'No hay membresías para mostrar'}
           </p>
-          {search ? (
+          {search || status || role || memberType ? (
             <Button
               className="mt-3"
-              onClick={() => setSearch('')}
+              onClick={() => {
+                setSearch('');
+                setStatus('');
+                setRole('');
+                setMemberType('');
+              }}
               size="sm"
               variant="outline"
             >
@@ -616,6 +1167,42 @@ export function MemberManagement({
           ) : null}
         </div>
       )}
+      {visibleMembers.count > 25 ? (
+        <nav
+          aria-label="Paginación del directorio"
+          className="mt-4 flex items-center justify-between gap-3"
+        >
+          <p className="text-sm text-muted-foreground">
+            Página {page} de {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              disabled={page <= 1}
+              onClick={() => {
+                setPage((current) => current - 1);
+                setSelectedMembershipIds([]);
+              }}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Anterior
+            </Button>
+            <Button
+              disabled={page >= totalPages}
+              onClick={() => {
+                setPage((current) => current + 1);
+                setSelectedMembershipIds([]);
+              }}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Siguiente
+            </Button>
+          </div>
+        </nav>
+      ) : null}
     </section>
   );
 }

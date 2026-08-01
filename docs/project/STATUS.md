@@ -1,5 +1,82 @@
 # Project status
 
+## Phase 16 — Identity, members, registration, configuration and integrations (in progress)
+
+- **Fecha y alcance:** 2026-07-31; se inició el Prompt 16 correctivo después
+  de auditar rutas, ADR, estados de fase, regresión histórica y navegador. El
+  inventario acumulativo de brechas está en
+  `docs/project/PRODUCT_COMPLETENESS_AUDIT.md`; no se califican como cerrados
+  los apartados que aún no tienen evidencia integral.
+- **Decisión y límites:** ADR 0030 delimita `identity` (registro global),
+  `organizations` (lifecycle institucional) e `integrations` (secretos,
+  OAuth y salud). `identity.0001` no fue alterada. No se añadieron roles a
+  `User`, grupos, sesiones, navegador, intentos o formularios genéricos.
+- **Implementación actual:** existen `PlatformRegistrationSettings`, ajustes
+  de membresía por organización, invitaciones hash-only, solicitudes públicas,
+  perfiles institucionales, eventos append-only con guardas PostgreSQL,
+  activación de cuentas administradas, revocación de sesiones e importación
+  CSV con preview efímero de servidor, límite de 500 filas y confirmación
+  atómica. La gestión visible ya no se limita a un diálogo de invitación:
+  `/miembros` expone `Registrar estudiante`, `Registrar persona`,
+  `Invitaciones`, `Solicitudes` y ficha de cada miembro; ésta concentra perfil
+  institucional, roles, lifecycle, cierre de sesiones, recuperación de
+  contraseña y actividad. Una cuenta administrada se persiste explícitamente
+  como `is_active=False` y sin contraseña utilizable hasta su activación. La nueva
+  aplicación `domain.integrations` conserva conexiones, credential cipher
+  text, OAuth request state/PKCE, health checks y eventos append-only.
+- **Cifrado y proveedores:** `cryptography==49.0.0` usa AES-GCM con key ID,
+  nonce y AAD institucional. `rotate_integration_credentials --dry-run`
+  permite validar la rotación sin revelar valores; la operación normal
+  re-cifra con la clave activa. Google usa authorization code, state y PKCE;
+  OpenAI, Gemini y DeepSeek consultan solamente listados de modelos para
+  validar claves. No hay credenciales reales ni generación de IA.
+- **Contrato e interfaz:** OpenAPI y `platform.ts` se regeneraron desde Django.
+  `/organizaciones/<slug>/miembros/nuevo`, `/invitaciones`, `/solicitudes` y
+  `/miembros/<membershipId>` son rutas dedicadas, no estados escondidos dentro
+  de la lista. `/configuracion/integraciones` es una superficie propia y la
+  sección de configuración reutiliza exactamente ese centro: separa OpenAI,
+  Gemini, DeepSeek y Google Workspace, muestra salud durable, prueba explícita,
+  rotación y desconexión. Google declara los tres nombres de configuración de
+  servidor necesarios sin mostrar secretos y diferencia OAuth de la clave
+  Gemini. La pantalla pública de registro consulta el estado de registro en el
+  servidor; `/administracion/configuracion/registro` queda protegido por proxy
+  y permiso backend.
+- **Evidencia disponible:** después de esta corrección, `pnpm check` pasó
+  completo; `organizations:test` pasó 26/26, `domain/integrations/tests` pasó
+  11/11 y `web:test` pasó 48/48. Chromium con la sesión de propietario verificó
+  el directorio, el formulario de estudiante, la ficha de un estudiante, las
+  invitaciones y el centro de integraciones. El intento posterior de `pnpm test`
+  fue interrumpido por el límite de 124 s del ejecutor antes de devolver un
+  resultado final; no se usa como evidencia nueva. PostgreSQL local tiene
+  aplicadas `identity.0002`, `organizations.0002/.0003` e
+  `integrations.0001/.0002`. Las pruebas contra cuentas externas no se hicieron
+  porque no existen credenciales autorizadas. También quedan pendientes una
+  matriz E2E Chromium específica de todos los flujos nuevos, axe de todas las
+  rutas nuevas y la inspección documentada a 390 px; por ello la fase no se
+  declara cerrada todavía.
+- **Corrección posterior de incorporación:** la aceptación de una invitación
+  existente es idempotente para la misma persona. Se corrigió la doble
+  ejecución de efectos de React en desarrollo: el navegador sólo inicia una
+  aceptación y el servicio devuelve la membresía ya creada si recibe el mismo
+  intento concurrente autenticado. `pnpm organizations:test` pasó 29/29 y la
+  regresión Django completa pasó 278/278 con 75,59 % de cobertura; la migración
+  limpia aplicó y eliminó una base PostgreSQL temporal. `pnpm check` y
+  `pnpm web:test` (48/48) pasaron. Chromium aislado comprobó el cambio de política de
+  registro y recorrió creación, corrección de email, activación y aceptación
+  hasta respuestas 201; la suite completa nueva sigue bloqueada por compilación
+  en frío de Next antes de cerrar axe, 390 px y los stubs de proveedores. La
+  matriz exacta está en `PRODUCT_COMPLETENESS_AUDIT.md`. La configuración
+  incorpora además los accesos explícitos `Gestionar personas` y `Registrar
+  estudiante`; los aliases `/configuracion/general` y
+  `/configuracion/miembros` fueron navegados en Chromium y mantienen la misma
+  superficie gobernada, sin crear una capa paralela.
+- **Estado de avance:** **NO LISTO PARA AUDITORÍA DE PROFUNDIDAD II** hasta
+  completar esa matriz E2E/a11y/móvil y los subflujos de gestión profesional
+  que el registro de deuda conserva abiertos.
+- **Git:** árbol de trabajo intencionalmente sin commit ni push por instrucción
+  expresa. No se ejecutaron add, commit, push, reset, restore, clean, rebase,
+  merge ni pull.
+
 ## Phase
 
 **Phase 15 — Assets académicos y multimedia** está completada localmente el

@@ -1,31 +1,65 @@
 from __future__ import annotations
 
+import hashlib
+import secrets
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from allauth.account.models import EmailAddress
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.contrib.sessions.models import Session
+from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
+from django.http import HttpRequest
 from django.utils import timezone
 
 from .capabilities import Capability
-from .choices import MembershipEventType, MembershipStatus, RoleCode
+from .choices import (
+    InvitationStatus,
+    InvitationType,
+    JoinRequestStatus,
+    MembershipEventType,
+    MembershipStatus,
+    RoleCode,
+)
 from .exceptions import (
     InvalidMembershipTransition,
+    InvitationAlreadyExists,
+    InvitationUnavailable,
+    JoinRequestAlreadyExists,
+    JoinRequestUnavailable,
     LastOwnerViolation,
+    ManagedAccountsDisabled,
     MemberAlreadyExists,
     MembershipNotActive,
     OrganizationAccessDenied,
+    RevisionConflict,
     RoleAlreadyAssigned,
     RoleAssignmentDenied,
     RoleNotAssigned,
     VerifiedUserRequired,
 )
-from .models import Membership, MembershipEvent, MembershipRoleAssignment, Organization
+from .models import (
+    Membership,
+    MembershipEvent,
+    MembershipInvitation,
+    MembershipRoleAssignment,
+    Organization,
+    OrganizationJoinRequest,
+    OrganizationMemberProfile,
+    OrganizationMembershipSettings,
+)
 from .policies import (
     can_assign_role,
     can_manage_membership,
     has_capability,
     target_is_active_owner,
 )
+
+# ORM related fields are dynamic at this service boundary; policy checks remain
+# the authority for every mutation.
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportAttributeAccessIssue=false, reportArgumentType=false
 
 if TYPE_CHECKING:
     from domain.identity.models import User
@@ -34,12 +68,13 @@ if TYPE_CHECKING:
 def _record_event(
     *,
     organization: Organization,
-    membership: Membership,
+    membership: Membership | None,
     actor: User | None,
     event_type: MembershipEventType,
     role: RoleCode | None = None,
     previous_status: MembershipStatus | None = None,
     new_status: MembershipStatus | None = None,
+    details: dict[str, object] | None = None,
 ) -> MembershipEvent:
     return MembershipEvent.objects.create(
         organization=organization,
@@ -49,6 +84,7 @@ def _record_event(
         role=role.value if role else "",
         previous_status=previous_status.value if previous_status else "",
         new_status=new_status.value if new_status else "",
+        details=details or {},
     )
 
 
@@ -97,6 +133,9 @@ def create_organization_with_owner(
     organization = Organization(name=name, slug=slug)
     organization.full_clean()
     organization.save()
+    OrganizationMembershipSettings.objects.create(
+        organization=organization, updated_by=actor
+    )
     membership = Membership.objects.create(
         organization=organization,
         user=actor,
@@ -168,6 +207,7 @@ def add_existing_member(
         event_type=MembershipEventType.CREATED,
         new_status=MembershipStatus.ACTIVE,
     )
+    OrganizationMemberProfile.objects.get_or_create(membership=membership)
     return membership
 
 
@@ -357,3 +397,846 @@ def revoke_role(
         role=role,
     )
     return assignment
+
+
+def _invitation_digest(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _new_invitation_token() -> tuple[str, str]:
+    token = secrets.token_urlsafe(32)
+    return token, _invitation_digest(token)
+
+
+def _locked_membership_settings(
+    organization: Organization,
+) -> OrganizationMembershipSettings:
+    settings, _ = OrganizationMembershipSettings.objects.get_or_create(
+        organization=organization
+    )
+    return OrganizationMembershipSettings.objects.select_for_update().get(
+        pk=settings.pk
+    )
+
+
+def _validate_roles(roles: set[RoleCode]) -> set[RoleCode]:
+    if not roles or RoleCode.OWNER in roles:
+        raise RoleAssignmentDenied("Debes indicar roles institucionales no owner.")
+    return roles
+
+
+def _create_profile_from_invitation(
+    *, membership: Membership, invitation: MembershipInvitation
+) -> OrganizationMemberProfile:
+    profile, _ = OrganizationMemberProfile.objects.get_or_create(membership=membership)
+    profile.member_type = invitation.member_type
+    profile.institutional_id = invitation.institutional_id
+    profile.preferred_name = invitation.preferred_name
+    profile.phone = invitation.phone
+    profile.locale = invitation.locale
+    profile.timezone = invitation.timezone_name
+    profile.save(
+        update_fields=(
+            "member_type",
+            "institutional_id",
+            "preferred_name",
+            "phone",
+            "locale",
+            "timezone",
+            "updated_at",
+        )
+    )
+    return profile
+
+
+def _create_active_membership(
+    *,
+    organization: Organization,
+    user: User,
+    actor: User | None,
+    roles: set[RoleCode],
+    invitation: MembershipInvitation | None = None,
+) -> Membership:
+    existing = (
+        Membership.objects.select_for_update()
+        .filter(organization=organization, user=user)
+        .exclude(status=MembershipStatus.REVOKED.value)
+        .first()
+    )
+    if existing is not None:
+        raise MemberAlreadyExists("La persona ya tiene una membresía vigente.")
+    membership = Membership.objects.create(
+        organization=organization, user=user, status_changed_by=actor
+    )
+    for role in sorted(roles, key=lambda item: item.value):
+        MembershipRoleAssignment.objects.create(
+            membership=membership, role=role.value, assigned_by=actor
+        )
+    if invitation is not None:
+        _create_profile_from_invitation(membership=membership, invitation=invitation)
+    else:
+        OrganizationMemberProfile.objects.get_or_create(membership=membership)
+    _record_event(
+        organization=organization,
+        membership=membership,
+        actor=actor,
+        event_type=MembershipEventType.CREATED,
+        new_status=MembershipStatus.ACTIVE,
+    )
+    return membership
+
+
+def _send_invitation_email(*, invitation: MembershipInvitation, token: str) -> None:
+    """Send after commit; token remains only in this closure and mail content."""
+
+    activation_url = f"{settings.FRONTEND_ORIGIN}/invitaciones/activar?token={token}"
+    send_mail(
+        subject="Invitación a la plataforma académica",
+        message=(
+            "Recibiste una invitación institucional. Abre este enlace una sola vez: "
+            f"{activation_url}"
+        ),
+        from_email=None,
+        recipient_list=[invitation.email],
+        fail_silently=False,
+    )
+
+
+@transaction.atomic
+def update_membership_settings(
+    *,
+    actor: User,
+    organization: Organization,
+    expected_version: int,
+    public_join_enabled: bool,
+    join_requires_approval: bool,
+    allowed_email_domains: list[str],
+    default_role: RoleCode,
+    invitation_expiry_hours: int,
+    allow_admin_managed_accounts: bool,
+    allow_bulk_invitations: bool,
+) -> OrganizationMembershipSettings:
+    locked_organization = _locked_organization(organization)
+    _require_capability(
+        actor, locked_organization, Capability.MEMBERSHIP_SETTINGS_MANAGE
+    )
+    settings = _locked_membership_settings(locked_organization)
+    if settings.lock_version != expected_version:
+        raise RevisionConflict("La configuración cambió antes de guardar.")
+    settings.public_join_enabled = public_join_enabled
+    settings.join_requires_approval = join_requires_approval
+    settings.allowed_email_domains = allowed_email_domains
+    settings.default_role = default_role.value
+    settings.invitation_expiry_hours = invitation_expiry_hours
+    settings.allow_admin_managed_accounts = allow_admin_managed_accounts
+    settings.allow_bulk_invitations = allow_bulk_invitations
+    settings.updated_by = actor
+    settings.lock_version += 1
+    settings.full_clean()
+    settings.save()
+    _record_event(
+        organization=locked_organization,
+        membership=None,
+        actor=actor,
+        event_type=MembershipEventType.SETTINGS_UPDATED,
+    )
+    return settings
+
+
+def _assert_invitation_available(invitation: MembershipInvitation) -> None:
+    if invitation.status != InvitationStatus.PENDING:
+        raise InvitationUnavailable("La invitación no está disponible.")
+    if invitation.expires_at <= timezone.now():
+        invitation.status = InvitationStatus.EXPIRED
+        invitation.save(update_fields=("status", "updated_at"))
+        raise InvitationUnavailable("La invitación expiró.")
+
+
+@transaction.atomic
+def expire_due_invitations(*, organization: Organization) -> int:
+    """Materialize expired invitations before presenting an administrative list.
+
+    Expiry is an objective state, rather than a state that only changes after a
+    recipient opens an old link.  No token, recipient data, or actor is stored
+    in this maintenance update.
+    """
+
+    return MembershipInvitation.objects.filter(
+        organization=organization,
+        status=InvitationStatus.PENDING,
+        expires_at__lte=timezone.now(),
+    ).update(status=InvitationStatus.EXPIRED, updated_at=timezone.now())
+
+
+@transaction.atomic
+def create_invitation(
+    *,
+    actor: User,
+    organization: Organization,
+    email: str,
+    roles: set[RoleCode],
+    invitation_type: InvitationType,
+    existing_user: User | None = None,
+    given_name: str = "",
+    family_name: str = "",
+    preferred_name: str = "",
+    member_type: str = "",
+    institutional_id: str = "",
+    phone: str = "",
+    locale: str = "es",
+    timezone_name: str = "UTC",
+) -> tuple[MembershipInvitation, str]:
+    locked_organization = _locked_organization(organization)
+    _require_capability(actor, locked_organization, Capability.MEMBERSHIP_INVITE)
+    settings = _locked_membership_settings(locked_organization)
+    if (
+        invitation_type == InvitationType.MANAGED_ACCOUNT
+        and not settings.allow_admin_managed_accounts
+    ):
+        raise ManagedAccountsDisabled(
+            "La institución no permite cuentas administradas."
+        )
+    clean_email = email.strip().lower()
+    if MembershipInvitation.objects.filter(
+        organization=locked_organization,
+        email__iexact=clean_email,
+        status=InvitationStatus.PENDING,
+    ).exists():
+        raise InvitationAlreadyExists("Ya existe una invitación pendiente.")
+    token, digest = _new_invitation_token()
+    invitation = MembershipInvitation(
+        organization=locked_organization,
+        email=clean_email,
+        existing_user=existing_user,
+        invited_roles=[role.value for role in _validate_roles(roles)],
+        invitation_type=invitation_type,
+        token_digest=digest,
+        expires_at=timezone.now() + timedelta(hours=settings.invitation_expiry_hours),
+        invited_by=actor,
+        given_name=given_name.strip(),
+        family_name=family_name.strip(),
+        preferred_name=preferred_name.strip(),
+        member_type=member_type.strip(),
+        institutional_id=institutional_id.strip(),
+        phone=phone.strip(),
+        locale=locale.strip() or "es",
+        timezone_name=timezone_name.strip() or "UTC",
+    )
+    invitation.full_clean()
+    invitation.save()
+    _record_event(
+        organization=locked_organization,
+        membership=None,
+        actor=actor,
+        event_type=MembershipEventType.INVITATION_CREATED,
+        details={"invitation_type": invitation_type.value},
+    )
+    transaction.on_commit(
+        lambda: _send_invitation_email(invitation=invitation, token=token)
+    )
+    return invitation, token
+
+
+def invite_person(
+    *,
+    actor: User,
+    organization: Organization,
+    email: str,
+    roles: set[RoleCode],
+    given_name: str = "",
+    family_name: str = "",
+    preferred_name: str = "",
+    member_type: str = "",
+    institutional_id: str = "",
+    phone: str = "",
+    locale: str = "es",
+    timezone_name: str = "UTC",
+) -> MembershipInvitation:
+    """Create the correct invitation without exposing a token to callers."""
+
+    clean_email = email.strip().lower()
+    user = get_user_model().objects.filter(email__iexact=clean_email).first()
+    invitation_type = (
+        InvitationType.EXISTING_USER if user is not None else InvitationType.NEW_USER
+    )
+    invitation, _ = create_invitation(
+        actor=actor,
+        organization=organization,
+        email=clean_email,
+        roles=roles,
+        invitation_type=invitation_type,
+        existing_user=user,
+        given_name=given_name,
+        family_name=family_name,
+        preferred_name=preferred_name,
+        member_type=member_type,
+        institutional_id=institutional_id,
+        phone=phone,
+        locale=locale,
+        timezone_name=timezone_name,
+    )
+    return invitation
+
+
+@transaction.atomic
+def create_managed_account(
+    *,
+    actor: User,
+    organization: Organization,
+    email: str,
+    roles: set[RoleCode],
+    given_name: str,
+    family_name: str,
+    preferred_name: str,
+    member_type: str,
+    institutional_id: str,
+    phone: str,
+    locale: str,
+    timezone_name: str,
+) -> tuple[MembershipInvitation, str]:
+    clean_email = email.strip().lower()
+    user_model = get_user_model()
+    if user_model.objects.filter(email__iexact=clean_email).exists():
+        raise InvitationAlreadyExists("No fue posible crear la invitación.")
+    user = user_model(
+        email=clean_email,
+        first_name=given_name.strip(),
+        last_name=family_name.strip(),
+        is_active=False,
+    )
+    user.set_unusable_password()
+    user.save()
+    EmailAddress.objects.create(
+        user=user, email=clean_email, primary=True, verified=False
+    )
+    invitation, token = create_invitation(
+        actor=actor,
+        organization=organization,
+        email=clean_email,
+        roles=roles,
+        invitation_type=InvitationType.MANAGED_ACCOUNT,
+        existing_user=user,
+        given_name=given_name,
+        family_name=family_name,
+        preferred_name=preferred_name,
+        member_type=member_type,
+        institutional_id=institutional_id,
+        phone=phone,
+        locale=locale,
+        timezone_name=timezone_name,
+    )
+    _record_event(
+        organization=organization,
+        membership=None,
+        actor=actor,
+        event_type=MembershipEventType.MANAGED_ACCOUNT_CREATED,
+    )
+    return invitation, token
+
+
+@transaction.atomic
+def resend_invitation(*, actor: User, invitation: MembershipInvitation) -> str:
+    locked = (
+        MembershipInvitation.objects.select_for_update()
+        .select_related("organization")
+        .get(pk=invitation.pk)
+    )
+    _require_capability(
+        actor, locked.organization, Capability.MEMBERSHIP_INVITATION_MANAGE
+    )
+    _assert_invitation_available(locked)
+    token, digest = _new_invitation_token()
+    locked.token_digest = digest
+    locked.expires_at = timezone.now() + timedelta(
+        hours=_locked_membership_settings(locked.organization).invitation_expiry_hours
+    )
+    locked.save(update_fields=("token_digest", "expires_at", "updated_at"))
+    _record_event(
+        organization=locked.organization,
+        membership=None,
+        actor=actor,
+        event_type=MembershipEventType.INVITATION_RESENT,
+    )
+    transaction.on_commit(
+        lambda: _send_invitation_email(invitation=locked, token=token)
+    )
+    return token
+
+
+@transaction.atomic
+def correct_managed_account_email(
+    *, actor: User, invitation: MembershipInvitation, email: str
+) -> MembershipInvitation:
+    """Correct an inactive managed account before activation.
+
+    The replacement address receives a freshly generated one-time link.  The
+    former link becomes unusable, and the administrator never receives either
+    token.  This intentionally applies only to institution-managed accounts:
+    changing the address of an existing or public account would silently change
+    whose identity is being invited.
+    """
+
+    locked = (
+        MembershipInvitation.objects.select_for_update(of=("self",))
+        .select_related("organization", "existing_user")
+        .get(pk=invitation.pk)
+    )
+    _require_capability(
+        actor, locked.organization, Capability.MEMBERSHIP_INVITATION_MANAGE
+    )
+    _assert_invitation_available(locked)
+    if (
+        locked.invitation_type != InvitationType.MANAGED_ACCOUNT
+        or locked.existing_user is None
+        or locked.existing_user.is_active
+    ):
+        raise InvitationUnavailable(
+            "Solo se puede corregir una cuenta administrada pendiente."
+        )
+
+    clean_email = email.strip().lower()
+    user = locked.existing_user
+    user_model = get_user_model()
+    if (
+        user_model.objects.filter(email__iexact=clean_email)
+        .exclude(pk=user.pk)
+        .exists()
+    ):
+        raise InvitationAlreadyExists("No fue posible actualizar la invitación.")
+    if (
+        EmailAddress.objects.filter(email__iexact=clean_email)
+        .exclude(user=user)
+        .exists()
+    ):
+        raise InvitationAlreadyExists("No fue posible actualizar la invitación.")
+    if (
+        MembershipInvitation.objects.filter(
+            organization=locked.organization,
+            email__iexact=clean_email,
+            status=InvitationStatus.PENDING,
+        )
+        .exclude(pk=locked.pk)
+        .exists()
+    ):
+        raise InvitationAlreadyExists("Ya existe una invitación pendiente.")
+
+    user.email = clean_email
+    user.save(update_fields=("email",))
+    email_address, _ = EmailAddress.objects.select_for_update().get_or_create(
+        user=user,
+        defaults={"email": clean_email, "primary": True, "verified": False},
+    )
+    email_address.email = clean_email
+    email_address.primary = True
+    email_address.verified = False
+    email_address.save(update_fields=("email", "primary", "verified"))
+
+    token, digest = _new_invitation_token()
+    locked.email = clean_email
+    locked.token_digest = digest
+    locked.expires_at = timezone.now() + timedelta(
+        hours=_locked_membership_settings(locked.organization).invitation_expiry_hours
+    )
+    locked.save(update_fields=("email", "token_digest", "expires_at", "updated_at"))
+    _record_event(
+        organization=locked.organization,
+        membership=None,
+        actor=actor,
+        event_type=MembershipEventType.INVITATION_UPDATED,
+        details={"fields": ["email"]},
+    )
+    transaction.on_commit(
+        lambda: _send_invitation_email(invitation=locked, token=token)
+    )
+    return locked
+
+
+@transaction.atomic
+def bulk_transition_memberships(
+    *,
+    actor: User,
+    organization: Organization,
+    membership_ids: list[str],
+    target_status: MembershipStatus,
+) -> list[Membership]:
+    """Apply one authorized lifecycle action atomically to selected members."""
+
+    locked_organization = _locked_organization(organization)
+    unique_ids = set(membership_ids)
+    memberships = list(
+        Membership.objects.filter(
+            organization=locked_organization, id__in=unique_ids
+        ).order_by("id")
+    )
+    if len(memberships) != len(unique_ids):
+        raise OrganizationAccessDenied(
+            "No puedes gestionar una membresía fuera de contexto."
+        )
+    updated: list[Membership] = []
+    for membership in memberships:
+        updated.append(
+            _transition_membership(
+                actor=actor, membership=membership, target_status=target_status
+            )
+        )
+    return updated
+
+
+@transaction.atomic
+def revoke_invitation(
+    *, actor: User, invitation: MembershipInvitation
+) -> MembershipInvitation:
+    locked = (
+        MembershipInvitation.objects.select_for_update()
+        .select_related("organization")
+        .get(pk=invitation.pk)
+    )
+    _require_capability(
+        actor, locked.organization, Capability.MEMBERSHIP_INVITATION_MANAGE
+    )
+    _assert_invitation_available(locked)
+    locked.status = InvitationStatus.REVOKED
+    locked.revoked_at = timezone.now()
+    locked.save(update_fields=("status", "revoked_at", "updated_at"))
+    _record_event(
+        organization=locked.organization,
+        membership=None,
+        actor=actor,
+        event_type=MembershipEventType.INVITATION_REVOKED,
+    )
+    return locked
+
+
+def begin_invitation_activation(
+    *, request: HttpRequest, token: str
+) -> MembershipInvitation:
+    digest = _invitation_digest(token)
+    invitation = (
+        MembershipInvitation.objects.select_related("organization")
+        .filter(token_digest=digest)
+        .first()
+    )
+    if invitation is None:
+        raise InvitationUnavailable("La invitación no está disponible.")
+    _assert_invitation_available(invitation)
+    request.session["organization_invitation_id"] = str(invitation.id)
+    request.session["organization_invitation_digest"] = digest
+    request.session.modified = True
+    return invitation
+
+
+def _session_invitation(
+    request: HttpRequest, *, require_available: bool = True
+) -> MembershipInvitation | None:
+    invitation_id = request.session.get("organization_invitation_id")
+    digest = request.session.get("organization_invitation_digest")
+    if not isinstance(invitation_id, str) or not isinstance(digest, str):
+        return None
+    invitation = (
+        MembershipInvitation.objects.select_related("organization", "existing_user")
+        .filter(pk=invitation_id, token_digest=digest)
+        .first()
+    )
+    if invitation is None:
+        return None
+    if require_available:
+        try:
+            _assert_invitation_available(invitation)
+        except InvitationUnavailable:
+            return None
+    return invitation
+
+
+def session_has_valid_signup_invitation(request: HttpRequest) -> bool:
+    invitation = _session_invitation(request)
+    return bool(invitation and invitation.invitation_type == InvitationType.NEW_USER)
+
+
+@transaction.atomic
+def accept_session_invitation(*, request: HttpRequest, user: User) -> Membership | None:
+    invitation = _session_invitation(request, require_available=False)
+    if invitation is None:
+        return None
+    locked = (
+        MembershipInvitation.objects.select_for_update(of=("self",))
+        .select_related("organization", "existing_user")
+        .get(pk=invitation.pk)
+    )
+    if locked.email.lower() != user.email.lower():
+        raise InvitationUnavailable("La invitación no corresponde a esta cuenta.")
+    if locked.existing_user_id and locked.existing_user_id != user.pk:
+        raise InvitationUnavailable("La invitación no corresponde a esta cuenta.")
+    if not EmailAddress.objects.filter(
+        user=user, email__iexact=user.email, verified=True
+    ).exists():
+        raise VerifiedUserRequired("Debes verificar el correo antes de aceptar.")
+    if locked.status == InvitationStatus.ACCEPTED:
+        membership = (
+            Membership.objects.filter(
+                organization=locked.organization,
+                user=user,
+            )
+            .exclude(status=MembershipStatus.REVOKED)
+            .first()
+        )
+        if membership is None:
+            raise InvitationUnavailable("La invitación no está disponible.")
+        request.session.pop("organization_invitation_id", None)
+        request.session.pop("organization_invitation_digest", None)
+        return membership
+    _assert_invitation_available(locked)
+    membership = _create_active_membership(
+        organization=locked.organization,
+        user=user,
+        actor=user,
+        roles={RoleCode(role) for role in locked.invited_roles},
+        invitation=locked,
+    )
+    locked.status = InvitationStatus.ACCEPTED
+    locked.accepted_at = timezone.now()
+    locked.save(update_fields=("status", "accepted_at", "updated_at"))
+    request.session.pop("organization_invitation_id", None)
+    request.session.pop("organization_invitation_digest", None)
+    _record_event(
+        organization=locked.organization,
+        membership=membership,
+        actor=user,
+        event_type=MembershipEventType.INVITATION_ACCEPTED,
+        details={"invitation_type": locked.invitation_type},
+    )
+    return membership
+
+
+def complete_onboarding_after_email_verification(
+    *, request: HttpRequest, user: User
+) -> None:
+    invitation = _session_invitation(request)
+    if invitation and invitation.invitation_type == InvitationType.NEW_USER:
+        accept_session_invitation(request=request, user=user)
+    join_slug = request.session.pop("organization_join_slug", None)
+    if isinstance(join_slug, str):
+        organization = Organization.objects.filter(slug=join_slug).first()
+        if organization is not None:
+            create_public_join_request(user=user, organization=organization)
+
+
+@transaction.atomic
+def activate_managed_account(*, request: HttpRequest, password: str) -> Membership:
+    invitation = _session_invitation(request)
+    if (
+        invitation is None
+        or invitation.invitation_type != InvitationType.MANAGED_ACCOUNT
+    ):
+        raise InvitationUnavailable("La activación no está disponible.")
+    locked = (
+        MembershipInvitation.objects.select_for_update(of=("self",))
+        .select_related("existing_user", "organization")
+        .get(pk=invitation.pk)
+    )
+    _assert_invitation_available(locked)
+    if locked.existing_user is None:
+        raise InvitationUnavailable("La activación no está disponible.")
+    user = locked.existing_user
+    user.set_password(password)
+    user.is_active = True
+    user.save(update_fields=("password", "is_active"))
+    EmailAddress.objects.update_or_create(
+        user=user,
+        email=user.email,
+        defaults={"primary": True, "verified": True},
+    )
+    membership = _create_active_membership(
+        organization=locked.organization,
+        user=user,
+        actor=user,
+        roles={RoleCode(role) for role in locked.invited_roles},
+        invitation=locked,
+    )
+    locked.status = InvitationStatus.ACCEPTED
+    locked.accepted_at = timezone.now()
+    locked.save(update_fields=("status", "accepted_at", "updated_at"))
+    request.session.pop("organization_invitation_id", None)
+    request.session.pop("organization_invitation_digest", None)
+    _record_event(
+        organization=locked.organization,
+        membership=membership,
+        actor=user,
+        event_type=MembershipEventType.MANAGED_ACCOUNT_ACTIVATED,
+    )
+    return membership
+
+
+def begin_public_join(*, request: HttpRequest, organization: Organization) -> None:
+    settings = OrganizationMembershipSettings.objects.get(organization=organization)
+    if not settings.public_join_enabled:
+        raise JoinRequestUnavailable("Esta institución no acepta solicitudes públicas.")
+    request.session["organization_join_slug"] = organization.slug
+    request.session.modified = True
+
+
+def _email_domain_allowed(
+    *, email: str, settings: OrganizationMembershipSettings
+) -> bool:
+    if not settings.allowed_email_domains:
+        return True
+    domain = email.rpartition("@")[2].lower()
+    return domain in set(settings.allowed_email_domains)
+
+
+@transaction.atomic
+def create_public_join_request(
+    *, user: User, organization: Organization
+) -> OrganizationJoinRequest | Membership:
+    settings = _locked_membership_settings(organization)
+    if not settings.public_join_enabled or not _email_domain_allowed(
+        email=user.email, settings=settings
+    ):
+        raise JoinRequestUnavailable("La solicitud no está disponible.")
+    if (
+        Membership.objects.filter(organization=organization, user=user)
+        .exclude(status=MembershipStatus.REVOKED)
+        .exists()
+    ):
+        raise MemberAlreadyExists("La persona ya tiene una membresía vigente.")
+    if not settings.join_requires_approval:
+        return _create_active_membership(
+            organization=organization,
+            user=user,
+            actor=None,
+            roles={RoleCode(settings.default_role)},
+        )
+    try:
+        request = OrganizationJoinRequest.objects.create(
+            organization=organization, user=user, email=user.email.lower()
+        )
+    except IntegrityError as error:
+        raise JoinRequestAlreadyExists("Ya existe una solicitud pendiente.") from error
+    _record_event(
+        organization=organization,
+        membership=None,
+        actor=user,
+        event_type=MembershipEventType.JOIN_REQUESTED,
+    )
+    return request
+
+
+@transaction.atomic
+def review_join_request(
+    *, actor: User, join_request: OrganizationJoinRequest, approve: bool
+) -> OrganizationJoinRequest:
+    locked = (
+        OrganizationJoinRequest.objects.select_for_update()
+        .select_related("organization", "user")
+        .get(pk=join_request.pk)
+    )
+    _require_capability(
+        actor, locked.organization, Capability.MEMBERSHIP_JOIN_REQUEST_MANAGE
+    )
+    if locked.status != JoinRequestStatus.PENDING:
+        raise JoinRequestUnavailable("La solicitud ya fue resuelta.")
+    locked.status = (
+        JoinRequestStatus.APPROVED if approve else JoinRequestStatus.REJECTED
+    )
+    locked.reviewed_by = actor
+    locked.reviewed_at = timezone.now()
+    locked.save(update_fields=("status", "reviewed_by", "reviewed_at", "updated_at"))
+    membership = None
+    if approve:
+        role = RoleCode(_locked_membership_settings(locked.organization).default_role)
+        membership = _create_active_membership(
+            organization=locked.organization,
+            user=locked.user,
+            actor=actor,
+            roles={role},
+        )
+    _record_event(
+        organization=locked.organization,
+        membership=membership,
+        actor=actor,
+        event_type=(
+            MembershipEventType.JOIN_APPROVED
+            if approve
+            else MembershipEventType.JOIN_REJECTED
+        ),
+    )
+    return locked
+
+
+@transaction.atomic
+def update_member_profile(
+    *,
+    actor: User,
+    membership: Membership,
+    member_type: str,
+    institutional_id: str,
+    preferred_name: str,
+    phone: str,
+    locale: str,
+    timezone_name: str,
+    administrative_notes: str | None = None,
+) -> OrganizationMemberProfile:
+    locked = _locked_membership(membership)
+    is_self = locked.user_id == actor.pk
+    can_manage = has_capability(
+        actor, locked.organization, Capability.MEMBERSHIP_PROFILE_MANAGE
+    )
+    if not is_self and not can_manage:
+        _require_capability(
+            actor, locked.organization, Capability.MEMBERSHIP_PROFILE_MANAGE
+        )
+    profile, _ = OrganizationMemberProfile.objects.select_for_update().get_or_create(
+        membership=locked
+    )
+    if (
+        is_self
+        and not can_manage
+        and (
+            member_type != profile.member_type
+            or institutional_id != profile.institutional_id
+            or administrative_notes is not None
+        )
+    ):
+        raise OrganizationAccessDenied(
+            "Solo la institución puede modificar los datos administrativos."
+        )
+    profile.member_type = member_type.strip()
+    profile.institutional_id = institutional_id.strip()
+    profile.preferred_name = preferred_name.strip()
+    profile.phone = phone.strip()
+    profile.locale = locale.strip() or "es"
+    profile.timezone = timezone_name.strip() or "UTC"
+    if administrative_notes is not None:
+        if not can_manage:
+            raise OrganizationAccessDenied(
+                "No puedes modificar las notas administrativas."
+            )
+        profile.administrative_notes = administrative_notes.strip()
+    profile.full_clean()
+    profile.save()
+    _record_event(
+        organization=locked.organization,
+        membership=locked,
+        actor=actor,
+        event_type=MembershipEventType.PROFILE_UPDATED,
+    )
+    return profile
+
+
+@transaction.atomic
+def revoke_user_sessions(*, actor: User, membership: Membership) -> int:
+    locked = _locked_membership(membership)
+    _require_capability(
+        actor, locked.organization, Capability.MEMBERSHIP_SESSIONS_REVOKE
+    )
+    deleted = 0
+    for session in Session.objects.filter(expire_date__gte=timezone.now()).iterator():
+        if session.get_decoded().get("_auth_user_id") == str(locked.user_id):
+            session.delete()
+            deleted += 1
+    _record_event(
+        organization=locked.organization,
+        membership=locked,
+        actor=actor,
+        event_type=MembershipEventType.SESSIONS_REVOKED,
+    )
+    return deleted

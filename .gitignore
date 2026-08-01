@@ -10,10 +10,8 @@ __pycache__/
 coverage.xml
 htmlcov/
 db.sqlite3
-apps/api/.local/mail/
-apps/api/.local/e2e-mail/
-apps/web/.local/e2e-results/
-.local/dev/
+.local/
+**/.local/
 
 # Node, pnpm, Next.js, Playwright
 node_modules/

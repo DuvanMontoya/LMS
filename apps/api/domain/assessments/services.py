@@ -15,6 +15,7 @@ from django.db.models import Max
 from django.utils import timezone
 
 from domain.catalog.models import LearningObjective
+from domain.events.services import record_domain_event
 from domain.learning.access import access_state
 from domain.learning.choices import AccessState, EnrollmentStatus
 from domain.learning.models import EnrollmentReleaseAssignment
@@ -310,6 +311,23 @@ def transition_question_revision(
         note=note.strip(),
     )
     _clean_save(transition)
+    if to_status in {"changes_requested", "approved"}:
+        action = "changes_requested" if to_status == "changes_requested" else "approved"
+        record_domain_event(
+            event_type=f"assessments.question_revision.{action}.v1",
+            organization=locked.question.bank.organization,
+            aggregate_type="question_revision",
+            aggregate_id=locked.id,
+            actor=actor,
+            payload={
+                "question_revision_id": str(locked.id),
+                **(
+                    {"question_version_id": str(version.id)}
+                    if version is not None
+                    else {}
+                ),
+            },
+        )
     return locked, version
 
 
@@ -1297,6 +1315,23 @@ def transition_assessment_revision(
         note=note.strip(),
     )
     _clean_save(transition)
+    if to_status in {"changes_requested", "approved"}:
+        action = "changes_requested" if to_status == "changes_requested" else "approved"
+        record_domain_event(
+            event_type=f"assessments.assessment_revision.{action}.v1",
+            organization=locked.assessment.organization,
+            aggregate_type="assessment_revision",
+            aggregate_id=locked.id,
+            actor=actor,
+            payload={
+                "assessment_revision_id": str(locked.id),
+                **(
+                    {"assessment_version_id": str(version.id)}
+                    if version is not None
+                    else {}
+                ),
+            },
+        )
     return locked, version
 
 
@@ -1774,6 +1809,23 @@ def _record_attempt_event(
         payload=deep_json_copy(payload),
     )
     _clean_save(event)
+    domain_type = None
+    if event_type == AttemptEventType.COMPLETED.value:
+        domain_type = "assessments.attempt.graded.v1"
+    elif event_type == AttemptEventType.AUTO_GRADED.value and payload.get(
+        "pending_manual"
+    ):
+        domain_type = "assessments.attempt.pending_manual.v1"
+    if domain_type:
+        organization = attempt.delivery_assignment.delivery.organization
+        record_domain_event(
+            event_type=domain_type,
+            organization=organization,
+            aggregate_type="attempt",
+            aggregate_id=attempt.id,
+            actor=actor,
+            payload={"attempt_id": str(attempt.id)},
+        )
     return event
 
 

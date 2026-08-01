@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import ClassVar
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models.functions import Lower
@@ -54,3 +56,77 @@ class User(AbstractUser):
 
     def get_short_name(self) -> str:
         return self.first_name.strip()
+
+
+class PlatformRegistrationSettings(models.Model):  # noqa: DJ012
+    """Singleton, database-backed policy evaluated by the allauth adapter."""
+
+    class SignupMode(models.TextChoices):
+        CLOSED = "closed", "Cerrado"
+        INVITE_ONLY = "invite_only", "Sólo invitación"
+        OPEN = "open", "Abierto"
+
+    singleton: models.PositiveSmallIntegerField[int, int] = (
+        models.PositiveSmallIntegerField(default=1, unique=True, editable=False)
+    )
+    public_signup_enabled: models.BooleanField[bool, bool] = models.BooleanField(
+        default=True
+    )
+    signup_mode: models.CharField[str, str] = models.CharField(
+        max_length=16, choices=SignupMode.choices, default=SignupMode.OPEN
+    )
+    require_email_verification: models.BooleanField[bool, bool] = models.BooleanField(
+        default=True
+    )
+    default_locale: models.CharField[str, str] = models.CharField(
+        max_length=16, default="es"
+    )
+    default_timezone: models.CharField[str, str] = models.CharField(
+        max_length=64, default="UTC"
+    )
+    updated_by: models.ForeignKey[User | None, User | None] = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="platform_registration_settings_updates",
+    )
+    updated_at: models.DateTimeField[datetime, datetime] = models.DateTimeField(
+        auto_now=True
+    )
+    lock_version: models.PositiveIntegerField[int, int] = models.PositiveIntegerField(
+        default=1
+    )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(singleton=1),
+                name="identity_registration_settings_singleton_one",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(signup_mode="open", public_signup_enabled=True)
+                    | models.Q(
+                        signup_mode__in=["closed", "invite_only"],
+                        public_signup_enabled=False,
+                    )
+                ),
+                name="identity_registration_settings_mode_consistent",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(require_email_verification=True),
+                name="identity_registration_settings_email_verification_required",
+            ),
+        ]
+        permissions = [
+            ("manage_platform_registration", "Can manage platform registration"),
+        ]
+
+    def __str__(self) -> str:
+        return "platform-registration-settings"
+
+    @classmethod
+    def current(cls) -> PlatformRegistrationSettings:
+        settings, _ = cls.objects.get_or_create(singleton=1)
+        return settings

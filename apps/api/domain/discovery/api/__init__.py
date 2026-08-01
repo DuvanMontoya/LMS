@@ -1,0 +1,1 @@
+"""Discovery REST adapters."""

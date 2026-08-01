@@ -50,6 +50,11 @@ function Import-LocalEnvironment {
         'sessionid',
         'Process'
     )
+    [Environment]::SetEnvironmentVariable(
+        'STRUCTURED_LOG_PATH',
+        (Join-Path $apiDirectory '.local/observability/lms.jsonl'),
+        'Process'
+    )
 }
 
 function Test-Endpoint([string]$Uri) {
@@ -144,7 +149,7 @@ function Start-Development {
         -RedirectStandardError $apiErrorLog
     $webProcess = Start-Process `
         -FilePath 'node.exe' `
-        -ArgumentList @($nextExecutable, 'dev', '--hostname', '127.0.0.1', '--port', '3000') `
+        -ArgumentList @($nextExecutable, 'dev', '--webpack', '--hostname', '127.0.0.1', '--port', '3000') `
         -WorkingDirectory $webDirectory `
         -PassThru `
         -WindowStyle Hidden `

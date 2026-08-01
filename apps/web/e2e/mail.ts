@@ -40,3 +40,39 @@ export async function waitForMailCode(
   }
   throw new Error('No se recibió un único correo con la estructura esperada.');
 }
+
+export async function waitForInvitationLink(
+  directory: string,
+  recipient: string,
+): Promise<string> {
+  const deadline = Date.now() + 15_000;
+  const linkPattern =
+    /https?:\/\/[^\s]+\/invitaciones\/activar\?token=[A-Za-z0-9_-]+/;
+  while (Date.now() < deadline) {
+    const names = await readdir(directory).catch(() => []);
+    const messages = await Promise.all(
+      names.map(async (name) => ({
+        name,
+        text: await readFile(`${directory}/${name}`, 'utf8'),
+      })),
+    );
+    const matching = messages
+      .map(({ name, text }) => ({ name, text: decodeQuotedPrintable(text) }))
+      .filter(({ text }) => text.includes(recipient))
+      .map(({ name, text }) => ({ name, link: linkPattern.exec(text)?.[0] }))
+      .filter((message): message is { name: string; link: string } =>
+        Boolean(message.link),
+      );
+    if (matching.length === 1) {
+      const message = matching[0];
+      if (message) {
+        await rm(`${directory}/${message.name}`, { force: true });
+        return message.link;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  throw new Error(
+    'No se recibió un enlace de invitación para la persona esperada.',
+  );
+}

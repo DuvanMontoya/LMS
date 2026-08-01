@@ -58,6 +58,11 @@
         ],
         "type": "object"
       },
+      "ActionEnum": {
+        "description": "* `suspend` - suspend\n* `reactivate` - reactivate\n* `revoke` - revoke",
+        "enum": ["suspend", "reactivate", "revoke"],
+        "type": "string"
+      },
       "AddMember": {
         "properties": {
           "email": { "format": "email", "type": "string" },
@@ -209,6 +214,30 @@
           "pass_rate_basis_points",
           "sample_size"
         ],
+        "type": "object"
+      },
+      "ApiKeyConnect": {
+        "properties": {
+          "api_key": { "maxLength": 2048, "type": "string", "writeOnly": true },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "provider": {
+            "$ref": "#/components/schemas/ApiKeyConnectProviderEnum"
+          }
+        },
+        "required": ["api_key", "provider"],
+        "type": "object"
+      },
+      "ApiKeyConnectProviderEnum": {
+        "description": "* `openai` - openai\n* `gemini` - gemini\n* `deepseek` - deepseek",
+        "enum": ["openai", "gemini", "deepseek"],
+        "type": "string"
+      },
+      "ApiKeyRotate": {
+        "properties": {
+          "api_key": { "maxLength": 2048, "type": "string", "writeOnly": true },
+          "expected_version": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["api_key", "expected_version"],
         "type": "object"
       },
       "Area": {
@@ -1296,10 +1325,83 @@
         "required": ["count", "next", "previous", "results"],
         "type": "object"
       },
+      "AuthTypeEnum": {
+        "description": "* `oauth2_user` - OAuth 2.0 de usuario\n* `api_key` - Clave API",
+        "enum": ["oauth2_user", "api_key"],
+        "type": "string"
+      },
       "BlankEnum": { "enum": [""] },
+      "BulkInvitationConfirm": {
+        "properties": { "preview_id": { "format": "uuid", "type": "string" } },
+        "required": ["preview_id"],
+        "type": "object"
+      },
+      "BulkInvitationIssue": {
+        "properties": {
+          "field": { "readOnly": true, "type": "string" },
+          "message": { "readOnly": true, "type": "string" },
+          "row": { "readOnly": true, "type": "integer" }
+        },
+        "required": ["field", "message", "row"],
+        "type": "object"
+      },
+      "BulkInvitationPreview": {
+        "properties": {
+          "file": { "format": "uri", "type": "string", "writeOnly": true }
+        },
+        "required": ["file"],
+        "type": "object"
+      },
+      "BulkInvitationPreviewResponse": {
+        "properties": {
+          "issues": {
+            "items": { "$ref": "#/components/schemas/BulkInvitationIssue" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "preview_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "valid_count": { "readOnly": true, "type": "integer" }
+        },
+        "required": ["issues", "preview_id", "valid_count"],
+        "type": "object"
+      },
+      "BulkMembershipTransition": {
+        "properties": {
+          "action": { "$ref": "#/components/schemas/ActionEnum" },
+          "membership_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": ["action", "membership_ids"],
+        "type": "object"
+      },
+      "CapabilitiesEnum": {
+        "description": "* `calendar` - calendar\n* `meet` - meet\n* `drive` - drive\n* `youtube` - youtube",
+        "enum": ["calendar", "meet", "drive", "youtube"],
+        "type": "string"
+      },
       "CatalogPrerequisiteKind": {
         "description": "* `required` - Obligatorio\n* `recommended` - Recomendado",
         "enum": ["required", "recommended"],
+        "type": "string"
+      },
+      "CategoryEnum": {
+        "description": "* `learning` - Aprendizaje\n* `assessment` - Evaluación\n* `authoring` - Autoría\n* `asset` - Recurso\n* `publication` - Publicación\n* `system` - Sistema",
+        "enum": [
+          "learning",
+          "assessment",
+          "authoring",
+          "asset",
+          "publication",
+          "system"
+        ],
         "type": "string"
       },
       "CognitiveLevelEnum": {
@@ -1646,6 +1748,11 @@
           "schema_version": { "minimum": 1, "type": "integer" }
         },
         "required": ["content", "expected_document_version", "schema_version"],
+        "type": "object"
+      },
+      "Count": {
+        "properties": { "count": { "minimum": 0, "type": "integer" } },
+        "required": ["count"],
         "type": "object"
       },
       "Course": {
@@ -2117,6 +2224,114 @@
         "required": ["area_id", "id", "name", "slug", "status"],
         "type": "object"
       },
+      "DomainEventDetail": {
+        "properties": {
+          "aggregate_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "aggregate_type": { "readOnly": true, "type": "string" },
+          "causation_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "correlation_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "event_type": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "occurred_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "organization_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "payload": { "readOnly": true },
+          "schema_version": { "readOnly": true, "type": "integer" }
+        },
+        "required": [
+          "aggregate_id",
+          "aggregate_type",
+          "causation_id",
+          "correlation_id",
+          "created_at",
+          "event_type",
+          "id",
+          "occurred_at",
+          "organization_id",
+          "payload",
+          "schema_version"
+        ],
+        "type": "object"
+      },
+      "DomainEventSummary": {
+        "properties": {
+          "aggregate_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "aggregate_type": { "readOnly": true, "type": "string" },
+          "causation_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "correlation_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "event_type": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "occurred_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "organization_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "schema_version": { "readOnly": true, "type": "integer" }
+        },
+        "required": [
+          "aggregate_id",
+          "aggregate_type",
+          "causation_id",
+          "correlation_id",
+          "created_at",
+          "event_type",
+          "id",
+          "occurred_at",
+          "organization_id",
+          "schema_version"
+        ],
+        "type": "object"
+      },
       "DraftResult": {
         "properties": {
           "lock_version": { "minimum": 1, "type": "integer" },
@@ -2125,6 +2340,75 @@
         },
         "required": ["lock_version", "revision_id", "revision_number"],
         "type": "object"
+      },
+      "EmailDelivery": {
+        "properties": {
+          "attempt_count": { "readOnly": true, "type": "integer" },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "failed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "last_error_code": { "readOnly": true, "type": "string" },
+          "message_id": { "readOnly": true, "type": "string" },
+          "next_attempt_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "notification_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "sent_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/EmailDeliveryStatusEnum" }
+            ],
+            "readOnly": true
+          },
+          "template_key": { "readOnly": true, "type": "string" }
+        },
+        "required": [
+          "attempt_count",
+          "created_at",
+          "failed_at",
+          "id",
+          "last_error_code",
+          "message_id",
+          "next_attempt_at",
+          "notification_id",
+          "sent_at",
+          "started_at",
+          "status",
+          "template_key"
+        ],
+        "type": "object"
+      },
+      "EmailDeliveryStatusEnum": {
+        "description": "* `queued` - En cola\n* `sending` - Enviando\n* `sent` - Enviado\n* `failed` - Fallido\n* `dead` - Terminal",
+        "enum": ["queued", "sending", "sent", "failed", "dead"],
+        "type": "string"
       },
       "EnrollmentCreate": {
         "properties": {
@@ -2232,15 +2516,192 @@
         "required": ["code", "detail"],
         "type": "object"
       },
+      "EventConsumerDelivery": {
+        "properties": {
+          "attempt_count": { "readOnly": true, "type": "integer" },
+          "claimed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "consumer_name": { "readOnly": true, "type": "string" },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "event_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "last_error_code": { "readOnly": true, "type": "string" },
+          "lease_expires_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "next_attempt_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "processed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/EventConsumerDeliveryStatusEnum" }
+            ],
+            "readOnly": true
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "attempt_count",
+          "claimed_at",
+          "consumer_name",
+          "created_at",
+          "event_id",
+          "id",
+          "last_error_code",
+          "lease_expires_at",
+          "next_attempt_at",
+          "processed_at",
+          "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "EventConsumerDeliveryStatusEnum": {
+        "description": "* `pending` - Pendiente\n* `processing` - Procesando\n* `completed` - Completada\n* `failed` - Fallida\n* `dead` - Terminal",
+        "enum": ["pending", "processing", "completed", "failed", "dead"],
+        "type": "string"
+      },
+      "EventReplay": {
+        "properties": {
+          "completed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "consumer_name": { "readOnly": true, "type": "string" },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "event_type": { "readOnly": true, "type": "string" },
+          "failed_events": { "readOnly": true, "type": "integer" },
+          "from_event_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "organization_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "processed_events": { "readOnly": true, "type": "integer" },
+          "reason": { "readOnly": true, "type": "string" },
+          "started_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/EventReplayStatusEnum" }],
+            "readOnly": true
+          },
+          "to_event_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "total_events": { "readOnly": true, "type": "integer" }
+        },
+        "required": [
+          "completed_at",
+          "consumer_name",
+          "created_at",
+          "event_type",
+          "failed_events",
+          "from_event_id",
+          "id",
+          "organization_id",
+          "processed_events",
+          "reason",
+          "started_at",
+          "status",
+          "to_event_id",
+          "total_events"
+        ],
+        "type": "object"
+      },
+      "EventReplayCreate": {
+        "properties": {
+          "consumer_name": { "maxLength": 120, "type": "string" },
+          "event_type": { "maxLength": 160, "type": "string" },
+          "from_event_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "organization_slug": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "reason": { "maxLength": 1000, "minLength": 10, "type": "string" },
+          "to_event_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": ["consumer_name", "organization_slug", "reason"],
+        "type": "object"
+      },
+      "EventReplayStatusEnum": {
+        "description": "* `pending` - Pendiente\n* `processing` - Procesando\n* `completed` - Completada\n* `failed` - Fallida",
+        "enum": ["pending", "processing", "completed", "failed"],
+        "type": "string"
+      },
       "EventTypeEnum": {
-        "description": "* `membership_created` - Membresía creada\n* `membership_suspended` - Membresía suspendida\n* `membership_reactivated` - Membresía reactivada\n* `membership_revoked` - Membresía revocada\n* `role_assigned` - Rol asignado\n* `role_revoked` - Rol revocado",
+        "description": "* `membership_created` - Membresía creada\n* `membership_suspended` - Membresía suspendida\n* `membership_reactivated` - Membresía reactivada\n* `membership_revoked` - Membresía revocada\n* `role_assigned` - Rol asignado\n* `role_revoked` - Rol revocado\n* `invitation_created` - Invitación creada\n* `invitation_updated` - Invitación actualizada\n* `invitation_resent` - Invitación reenviada\n* `invitation_revoked` - Invitación revocada\n* `invitation_accepted` - Invitación aceptada\n* `join_requested` - Solicitud de ingreso creada\n* `join_approved` - Solicitud de ingreso aprobada\n* `join_rejected` - Solicitud de ingreso rechazada\n* `managed_account_created` - Cuenta administrada creada\n* `managed_account_activated` - Cuenta administrada activada\n* `profile_updated` - Perfil institucional actualizado\n* `roles_replaced` - Roles sustituidos\n* `sessions_revoked` - Sesiones revocadas\n* `membership_settings_updated` - Configuración de membresías actualizada",
         "enum": [
           "membership_created",
           "membership_suspended",
           "membership_reactivated",
           "membership_revoked",
           "role_assigned",
-          "role_revoked"
+          "role_revoked",
+          "invitation_created",
+          "invitation_updated",
+          "invitation_resent",
+          "invitation_revoked",
+          "invitation_accepted",
+          "join_requested",
+          "join_approved",
+          "join_rejected",
+          "managed_account_created",
+          "managed_account_activated",
+          "profile_updated",
+          "roles_replaced",
+          "sessions_revoked",
+          "membership_settings_updated"
         ],
         "type": "string"
       },
@@ -2256,6 +2717,27 @@
           "expected_version": { "minimum": 1, "type": "integer" }
         },
         "required": ["expected_version"],
+        "type": "object"
+      },
+      "GoogleOAuthStart": {
+        "properties": {
+          "capabilities": {
+            "items": { "$ref": "#/components/schemas/CapabilitiesEnum" },
+            "type": "array"
+          }
+        },
+        "required": ["capabilities"],
+        "type": "object"
+      },
+      "GoogleOAuthStartResponse": {
+        "properties": {
+          "authorization_url": {
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": ["authorization_url"],
         "type": "object"
       },
       "Gradebook": {
@@ -2649,6 +3131,261 @@
         ],
         "type": "object"
       },
+      "HealthCheck": {
+        "properties": {
+          "capabilities": { "readOnly": true },
+          "completed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "error_code": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "started_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/HealthCheckStatusEnum" }],
+            "readOnly": true
+          },
+          "task_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "capabilities",
+          "completed_at",
+          "created_at",
+          "error_code",
+          "id",
+          "started_at",
+          "status",
+          "task_id"
+        ],
+        "type": "object"
+      },
+      "HealthCheckStatusEnum": {
+        "description": "* `queued` - En cola\n* `running` - En ejecución\n* `succeeded` - Exitosa\n* `failed` - Fallida",
+        "enum": ["queued", "running", "succeeded", "failed"],
+        "type": "string"
+      },
+      "IntegrationConnection": {
+        "properties": {
+          "account_label": { "readOnly": true, "type": "string" },
+          "allowed_models": { "readOnly": true },
+          "auth_type": {
+            "allOf": [{ "$ref": "#/components/schemas/AuthTypeEnum" }],
+            "readOnly": true
+          },
+          "capabilities": { "readOnly": true },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "granted_scopes": { "readOnly": true },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "last_error_code": { "readOnly": true, "type": "string" },
+          "last_four": { "default": "", "readOnly": true, "type": "string" },
+          "last_validated_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "provider": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IntegrationConnectionProviderEnum"
+              }
+            ],
+            "readOnly": true
+          },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/IntegrationConnectionStatusEnum" }
+            ],
+            "readOnly": true
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_label",
+          "allowed_models",
+          "auth_type",
+          "capabilities",
+          "created_at",
+          "granted_scopes",
+          "id",
+          "last_error_code",
+          "last_four",
+          "last_validated_at",
+          "lock_version",
+          "provider",
+          "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "IntegrationConnectionProviderEnum": {
+        "description": "* `google_workspace` - Google Workspace\n* `openai` - OpenAI\n* `gemini` - Gemini\n* `deepseek` - DeepSeek",
+        "enum": ["google_workspace", "openai", "gemini", "deepseek"],
+        "type": "string"
+      },
+      "IntegrationConnectionStatusEnum": {
+        "description": "* `disconnected` - Desconectada\n* `connecting` - Conectando\n* `connected` - Conectada\n* `degraded` - Degradada\n* `revoked` - Revocada",
+        "enum": [
+          "disconnected",
+          "connecting",
+          "connected",
+          "degraded",
+          "revoked"
+        ],
+        "type": "string"
+      },
+      "Invitation": {
+        "properties": {
+          "accepted_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "email": { "format": "email", "readOnly": true, "type": "string" },
+          "expires_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "family_name": { "readOnly": true, "type": "string" },
+          "given_name": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "institutional_id": { "readOnly": true, "type": "string" },
+          "invitation_type": {
+            "allOf": [{ "$ref": "#/components/schemas/InvitationTypeEnum" }],
+            "readOnly": true
+          },
+          "locale": { "readOnly": true, "type": "string" },
+          "member_type": { "readOnly": true, "type": "string" },
+          "phone": { "readOnly": true, "type": "string" },
+          "preferred_name": { "readOnly": true, "type": "string" },
+          "revoked_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "roles": { "items": {}, "readOnly": true, "type": "array" },
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/InvitationStatusEnum" }],
+            "readOnly": true
+          },
+          "timezone_name": { "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "accepted_at",
+          "created_at",
+          "email",
+          "expires_at",
+          "family_name",
+          "given_name",
+          "id",
+          "institutional_id",
+          "invitation_type",
+          "locale",
+          "member_type",
+          "phone",
+          "preferred_name",
+          "revoked_at",
+          "roles",
+          "status",
+          "timezone_name",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "InvitationActivation": {
+        "properties": {
+          "token": {
+            "maxLength": 512,
+            "minLength": 24,
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": ["token"],
+        "type": "object"
+      },
+      "InvitationActivationResponse": {
+        "properties": {
+          "invitation_type": {
+            "allOf": [{ "$ref": "#/components/schemas/InvitationTypeEnum" }],
+            "readOnly": true
+          }
+        },
+        "required": ["invitation_type"],
+        "type": "object"
+      },
+      "InvitationCreate": {
+        "properties": {
+          "email": { "format": "email", "type": "string" },
+          "family_name": { "maxLength": 150, "type": "string" },
+          "given_name": { "maxLength": 150, "type": "string" },
+          "institutional_id": { "maxLength": 120, "type": "string" },
+          "locale": { "default": "es", "maxLength": 16, "type": "string" },
+          "member_type": { "maxLength": 80, "type": "string" },
+          "phone": { "maxLength": 64, "type": "string" },
+          "preferred_name": { "maxLength": 150, "type": "string" },
+          "roles": {
+            "items": { "$ref": "#/components/schemas/OrganizationRole" },
+            "type": "array"
+          },
+          "timezone_name": {
+            "default": "UTC",
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": ["email", "roles"],
+        "type": "object"
+      },
+      "InvitationStatusEnum": {
+        "description": "* `pending` - Pendiente\n* `accepted` - Aceptada\n* `revoked` - Revocada\n* `expired` - Expirada",
+        "enum": ["pending", "accepted", "revoked", "expired"],
+        "type": "string"
+      },
+      "InvitationTypeEnum": {
+        "description": "* `existing_user` - Usuario existente\n* `new_user` - Usuario nuevo\n* `managed_account` - Cuenta administrada",
+        "enum": ["existing_user", "new_user", "managed_account"],
+        "type": "string"
+      },
       "Item": {
         "properties": {
           "created_at": {
@@ -2808,6 +3545,45 @@
       "JobTypeEnum": {
         "description": "* `initial_processing` - Procesamiento inicial\n* `reprocess_variants` - Reprocesar variantes",
         "enum": ["initial_processing", "reprocess_variants"],
+        "type": "string"
+      },
+      "JoinRequest": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "email": { "format": "email", "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "reviewed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [{ "$ref": "#/components/schemas/JoinRequestStatusEnum" }],
+            "readOnly": true
+          },
+          "user": {
+            "allOf": [{ "$ref": "#/components/schemas/UserSummary" }],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "created_at",
+          "email",
+          "id",
+          "reviewed_at",
+          "status",
+          "user"
+        ],
+        "type": "object"
+      },
+      "JoinRequestStatusEnum": {
+        "description": "* `pending` - Pendiente\n* `approved` - Aprobada\n* `rejected` - Rechazada\n* `cancelled` - Cancelada",
+        "enum": ["pending", "approved", "rejected", "cancelled"],
         "type": "string"
       },
       "LearnerDelivery": {
@@ -3038,6 +3814,52 @@
         ],
         "type": "object"
       },
+      "ManagedAccountCreate": {
+        "properties": {
+          "email": { "format": "email", "type": "string" },
+          "family_name": { "maxLength": 150, "type": "string" },
+          "given_name": { "maxLength": 150, "type": "string" },
+          "institutional_id": { "maxLength": 120, "type": "string" },
+          "locale": { "default": "es", "maxLength": 16, "type": "string" },
+          "member_type": { "maxLength": 80, "type": "string" },
+          "phone": { "maxLength": 64, "type": "string" },
+          "preferred_name": { "maxLength": 150, "type": "string" },
+          "roles": {
+            "items": { "$ref": "#/components/schemas/OrganizationRole" },
+            "type": "array"
+          },
+          "timezone_name": {
+            "default": "UTC",
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "family_name",
+          "given_name",
+          "member_type",
+          "roles"
+        ],
+        "type": "object"
+      },
+      "ManagedAccountEmailCorrection": {
+        "properties": { "email": { "format": "email", "type": "string" } },
+        "required": ["email"],
+        "type": "object"
+      },
+      "ManagedActivation": {
+        "properties": {
+          "password": {
+            "maxLength": 256,
+            "minLength": 12,
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": ["password"],
+        "type": "object"
+      },
       "ManualGrade": {
         "properties": {
           "feedback": { "maxLength": 10000, "type": "string" },
@@ -3080,6 +3902,36 @@
           "score",
           "sequence"
         ],
+        "type": "object"
+      },
+      "MemberProfile": {
+        "properties": {
+          "administrative_notes": { "maxLength": 4000, "type": "string" },
+          "institutional_id": { "maxLength": 120, "type": "string" },
+          "locale": { "maxLength": 16, "type": "string" },
+          "member_type": { "maxLength": 80, "type": "string" },
+          "phone": { "maxLength": 64, "type": "string" },
+          "preferred_name": { "maxLength": 150, "type": "string" },
+          "timezone": { "maxLength": 64, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": ["updated_at"],
+        "type": "object"
+      },
+      "MemberProfileUpdate": {
+        "properties": {
+          "administrative_notes": { "maxLength": 4000, "type": "string" },
+          "institutional_id": { "maxLength": 120, "type": "string" },
+          "locale": { "maxLength": 16, "type": "string" },
+          "member_type": { "maxLength": 80, "type": "string" },
+          "phone": { "maxLength": 64, "type": "string" },
+          "preferred_name": { "maxLength": 150, "type": "string" },
+          "timezone": { "maxLength": 64, "type": "string" }
+        },
         "type": "object"
       },
       "Membership": {
@@ -3316,6 +4168,76 @@
         ],
         "type": "object"
       },
+      "Notification": {
+        "properties": {
+          "action_url": { "readOnly": true, "type": "string" },
+          "archived_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "body": { "readOnly": true, "type": "string" },
+          "category": {
+            "allOf": [{ "$ref": "#/components/schemas/CategoryEnum" }],
+            "readOnly": true
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "organization_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "read_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "template_key": { "readOnly": true, "type": "string" },
+          "title": { "readOnly": true, "type": "string" }
+        },
+        "required": [
+          "action_url",
+          "archived_at",
+          "body",
+          "category",
+          "created_at",
+          "id",
+          "organization_id",
+          "read_at",
+          "template_key",
+          "title"
+        ],
+        "type": "object"
+      },
+      "NotificationPage": {
+        "properties": {
+          "pagination": {
+            "$ref": "#/components/schemas/NotificationPagination"
+          },
+          "results": {
+            "items": { "$ref": "#/components/schemas/Notification" },
+            "type": "array"
+          }
+        },
+        "required": ["pagination", "results"],
+        "type": "object"
+      },
+      "NotificationPagination": {
+        "properties": {
+          "page": { "minimum": 1, "type": "integer" },
+          "page_size": { "maximum": 50, "minimum": 1, "type": "integer" },
+          "total": { "minimum": 0, "type": "integer" }
+        },
+        "required": ["page", "page_size", "total"],
+        "type": "object"
+      },
       "NullEnum": { "enum": [null] },
       "Objective": {
         "properties": {
@@ -3358,6 +4280,11 @@
         "required": ["code", "id", "statement", "status", "subject_id"],
         "type": "object"
       },
+      "OperationEnum": {
+        "description": "* `upsert` - Actualizar\n* `deactivate` - Desactivar\n* `rebuild` - Reconstruir",
+        "enum": ["upsert", "deactivate", "rebuild"],
+        "type": "string"
+      },
       "OptionAnalytics": {
         "properties": {
           "option_id": { "readOnly": true, "type": "string" },
@@ -3395,6 +4322,58 @@
           }
         },
         "required": ["id", "name", "slug"],
+        "type": "object"
+      },
+      "OrganizationMembershipSettings": {
+        "properties": {
+          "allow_admin_managed_accounts": { "type": "boolean" },
+          "allow_bulk_invitations": { "type": "boolean" },
+          "allowed_email_domains": {},
+          "default_role": { "$ref": "#/components/schemas/OrganizationRole" },
+          "invitation_expiry_hours": {
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "join_requires_approval": { "type": "boolean" },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "public_join_enabled": { "type": "boolean" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": ["lock_version", "updated_at"],
+        "type": "object"
+      },
+      "OrganizationMembershipSettingsUpdate": {
+        "properties": {
+          "allow_admin_managed_accounts": { "type": "boolean" },
+          "allow_bulk_invitations": { "type": "boolean" },
+          "allowed_email_domains": {
+            "items": { "maxLength": 253, "type": "string" },
+            "type": "array"
+          },
+          "default_role": { "$ref": "#/components/schemas/OrganizationRole" },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "invitation_expiry_hours": {
+            "maximum": 720,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "join_requires_approval": { "type": "boolean" },
+          "public_join_enabled": { "type": "boolean" }
+        },
+        "required": [
+          "allow_admin_managed_accounts",
+          "allow_bulk_invitations",
+          "default_role",
+          "expected_version",
+          "invitation_expiry_hours",
+          "join_requires_approval",
+          "public_join_enabled"
+        ],
         "type": "object"
       },
       "OrganizationMembershipStatus": {
@@ -3617,6 +4596,52 @@
         "required": ["count", "next", "previous", "results"],
         "type": "object"
       },
+      "PaginatedInvitationList": {
+        "properties": {
+          "count": { "example": 123, "type": "integer" },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": { "$ref": "#/components/schemas/Invitation" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "results"],
+        "type": "object"
+      },
+      "PaginatedJoinRequestList": {
+        "properties": {
+          "count": { "example": 123, "type": "integer" },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": { "$ref": "#/components/schemas/JoinRequest" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "results"],
+        "type": "object"
+      },
       "PaginatedMembershipEventList": {
         "properties": {
           "count": { "example": 123, "type": "integer" },
@@ -3786,6 +4811,35 @@
         "enum": ["left", "right", "first-child", "last-child", "sorted-child"],
         "type": "string"
       },
+      "PreferenceValue": {
+        "properties": {
+          "category": { "$ref": "#/components/schemas/CategoryEnum" },
+          "email_enabled": { "type": "boolean" },
+          "in_app_enabled": { "type": "boolean" }
+        },
+        "required": ["category", "email_enabled", "in_app_enabled"],
+        "type": "object"
+      },
+      "PreferencesResponse": {
+        "properties": {
+          "preferences": {
+            "items": { "$ref": "#/components/schemas/PreferenceValue" },
+            "type": "array"
+          }
+        },
+        "required": ["preferences"],
+        "type": "object"
+      },
+      "PreferencesUpdate": {
+        "properties": {
+          "preferences": {
+            "items": { "$ref": "#/components/schemas/PreferenceValue" },
+            "type": "array"
+          }
+        },
+        "required": ["preferences"],
+        "type": "object"
+      },
       "PrerequisiteGraphEntry": {
         "properties": {
           "entity_id": { "format": "uuid", "type": "string" },
@@ -3900,6 +4954,27 @@
           "started_at",
           "status",
           "total_units"
+        ],
+        "type": "object"
+      },
+      "PublicRegistrationSettings": {
+        "description": "Expose the live browser decision without exposing administrative data.",
+        "properties": {
+          "default_locale": { "readOnly": true, "type": "string" },
+          "default_timezone": { "readOnly": true, "type": "string" },
+          "require_email_verification": { "readOnly": true, "type": "boolean" },
+          "signup_available": { "readOnly": true, "type": "boolean" },
+          "signup_mode": {
+            "allOf": [{ "$ref": "#/components/schemas/SignupModeEnum" }],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "default_locale",
+          "default_timezone",
+          "require_email_verification",
+          "signup_available",
+          "signup_mode"
         ],
         "type": "object"
       },
@@ -4307,6 +5382,11 @@
         ],
         "type": "object"
       },
+      "RankBucketEnum": {
+        "description": "* `high` - high\n* `medium` - medium\n* `low` - low",
+        "enum": ["high", "medium", "low"],
+        "type": "string"
+      },
       "ReaderNavigation": {
         "properties": {
           "next": {
@@ -4363,6 +5443,43 @@
           "size_bytes": { "minimum": 1, "type": "integer" }
         },
         "required": ["checksum_sha256", "etag", "size_bytes"],
+        "type": "object"
+      },
+      "RegistrationSettings": {
+        "properties": {
+          "default_locale": { "maxLength": 16, "type": "string" },
+          "default_timezone": { "maxLength": 64, "type": "string" },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "public_signup_enabled": { "readOnly": true, "type": "boolean" },
+          "require_email_verification": { "readOnly": true, "type": "boolean" },
+          "signup_mode": { "$ref": "#/components/schemas/SignupModeEnum" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "lock_version",
+          "public_signup_enabled",
+          "require_email_verification",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "RegistrationSettingsUpdate": {
+        "properties": {
+          "default_locale": { "maxLength": 16, "type": "string" },
+          "default_timezone": { "maxLength": 64, "type": "string" },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "signup_mode": { "$ref": "#/components/schemas/SignupModeEnum" }
+        },
+        "required": [
+          "default_locale",
+          "default_timezone",
+          "expected_version",
+          "signup_mode"
+        ],
         "type": "object"
       },
       "RegradeJob": {
@@ -4866,6 +5983,201 @@
         "required": ["expected_version", "item_overrides", "reason"],
         "type": "object"
       },
+      "SearchGeneration": {
+        "properties": {
+          "completed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "document_count": { "readOnly": true, "type": "integer" },
+          "failure_code": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "number": { "readOnly": true, "type": "integer" },
+          "organization_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/SearchGenerationStatusEnum" }
+            ],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "completed_at",
+          "created_at",
+          "document_count",
+          "failure_code",
+          "id",
+          "number",
+          "organization_id",
+          "started_at",
+          "status"
+        ],
+        "type": "object"
+      },
+      "SearchGenerationStatusEnum": {
+        "description": "* `building` - Construyendo\n* `active` - Activa\n* `failed` - Fallida\n* `superseded` - Reemplazada",
+        "enum": ["building", "active", "failed", "superseded"],
+        "type": "string"
+      },
+      "SearchIndexJob": {
+        "properties": {
+          "attempt_count": { "readOnly": true, "type": "integer" },
+          "completed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "generation_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "last_error_code": { "readOnly": true, "type": "string" },
+          "operation": {
+            "allOf": [{ "$ref": "#/components/schemas/OperationEnum" }],
+            "readOnly": true
+          },
+          "organization_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "source_type": {
+            "allOf": [{ "$ref": "#/components/schemas/SourceTypeEnum" }],
+            "readOnly": true
+          },
+          "started_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "status": {
+            "allOf": [
+              { "$ref": "#/components/schemas/SearchIndexJobStatusEnum" }
+            ],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "attempt_count",
+          "completed_at",
+          "created_at",
+          "generation_id",
+          "id",
+          "last_error_code",
+          "operation",
+          "organization_id",
+          "source_type",
+          "started_at",
+          "status"
+        ],
+        "type": "object"
+      },
+      "SearchIndexJobStatusEnum": {
+        "description": "* `pending` - Pendiente\n* `processing` - Procesando\n* `completed` - Completado\n* `failed` - Fallido",
+        "enum": ["pending", "processing", "completed", "failed"],
+        "type": "string"
+      },
+      "SearchPagination": {
+        "properties": {
+          "page": { "minimum": 1, "type": "integer" },
+          "page_size": { "maximum": 50, "minimum": 1, "type": "integer" },
+          "total": { "minimum": 0, "type": "integer" }
+        },
+        "required": ["page", "page_size", "total"],
+        "type": "object"
+      },
+      "SearchRebuild": {
+        "properties": {
+          "organization_slug": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          }
+        },
+        "required": ["organization_slug"],
+        "type": "object"
+      },
+      "SearchResponse": {
+        "properties": {
+          "filters": { "items": { "type": "string" }, "type": "array" },
+          "pagination": { "$ref": "#/components/schemas/SearchPagination" },
+          "query": { "type": "string" },
+          "results": {
+            "items": { "$ref": "#/components/schemas/SearchResult" },
+            "type": "array"
+          },
+          "timing_bucket": { "type": "string" }
+        },
+        "required": [
+          "filters",
+          "pagination",
+          "query",
+          "results",
+          "timing_bucket"
+        ],
+        "type": "object"
+      },
+      "SearchResult": {
+        "properties": {
+          "metadata": {},
+          "rank_bucket": { "$ref": "#/components/schemas/RankBucketEnum" },
+          "snippet_segments": {
+            "items": { "$ref": "#/components/schemas/SnippetSegment" },
+            "type": "array"
+          },
+          "source_id": { "format": "uuid", "type": "string" },
+          "source_type": { "type": "string" },
+          "subtitle": { "type": "string" },
+          "title": { "type": "string" },
+          "url_path": { "type": "string" }
+        },
+        "required": [
+          "metadata",
+          "rank_bucket",
+          "snippet_segments",
+          "source_id",
+          "source_type",
+          "subtitle",
+          "title",
+          "url_path"
+        ],
+        "type": "object"
+      },
+      "SearchSuggestion": {
+        "properties": {
+          "source_type": { "type": "string" },
+          "title": { "type": "string" },
+          "url_path": { "type": "string" }
+        },
+        "required": ["source_type", "title", "url_path"],
+        "type": "object"
+      },
       "Section": {
         "properties": {
           "created_at": {
@@ -4934,6 +6246,34 @@
         },
         "required": ["part_number", "url"],
         "type": "object"
+      },
+      "SignupModeEnum": {
+        "description": "* `closed` - Cerrado\n* `invite_only` - Sólo invitación\n* `open` - Abierto",
+        "enum": ["closed", "invite_only", "open"],
+        "type": "string"
+      },
+      "SnippetSegment": {
+        "properties": {
+          "highlighted": { "type": "boolean" },
+          "text": { "type": "string" }
+        },
+        "required": ["highlighted", "text"],
+        "type": "object"
+      },
+      "SourceTypeEnum": {
+        "description": "* `course_release` - Release de curso\n* `course_unit` - Unidad de curso\n* `catalog_subject` - Asignatura\n* `catalog_topic` - Tema\n* `catalog_concept` - Concepto\n* `learning_objective` - Objetivo\n* `asset_version` - Versión de asset\n* `question_version` - Versión de pregunta\n* `assessment_version` - Versión de evaluación",
+        "enum": [
+          "course_release",
+          "course_unit",
+          "catalog_subject",
+          "catalog_topic",
+          "catalog_concept",
+          "learning_objective",
+          "asset_version",
+          "question_version",
+          "assessment_version"
+        ],
+        "type": "string"
       },
       "StageEnum": {
         "description": "* `queued` - En cola\n* `downloading` - Descargando\n* `scanning` - Escaneando\n* `validating` - Validando\n* `extracting_metadata` - Extrayendo metadatos\n* `transcoding` - Transcodificando\n* `uploading_variants` - Subiendo variantes\n* `promoting_original` - Promoviendo original\n* `cleaning_quarantine` - Limpiando cuarentena\n* `completed` - Completado",
@@ -5296,6 +6636,11 @@
         },
         "type": "object"
       },
+      "Updated": {
+        "properties": { "updated": { "minimum": 0, "type": "integer" } },
+        "required": ["updated"],
+        "type": "object"
+      },
       "UploadInitialize": {
         "properties": {
           "asset_id": { "format": "uuid", "nullable": true, "type": "string" },
@@ -5528,6 +6873,181 @@
         },
         "security": [{ "cookieAuth": [] }],
         "tags": ["access"]
+      }
+    },
+    "/api/v1/notifications/": {
+      "get": {
+        "operationId": "notifications_list",
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotificationPage" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["notifications"]
+      }
+    },
+    "/api/v1/notifications/preferences/": {
+      "get": {
+        "operationId": "notification_preferences_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PreferencesResponse" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["notifications"]
+      },
+      "put": {
+        "operationId": "notification_preferences_update",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PreferencesUpdate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/PreferencesUpdate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/PreferencesUpdate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PreferencesResponse" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["notifications"]
+      }
+    },
+    "/api/v1/notifications/read-all/": {
+      "post": {
+        "operationId": "notifications_mark_all_read",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Updated" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["notifications"]
+      }
+    },
+    "/api/v1/notifications/unread-count/": {
+      "get": {
+        "operationId": "notifications_unread_count",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Count" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["notifications"]
+      }
+    },
+    "/api/v1/notifications/{notification_id}/archive/": {
+      "post": {
+        "operationId": "notifications_archive",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Notification" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["notifications"]
+      }
+    },
+    "/api/v1/notifications/{notification_id}/read/": {
+      "post": {
+        "operationId": "notifications_mark_read",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Notification" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["notifications"]
+      }
+    },
+    "/api/v1/notifications/{notification_id}/unread/": {
+      "post": {
+        "operationId": "notifications_mark_unread",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Notification" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["notifications"]
       }
     },
     "/api/v1/organizations/": {
@@ -7296,6 +8816,78 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/AssetError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{organization_slug}/search/": {
+      "get": {
+        "operationId": "organizations_discovery_search",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "page", "schema": { "type": "integer" } },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          { "in": "query", "name": "types", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SearchResponse" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{organization_slug}/search/suggestions/": {
+      "get": {
+        "operationId": "organizations_discovery_search_suggestions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/SearchSuggestion" },
+                  "type": "array"
+                }
               }
             },
             "description": ""
@@ -15910,6 +17502,667 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/integrations/": {
+      "get": {
+        "operationId": "organizations_integrations_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IntegrationConnection"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/integrations/api-key/": {
+      "post": {
+        "operationId": "organizations_integrations_api_key_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ApiKeyConnect" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ApiKeyConnect" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ApiKeyConnect" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationConnection"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/integrations/google/authorize/": {
+      "post": {
+        "operationId": "organizations_integrations_google_authorize_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GoogleOAuthStart" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/GoogleOAuthStart" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/GoogleOAuthStart" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleOAuthStartResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/integrations/{connection_id}/disconnect/": {
+      "post": {
+        "operationId": "organizations_integrations_disconnect_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationConnection"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/integrations/{connection_id}/health-checks/": {
+      "get": {
+        "operationId": "organizations_integrations_health_checks_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/HealthCheck" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_integrations_health_checks_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthCheck" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/integrations/{connection_id}/rotate-key/": {
+      "post": {
+        "operationId": "organizations_integrations_rotate_key_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ApiKeyRotate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ApiKeyRotate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ApiKeyRotate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationConnection"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/integrations/{connection_id}/test-meeting/": {
+      "post": {
+        "operationId": "organizations_integrations_test_meeting_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "additionalProperties": {}, "type": "object" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/invitations/": {
+      "get": {
+        "operationId": "organizations_invitations_list",
+        "parameters": [
+          {
+            "description": "Un número de página dentro del conjunto de resultados paginado.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "description": "Número de resultados a devolver por página.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedInvitationList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_invitations_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/InvitationCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/InvitationCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/InvitationCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Invitation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/invitations/bulk/confirm/": {
+      "post": {
+        "operationId": "organizations_invitations_bulk_confirm_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BulkInvitationConfirm" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/BulkInvitationConfirm" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/BulkInvitationConfirm" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "additionalProperties": {}, "type": "object" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/invitations/bulk/preview/": {
+      "post": {
+        "operationId": "organizations_invitations_bulk_preview_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BulkInvitationPreview" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/BulkInvitationPreview" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/BulkInvitationPreview" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkInvitationPreviewResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/invitations/{invitation_id}/managed-email/": {
+      "patch": {
+        "operationId": "organizations_invitations_managed_email_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedAccountEmailCorrection"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedAccountEmailCorrection"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedAccountEmailCorrection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Invitation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/invitations/{invitation_id}/resend/": {
+      "post": {
+        "operationId": "organizations_invitations_resend_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Invitation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/invitations/{invitation_id}/revoke/": {
+      "post": {
+        "operationId": "organizations_invitations_revoke_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Invitation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/join-requests/": {
+      "get": {
+        "operationId": "organizations_join_requests_list",
+        "parameters": [
+          {
+            "description": "Un número de página dentro del conjunto de resultados paginado.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "description": "Número de resultados a devolver por página.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedJoinRequestList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/join-requests/{join_request_id}/{action}/": {
+      "post": {
+        "operationId": "organizations_join_requests_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "join_request_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JoinRequest" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/join/": {
+      "post": {
+        "operationId": "organizations_join_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JoinRequest" }
+              }
+            },
+            "description": ""
+          },
+          "202": { "description": "No response body" }
+        },
+        "security": [{ "cookieAuth": [] }, {}],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/learning/cohorts/": {
       "get": {
         "operationId": "learning_cohorts_list",
@@ -17196,10 +19449,137 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/managed-accounts/": {
+      "post": {
+        "operationId": "organizations_managed_accounts_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ManagedAccountCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ManagedAccountCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ManagedAccountCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Invitation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/membership-settings/": {
+      "get": {
+        "operationId": "organizations_membership_settings_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationMembershipSettings"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "operationId": "organizations_membership_settings_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationMembershipSettingsUpdate"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationMembershipSettingsUpdate"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationMembershipSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationMembershipSettings"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/memberships/": {
       "get": {
         "operationId": "organizations_memberships_list",
         "parameters": [
+          {
+            "in": "query",
+            "name": "member_type",
+            "schema": { "maxLength": 80, "type": "string" }
+          },
+          {
+            "description": "* `email` - email\n* `-email` - -email\n* `joined_at` - joined_at\n* `-joined_at` - -joined_at",
+            "in": "query",
+            "name": "ordering",
+            "schema": {
+              "default": "email",
+              "enum": ["email", "-email", "joined_at", "-joined_at"],
+              "minLength": 1,
+              "type": "string"
+            }
+          },
           {
             "description": "Un número de página dentro del conjunto de resultados paginado.",
             "in": "query",
@@ -17215,10 +19595,42 @@
             "schema": { "type": "integer" }
           },
           {
+            "in": "query",
+            "name": "q",
+            "schema": { "maxLength": 254, "type": "string" }
+          },
+          {
+            "description": "* `owner` - Propietario\n* `administrator` - Administrador\n* `author` - Autor\n* `reviewer` - Revisor\n* `instructor` - Docente\n* `learner` - Estudiante",
+            "in": "query",
+            "name": "role",
+            "schema": {
+              "enum": [
+                "owner",
+                "administrator",
+                "author",
+                "reviewer",
+                "instructor",
+                "learner"
+              ],
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
             "in": "path",
             "name": "slug",
             "required": true,
             "schema": { "type": "string" }
+          },
+          {
+            "description": "* `active` - Activa\n* `suspended` - Suspendida\n* `revoked` - Revocada",
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "enum": ["active", "suspended", "revoked"],
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -17265,6 +19677,54 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Membership" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/memberships/bulk-transition/": {
+      "post": {
+        "operationId": "organizations_memberships_bulk_transition_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkMembershipTransition"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkMembershipTransition"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkMembershipTransition"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Membership" },
+                  "type": "array"
+                }
               }
             },
             "description": ""
@@ -17352,6 +19812,79 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/memberships/{membership_id}/profile/": {
+      "get": {
+        "operationId": "organizations_memberships_profile_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MemberProfile" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "patch": {
+        "operationId": "organizations_memberships_profile_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MemberProfileUpdate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/MemberProfileUpdate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/MemberProfileUpdate" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MemberProfile" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/memberships/{membership_id}/reactivate/": {
       "post": {
         "operationId": "organizations_memberships_reactivate_create",
@@ -17374,6 +19907,37 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Membership" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/memberships/{membership_id}/revoke-sessions/": {
+      "post": {
+        "operationId": "organizations_memberships_revoke_sessions_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "additionalProperties": {}, "type": "object" }
               }
             },
             "description": ""
@@ -17488,6 +20052,411 @@
         },
         "security": [{ "cookieAuth": [] }],
         "tags": ["organizations"]
+      }
+    },
+    "/api/v1/platform/email-deliveries/": {
+      "get": {
+        "operationId": "platform_email_deliveries_list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/EmailDelivery" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/email-deliveries/{delivery_id}/retry/": {
+      "post": {
+        "operationId": "platform_email_delivery_retry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EmailDelivery" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/events/": {
+      "get": {
+        "operationId": "platform_events_list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DomainEventSummary"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/events/replays/": {
+      "post": {
+        "operationId": "platform_event_replays_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EventReplayCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/EventReplayCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/EventReplayCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EventReplay" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/events/replays/{replay_id}/": {
+      "get": {
+        "operationId": "platform_event_replays_detail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "replay_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EventReplay" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/events/{event_id}/": {
+      "get": {
+        "operationId": "platform_events_detail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DomainEventDetail" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/events/{event_id}/deliveries/": {
+      "get": {
+        "operationId": "platform_event_deliveries_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventConsumerDelivery"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/registration-settings/": {
+      "get": {
+        "operationId": "platform_registration_settings_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationSettings"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      },
+      "put": {
+        "operationId": "platform_registration_settings_update",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationSettingsUpdate"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationSettingsUpdate"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationSettings"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/registration-settings/public/": {
+      "get": {
+        "operationId": "platform_registration_settings_public_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicRegistrationSettings"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }, {}],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/search-index/": {
+      "get": {
+        "operationId": "platform_search_generations_list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/SearchGeneration" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/search-index/jobs/": {
+      "get": {
+        "operationId": "platform_search_index_jobs_list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/SearchIndexJob" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/search-index/rebuild/": {
+      "post": {
+        "operationId": "platform_search_rebuild_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SearchRebuild" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/SearchRebuild" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/SearchRebuild" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SearchIndexJob" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/public/invitations/accept/": {
+      "post": {
+        "operationId": "public_invitations_accept_create",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Membership" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["public"]
+      }
+    },
+    "/api/v1/public/invitations/activate/": {
+      "post": {
+        "operationId": "public_invitations_activate_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/InvitationActivation" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/InvitationActivation" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/InvitationActivation" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationActivationResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }, {}],
+        "tags": ["public"]
+      }
+    },
+    "/api/v1/public/managed-accounts/activate/": {
+      "post": {
+        "operationId": "public_managed_accounts_activate_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ManagedActivation" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ManagedActivation" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ManagedActivation" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Membership" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }, {}],
+        "tags": ["public"]
       }
     }
   }

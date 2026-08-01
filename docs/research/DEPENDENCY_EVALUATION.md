@@ -160,3 +160,25 @@ python-magic: cada parser combina allowlist, firma y validación propia. No se
 añadieron MinIO, Axios, tus, Uppy, HLS, OCR o speech-to-text. FFmpeg introduce
 la obligación material de distribuir avisos/source correspondiente; la imagen
 documenta origen, fingerprint y build reproducible.
+
+## Prompt 16
+
+No se añadió una librería funcional para eventos, búsqueda o notificaciones:
+Django, PostgreSQL, Celery y los clientes OpenAPI existentes cubren esos
+contratos. Observabilidad sí incorpora los pins aprobados y documentados en
+ADR 0029: `sentry-sdk 2.66.1`, `structlog 26.1.0`, OpenTelemetry `1.44.0` y
+`@sentry/nextjs 10.69.0`; el equipo de plataforma es owner y la alternativa de
+retiro es desactivar exportadores manteniendo métricas/logs locales, no retirar
+los contextos ni la redacción.
+
+La auditoría npm del 2026-07-31 detectó avisos altos en tooling transitivo. Se
+rechazó `openapi-typescript 7.13.0` porque declara peer TypeScript `^5.x` y el
+repositorio fija TypeScript 6. Se conserva `openapi-typescript 6.7.6` (MIT) y se
+fija sólo su transporte transitivo `undici 6.27.0` (MIT), que contiene las
+correcciones oficiales; generación de ambos clientes, drift check, typecheck,
+tests y build prueban compatibilidad. `brace-expansion 1.1.17` (MIT) reemplaza
+la versión vulnerable usada por `minimatch 3.1.5` en ESLint. Owner: developer
+experience. Retiro: eliminar ambos overrides cuando los parents adopten
+versiones corregidas; revisión obligatoria en cada actualización. Los warnings
+peer opcionales de WASM permanecen visibles, no se suprimen y no afectan los
+targets Windows/Linux usados por CI o runtime.

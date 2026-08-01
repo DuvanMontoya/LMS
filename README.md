@@ -220,6 +220,74 @@ El E2E usa una base PostgreSQL temporal, prefijo Redis temporal y correo
 aislado; crea sus contraseñas aleatoriamente para el proceso y elimina los
 recursos al terminar. No reutiliza las cuentas demo locales.
 
+## Eventos, búsqueda, notificaciones y observabilidad
+
+Los servicios de negocio registran `DomainEvent` versionados en la misma
+transacción PostgreSQL que el cambio. El outbox crea un delivery durable por
+consumer, agenda su dispatch únicamente después del commit y usa leases,
+backoff, máximo de cinco intentos y estado `dead`; los consumidores son
+idempotentes. El replay es explícito, requiere organización, consumer
+registrado, operador de plataforma y razón, y se limita a 100 000 eventos. Los
+eventos y el historial de delivery de correo son append-only mediante triggers.
+
+`domain.discovery` mantiene generaciones shadow del índice. PostgreSQL 18 usa
+`SearchVectorField`, GIN y `pg_trgm`; el ranking determinista combina full-text
+(80 %) y similitud del título (20 %). Los snippets se devuelven como segmentos
+texto/mark y nunca como HTML. El digest evita escrituras idénticas y el switch
+de generación conserva la active si el rebuild falla. El learner sólo consulta
+releases de matrículas efectivas; autoría e institucional dependen de
+capacidades. Assets sólo aportan nombre/descripción de versiones READY;
+preguntas y evaluaciones sólo sus snapshots públicos. Grading, respuestas,
+notas manuales, claves S3 y queries no entran al índice ni a telemetría.
+
+`domain.notifications` crea avisos propios deduplicados por evento, recipient y
+template. La bandeja admite leer/no leer, leer todas, archivar y paginar; las
+preferencias sólo materializan overrides. Los avisos obligatorios permanecen
+in-app. `EmailDelivery` usa el correo primario verificado resuelto al enviar,
+HMAC-SHA256 operacional, templates texto/HTML sin tracking, URL relativa
+allowlisted, Message-ID estable, cola `notifications`, backoff y `dead`.
+
+Sentry se configura manualmente en Django y Next.js con
+`send_default_pii=false`, sin Session Replay, bodies, responses, cookies,
+emails, signed URLs ni search queries. `structlog` produce JSON con request,
+trace, task y event IDs y redaction recursiva. El SDK estable de OpenTelemetry
+exporta OTLP y aplica propagación W3C manual a HTTP/Celery; se rechazaron las
+auto-instrumentaciones beta. Las métricas usan una allowlist de labels de baja
+cardinalidad, sin IDs ni queries.
+
+El profile `observability` levanta sólo en loopback Collector 0.157.0,
+Prometheus 3.13.2, Jaeger 2.20.0, Loki 3.7.4 y Grafana 13.1.1, todos fijados por
+tag y digest. Grafana tiene acceso anónimo deshabilitado, tres datasources,
+cinco dashboards y reglas para disponibilidad, outbox, búsqueda, email,
+workers, grading, assets y telemetría. Es un stack local/CI, no una topología
+productiva.
+
+```powershell
+pnpm events:check
+pnpm events:dispatch
+pnpm events:dead
+pnpm discovery:rebuild
+pnpm discovery:status
+pnpm notifications:email-smoke
+pnpm observability:validate
+pnpm observability:up
+pnpm observability:dashboards
+pnpm observability:metrics
+pnpm observability:traces
+pnpm observability:logs
+pnpm events:operational-check
+pnpm observability:down
+```
+
+Después de cargar los demos de organización, catálogo, cursos, contenido,
+publicación y learning, `pnpm events:demo` crea una generación y una
+notificación controlada sin `EmailDelivery`. Es development-only e idempotente.
+Los procedimientos de diagnóstico y recuperación están en `docs/runbooks/`.
+Ante fallos: conserva la generación active, recupera primero DB/broker/worker,
+reintenta sólo estados vencidos y nunca edites/borras eventos ni payloads. Las
+limitaciones productivas —TLS, secrets administrados, retención, backups,
+restore, DR y carga— pertenecen exclusivamente al Prompt 17.
+
 El E2E de Courses crea sus cursos sólo en esa base aislada. Recorre creación,
 estructura, alineaciones, concurrencia optimista, envío, solicitud de cambios,
 reenvío y aprobación; valida author/reviewer/instructor/learner, aislamiento

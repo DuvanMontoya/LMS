@@ -1,0 +1,53 @@
+groups:
+  - name: lms-local-operational-alerts
+    rules:
+      - alert: ApiErrorRateElevated
+        expr: sum(rate(lms_http_requests_total{status_class="5xx"}[5m])) > 0.05
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "API error rate elevated" }
+      - alert: ApiP95LatencyElevated
+        expr: histogram_quantile(0.95, sum by (le) (rate(lms_http_request_duration_seconds_bucket[5m]))) > 1.5
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "API p95 latency elevated" }
+      - alert: OutboxOldestPendingElevated
+        expr: lms_outbox_oldest_pending_seconds > 300
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "Outbox oldest pending exceeds five minutes" }
+      - alert: OutboxDeadDetected
+        expr: lms_outbox_dead_total > 0
+        for: 1m
+        labels: { severity: critical }
+        annotations: { summary: "Outbox dead delivery detected" }
+      - alert: SearchIndexingLagElevated
+        expr: lms_search_index_lag_seconds > 600
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Search indexing lag elevated" }
+      - alert: EmailDeadDetected
+        expr: lms_email_dead_total > 0
+        for: 1m
+        labels: { severity: warning }
+        annotations: { summary: "Terminal email delivery detected" }
+      - alert: CeleryTaskFailuresElevated
+        expr: sum(rate(lms_celery_tasks_total{outcome="failed"}[10m])) > 0.05
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Celery task failures elevated" }
+      - alert: AssetProcessingStuck
+        expr: lms_asset_processing_oldest_seconds > 1800
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Asset processing appears stuck" }
+      - alert: GradingJobsStuck
+        expr: lms_grading_job_oldest_seconds > 600
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Grading job appears stuck" }
+      - alert: CollectorUnavailable
+        expr: up{job="otel-collector"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: "OpenTelemetry Collector unavailable" }

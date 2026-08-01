@@ -1,0 +1,70 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  file_log:
+    include: [/var/log/lms/*.jsonl]
+    start_at: end
+    include_file_name: true
+    operators:
+      - type: json_parser
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+  resource:
+    attributes:
+      - key: deployment.environment.name
+        value: development
+        action: upsert
+  attributes/redaction:
+    actions:
+      - key: http.request.body
+        action: delete
+      - key: http.request.header.cookie
+        action: delete
+      - key: enduser.id
+        action: delete
+      - key: user.email
+        action: delete
+      - key: search.query
+        action: delete
+  batch:
+    timeout: 2s
+    send_batch_size: 512
+
+exporters:
+  otlp_grpc/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    enable_open_metrics: true
+  otlp_http/loki:
+    endpoint: http://loki:3100/otlp
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes/redaction, batch]
+      exporters: [otlp_grpc/jaeger]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes/redaction, batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp, file_log]
+      processors: [memory_limiter, resource, attributes/redaction, batch]
+      exporters: [otlp_http/loki]

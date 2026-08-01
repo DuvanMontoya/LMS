@@ -55,6 +55,16 @@ export default async function OrganizationDetailPage({
       label: 'Miembros',
       visible: canViewMembers,
     },
+    {
+      description:
+        'Reglas de incorporación, cuentas administradas e integraciones externas.',
+      href: `/organizaciones/${slug}/configuracion`,
+      icon: Settings2,
+      label: 'Configuración',
+      visible:
+        hasCapability(access.capabilities, 'membership.settings.view') ||
+        hasCapability(access.capabilities, 'integration.view'),
+    },
   ].filter((item) => item.visible);
 
   return (

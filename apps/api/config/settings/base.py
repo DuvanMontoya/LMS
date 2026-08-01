@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     "allauth",
     "allauth.account",
     "allauth.headless",
@@ -57,10 +58,16 @@ INSTALLED_APPS = [
     "domain.learning",
     "domain.assessments",
     "domain.assets",
+    "domain.events",
+    "domain.discovery",
+    "domain.notifications",
+    "domain.integrations",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "config.observability.middleware.RequestIdMiddleware",
+    "config.observability.middleware.OpenTelemetryRequestMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -132,6 +139,7 @@ ACCOUNT_SESSION_REMEMBER = False
 ACCOUNT_LOGOUT_ON_GET = False
 ACCOUNT_EMAIL_NOTIFICATIONS = True
 ACCOUNT_PHONE_VERIFICATION_ENABLED = False
+ACCOUNT_ADAPTER = "domain.identity.adapters.LMSAccountAdapter"
 
 HEADLESS_ONLY = True
 HEADLESS_CLIENTS = ("browser",)
@@ -243,8 +251,19 @@ CELERY_TASK_ROUTES = {
         "queue": f"{ASSESSMENT_TASK_QUEUE_PREFIX}analytics"
     },
     "domain.assets.processing.tasks.process_asset_version_task": {"queue": "media"},
+    "domain.events.tasks.dispatch_domain_event": {"queue": "events"},
+    "domain.events.tasks.process_event_replay": {"queue": "events"},
+    "domain.discovery.tasks.process_search_index_job": {"queue": "events"},
+    "domain.notifications.tasks.send_email_delivery": {"queue": "notifications"},
+    "domain.integrations.tasks.run_integration_health_check": {"queue": "integrations"},
 }
-CELERY_IMPORTS = ("domain.assets.processing.tasks",)
+CELERY_IMPORTS = (
+    "domain.assets.processing.tasks",
+    "domain.events.tasks",
+    "domain.discovery.tasks",
+    "domain.notifications.tasks",
+    "domain.integrations.tasks",
+)
 
 ASSET_S3_REGION = os.environ.get("ASSET_S3_REGION", "us-east-1")
 ASSET_S3_INTERNAL_ENDPOINT = os.environ.get("ASSET_S3_INTERNAL_ENDPOINT", "")
@@ -307,6 +326,40 @@ CSRF_COOKIE_SECURE = False
 DEFAULT_FROM_EMAIL = "Plataforma académica <no-reply@lms.invalid>"
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 EMAIL_SUBJECT_PREFIX = "[Plataforma académica] "
+NOTIFICATION_EMAIL_HMAC_KEY = os.environ.get("NOTIFICATION_EMAIL_HMAC_KEY", SECRET_KEY)
+INTEGRATIONS_MASTER_KEYS = os.environ.get("INTEGRATIONS_MASTER_KEYS", "")
+INTEGRATIONS_ACTIVE_KEY_ID = os.environ.get("INTEGRATIONS_ACTIVE_KEY_ID", "")
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "")
+GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET", "")
+GOOGLE_OAUTH_AUTHORIZE_URL = os.environ.get(
+    "GOOGLE_OAUTH_AUTHORIZE_URL", "https://accounts.google.com/o/oauth2/v2/auth"
+)
+GOOGLE_OAUTH_TOKEN_URL = os.environ.get(
+    "GOOGLE_OAUTH_TOKEN_URL", "https://oauth2.googleapis.com/token"
+)
+GOOGLE_OAUTH_REDIRECT_URI = os.environ.get(
+    "GOOGLE_OAUTH_REDIRECT_URI",
+    f"{FRONTEND_ORIGIN}/api/v1/integrations/google/callback/",
+)
+INTEGRATIONS_OPENAI_MODELS_URL = os.environ.get("INTEGRATIONS_OPENAI_MODELS_URL", "")
+INTEGRATIONS_GEMINI_MODELS_URL = os.environ.get("INTEGRATIONS_GEMINI_MODELS_URL", "")
+INTEGRATIONS_DEEPSEEK_MODELS_URL = os.environ.get(
+    "INTEGRATIONS_DEEPSEEK_MODELS_URL", ""
+)
+INTEGRATIONS_GOOGLE_API_BASE_URL = os.environ.get(
+    "INTEGRATIONS_GOOGLE_API_BASE_URL", ""
+)
+
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
+SENTRY_ENVIRONMENT = os.environ.get("SENTRY_ENVIRONMENT", "development")
+SENTRY_RELEASE = os.environ.get("SENTRY_RELEASE", "")
+SENTRY_TRACES_SAMPLE_RATE = float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0"))
+OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "lms-api")
+OTEL_SERVICE_VERSION = os.environ.get("OTEL_SERVICE_VERSION", "0.1.0")
+OTEL_DEPLOYMENT_ENVIRONMENT = os.environ.get(
+    "OTEL_DEPLOYMENT_ENVIRONMENT", SENTRY_ENVIRONMENT
+)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -365,3 +418,7 @@ SPECTACULAR_SETTINGS = {
         "AssetVariantRole": "domain.assets.choices.VariantRole",
     },
 }
+
+from config.observability.logging import configure_structured_logging  # noqa: E402
+
+configure_structured_logging(environment=SENTRY_ENVIRONMENT)

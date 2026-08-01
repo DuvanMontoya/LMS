@@ -60,6 +60,14 @@ jobs:
           pnpm run media:up
           pnpm run media:status
           pnpm run media:smoke
+          pnpm run observability:validate
+          pnpm run observability:up
+          pnpm run observability:status
+          pnpm run observability:smoke
+          pnpm run observability:dashboards
+          pnpm run observability:metrics
+          pnpm run observability:traces
+          pnpm run observability:logs
           pnpm run organizations:check
           pnpm run organizations:test:policies
           pnpm run organizations:test:concurrency
@@ -124,6 +132,19 @@ jobs:
           pnpm run assessments:test
           pnpm run assessments:test:concurrency
           pnpm run assessments:test:security
+          pnpm run events:check
+          pnpm run events:migrations
+          pnpm run events:test
+          pnpm run events:smoke
+          pnpm run discovery:check
+          pnpm run discovery:migrations
+          pnpm run discovery:test
+          pnpm run discovery:smoke
+          pnpm run notifications:check
+          pnpm run notifications:migrations
+          pnpm run notifications:test
+          pnpm run notifications:email-smoke
+          pnpm run events:operational-check
           pnpm run auth:check
           pnpm run auth:spec
           pnpm run auth:test
@@ -167,6 +188,7 @@ jobs:
           pnpm run assessments:advanced-e2e
           pnpm run assets:e2e
           pnpm run assets:visual
+          pnpm run discovery:e2e
       - name: Stop and clean academic media services
         if: always()
         shell: pwsh
@@ -179,6 +201,9 @@ jobs:
       - name: Stop the asynchronous assessment worker
         if: always()
         run: pnpm run async:down
+      - name: Stop the local observability stack
+        if: always()
+        run: pnpm run observability:down
       - name: Remove schema-test infrastructure resources
         if: always()
         run: pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Reset -ConfirmReset

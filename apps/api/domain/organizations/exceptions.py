@@ -36,3 +36,27 @@ class MemberAlreadyExists(OrganizationDomainError):
 
 class VerifiedUserRequired(OrganizationDomainError):
     pass
+
+
+class RevisionConflict(OrganizationDomainError):
+    pass
+
+
+class InvitationUnavailable(OrganizationDomainError):
+    pass
+
+
+class InvitationAlreadyExists(OrganizationDomainError):
+    pass
+
+
+class JoinRequestUnavailable(OrganizationDomainError):
+    pass
+
+
+class JoinRequestAlreadyExists(OrganizationDomainError):
+    pass
+
+
+class ManagedAccountsDisabled(OrganizationDomainError):
+    pass

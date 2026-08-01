@@ -6,6 +6,8 @@ from celery import shared_task
 from django.db import transaction
 from django.utils import timezone
 
+from config.observability.tracing import traced_domain_operation
+
 from .choices import AttemptStatus, GradeSource, JobStatus
 from .grading import create_attempt_grade, evaluate_symbolic_responses
 from .math.equivalence import MathEquivalenceOutcome
@@ -89,6 +91,7 @@ def _complete_grading_job(
     time_limit=5,
     max_retries=0,
 )
+@traced_domain_operation("assessments.grade_attempt")
 def grade_attempt_task(self, job_id: str) -> None:
     del self
     job = _claim_grading_job(job_id)
@@ -140,6 +143,7 @@ def grade_attempt_task(self, job_id: str) -> None:
     time_limit=45,
     max_retries=0,
 )
+@traced_domain_operation("assessments.process_regrade")
 def process_regrade_job_task(self, job_id: str) -> None:
     from .regrading import process_regrade_job_chunk
 
@@ -153,6 +157,7 @@ def process_regrade_job_task(self, job_id: str) -> None:
     reject_on_worker_lost=True,
     max_retries=0,
 )
+@traced_domain_operation("assessments.refresh_analytics")
 def refresh_analytics_task(self, job_id: str) -> None:
     del self
     from .analytics import process_analytics_job
