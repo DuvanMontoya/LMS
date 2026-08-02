@@ -234,7 +234,7 @@ export function CreateGradebookForm({
       }}
     >
       <label className="min-w-0 flex-1 space-y-1.5">
-        <span className="text-sm font-medium">Grupo de curso</span>
+        <span className="text-sm font-medium">Sección</span>
         <select className="academic-control" name="course_group_id" required>
           <option value="">Selecciona un grupo</option>
           {groupOptions.map((group) => (

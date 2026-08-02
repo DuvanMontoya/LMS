@@ -50,7 +50,7 @@ export default async function EnrollmentDetailPage({
           </p>
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">Grupo de curso</p>
+          <p className="text-sm text-muted-foreground">Sección</p>
           <p className="mt-2 font-medium">{item.cohort_name ?? 'Individual'}</p>
         </div>
       </section>

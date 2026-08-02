@@ -55,7 +55,7 @@ export default async function CohortDetailPage({
           { label: data.cohort.name },
         ]}
         description={`${data.cohort.course_title} · release ${data.cohort.release_number}`}
-        eyebrow="Grupo de curso"
+        eyebrow="Sección"
         title={data.cohort.name}
       />
       <section

@@ -110,6 +110,62 @@ async function advancedAssessmentOptions(
   );
 }
 
+type AnalyticsAssessmentOption = {
+  id: string;
+  label: string;
+  number: number;
+  title: string;
+};
+
+async function analyticsAssessmentOptions(
+  client: Awaited<ReturnType<typeof createPlatformServerClient>>,
+  slug: string,
+): Promise<AnalyticsAssessmentOption[]> {
+  const deliveries = (await required(
+    client.GET('/api/v1/organizations/{slug}/assessments/deliveries/', {
+      params: { path: { slug } },
+      cache: 'no-store',
+    }),
+    'No fue posible consultar las versiones entregadas.',
+  )) as AssessmentDeliveryPage;
+  return [
+    ...new Map(
+      deliveries.results.map((delivery) => [
+        delivery.assessment_version_id,
+        {
+          id: delivery.assessment_version_id,
+          label: `${delivery.assessment_title} · versión ${delivery.assessment_version_number}`,
+          number: delivery.assessment_version_number,
+          title: delivery.assessment_title,
+        },
+      ]),
+    ).values(),
+  ];
+}
+
+async function analyticsRevisionOptions(
+  client: Awaited<ReturnType<typeof createPlatformServerClient>>,
+  slug: string,
+  versionId: string,
+) {
+  const { data, response } = await client.GET(
+    '/api/v1/organizations/{slug}/assessments/scoring-policies/{version_id}/revisions/',
+    {
+      params: { path: { slug, version_id: versionId } },
+      cache: 'no-store',
+    },
+  );
+  if (!response.ok || !data) return [];
+  return (data as GradingRevision[]).map((revision) => ({
+    id: revision.id,
+    label:
+      revision.source === 'correction'
+        ? `Revisión ${revision.number} · corrección: ${revision.reason}`
+        : `Revisión ${revision.number} · política original`,
+    number: revision.number,
+  }));
+}
+
 export async function getAssessments(slug: string) {
   const organization = await getOrganizationForPage(slug);
   if (!organization.access.capabilities.includes('assessment.authoring.view')) {
@@ -750,7 +806,7 @@ export async function getAssessmentAnalytics(
         cache: 'no-store',
       },
     ),
-    advancedAssessmentOptions(client, slug),
+    analyticsAssessmentOptions(client, slug),
   ]);
   if (response.status === 403) notFound();
   if (!response.ok && response.status !== 404) {
@@ -761,7 +817,12 @@ export async function getAssessmentAnalytics(
     (option) => option.id === assessmentVersionId,
   );
   if (!version) notFound();
-  return { ...organization, snapshot, version };
+  const revisions = organization.access.capabilities.includes(
+    'assessment.analytics.refresh',
+  )
+    ? await analyticsRevisionOptions(client, slug, assessmentVersionId)
+    : [];
+  return { ...organization, snapshot, version: { ...version, revisions } };
 }
 
 export async function getAnalyticsContext(slug: string) {
@@ -770,6 +831,6 @@ export async function getAnalyticsContext(slug: string) {
     notFound();
   }
   const client = await createPlatformServerClient();
-  const versionOptions = await advancedAssessmentOptions(client, slug);
+  const versionOptions = await analyticsAssessmentOptions(client, slug);
   return { ...organization, versionOptions };
 }

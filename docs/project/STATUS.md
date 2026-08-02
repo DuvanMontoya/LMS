@@ -35,10 +35,15 @@
 - **Evidencia actual:** Vitest de `PlatformShell` pasó **10/10**; TypeScript,
   ESLint, Prettier y `ruff` pasaron. La prueba PostgreSQL
   `test_administrator_can_read_revision_metadata_for_analytics` pasó y verifica
-  la política que originaba el 404. La matriz Chromium aislada de todas las
-  rutas expuestas fue lanzada, pero agotó 240 s durante su preparación efímera
-  sin llegar a producir resultado de Playwright; sigue pendiente ejecutar esa
-  matriz completa y la comprobación visual a 390 px y escritorio.
+  la política que originaba el 404. En la sesión real de Chrome del
+  administrador se recorrieron las 16 rutas expuestas por el sidebar y la
+  configuración del menú de cuenta: todas cargaron contenido, incluida
+  Analítica, sin 404. El sidebar conserva las mismas cinco secciones en Cursos
+  y Entregas y, a 889 px de alto, `scrollHeight == clientHeight`. También se
+  comprobó que el administrador no ve ni el enlace de crear curso ni el de
+  calificación manual. La matriz Chromium aislada de todos los roles sigue
+  pendiente: su preparación efímera agotó 240 s antes de Playwright, así que
+  todavía falta la comprobación a 390 px y la matriz de los demás roles.
 
 ## Incorporación privada y superficies por rol — en curso 2026-08-02
 

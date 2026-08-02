@@ -12,11 +12,11 @@ export default async function AcademicGroupsPage({
       <PageHeader
         breadcrumbs={[
           { href: `/organizaciones/${slug}`, label: data.organization.name },
-          { label: 'Grupos académicos' },
+          { label: 'Grupos' },
         ]}
         description="Agrupa estudiantes, docentes y acompañantes por año y nivel; luego reutiliza el padrón en secciones concretas."
         eyebrow="Organización del aprendizaje"
-        title="Grupos académicos"
+        title="Grupos"
       />
       <AcademicGroupsPanel
         canManage={data.access.capabilities.includes('learning.cohort.manage')}

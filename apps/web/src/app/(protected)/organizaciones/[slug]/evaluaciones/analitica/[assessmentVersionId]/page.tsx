@@ -10,9 +10,9 @@ export default async function AssessmentAnalyticsDetailPage({
 }>) {
   const { assessmentVersionId, slug } = await params;
   const data = await getAssessmentAnalytics(slug, assessmentVersionId);
-  const canRefresh = data.access.capabilities.includes(
-    'assessment.analytics.refresh',
-  );
+  const canRefresh =
+    data.access.capabilities.includes('assessment.analytics.refresh') &&
+    data.version.revisions.length > 0;
   const { snapshot } = data;
   const snapshotRevision = snapshot
     ? data.version.revisions.find(

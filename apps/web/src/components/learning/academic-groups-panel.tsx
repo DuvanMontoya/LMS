@@ -217,7 +217,7 @@ export function AcademicGroupsPanel({
           </Button>
         </form>
       ) : null}
-      <section className="grid gap-3" aria-label="Grupos académicos">
+      <section className="grid gap-3" aria-label="Grupos">
         {groups.map((group) => (
           <article className="academic-panel p-5" key={group.id}>
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -379,7 +379,7 @@ export function AcademicGroupsPanel({
         {!groups.length ? (
           <div className="academic-panel border-dashed p-10 text-center">
             <UsersRound className="mx-auto mb-3 size-7 text-muted-foreground" />
-            <h2 className="font-semibold">Aún no hay grupos académicos</h2>
+            <h2 className="font-semibold">Aún no hay grupos</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Crea el primer grupo para organizar una promoción, grado o grupo
               independiente.

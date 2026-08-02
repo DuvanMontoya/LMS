@@ -138,7 +138,7 @@ export default async function LearningOutlinePage({
             />
             <CourseFact
               icon={<Users />}
-              label="Grupo de curso"
+              label="Sección"
               value={data.outline.cohort?.name ?? 'Matrícula individual'}
             />
           </dl>

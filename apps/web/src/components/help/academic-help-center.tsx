@@ -132,7 +132,7 @@ export function AcademicHelpCenter({
         {
           capability: 'learning.cohort.view',
           description:
-            'Registra las personas y prepara grupos académicos reutilizables. Todavía no concedas acceso a un curso.',
+            'Registra las personas y prepara grupos reutilizables. Todavía no concedas acceso a un curso.',
           example: 'Grupo académico 8.º A',
           href: `${base}/aprendizaje/grupos`,
           icon: UsersRound,
@@ -176,7 +176,7 @@ export function AcademicHelpCenter({
           example: 'Álgebra I · 8.º A · P2 · R3',
           href: `${base}/aprendizaje/cohortes`,
           icon: ClipboardList,
-          result: 'Grupo de curso operativo',
+          result: 'Sección operativa',
           title: 'Abrir la sección',
         },
         {
@@ -337,7 +337,7 @@ export function AcademicHelpCenter({
                   ['Periodo', '2026 → Periodo 2'],
                   ['Curso', 'Álgebra I · revisión R3'],
                   ['Publicación', 'Release R3 inmutable'],
-                  ['Grupo de curso', 'Álgebra I · 8.º A · P2 · R3'],
+                  ['Sección', 'Álgebra I · 8.º A · P2 · R3'],
                   ['Estudiante', 'Ana · matrícula fijada a R3'],
                 ].map(([label, value]) => (
                   <div

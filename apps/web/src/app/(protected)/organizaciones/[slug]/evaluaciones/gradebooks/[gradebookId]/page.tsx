@@ -148,7 +148,7 @@ export default async function GradebookDetailPage({
           </div>
           <form>
             <label className="flex items-center gap-2 text-sm">
-              <span>Grupo de curso</span>
+              <span>Sección</span>
               <select
                 className="academic-control"
                 defaultValue={query.cohort ?? ''}

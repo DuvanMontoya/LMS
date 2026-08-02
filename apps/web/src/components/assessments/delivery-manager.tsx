@@ -356,7 +356,7 @@ function AssignmentControl({
         .filter((enrollment) => enrollment.cohort_id)
         .map((enrollment) => [
           enrollment.cohort_id as string,
-          enrollment.cohort_name ?? 'Grupo de curso',
+          enrollment.cohort_name ?? 'Sección',
         ]),
     ),
   );
@@ -400,7 +400,7 @@ function AssignmentControl({
       </div>
       <div className="flex min-w-0 gap-2">
         <Label className="sr-only" htmlFor={`cohort-${deliveryId}`}>
-          Grupo de curso con matrículas vigentes
+          Sección con matrículas vigentes
         </Label>
         <select
           className="h-9 min-w-0 flex-1 border bg-background px-3 text-sm"
