@@ -60,7 +60,7 @@ export default async function CurriculumPage({
           { href: `/organizaciones/${slug}`, label: organization.name },
           { label: 'Currículo' },
         ]}
-        description="Organiza áreas, disciplinas, asignaturas y sus relaciones de aprendizaje."
+        description="Organiza áreas, disciplinas y asignaturas. Una asignatura describe el saber curricular; los cursos se crean y versionan en un espacio distinto."
         eyebrow="Currículo institucional"
         title="Currículo"
       />

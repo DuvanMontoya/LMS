@@ -13,8 +13,7 @@ y no crea un snapshot inmutable de contenido semántico.
 El flujo explícito usa `draft`, `in_review`, `changes_requested` y `approved`.
 Sólo `draft` y `changes_requested` admiten escritura. Las transiciones pasan por
 servicios transaccionales y dejan un `CourseRevisionTransition` append-only. No
-hay bypass por `is_staff`; el superuser conserva el bypass deliberado de la
-política institucional. El envío exige integridad curricular y estructural; el
+hay bypass por `is_staff` ni `is_superuser` (ADR 0034); el envío exige integridad curricular y estructural; el
 revisor puede solicitar cambios, pero sólo owner o administrator pueden aprobar.
 
 `CourseModule` y `CourseUnit` forman listas jerárquicas con posiciones activas

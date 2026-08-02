@@ -2,6 +2,16 @@
 
 ## Navegación institucional y secuencia de trabajo — en curso 2026-08-02
 
+- **Auditoría de roles y retorno autenticado (2026-08-02):** se detectó que un
+  `next` válido pero fuera de las capacidades del rol permitía iniciar sesión y
+  terminaba en una 404 (por ejemplo, owner → currículo). La continuación de
+  login ahora compara la familia de ruta con las capacidades efectivas y envía
+  al workspace principal autorizado sin sustituir la autorización de Server
+  Components/API. README diferencia explícitamente asignatura, curso, sección,
+  grupo y matrícula, y documenta facultades y límites de cada rol. Pendiente:
+  ejecutar las validaciones y la nueva comprobación Chrome para todos los roles
+  antes de marcar esta auditoría como cerrada.
+
 - **Auditoría de rutas:** el sidebar global es estable: no revela ni reemplaza
   secciones al entrar en cursos o evaluaciones. Las pantallas de detalle y
   formularios se alcanzan desde su listado, breadcrumb o cabecera local, sin

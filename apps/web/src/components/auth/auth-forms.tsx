@@ -217,8 +217,12 @@ export function LoginForm({
       form.reset({ email, password: '' });
       // A full navigation starts a new server request with the session cookie.
       // Client-side route reuse can otherwise render the anonymous access
-      // context immediately after a successful login.
-      window.location.assign(sanitizeReturnPath(searchParams.get('next')));
+      // context immediately after a successful login. The continuation route
+      // also prevents a valid session from landing on a route outside its role.
+      const next = encodeURIComponent(
+        sanitizeReturnPath(searchParams.get('next')),
+      );
+      window.location.assign(`/auth/continuar?next=${next}`);
     } catch (error) {
       setMessage(submitError(error, form.setError));
     }

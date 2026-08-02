@@ -128,6 +128,79 @@ alineaciones reales al currículo demo. No cambia una revisión existente ni
 publica contenido. El workspace se abre en
 `/organizaciones/organizacion-demo/cursos/introduccion-calculo-diferencial`.
 
+## Roles, permisos y lenguaje académico
+
+La autorización nunca depende sólo de que un enlace esté visible. Cada llamada
+al servidor vuelve a comprobar una membresía **activa** en la organización y la
+capacidad concreta. Los roles pertenecen a esa membresía —no al usuario global—
+y una persona puede tener roles distintos en instituciones distintas.
+
+### Primero: asignatura no es curso
+
+| Término | Es | No es | Ejemplo |
+| --- | --- | --- | --- |
+| Área | Primer nivel del currículo. | Un curso o un grupo. | Matemáticas. |
+| Disciplina | Rama dentro de un área. | Una unidad que un estudiante toma. | Análisis. |
+| Asignatura | Saber curricular estable que organiza temas, conceptos, objetivos y prerrequisitos. | Una experiencia de aprendizaje, una sección ni una matrícula. | Cálculo diferencial. |
+| Curso | Experiencia de aprendizaje con estructura, revisión, versión y release; se alinea a una asignatura principal. | Un sinónimo de asignatura. | Introducción al cálculo diferencial. |
+| Sección | Ejecución de un curso publicado en un período, con release y participantes. | Un grupo institucional general. | Cálculo I — 10A — 2026-2. |
+| Grupo institucional | Agrupación académica transversal de personas. | Una sección ni una matrícula. | Estudiantes de grado 10. |
+| Matrícula | Vínculo individual con una sección y un release concreto. | Acceso global al curso. | Ana en Cálculo I — 10A. |
+
+La secuencia correcta es: **currículo (asignatura) → curso en autoría →
+revisión/aprobación → release publicado → sección → matrícula → aprendizaje**.
+Una responsabilidad docente vincula a una persona con una **asignatura** para
+delimitar su ámbito académico; por sí sola no crea una sección, una matrícula ni
+acceso a los grupos de otra persona.
+
+### Qué puede hacer cada rol
+
+| Rol | Propósito | Puede | No puede por ese rol |
+| --- | --- | --- | --- |
+| Propietario (`owner`) | Gobierno y continuidad institucional. | Gestionar personas, roles (incluido propietario), invitaciones, ajustes de membresía, sesiones administradas e integraciones. | Ver o editar currículo, cursos, secciones, matrículas, clases, resultados, intentos o calificaciones. |
+| Administrador (`administrator`) | Operación académica institucional. | Gestionar currículo y responsabilidades docentes; preparar períodos, grupos, secciones y matrículas; consultar cursos aprobados, operar releases, calendario, clases, entregas, resultados, libros y analítica. | Crear, editar, enviar o aprobar la estructura de cursos/evaluaciones; calificar, recalificar o alterar libros de calificaciones; gestionar propietarios. |
+| Autor (`author`) | Diseño y producción académica. | Gestionar currículo; crear, editar y enviar cursos, contenido, bancos, preguntas y evaluaciones; crear borradores de release; gestionar recursos de autoría. | Aprobar su trabajo, gestionar personas, matrículas, secciones, agenda institucional, entregas o calificaciones. |
+| Revisor (`reviewer`) | Control de calidad maker-checker. | Consultar currículo y autoría; revisar y aprobar cursos, preguntas y evaluaciones; consultar historial y recursos de autoría. | Crear o editar como autor, gestionar currículo, publicar releases, operar grupos o calificar. |
+| Docente (`instructor`) | Ejecución y juicio académico de su alcance asignado. | Ver sus responsabilidades, cursos aprobados, secciones y matrículas de alcance; crear clases, moderarlas, gestionar entregas y calificar/recalificar dentro de ese alcance. | Ver el currículo completo, crear o aprobar cursos/evaluaciones, gestionar personas o acceder a otros cursos/grupos. |
+| Estudiante (`learner`) | Experiencia personal de aprendizaje. | Ver su aprendizaje, calendario, clases y evaluaciones asignadas; gestionar sus preferencias de notificación. | Ver currículo, cursos en autoría, personas, secciones ajenas, resultados ajenos, recursos internos o calificaciones de otras personas. |
+| Superadministrador de plataforma | Gobierno del producto, fuera de una institución. | Administrar registro global y aprovisionar instituciones. | Entrar, leer o administrar datos de un tenant sin membresía explícita. No es owner ni administrator de todas las instituciones. |
+
+### Reglas que evitan privilegios accidentales
+
+- `owner` es exclusivamente institucional y no se combina con roles académicos.
+  La última persona propietaria activa no puede retirarse ni perder ese rol.
+- `author` y `reviewer` son incompatibles en la misma membresía: quien crea no
+  aprueba su propio trabajo.
+- Los demás roles pueden combinarse cuando la institución lo justifique. Las
+  capacidades efectivas son la unión de los roles de esa membresía, pero los
+  alcances de curso, sección, período, matrícula y responsabilidad siguen
+  aplicándose.
+- Un administrador **sí puede crear y editar áreas, disciplinas, asignaturas,
+  temas, conceptos, objetivos y prerrequisitos** porque opera el currículo
+  institucional (`catalog.manage`). No puede crear ni editar la estructura de
+  un curso: esa facultad es `course.authoring.manage` del autor.
+- Que una ruta devuelva 404 para un rol no es un permiso fallido: es la forma de
+  no revelar recursos o superficies fuera de su alcance. Tras iniciar sesión,
+  la plataforma redirige al espacio autorizado del rol en vez de conservar una
+  ruta que produciría una 404.
+
+### Guía de decisión rápida
+
+- ¿Cambiar la materia, sus temas, objetivos o prerrequisitos? **Currículo**:
+  administrador o autor.
+- ¿Crear módulos, unidades y contenido de una experiencia concreta? **Curso**:
+  autor; revisor para revisar/aprobar; administrador para releases aprobados.
+- ¿Decidir quién puede enseñar una materia? **Responsabilidades docentes**:
+  administrador.
+- ¿Abrir una oferta para un período y sus participantes? **Secciones y
+  matrículas**: administrador; docente sólo dentro de lo que le fue asignado.
+- ¿Emitir un juicio sobre una entrega? **Docente** dentro de su alcance, nunca
+  administrador por defecto.
+
+La definición ejecutable completa está en
+`apps/api/domain/organizations/capabilities.py`; las políticas de dominio y la
+API son autoritativas frente a esta guía de producto.
+
 ## Revisión manual en navegador real
 
 Después de completar el arranque anterior, deja estas dos terminales abiertas:

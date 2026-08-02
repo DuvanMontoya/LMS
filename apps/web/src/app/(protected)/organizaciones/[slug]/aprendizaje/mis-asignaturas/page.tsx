@@ -16,7 +16,7 @@ export default async function MySubjectsPage({
           { href: `/organizaciones/${slug}`, label: data.organization.name },
           { label: 'Mis asignaturas' },
         ]}
-        description="Alcance académico explícito para autoría y docencia. Una responsabilidad no concede acceso operativo a grupos que no te fueron asignados."
+        description="Una responsabilidad vincula a una persona con una asignatura del currículo; no es un curso ni concede acceso automático a grupos. Los cursos se asignan por separado."
         eyebrow="Responsabilidad docente"
         title={canManage ? 'Responsabilidades docentes' : 'Mis asignaturas'}
       />

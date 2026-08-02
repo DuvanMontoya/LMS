@@ -18,9 +18,11 @@ ni terminarse; el bloqueo común de organización conserva esa invariante frente
 a solicitudes concurrentes. Los eventos y asignaciones se preservan como
 historia; no hay borrado físico por API.
 
-Un superuser activo es un bypass explícito de política. `is_staff` no lo es.
-Django admin es de lectura para los hechos institucionales y el alta inicial se
-hace mediante `bootstrap_organization`, que reutiliza el servicio.
+> **Nota de vigencia:** ADR 0034 y ADR 0038 reemplazan el supuesto histórico
+> de bypass de superuser. `is_staff` e `is_superuser` no conceden capacidades
+> institucionales ni membresía implícita. El operador de plataforma conserva
+> únicamente superficies globales explícitas; Django admin es de lectura para
+> los hechos institucionales y el alta inicial reutiliza el servicio.
 
 La URL representa el contexto institucional en Next.js. El navegador no guarda
 organización, roles ni capacidades; los Server Components vuelven a consultar

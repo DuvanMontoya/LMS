@@ -72,7 +72,7 @@ export default async function CoursesPage({
           { href: `/organizaciones/${slug}`, label: organization.name },
           { label: 'Cursos' },
         ]}
-        description="Estructuras académicas versionadas y su flujo de revisión."
+        description="Experiencias de aprendizaje versionadas, alineadas a una asignatura principal y sometidas a revisión. Un curso no reemplaza la asignatura del currículo."
         eyebrow="Autoría académica"
         title="Cursos"
       />
@@ -82,9 +82,10 @@ export default async function CoursesPage({
           className="mt-5 flex flex-col gap-3 rounded-lg border border-dashed bg-muted/20 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
         >
           <p className="text-muted-foreground">
-            Crear y editar cursos corresponde al rol <strong>Autor</strong>. Tu
-            acceso permite consultar las estructuras y gestionar su operación
-            posterior.
+            Tu rol administra el currículo y la operación institucional, pero no
+            la autoría del curso. <strong>Autor</strong> crea y edita la
+            estructura; aquí puedes consultar cursos aprobados y operar sus
+            releases.
           </p>
           {access.capabilities.includes('role.assign') ? (
             <Button asChild className="shrink-0" size="sm" variant="outline">
