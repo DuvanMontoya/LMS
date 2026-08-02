@@ -69,11 +69,23 @@ export async function getCourseCreationContext(slug: string) {
   const organization = await getOrganizationForPage(slug);
   if (!organization.access.capabilities.includes('course.authoring.manage'))
     notFound();
+  const canManageTeachingResponsibilities =
+    organization.access.capabilities.includes(
+      'catalog.teaching_responsibility.manage',
+    );
   const client = await createPlatformServerClient();
   const [subjects, objectives] = await Promise.all([
     required(
       client.GET('/api/v1/organizations/{slug}/catalog/subjects/', {
-        params: { path: { slug }, query: { status: 'active' } },
+        params: {
+          path: { slug },
+          query: {
+            status: 'active',
+            ...(canManageTeachingResponsibilities
+              ? {}
+              : { teaching_responsibility: 'mine' }),
+          },
+        },
       }),
       'No fue posible consultar las asignaturas.',
     ) as Promise<SubjectList>,

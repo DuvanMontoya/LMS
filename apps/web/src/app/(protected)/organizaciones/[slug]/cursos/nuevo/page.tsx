@@ -1,8 +1,10 @@
+import { ArrowLeft, BookOpenCheck, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
+
 import { CourseCreateForm } from '@/components/courses/course-create-form';
 import { PageHeader } from '@/components/platform/page-header';
 import { Button } from '@/components/ui/button';
 import { getCourseCreationContext } from '@/lib/courses/server';
-import Link from 'next/link';
 
 export default async function NewCoursePage({
   params,
@@ -13,12 +15,20 @@ export default async function NewCoursePage({
   return (
     <main className="academic-page">
       <PageHeader
+        actions={
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/organizaciones/${slug}/cursos`}>
+              <ArrowLeft data-icon="inline-start" />
+              Volver a cursos
+            </Link>
+          </Button>
+        }
         breadcrumbs={[
           { href: `/organizaciones/${slug}`, label: organization.name },
           { href: `/organizaciones/${slug}/cursos`, label: 'Cursos' },
           { label: 'Nuevo curso' },
         ]}
-        description="Define la identidad y su alineación curricular. La estructura se construye después en el espacio de autoría."
+        description="Configura la identidad y la alineación curricular del curso. Al crearlo, abrirás su espacio de autoría para construir la estructura."
         eyebrow="Autoría"
         title="Crear curso"
       />
@@ -29,16 +39,33 @@ export default async function NewCoursePage({
           subjects={subjects}
         />
       ) : (
-        <section className="mt-7 border-y border-amber-300 bg-amber-50/70 px-5 py-6">
-          <h2 className="font-semibold">Falta una asignatura activa</h2>
-          <p className="mt-2">
-            Se necesita al menos una asignatura activa para crear un curso.
+        <section className="mt-6 max-w-3xl rounded-xl border bg-card p-6 shadow-sm sm:p-8">
+          <div className="grid size-11 place-items-center rounded-lg border bg-muted/30 text-primary">
+            <BookOpenCheck className="size-5" />
+          </div>
+          <h2 className="mt-4 text-lg font-semibold">
+            No tienes asignaturas disponibles para autoría
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+            Para crear un curso necesitas al menos una responsabilidad docente
+            vigente sobre una asignatura activa. La plataforma evita ofrecerte
+            combinaciones que el servidor rechazaría.
           </p>
-          <Button asChild className="mt-4">
-            <Link href={`/organizaciones/${slug}/curriculo`}>
-              Abrir currículo
-            </Link>
-          </Button>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button asChild>
+              <Link
+                href={`/organizaciones/${slug}/aprendizaje/mis-asignaturas`}
+              >
+                <ShieldCheck data-icon="inline-start" />
+                Ver mis responsabilidades
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`/organizaciones/${slug}/curriculo`}>
+                Abrir currículo
+              </Link>
+            </Button>
+          </div>
         </section>
       )}
     </main>

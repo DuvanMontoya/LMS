@@ -137,6 +137,7 @@ test.describe.serial('institutional organization access', () => {
       'href',
       `/organizaciones/${organizationSlug}/configuracion`,
     );
+    await page.keyboard.press('Escape');
 
     await expect(
       page.getByRole('region', { name: 'Acceso a la creación de cursos' }),

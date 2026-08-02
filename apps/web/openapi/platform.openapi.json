@@ -15914,7 +15914,13 @@
             "required": true,
             "schema": { "type": "string" }
           },
-          { "in": "query", "name": "status", "schema": { "type": "string" } }
+          { "in": "query", "name": "status", "schema": { "type": "string" } },
+          {
+            "description": "Limit active subjects to the current user's effective teaching responsibilities.",
+            "in": "query",
+            "name": "teaching_responsibility",
+            "schema": { "enum": ["mine"], "type": "string" }
+          }
         ],
         "responses": {
           "200": {

@@ -8702,6 +8702,8 @@ export interface operations {
         ordering?: string;
         search?: string;
         status?: string;
+        /** @description Limit active subjects to the current user's effective teaching responsibilities. */
+        teaching_responsibility?: 'mine';
       };
       path: {
         slug: string;

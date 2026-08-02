@@ -112,13 +112,6 @@ class CourseWorkflowTests(CourseFixtureMixin, TestCase):
                 expected_version=revision.lock_version,
                 title="No permitido",
             )
-        with self.assertRaises(CourseAccessDenied):
-            approve_revision(
-                actor=reviewer,
-                organization=organization,
-                revision=revision,
-                expected_version=revision.lock_version,
-            )
         revision = request_revision_changes(
             actor=reviewer,
             organization=organization,
@@ -140,8 +133,15 @@ class CourseWorkflowTests(CourseFixtureMixin, TestCase):
             revision=revision,
             expected_version=revision.lock_version,
         )
+        with self.assertRaises(CourseAccessDenied):
+            approve_revision(
+                actor=owner,
+                organization=organization,
+                revision=revision,
+                expected_version=revision.lock_version,
+            )
         revision = approve_revision(
-            actor=owner,
+            actor=reviewer,
             organization=organization,
             revision=revision,
             expected_version=revision.lock_version,

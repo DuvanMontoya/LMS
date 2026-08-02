@@ -62,7 +62,7 @@ class CatalogApiTests(TestCase):
                 actor=owner,
                 organization=organization,
                 user=user,
-                roles={RoleCode.INSTRUCTOR},
+                roles={RoleCode.AUTHOR},
             )
         area = create_area(
             actor=owner,
@@ -107,6 +107,18 @@ class CatalogApiTests(TestCase):
         self.assertEqual(len(self.client_for(owner).get(prefix).data), 1)
         self.assertEqual(len(self.client_for(instructor).get(prefix).data), 1)
         self.assertEqual(len(self.client_for(other_instructor).get(prefix).data), 0)
+        subject_scope = (
+            f"/api/v1/organizations/{organization.slug}/catalog/subjects/"
+            "?status=active&teaching_responsibility=mine"
+        )
+        self.assertEqual(
+            [row["id"] for row in self.client_for(instructor).get(subject_scope).data],
+            [str(subject.id)],
+        )
+        self.assertEqual(
+            self.client_for(other_instructor).get(subject_scope).data,
+            [],
+        )
 
         forbidden = self.client_for(instructor).post(
             prefix,
@@ -131,6 +143,7 @@ class CatalogApiTests(TestCase):
         )
         self.assertEqual(closed.status_code, 200)
         self.assertIsNotNone(closed.data["ended_at"])
+        self.assertEqual(self.client_for(instructor).get(subject_scope).data, [])
 
     def test_owner_creates_and_lists_curriculum_structure(self) -> None:
         owner, organization = self.operational_organization(

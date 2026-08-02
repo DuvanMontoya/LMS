@@ -1,6 +1,7 @@
 # pyright: reportUnknownArgumentType=false, reportMissingParameterType=false, reportUnusedExpression=false
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
 
 from domain.catalog.models import (
     AcademicArea,
@@ -11,6 +12,8 @@ from domain.catalog.models import (
     Topic,
 )
 from domain.catalog.services import (
+    assign_subject_teaching_responsibility,
+    close_subject_teaching_responsibility,
     create_area,
     create_concept,
     create_discipline,
@@ -21,7 +24,7 @@ from domain.catalog.services import (
     replace_subject_prerequisites,
 )
 from domain.identity.models import User
-from domain.organizations.models import Organization
+from domain.organizations.models import Membership, Organization
 
 
 class Command(BaseCommand):
@@ -31,9 +34,14 @@ class Command(BaseCommand):
         if not settings.DEBUG:
             raise CommandError("El currículo demo sólo se permite con DEBUG=True.")
         organization = Organization.objects.filter(slug="organizacion-demo").first()
-        actor = User.objects.filter(email="owner@demo.local").first()
+        actor = User.objects.filter(email="author@demo.local").first()
         if not organization or not actor:
             raise CommandError("Ejecuta primero bootstrap_demo_organizations.")
+        responsibility_manager = User.objects.filter(
+            email="administrator@demo.local"
+        ).first()
+        if not responsibility_manager:
+            raise CommandError("La organización demo no contiene sus roles académicos.")
         area = AcademicArea.objects.filter(
             organization=organization, slug="matematicas"
         ).first() or create_area(
@@ -83,6 +91,38 @@ class Command(BaseCommand):
             slug="calculo-diferencial",
             description="",
         )
+        author_membership = Membership.objects.get(
+            organization=organization, user=actor, status="active"
+        )
+        today = timezone.localdate()
+        for subject in (precalculus, differential):
+            responsibility = subject.teaching_responsibilities.filter(
+                membership=author_membership, ended_at__isnull=True
+            ).first()
+            if responsibility and not (
+                responsibility.starts_on <= today
+                and (responsibility.ends_on is None or responsibility.ends_on >= today)
+            ):
+                close_subject_teaching_responsibility(
+                    actor=responsibility_manager,
+                    responsibility=responsibility,
+                    ended_on=(
+                        responsibility.ends_on
+                        if responsibility.ends_on and responsibility.ends_on < today
+                        else max(today, responsibility.starts_on)
+                    ),
+                )
+                responsibility = None
+            if responsibility is None:
+                assign_subject_teaching_responsibility(
+                    actor=responsibility_manager,
+                    organization=organization,
+                    subject=subject,
+                    membership=author_membership,
+                    starts_on=today,
+                    ends_on=None,
+                    rationale="Responsabilidad académica de la autoría demo local.",
+                )
         Topic.objects.filter(
             subject=precalculus, slug="funciones"
         ).first() or create_root_topic(

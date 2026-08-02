@@ -53,6 +53,7 @@ export function ReviewPanel({
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const note = useRef<HTMLTextAreaElement>(null);
+  const readinessIssues = useRef<HTMLDivElement>(null);
 
   async function act(
     action: 'approve' | 'request-changes' | 'submit-review',
@@ -61,7 +62,7 @@ export function ReviewPanel({
     setError('');
     if (action === 'submit-review' && !readiness.ready) {
       setError('Resuelve los problemas de integridad antes de enviar.');
-      document.getElementById('readiness-issues')?.focus();
+      window.setTimeout(() => readinessIssues.current?.focus(), 0);
       return;
     }
     if (action === 'request-changes' && !noteValue.trim()) {
@@ -102,6 +103,7 @@ export function ReviewPanel({
       <div
         className="mt-4 border-y bg-muted/25 px-4 py-4"
         id="readiness-issues"
+        ref={readinessIssues}
         tabIndex={-1}
       >
         <h3 className="font-semibold">

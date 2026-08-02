@@ -47,6 +47,7 @@ from domain.catalog.selectors import (
     concepts_visible_to,
     disciplines_visible_to,
     learning_objectives_visible_to,
+    responsible_subjects_for_actor,
     subjects_visible_to,
     topics_visible_to,
 )
@@ -267,6 +268,16 @@ class AreaListView(CatalogFilteredListView):
     @extend_schema(
         parameters=[
             OpenApiParameter("status", str, OpenApiParameter.QUERY),
+            OpenApiParameter(
+                "teaching_responsibility",
+                str,
+                OpenApiParameter.QUERY,
+                enum=["mine"],
+                description=(
+                    "Limit active subjects to the current user's effective teaching "
+                    "responsibilities."
+                ),
+            ),
             OpenApiParameter("search", str, OpenApiParameter.QUERY),
             OpenApiParameter("ordering", str, OpenApiParameter.QUERY),
         ],
@@ -488,9 +499,14 @@ class SubjectListView(CatalogFilteredListView):
     )
     def get(self, request: Request, slug: str) -> Response:
         organization = _organization(request, slug)
-        rows = self.filter_catalog_queryset(
-            request, subjects_visible_to(organization, _visible(request, organization))
-        )
+        visible = subjects_visible_to(organization, _visible(request, organization))
+        if request.query_params.get("teaching_responsibility") == "mine":
+            visible = visible.filter(
+                pk__in=responsible_subjects_for_actor(
+                    actor=request.user, organization=organization
+                ).values("pk")
+            )
+        rows = self.filter_catalog_queryset(request, visible)
         return Response(SubjectSerializer(rows, many=True).data)
 
     @extend_schema(request=CreateSubjectSerializer, responses={201: SubjectSerializer})

@@ -24,7 +24,7 @@ class Command(BaseCommand):
         if not settings.DEBUG:
             raise CommandError("Los cursos demo sólo se permiten con DEBUG=True.")
         organization = Organization.objects.filter(slug="organizacion-demo").first()
-        actor = User.objects.filter(email="owner@demo.local").first()
+        actor = User.objects.filter(email="author@demo.local").first()
         if not organization or not actor:
             raise CommandError("Ejecuta primero bootstrap_demo_organizations.")
         if Course.objects.filter(

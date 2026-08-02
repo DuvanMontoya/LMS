@@ -2,6 +2,27 @@
 
 ## Navegación institucional y secuencia de trabajo — en curso 2026-08-02
 
+- **Creación de cursos protegida y rediseñada (2026-08-02):**
+  `/organizaciones/{slug}/cursos/nuevo` usa ahora una composición empresarial
+  en tres pasos —identidad, alineación curricular y objetivos— con resumen
+  persistente en escritorio, lectura lineal en móvil, generación asistida del
+  `slug`, estados vacíos accionables y mensajes que explican el siguiente paso.
+  El formulario ya no recibe todo el catálogo: para autores, el API filtra las
+  asignaturas activas por responsabilidad académica vigente; quienes gestionan
+  esas responsabilidades conservan la vista completa. La validación del
+  servicio de cursos permanece como segunda barrera frente a solicitudes
+  manipuladas o responsabilidades revocadas durante la edición. El bootstrap
+  demo asigna responsabilidades reales al autor y dejó de usar al owner como
+  actor académico. La revisión visual real cubrió escritorio y 390 × 844 sin
+  desbordamiento, incluido el estado sin asignaturas elegibles. Pasan TypeScript,
+  ESLint, Prettier, Ruff, `courses:check`, la prueba PostgreSQL del filtro de
+  responsabilidades y las 22/22 pruebas de cursos. En Chromium aislado pasaron
+  `courses:e2e` pasó 4/4 en una sola corrida: curso incompleto con foco
+  accesible, IDOR entre organizaciones, handoff del administrador y el
+  escenario largo de extremo a extremo con creación, conflicto optimista,
+  estructura, contenido semántico, política de finalización, revisión,
+  aprobación, roles, axe y 390 px.
+
 - **Currículo compacto y contextual (2026-08-02):** la ruta institucional de
   currículo conserva búsqueda, filtros, jerarquía, permisos y acciones, pero
   elimina el panel redundante de identidad técnica (`slug`, estado y conteo de
