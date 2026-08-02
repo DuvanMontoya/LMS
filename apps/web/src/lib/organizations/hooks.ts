@@ -41,10 +41,12 @@ export function useOrganizations() {
 export function useProvisionPlatformOrganization() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) =>
+    mutationFn: (
+      provision: components['schemas']['PlatformOrganizationProvision'],
+    ) =>
       requireData(
         platformBrowserClient.POST('/api/v1/platform/organizations/', {
-          body: { name },
+          body: provision,
         }),
       ),
     onSuccess: async () => {

@@ -38,6 +38,10 @@ class VerifiedUserRequired(OrganizationDomainError):
     pass
 
 
+class InitialOwnerUnavailable(OrganizationDomainError):
+    pass
+
+
 class RevisionConflict(OrganizationDomainError):
     pass
 

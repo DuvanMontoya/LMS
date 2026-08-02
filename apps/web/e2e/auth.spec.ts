@@ -121,6 +121,10 @@ test.describe.serial('browser session authentication', () => {
     await expect(page).toHaveURL(
       /\/auth\/iniciar-sesion\?next=(?:%2F|\/)estudiar/,
     );
+    await page.goto('/invitaciones/aceptar');
+    await expect(page).toHaveURL(
+      /\/auth\/iniciar-sesion\?next=(?:%2F|\/)invitaciones(?:%2F|\/)aceptar/,
+    );
     await page.context().clearCookies();
 
     for (const next of [

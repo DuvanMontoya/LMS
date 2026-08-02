@@ -26,15 +26,20 @@ export function PlatformOrganizationProvisioner({
 }>) {
   const provision = useProvisionPlatformOrganization();
   const [name, setName] = useState('');
+  const [ownerEmail, setOwnerEmail] = useState('');
   const [created, setCreated] = useState<Organization | null>(null);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCreated(null);
     try {
-      const organization = await provision.mutateAsync(name.trim());
+      const organization = await provision.mutateAsync({
+        name: name.trim(),
+        owner_email: ownerEmail.trim(),
+      });
       setCreated(organization);
       setName('');
+      setOwnerEmail('');
     } catch {
       // The normalized API error is rendered below.
     }
@@ -46,9 +51,10 @@ export function PlatformOrganizationProvisioner({
         <CardHeader>
           <CardTitle>Crear institución</CardTitle>
           <p className="text-sm leading-6 text-muted-foreground">
-            Escribe sólo el nombre. La plataforma genera un código institucional
-            único, crea la configuración inicial y te deja como propietario
-            inicial para que puedas delegar la administración con trazabilidad.
+            Indica el nombre y el correo de la persona propietaria. La
+            plataforma genera el código institucional y deja una membresía real
+            y trazable sólo a esa persona; tu cuenta conserva el control global
+            sin acceso automático a los datos institucionales.
           </p>
         </CardHeader>
         <CardContent>
@@ -67,6 +73,25 @@ export function PlatformOrganizationProvisioner({
                 value={name}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="organization-owner-email">
+                Correo de la persona propietaria
+              </Label>
+              <Input
+                autoComplete="email"
+                id="organization-owner-email"
+                onChange={(event) => setOwnerEmail(event.target.value)}
+                placeholder="responsable@institucion.edu.co"
+                required
+                type="email"
+                value={ownerEmail}
+              />
+              <p className="text-xs leading-5 text-muted-foreground">
+                Debe corresponder a una cuenta activa con el correo ya
+                verificado. Esa persona configurará la institución y podrá
+                delegar después.
+              </p>
+            </div>
             {provision.error instanceof Error ? (
               <Alert variant="destructive">
                 <AlertTitle>No se creó la institución</AlertTitle>
@@ -79,19 +104,16 @@ export function PlatformOrganizationProvisioner({
                 <AlertTitle>Institución creada</AlertTitle>
                 <AlertDescription>
                   El código institucional generado es{' '}
-                  <strong>{created.slug}</strong>.{' '}
-                  <Link
-                    className="font-medium underline"
-                    href={`/organizaciones/${created.slug}`}
-                  >
-                    Abrir la institución
-                  </Link>
-                  .
+                  <strong>{created.slug}</strong>. La persona propietaria ya
+                  tiene su acceso institucional; este directorio no concede
+                  acceso adicional a tu cuenta.
                 </AlertDescription>
               </Alert>
             ) : null}
             <Button
-              disabled={provision.isPending || !name.trim()}
+              disabled={
+                provision.isPending || !name.trim() || !ownerEmail.trim()
+              }
               type="submit"
             >
               {provision.isPending ? (
@@ -114,10 +136,11 @@ export function PlatformOrganizationProvisioner({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
-            <p>1. Configura las reglas de incorporación de esa institución.</p>
-            <p>2. Registra o invita a la persona responsable.</p>
+            <p>1. La persona indicada recibe la membresía propietaria real.</p>
+            <p>2. Esa persona configura las reglas e incorpora a su equipo.</p>
             <p>
-              3. Asígnale el rol de propietario y conserva el control global.
+              3. Tú conservas el directorio y las reglas globales, sin acceso
+              implícito a los datos de la institución.
             </p>
           </CardContent>
         </Card>

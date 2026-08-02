@@ -6,7 +6,7 @@ export default async function OrganizationMemberDetailPage({
   params,
 }: Readonly<{ params: Promise<{ membershipId: string; slug: string }> }>) {
   const { membershipId, slug } = await params;
-  const { access, events, member, organization, profile } =
+  const { access, context, events, member, organization, profile } =
     await getOrganizationMemberForPage(slug, membershipId);
   return (
     <main className="academic-page" id="contenido-principal">
@@ -26,6 +26,7 @@ export default async function OrganizationMemberDetailPage({
           events={events}
           initialMember={member}
           initialProfile={profile}
+          isOwnProfile={member.user.id === context.user.id}
           slug={slug}
         />
       </div>

@@ -5777,9 +5777,12 @@
         "type": "object"
       },
       "PlatformOrganizationProvision": {
-        "description": "The platform operator supplies a name; the institutional code is generated.",
-        "properties": { "name": { "maxLength": 160, "type": "string" } },
-        "required": ["name"],
+        "description": "The operator supplies an institution and its initial verified owner.",
+        "properties": {
+          "name": { "maxLength": 160, "type": "string" },
+          "owner_email": { "format": "email", "type": "string" }
+        },
+        "required": ["name", "owner_email"],
         "type": "object"
       },
       "PoolCandidates": {

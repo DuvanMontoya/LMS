@@ -24,6 +24,7 @@ import {
   SquarePen,
   Tags,
   Target,
+  UserRound,
   Users,
   Video,
 } from 'lucide-react';
@@ -69,6 +70,7 @@ import {
 
 type ShellOrganization = {
   id: string;
+  membership_id: string;
   name: string;
   slug: string;
   roles: readonly OrganizationRole[];
@@ -182,6 +184,15 @@ function PlatformSidebar({
       exact: true,
       visible: !learnerOnly,
     },
+    ...(activeOrganization && organizationBase
+      ? [
+          {
+            href: `${organizationBase}/miembros/${activeOrganization.membership_id}`,
+            icon: UserRound,
+            label: 'Mi perfil',
+          },
+        ]
+      : []),
     ...(organizations.length > 1 && organizationBase
       ? [
           {

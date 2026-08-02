@@ -26,6 +26,7 @@ from domain.organizations.bulk import (
 from domain.organizations.capabilities import Capability
 from domain.organizations.choices import MembershipStatus, RoleCode
 from domain.organizations.exceptions import (
+    InitialOwnerUnavailable,
     InvalidMembershipTransition,
     InvitationAlreadyExists,
     InvitationUnavailable,
@@ -199,6 +200,11 @@ def _domain_error_response(error: OrganizationDomainError) -> Response:
             "member_could_not_be_added",
             "No fue posible agregar a la persona indicada.",
         ),
+        InitialOwnerUnavailable: (
+            status.HTTP_400_BAD_REQUEST,
+            "initial_owner_unavailable",
+            "La persona propietaria debe tener una cuenta activa y correo verificado.",
+        ),
         InvalidMembershipTransition: (
             status.HTTP_409_CONFLICT,
             "membership_transition_invalid",
@@ -322,6 +328,7 @@ class PlatformOrganizationProvisionView(APIView):
             organization = provision_platform_organization(
                 actor=_actor(request),
                 name=serializer.validated_data["name"],
+                owner_email=serializer.validated_data["owner_email"],
             )
         except OrganizationDomainError as error:
             return _domain_error_response(error)

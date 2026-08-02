@@ -3767,9 +3767,11 @@ export interface components {
       response_id: string;
       response_status: components['schemas']['AssessmentResponseStatus'];
     };
-    /** @description The platform operator supplies a name; the institutional code is generated. */
+    /** @description The operator supplies an institution and its initial verified owner. */
     PlatformOrganizationProvision: {
       name: string;
+      /** Format: email */
+      owner_email: string;
     };
     PoolCandidates: {
       expected_version: number;

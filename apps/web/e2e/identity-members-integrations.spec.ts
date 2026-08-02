@@ -200,16 +200,20 @@ test.describe
     await page.goto('/administracion/organizaciones');
     const institutionName = `Institución E2E ${randomUUID().slice(0, 8)}`;
     await page.getByLabel('Nombre de la institución').fill(institutionName);
+    await page
+      .getByLabel('Correo de la persona propietaria')
+      .fill('owner@organizations.e2e.test');
     await page.getByRole('button', { name: 'Crear institución' }).click();
     await expect(page.getByText('Institución creada')).toBeVisible();
-    const createdInstitution = page.getByRole('link', {
-      name: 'Abrir la institución',
-    });
-    await expect(createdInstitution).toBeVisible();
-    await createdInstitution.click();
-    await expect(page).toHaveURL(/\/organizaciones\/[a-z0-9-]+$/, {
-      timeout: 45_000,
-    });
+    await expect(
+      page.getByText('La persona propietaria ya tiene su acceso institucional'),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Abrir la institución' }),
+    ).toHaveCount(0);
+    const context = await page.request.get('/api/v1/access/context/');
+    expect(context.ok()).toBeTruthy();
+    expect((await context.json()).organizations).toEqual([]);
   });
 
   test('a verified public request is reviewed before it becomes a member', async ({

@@ -139,7 +139,6 @@ export async function getOrganizationMemberForPage(
   membershipId: string,
 ) {
   const { access, context, organization } = await getOrganizationForPage(slug);
-  if (!access.capabilities.includes('membership.view')) notFound();
   const client = await createPlatformServerClient();
   const memberRequest = client.GET(
     '/api/v1/organizations/{slug}/memberships/{membership_id}/',

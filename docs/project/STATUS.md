@@ -1,5 +1,46 @@
 # Project status
 
+## Refuerzo del borde de autenticación e invitaciones — 2026-08-01
+
+- **Sesión revocada en una ruta protegida:** el proxy de Next sólo puede
+  detectar la presencia de una cookie. La aceptación de invitaciones ahora
+  comprueba la sesión contra Django en un layout de servidor y redirige al
+  inicio de sesión preservando exactamente `next=/invitaciones/aceptar` cuando
+  la cookie es falsa, vencida o revocada.
+- **Fijación de sesión:** al intercambiar una invitación de un solo uso,
+  `begin_invitation_activation` rota la clave de la sesión antes de asociar el
+  identificador y el digest de la invitación. La prueba conserva estado no
+  sensible y prueba que la clave anterior no se reutiliza.
+- **Arnés de navegador:** se retiraron inclusiones temporales `e2e-next-*` de
+  `tsconfig.json`; el script E2E las incorpora y restaura por ejecución. Esto
+  evita que tipos de una corrida interrumpida se mezclen con rutas vigentes.
+- **Perfil propio y roles:** la API ya permitía que una membresía activa leyera
+  y actualizara sus propios datos personales, pero la ruta y la ficha web lo
+  bloqueaban detrás de `membership.view`. La ficha ahora respeta ese contrato y
+  el sidebar ofrece `Mi perfil`; los campos institucionales, notas internas y
+  roles siguen siendo exclusivos de `membership.profile.manage`.
+- **Control global sin escalamiento de tenant:** el formulario de
+  aprovisionamiento ahora exige el correo de una persona propietaria activa y
+  verificada. La membresía `owner`, su perfil y sus eventos quedan auditados a
+  nombre de esa persona y de quien aprovisionó; el superadministrador no puede
+  designarse a sí mismo ni abrir la institución recién creada sin un grant
+  institucional explícito.
+- **Evidencia local:** Django check, migraciones, Ruff, Pyright, ESLint,
+  Prettier y TypeScript pasaron. La prueba Django específica pasó 1/1 sobre
+  PostgreSQL. El E2E aislado de Chromium pasó 1/1: ruta protegida con cookie
+  falsificada, redirección segura, CSRF y bloqueo efectivo de registro público.
+  Una solicitud HTTP directa confirmó `307` a la pantalla de inicio de sesión
+  para `/invitaciones/aceptar` con una `sessionid` falsificada. La prueba de
+  perfil propio pasó 1/1 y confirmó que un estudiante no puede alterar su tipo
+  institucional. Las 59 pruebas Vitest y la batería estática completa también
+  pasaron tras estos cambios. Tres pruebas de aprovisionamiento sobre
+  PostgreSQL y el E2E aislado de Chromium 1/1 confirmaron que el operador no
+  hereda acceso a la institución que crea.
+- **Límite de evidencia:** Chrome enumeró las pestañas autenticadas existentes,
+  pero el canal expiró al reclamar una para inspección de DOM; no se declara
+  verificación visual en Chrome por esta auditoría. No se modificaron datos,
+  formularios ni la sesión del usuario.
+
 ## Academic scheduling and self-hosted live classes — complete locally
 
 - **Fecha y alcance:** 2026-07-31–2026-08-01. ADR 0031 y ADR 0032 delimitan

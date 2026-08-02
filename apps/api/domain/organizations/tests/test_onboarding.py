@@ -82,6 +82,29 @@ class OnboardingServiceTests(TestCase):
         self.assertIsNotNone(retried)
         self.assertEqual(retried.pk, membership.pk)
 
+    def test_invitation_activation_rotates_the_anonymous_session_key(self) -> None:
+        owner = self.verified_user("owner@example.test")
+        organization = create_organization_with_owner(
+            actor=owner, name="Institución", slug="institucion"
+        )
+        _, token = create_invitation(
+            actor=owner,
+            organization=organization,
+            email="new@example.test",
+            roles={RoleCode.LEARNER},
+            invitation_type=InvitationType.NEW_USER,
+        )
+        request = self.request()
+        request.session["non_sensitive_marker"] = "preserved"
+        request.session.save()
+        previous_session_key = request.session.session_key
+
+        begin_invitation_activation(request=request, token=token)
+
+        self.assertIsNotNone(request.session.session_key)
+        self.assertNotEqual(request.session.session_key, previous_session_key)
+        self.assertEqual(request.session["non_sensitive_marker"], "preserved")
+
     def test_organization_settings_are_versioned_and_validate_domains(self) -> None:
         owner = self.verified_user("owner@example.test")
         organization = create_organization_with_owner(

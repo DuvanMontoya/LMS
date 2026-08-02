@@ -66,9 +66,10 @@ class OrganizationUpdateSerializer(serializers.Serializer[object]):
 
 
 class PlatformOrganizationProvisionSerializer(serializers.Serializer[object]):
-    """The platform operator supplies a name; the institutional code is generated."""
+    """The operator supplies an institution and its initial verified owner."""
 
     name = serializers.CharField(max_length=160)
+    owner_email = serializers.EmailField()
 
     def validate_name(self, value: str) -> str:
         normalized = value.strip()

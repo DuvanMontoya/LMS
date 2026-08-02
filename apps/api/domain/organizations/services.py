@@ -29,6 +29,7 @@ from .choices import (
     normalize_member_type,
 )
 from .exceptions import (
+    InitialOwnerUnavailable,
     InvalidMembershipTransition,
     InvitationAlreadyExists,
     InvitationUnavailable,
@@ -134,36 +135,37 @@ def _require_capability(
 
 @transaction.atomic
 def create_organization_with_owner(
-    *, actor: User, name: str, slug: str
+    *, actor: User, name: str, slug: str, created_by: User | None = None
 ) -> Organization:
+    audit_actor = created_by or actor
     organization = Organization(name=name, slug=slug)
     organization.full_clean()
     organization.save()
     OrganizationMembershipSettings.objects.create(
-        organization=organization, updated_by=actor
+        organization=organization, updated_by=audit_actor
     )
     membership = Membership.objects.create(
         organization=organization,
         user=actor,
-        status_changed_by=actor,
+        status_changed_by=audit_actor,
     )
     # Every membership owns its institutional profile from creation.  Keeping
     # this invariant in the command path means profile reads remain read-only.
     OrganizationMemberProfile.objects.create(membership=membership)
     MembershipRoleAssignment.objects.create(
-        membership=membership, role=RoleCode.OWNER.value, assigned_by=actor
+        membership=membership, role=RoleCode.OWNER.value, assigned_by=audit_actor
     )
     _record_event(
         organization=organization,
         membership=membership,
-        actor=actor,
+        actor=audit_actor,
         event_type=MembershipEventType.CREATED,
         new_status=MembershipStatus.ACTIVE,
     )
     _record_event(
         organization=organization,
         membership=membership,
-        actor=actor,
+        actor=audit_actor,
         event_type=MembershipEventType.ROLE_ASSIGNED,
         role=RoleCode.OWNER,
     )
@@ -171,16 +173,35 @@ def create_organization_with_owner(
 
 
 @transaction.atomic
-def provision_platform_organization(*, actor: User, name: str) -> Organization:
+def provision_platform_organization(
+    *, actor: User, name: str, owner_email: str
+) -> Organization:
     """Provision an institution from the platform control plane.
 
     The public identifier is generated server-side so an operator never has to
-    invent or coordinate an institutional code.  The transaction uses a short
-    random suffix and retries the vanishingly rare uniqueness collision.
+    invent or coordinate an institutional code.  The designated owner receives
+    the real tenant membership; the platform operator does not inherit it.
+    The transaction uses a short random suffix and retries the vanishingly rare
+    uniqueness collision.
     """
 
     if not is_active_platform_operator(actor):
         raise OrganizationAccessDenied("Solo el superadministrador crea instituciones.")
+
+    normalized_owner_email = owner_email.strip().lower()
+    owner = (
+        get_user_model()
+        .objects.filter(email__iexact=normalized_owner_email, is_active=True)
+        .first()
+    )
+    if (
+        owner is None
+        or owner.pk == actor.pk
+        or not EmailAddress.objects.filter(user=owner, verified=True).exists()
+    ):
+        raise InitialOwnerUnavailable(
+            "La persona propietaria debe tener una cuenta activa y correo verificado."
+        )
 
     normalized_name = name.strip()
     base = slugify(normalized_name)[:72].strip("-") or "institucion"
@@ -189,7 +210,8 @@ def provision_platform_organization(*, actor: User, name: str) -> Organization:
         try:
             with transaction.atomic():
                 return create_organization_with_owner(
-                    actor=actor,
+                    actor=owner,
+                    created_by=actor,
                     name=normalized_name,
                     slug=generated_slug,
                 )
@@ -1118,6 +1140,10 @@ def begin_invitation_activation(
     if invitation is None:
         raise InvitationUnavailable("La invitación no está disponible.")
     _assert_invitation_available(invitation)
+    # A one-time invitation grants the ability to activate or accept an
+    # institutional account. Rotate any anonymous session identifier before
+    # binding that capability to server-side state.
+    request.session.cycle_key()
     request.session["organization_invitation_id"] = str(invitation.id)
     request.session["organization_invitation_digest"] = digest
     request.session.modified = True

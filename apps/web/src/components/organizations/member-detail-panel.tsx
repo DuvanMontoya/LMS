@@ -162,12 +162,14 @@ export function MemberDetailPanel({
   events,
   initialMember,
   initialProfile,
+  isOwnProfile,
   slug,
 }: Readonly<{
   capabilities: readonly string[];
   events: MembershipEventList | undefined;
   initialMember: Membership;
   initialProfile: MemberProfile;
+  isOwnProfile: boolean;
   slug: string;
 }>) {
   const [member, setMember] = useState(initialMember);
@@ -180,10 +182,11 @@ export function MemberDetailPanel({
   const revoke = useRevokeMembership(slug);
   const revokeSessions = useRevokeMemberSessions(slug);
   const passwordRecovery = useSendMemberPasswordRecovery(slug);
-  const canEditProfile = hasCapability(
+  const canManageProfile = hasCapability(
     capabilities,
     'membership.profile.manage',
   );
+  const canEditPersonalProfile = canManageProfile || isOwnProfile;
   const canAssignRoles = hasCapability(capabilities, 'role.assign');
   const canSuspend = hasCapability(capabilities, 'membership.suspend');
   const canReactivate = hasCapability(capabilities, 'membership.reactivate');
@@ -239,8 +242,6 @@ export function MemberDetailPanel({
           first_name: profile.first_name,
           first_surname: profile.first_surname,
           gender: profile.gender,
-          member_type: profile.member_type,
-          institutional_id: profile.institutional_id,
           preferred_name: profile.preferred_name,
           phone: profile.phone,
           middle_name: profile.middle_name,
@@ -252,8 +253,12 @@ export function MemberDetailPanel({
           whatsapp: profile.whatsapp,
           locale: profile.locale,
           timezone: profile.timezone,
-          ...(canEditProfile
-            ? { administrative_notes: profile.administrative_notes ?? '' }
+          ...(canManageProfile
+            ? {
+                administrative_notes: profile.administrative_notes ?? '',
+                institutional_id: profile.institutional_id,
+                member_type: profile.member_type,
+              }
             : {}),
         },
       });
@@ -411,7 +416,7 @@ export function MemberDetailPanel({
                 </p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <ProfileField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Primer nombre"
                     onChange={(value) =>
                       updateProfileField('first_name', value)
@@ -419,7 +424,7 @@ export function MemberDetailPanel({
                     value={profile.first_name}
                   />
                   <ProfileField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Primer apellido"
                     onChange={(value) =>
                       updateProfileField('first_surname', value)
@@ -427,7 +432,7 @@ export function MemberDetailPanel({
                     value={profile.first_surname}
                   />
                   <ProfileSelectField
-                    disabled={!canEditProfile}
+                    disabled={!canManageProfile}
                     label="Tipo de miembro"
                     onChange={(value) =>
                       updateProfileField('member_type', value)
@@ -448,7 +453,7 @@ export function MemberDetailPanel({
                 </p>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <ProfileField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Segundo nombre"
                     onChange={(value) =>
                       updateProfileField('middle_name', value)
@@ -456,7 +461,7 @@ export function MemberDetailPanel({
                     value={profile.middle_name}
                   />
                   <ProfileField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Segundo apellido"
                     onChange={(value) =>
                       updateProfileField('second_surname', value)
@@ -464,7 +469,7 @@ export function MemberDetailPanel({
                     value={profile.second_surname}
                   />
                   <ProfileField
-                    disabled={!canEditProfile}
+                    disabled={!canManageProfile}
                     label="ID institucional"
                     onChange={(value) =>
                       updateProfileField('institutional_id', value)
@@ -472,7 +477,7 @@ export function MemberDetailPanel({
                     value={profile.institutional_id}
                   />
                   <ProfileField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Nombre visible"
                     onChange={(value) =>
                       updateProfileField('preferred_name', value)
@@ -480,7 +485,7 @@ export function MemberDetailPanel({
                     value={profile.preferred_name}
                   />
                   <ProfileField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="WhatsApp"
                     onChange={(value) => updateProfileField('whatsapp', value)}
                     type="tel"
@@ -488,7 +493,7 @@ export function MemberDetailPanel({
                   />
                   <div className="space-y-2">
                     <ProfileField
-                      disabled={!canEditProfile}
+                      disabled={!canEditPersonalProfile}
                       label="Fecha de nacimiento"
                       onChange={(value) => {
                         const documentType = suggestedDocument(
@@ -511,7 +516,7 @@ export function MemberDetailPanel({
                     ) : null}
                   </div>
                   <ProfileSelectField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Tipo de documento"
                     onChange={(value) =>
                       updateProfileField('document_type', value)
@@ -520,7 +525,7 @@ export function MemberDetailPanel({
                     value={profile.document_type}
                   />
                   <ProfileField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Número de documento"
                     onChange={(value) =>
                       updateProfileField('document_number', value)
@@ -528,7 +533,7 @@ export function MemberDetailPanel({
                     value={profile.document_number}
                   />
                   <ProfileSelectField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Género"
                     onChange={(value) => updateProfileField('gender', value)}
                     options={genderOptions}
@@ -547,7 +552,7 @@ export function MemberDetailPanel({
                 </p>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <ProfileSelectField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Situación educativa"
                     onChange={(value) => {
                       setProfile((current) => ({
@@ -565,7 +570,7 @@ export function MemberDetailPanel({
                   />
                   {educationInstitutionApplies(profile.education_stage) ? (
                     <ProfileField
-                      disabled={!canEditProfile}
+                      disabled={!canEditPersonalProfile}
                       label="Institución educativa"
                       onChange={(value) =>
                         updateProfileField('education_institution', value)
@@ -574,7 +579,7 @@ export function MemberDetailPanel({
                     />
                   ) : null}
                   <ProfileSelectField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Grado o nivel"
                     onChange={(value) =>
                       updateProfileField('education_level', value)
@@ -583,7 +588,7 @@ export function MemberDetailPanel({
                     value={profile.education_level}
                   />
                   <ProfileSelectField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Departamento"
                     onChange={(value) =>
                       updateProfileField('department_code', value)
@@ -592,7 +597,7 @@ export function MemberDetailPanel({
                     value={profile.department_code}
                   />
                   <ProfileField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Municipio o ciudad"
                     onChange={(value) =>
                       updateProfileField('municipality', value)
@@ -600,13 +605,13 @@ export function MemberDetailPanel({
                     value={profile.municipality}
                   />
                   <ProfileField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Dirección"
                     onChange={(value) => updateProfileField('address', value)}
                     value={profile.address}
                   />
                   <ProfileSelectField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Estrato"
                     onChange={(value) =>
                       updateProfileField('socioeconomic_stratum', value)
@@ -615,7 +620,7 @@ export function MemberDetailPanel({
                     value={profile.socioeconomic_stratum}
                   />
                   <ProfileSelectField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Motivo de registro"
                     onChange={(value) => {
                       setProfile((current) => ({
@@ -632,7 +637,7 @@ export function MemberDetailPanel({
                   />
                   {profile.registration_reason === 'other' ? (
                     <ProfileField
-                      disabled={!canEditProfile}
+                      disabled={!canEditPersonalProfile}
                       label="Detalle del motivo"
                       onChange={(value) =>
                         updateProfileField('registration_reason_detail', value)
@@ -641,7 +646,7 @@ export function MemberDetailPanel({
                     />
                   ) : null}
                   <ProfileSelectField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Idioma"
                     onChange={(value) => updateProfileField('locale', value)}
                     options={[
@@ -651,7 +656,7 @@ export function MemberDetailPanel({
                     value={profile.locale}
                   />
                   <ProfileSelectField
-                    disabled={!canEditProfile}
+                    disabled={!canEditPersonalProfile}
                     label="Zona horaria"
                     onChange={(value) => updateProfileField('timezone', value)}
                     options={[
@@ -662,7 +667,7 @@ export function MemberDetailPanel({
                   />
                 </div>
               </details>
-              {canEditProfile ? (
+              {canManageProfile ? (
                 <details className="rounded-lg border bg-muted/20 p-4">
                   <summary className="cursor-pointer text-sm font-medium marker:text-primary">
                     Notas administrativas
@@ -685,7 +690,7 @@ export function MemberDetailPanel({
                   </div>
                 </details>
               ) : null}
-              {canEditProfile ? (
+              {canEditPersonalProfile ? (
                 <Button disabled={updateProfile.isPending} type="submit">
                   {updateProfile.isPending ? (
                     <LoaderCircle className="animate-spin" />

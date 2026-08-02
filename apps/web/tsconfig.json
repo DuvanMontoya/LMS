@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -27,14 +23,9 @@
         "name": "next"
       }
     ],
-    "types": [
-      "vitest/globals",
-      "@testing-library/jest-dom"
-    ],
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
@@ -43,11 +34,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts",
-    ".local/e2e-next-689862d307204ccba89e059f3f8dd38f/types/**/*.ts",
-    ".local/e2e-next-689862d307204ccba89e059f3f8dd38f/dev/types/**/*.ts"
+    "**/*.mts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }
