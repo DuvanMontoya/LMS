@@ -68,4 +68,18 @@ describe('LoginForm', () => {
       unmount();
     }
   });
+
+  it('locks invited signup to the server-provided email', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <SignUpForm invitedEmail="owner@example.test" />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByLabelText('Correo electrónico')).toHaveValue(
+      'owner@example.test',
+    );
+    expect(screen.getByLabelText('Correo electrónico')).toHaveAttribute(
+      'readonly',
+    );
+  });
 });

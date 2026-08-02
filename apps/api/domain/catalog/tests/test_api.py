@@ -35,13 +35,28 @@ class CatalogApiTests(TestCase):
         client.force_authenticate(user=user)
         return client
 
+    def operational_organization(self, *, email: str, name: str, slug: str):
+        governance_owner = self.user(f"governance-{email}")
+        organization = create_organization_with_owner(
+            actor=governance_owner, name=name, slug=slug
+        )
+        administrator = self.user(email)
+        add_existing_member_with_roles(
+            actor=governance_owner,
+            organization=organization,
+            user=administrator,
+            roles={RoleCode.ADMINISTRATOR},
+        )
+        return administrator, organization
+
     def test_teaching_responsibilities_are_administered_and_self_scoped(self) -> None:
-        owner = self.user("owner-responsibilities@example.test")
+        owner, organization = self.operational_organization(
+            email="owner-responsibilities@example.test",
+            name="Institución",
+            slug="responsabilidades",
+        )
         instructor = self.user("instructor-responsibilities@example.test")
         other_instructor = self.user("other-instructor@example.test")
-        organization = create_organization_with_owner(
-            actor=owner, name="Institución", slug="responsabilidades"
-        )
         for user in (instructor, other_instructor):
             add_existing_member_with_roles(
                 actor=owner,
@@ -118,9 +133,8 @@ class CatalogApiTests(TestCase):
         self.assertIsNotNone(closed.data["ended_at"])
 
     def test_owner_creates_and_lists_curriculum_structure(self) -> None:
-        owner = self.user("owner@example.test")
-        organization = create_organization_with_owner(
-            actor=owner, name="Institución", slug="institucion"
+        owner, organization = self.operational_organization(
+            email="owner@example.test", name="Institución", slug="institucion"
         )
         client = self.client_for(owner)
         prefix = f"/api/v1/organizations/{organization.slug}/catalog"
@@ -160,13 +174,11 @@ class CatalogApiTests(TestCase):
     def test_reader_only_sees_active_catalog_and_other_organization_is_not_found(
         self,
     ) -> None:
-        owner = self.user("owner@example.test")
-        other = self.user("other@example.test")
-        organization = create_organization_with_owner(
-            actor=owner, name="Institución", slug="institucion"
+        owner, organization = self.operational_organization(
+            email="owner@example.test", name="Institución", slug="institucion"
         )
-        external = create_organization_with_owner(
-            actor=other, name="Externa", slug="externa"
+        other, external = self.operational_organization(
+            email="other@example.test", name="Externa", slug="externa"
         )
         active = create_area(
             actor=owner,
@@ -202,9 +214,8 @@ class CatalogApiTests(TestCase):
         )
 
     def test_concepts_are_scoped_to_the_organization(self) -> None:
-        owner = self.user("owner@example.test")
-        organization = create_organization_with_owner(
-            actor=owner, name="Institución", slug="institucion"
+        owner, organization = self.operational_organization(
+            email="owner@example.test", name="Institución", slug="institucion"
         )
         create_concept(
             actor=owner,
@@ -220,9 +231,8 @@ class CatalogApiTests(TestCase):
         self.assertEqual(response.data[0]["name"], "Función")
 
     def test_catalog_filters_and_create_endpoints(self) -> None:
-        owner = self.user("owner@example.test")
-        organization = create_organization_with_owner(
-            actor=owner, name="Institución", slug="institucion"
+        owner, organization = self.operational_organization(
+            email="owner@example.test", name="Institución", slug="institucion"
         )
         client = self.client_for(owner)
         prefix = f"/api/v1/organizations/{organization.slug}/catalog"
@@ -255,9 +265,8 @@ class CatalogApiTests(TestCase):
         self.assertEqual(ordered.data[0]["id"], created.data["id"])
 
     def test_owner_updates_and_archives_simple_catalog_entities(self) -> None:
-        owner = self.user("owner@example.test")
-        organization = create_organization_with_owner(
-            actor=owner, name="Institución", slug="institucion"
+        owner, organization = self.operational_organization(
+            email="owner@example.test", name="Institución", slug="institucion"
         )
         client = self.client_for(owner)
         prefix = f"/api/v1/organizations/{organization.slug}/catalog"
@@ -279,9 +288,8 @@ class CatalogApiTests(TestCase):
         self.assertEqual(restored.data["status"], CatalogStatus.ACTIVE)
 
     def test_archive_dependency_rejection_returns_the_safe_catalog_error(self) -> None:
-        owner = self.user("owner@example.test")
-        organization = create_organization_with_owner(
-            actor=owner, name="Institución", slug="institucion"
+        owner, organization = self.operational_organization(
+            email="owner@example.test", name="Institución", slug="institucion"
         )
         concept = create_concept(
             actor=owner,
@@ -333,9 +341,8 @@ class CatalogApiTests(TestCase):
     def test_subject_prerequisites_are_replaced_and_cycles_return_conflict(
         self,
     ) -> None:
-        owner = self.user("owner@example.test")
-        organization = create_organization_with_owner(
-            actor=owner, name="Institución", slug="institucion"
+        owner, organization = self.operational_organization(
+            email="owner@example.test", name="Institución", slug="institucion"
         )
         client = self.client_for(owner)
         prefix = f"/api/v1/organizations/{organization.slug}/catalog"
@@ -400,9 +407,8 @@ class CatalogApiTests(TestCase):
         self.assertEqual(cycle.data["code"], "prerequisite_cycle")
 
     def test_topic_concept_association_keeps_the_request_order(self) -> None:
-        owner = self.user("owner@example.test")
-        organization = create_organization_with_owner(
-            actor=owner, name="Institución", slug="institucion"
+        owner, organization = self.operational_organization(
+            email="owner@example.test", name="Institución", slug="institucion"
         )
         client = self.client_for(owner)
         prefix = f"/api/v1/organizations/{organization.slug}/catalog"
@@ -460,9 +466,8 @@ class CatalogApiTests(TestCase):
         )
 
     def test_concept_prerequisite_rejects_a_cycle(self) -> None:
-        owner = self.user("owner@example.test")
-        organization = create_organization_with_owner(
-            actor=owner, name="Institución", slug="institucion"
+        owner, organization = self.operational_organization(
+            email="owner@example.test", name="Institución", slug="institucion"
         )
         client = self.client_for(owner)
         prefix = f"/api/v1/organizations/{organization.slug}/catalog"
@@ -503,9 +508,8 @@ class CatalogApiTests(TestCase):
         self.assertEqual(cycle.data["code"], "prerequisite_cycle")
 
     def test_objective_concept_associations_are_available_in_one_query(self) -> None:
-        owner = self.user("owner@example.test")
-        organization = create_organization_with_owner(
-            actor=owner, name="Institución", slug="institucion"
+        owner, organization = self.operational_organization(
+            email="owner@example.test", name="Institución", slug="institucion"
         )
         client = self.client_for(owner)
         prefix = f"/api/v1/organizations/{organization.slug}/catalog"
@@ -559,9 +563,8 @@ class CatalogApiTests(TestCase):
         )
 
     def test_detail_actions_update_move_and_archive_objective(self) -> None:
-        owner = self.user("owner@example.test")
-        organization = create_organization_with_owner(
-            actor=owner, name="Institución", slug="institucion"
+        owner, organization = self.operational_organization(
+            email="owner@example.test", name="Institución", slug="institucion"
         )
         client = self.client_for(owner)
         prefix = f"/api/v1/organizations/{organization.slug}/catalog"

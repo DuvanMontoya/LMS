@@ -13,6 +13,7 @@ from domain.organizations.models import Membership, Organization
 from domain.organizations.services import (
     add_existing_member_with_roles,
     create_organization_with_owner,
+    replace_membership_roles,
 )
 
 if TYPE_CHECKING:
@@ -33,17 +34,31 @@ class Command(BaseCommand):
             )
         password = str(options["password"])
 
-        def user(email: str) -> User:
+        def user(email: str, first_name: str, last_name: str) -> User:
             existing = cast(
                 "User | None", get_user_model().objects.filter(email=email).first()
             )
             if existing is None:
                 manager = cast("UserManager", get_user_model().objects)
-                existing = manager.create_user(email=email, password=password)
+                existing = manager.create_user(
+                    email=email,
+                    password=password,
+                    first_name=first_name,
+                    last_name=last_name,
+                )
             else:
                 existing.set_password(password)
                 existing.is_active = True
-                existing.save(update_fields=["password", "is_active"])
+                existing.first_name = first_name
+                existing.last_name = last_name
+                existing.save(
+                    update_fields=[
+                        "password",
+                        "is_active",
+                        "first_name",
+                        "last_name",
+                    ]
+                )
             EmailAddress.objects.update_or_create(
                 user=existing,
                 email=email,
@@ -51,13 +66,13 @@ class Command(BaseCommand):
             )
             return existing
 
-        owner = user("owner@demo.local")
-        administrator = user("administrator@demo.local")
-        learner = user("learner@demo.local")
-        author = user("author@demo.local")
-        reviewer = user("reviewer@demo.local")
-        instructor = user("instructor@demo.local")
-        external_owner = user("external@demo.local")
+        owner = user("owner@demo.local", "Propietario", "Demo")
+        administrator = user("administrator@demo.local", "Administrador", "Demo")
+        learner = user("learner@demo.local", "Estudiante", "Demo")
+        author = user("author@demo.local", "Autor", "Demo")
+        reviewer = user("reviewer@demo.local", "Revisor", "Demo")
+        instructor = user("instructor@demo.local", "Docente", "Demo")
+        external_owner = user("external@demo.local", "Propietario", "Externo")
 
         organization = Organization.objects.filter(slug="organizacion-demo").first()
         if organization is None:
@@ -81,13 +96,18 @@ class Command(BaseCommand):
             (reviewer, {RoleCode.REVIEWER}),
             (instructor, {RoleCode.INSTRUCTOR}),
         ):
-            if not Membership.objects.filter(
+            membership = Membership.objects.filter(
                 organization=organization,
                 user=member,
                 status=MembershipStatus.ACTIVE.value,
-            ).exists():
+            ).first()
+            if membership is None:
                 add_existing_member_with_roles(
                     actor=owner, organization=organization, user=member, roles=roles
+                )
+            else:
+                replace_membership_roles(
+                    actor=owner, membership=membership, roles=roles
                 )
         if not Organization.objects.filter(slug="organizacion-externa-demo").exists():
             create_organization_with_owner(

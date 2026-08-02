@@ -95,6 +95,9 @@ async function required<T>(
 
 export async function getMyLearning(slug: string) {
   const organization = await getOrganizationForPage(slug);
+  if (!organization.access.capabilities.includes('assessment.attempt')) {
+    notFound();
+  }
   const client = await createPlatformServerClient();
   const enrollments = (await required(
     client.GET('/api/v1/organizations/{slug}/learning/me/', {
@@ -218,7 +221,7 @@ export async function getCohorts(slug: string, query: CohortQuery = {}) {
       params: { path: { slug }, query },
       cache: 'no-store',
     }),
-    'No fue posible consultar las cohortes.',
+    'No fue posible consultar los grupos de curso.',
   )) as CohortPage;
   return { ...organization, cohorts };
 }
@@ -266,7 +269,7 @@ export async function getCohort(slug: string, cohortId: string) {
         params: { path },
         cache: 'no-store',
       }),
-      'No fue posible consultar la cohorte.',
+      'No fue posible consultar el grupo de curso.',
     ) as Promise<Cohort>,
     required(
       client.GET(
@@ -276,7 +279,7 @@ export async function getCohort(slug: string, cohortId: string) {
           cache: 'no-store',
         },
       ),
-      'No fue posible consultar el progreso de la cohorte.',
+      'No fue posible consultar el progreso del grupo de curso.',
     ) as Promise<CohortProgress>,
     required(
       client.GET(
@@ -286,7 +289,7 @@ export async function getCohort(slug: string, cohortId: string) {
           cache: 'no-store',
         },
       ),
-      'No fue posible consultar las matrículas de la cohorte.',
+      'No fue posible consultar las matrículas del grupo de curso.',
     ),
     canManage
       ? getLearningAdminOptionsFromClient(client, slug)
@@ -368,7 +371,7 @@ async function getLearningAdminOptionsFromClient(
           },
           cache: 'no-store',
         }),
-        'No fue posible consultar las cohortes disponibles.',
+        'No fue posible consultar los grupos de curso disponibles.',
       ) as Promise<CohortPage>,
       required(
         client.GET('/api/v1/organizations/{slug}/learning/academic-groups/', {

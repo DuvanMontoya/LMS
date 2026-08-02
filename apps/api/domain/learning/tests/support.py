@@ -9,6 +9,7 @@ from domain.courses.services import (
     submit_revision_for_review,
 )
 from domain.learning.services import enroll_member
+from domain.organizations.choices import RoleCode
 from domain.organizations.models import Membership
 from domain.publishing.services import (
     create_draft_from_release,
@@ -83,8 +84,14 @@ class LearningFixtureMixin(PublishingFixtureMixin):
             revision=draft,
             expected_version=draft.lock_version,
         )
+        reviewer = self.member(
+            owner,
+            organization,
+            RoleCode.REVIEWER,
+            f"release-reviewer-{revision.id}@example.test",
+        )
         draft = approve_revision(
-            actor=owner,
+            actor=reviewer,
             organization=organization,
             revision=draft,
             expected_version=draft.lock_version,

@@ -9,9 +9,11 @@ from domain.courses.models import Course
 from domain.learning.choices import AcademicPeriodType, CohortStatus, EnrollmentStatus
 from domain.learning.models import AcademicPeriod, CourseEnrollment, LearningCohort
 from domain.learning.services import (
+    archive_cohort,
     create_academic_period,
     create_cohort,
     enroll_member,
+    revoke_enrollment,
 )
 from domain.organizations.choices import MembershipStatus
 from domain.organizations.models import Membership, Organization
@@ -66,34 +68,64 @@ class Command(BaseCommand):
                 starts_on=date(2026, 1, 1),
                 ends_on=date(2026, 12, 31),
             )
+        release = publication.current_release
         cohort = LearningCohort.objects.filter(
-            organization=organization, course=course, slug=DEMO_COHORT
+            organization=organization,
+            course=course,
+            release=release,
+            status=CohortStatus.ACTIVE,
         ).first()
         if cohort is None:
+            previous = LearningCohort.objects.filter(
+                organization=organization,
+                course=course,
+                slug=DEMO_COHORT,
+                status=CohortStatus.ACTIVE,
+            ).first()
+            if previous is not None:
+                archive_cohort(
+                    actor=owner,
+                    cohort=previous,
+                    expected_cohort_version=previous.lock_version,
+                )
+            cohort_slug = (
+                DEMO_COHORT
+                if not LearningCohort.objects.filter(
+                    organization=organization,
+                    course=course,
+                    slug=DEMO_COHORT,
+                ).exists()
+                else f"{DEMO_COHORT}-v{release.number}"
+            )
             cohort = create_cohort(
                 actor=owner,
                 organization=organization,
                 course=course,
-                release=publication.current_release,
+                release=release,
                 academic_period=academic_period,
                 name="Cohorte inicial de cálculo",
-                slug=DEMO_COHORT,
-            )
-        elif (
-            cohort.status != CohortStatus.ACTIVE
-            or cohort.release_id != publication.current_release_id
-        ):
-            raise CommandError(
-                "La cohorte demo existe archivada o fijada a otro release."
+                slug=cohort_slug,
             )
         enrollment = (
-            CourseEnrollment.objects.filter(
+            CourseEnrollment.objects.select_related("current_release_assignment")
+            .filter(
                 membership=membership,
                 course=course,
             )
             .exclude(status=EnrollmentStatus.REVOKED)
             .first()
         )
+        if enrollment is not None and (
+            enrollment.current_release_assignment_id is None
+            or enrollment.current_release_assignment.release_id != release.id
+            or enrollment.cohort_id != cohort.id
+        ):
+            revoke_enrollment(
+                actor=owner,
+                enrollment=enrollment,
+                expected_version=enrollment.lock_version,
+            )
+            enrollment = None
         if enrollment is None:
             enrollment = enroll_member(
                 actor=owner,

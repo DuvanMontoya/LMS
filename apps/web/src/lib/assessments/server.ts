@@ -420,14 +420,17 @@ export async function getAssessmentDeliveries(slug: string) {
       versions: [],
     };
   }
-  const [assessments, enrollments] = await Promise.all([
+  const [versions, enrollments] = await Promise.all([
     required(
-      client.GET('/api/v1/organizations/{slug}/assessments/', {
-        params: { path: { slug } },
-        cache: 'no-store',
-      }),
-      'No fue posible consultar las evaluaciones.',
-    ) as Promise<AssessmentPage>,
+      client.GET(
+        '/api/v1/organizations/{slug}/assessments/approved-version-options/',
+        {
+          params: { path: { slug } },
+          cache: 'no-store',
+        },
+      ),
+      'No fue posible consultar las evaluaciones aprobadas.',
+    ) as Promise<AssessmentVersion[]>,
     required(
       client.GET('/api/v1/organizations/{slug}/learning/enrollments/', {
         params: { path: { slug }, query: { page_size: 100 } },
@@ -436,23 +439,6 @@ export async function getAssessmentDeliveries(slug: string) {
       'No fue posible consultar las matrículas.',
     ) as Promise<EnrollmentPage>,
   ]);
-  const versionGroups = await Promise.all(
-    assessments.results.map(async (assessment) => {
-      const versions = (await required(
-        client.GET(
-          '/api/v1/organizations/{slug}/assessments/{assessment_slug}/versions/',
-          {
-            params: {
-              path: { assessment_slug: assessment.slug, slug },
-            },
-            cache: 'no-store',
-          },
-        ),
-        'No fue posible consultar las versiones.',
-      )) as AssessmentVersion[];
-      return versions;
-    }),
-  );
   const releaseById = new Map<
     string,
     {
@@ -479,7 +465,7 @@ export async function getAssessmentDeliveries(slug: string) {
     deliveries,
     enrollments: enrollments.results,
     releaseOptions,
-    versions: versionGroups.flat(),
+    versions,
   };
 }
 

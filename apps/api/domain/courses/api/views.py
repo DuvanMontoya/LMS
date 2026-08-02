@@ -18,9 +18,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from domain.catalog.models import LearningObjective, Subject, Topic
-from domain.organizations.choices import RoleCode
+from domain.organizations.capabilities import Capability
 from domain.organizations.models import Membership, Organization
-from domain.organizations.policies import active_membership, active_roles
+from domain.organizations.policies import has_capability
 from domain.organizations.selectors import organization_visible_to
 
 from ..choices import AuthoringStatus, StructureStatus
@@ -183,23 +183,25 @@ def _require_manage(request: Request, organization: Organization) -> None:
 def _can_manage_teaching_exceptions(
     request: Request, organization: Organization
 ) -> bool:
-    membership = active_membership(request.user, organization)
-    return bool({RoleCode.OWNER, RoleCode.ADMINISTRATOR} & active_roles(membership))
+    return has_capability(
+        request.user,
+        organization,
+        Capability.CATALOG_TEACHING_RESPONSIBILITY_MANAGE,
+    )
 
 
 class CourseTeachingExceptionListCreateView(APIView):
     @extend_schema(responses={200: CourseTeachingExceptionSerializer(many=True)})
     def get(self, request: Request, slug: str) -> Response:
         organization = _organization(request, slug)
-        membership = active_membership(request.user, organization)
-        roles = active_roles(membership)
-        if not roles & {
-            RoleCode.OWNER,
-            RoleCode.ADMINISTRATOR,
-            RoleCode.AUTHOR,
-            RoleCode.REVIEWER,
-            RoleCode.INSTRUCTOR,
-        }:
+        if not (
+            has_capability(request.user, organization, Capability.CATALOG_VIEW)
+            or has_capability(
+                request.user,
+                organization,
+                Capability.CATALOG_TEACHING_RESPONSIBILITY_VIEW,
+            )
+        ):
             raise PermissionDenied("course_permission_denied")
         queryset = CourseTeachingException.objects.filter(
             course__organization=organization

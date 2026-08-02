@@ -12,6 +12,7 @@ from domain.content.services import save_unit_content
 from domain.courses.models import Course
 from domain.courses.services import (
     approve_revision,
+    confirm_completion_policy,
     create_course,
     create_module,
     create_unit,
@@ -135,6 +136,15 @@ class Command(BaseCommand):
                     ],
                 },
             )
+        _, revision = confirm_completion_policy(
+            actor=owner,
+            organization=organization,
+            revision=revision,
+            expected_version=revision.lock_version,
+            require_required_activities=True,
+            minimum_grade_basis_points=None,
+            minimum_attendance_basis_points=None,
+        )
         revision = submit_revision_for_review(
             actor=owner,
             organization=organization,

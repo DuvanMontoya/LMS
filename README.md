@@ -100,9 +100,10 @@ verificados y nunca debe usarse en producción. Puedes iniciar sesión con:
 
 La organización principal es `Organización de demostración` y se abre en
 `/organizaciones/organizacion-demo`. El owner puede administrar miembros; el
-administrador puede añadir personas pero no gestionar owners; el estudiante
-solamente ve su contexto. La organización externa sirve para comprobar que una
-URL ajena devuelve 404.
+administrador opera currículo, grupos, agenda y entregas pero no gestiona owners
+ni califica; el estudiante solamente ve su contexto. Owner no hereda acceso
+académico. La organización externa sirve para comprobar que una URL ajena
+devuelve 404.
 
 `pnpm catalog:demo` no recibe ni imprime contraseñas: crea de forma idempotente
 la estructura Matemáticas, sus temas, conceptos, objetivos y prerrequisitos. El
@@ -167,10 +168,10 @@ obligatorio/recomendado y una justificación. Las entidades archivadas no se
 ofrecen como candidatos y el mensaje de ciclo no revela detalles internos.
 
 El workspace de Cursos separa identidad estable, revisión de autoría y
-estructura ordenada. Owner y administrator pueden administrar cursos; author
-puede editarlos y enviarlos; reviewer puede solicitar cambios; sólo owner y
-administrator pueden aprobar. Instructor ve únicamente revisiones aprobadas y
-learner no tiene acceso a este workspace. Cada mutación exige
+estructura ordenada. Author edita y envía; reviewer solicita cambios o aprueba;
+administrator opera releases aprobados sin convertirse en autor y owner no
+recibe acceso académico. Instructor ve únicamente cursos aprobados dentro de su
+responsabilidad y learner no tiene acceso a este workspace. Cada mutación exige
 `expected_version`; una edición concurrente devuelve `409 revision_conflict` sin
 descartar los valores del formulario. La aprobación exige título, resumen,
 resultado de aprendizaje, al menos un módulo activo y al menos una unidad
@@ -432,8 +433,9 @@ reescribe la anterior. Cambios dirty activan aviso de salida.
 
 Preview y lectura usan el mismo renderer estático tipado. No almacenan HTML,
 SVG o MathML y el código propio no usa `dangerouslySetInnerHTML`. En `draft` y
-`changes_requested` un owner/author autorizado puede editar; `in_review` y
-`approved` son sólo lectura. Reviewer e instructor leen según su rol; learner
+`changes_requested` un author autorizado puede editar; `in_review` y
+`approved` son sólo lectura. Reviewer lee y decide según su rol; instructor
+consulta únicamente cursos aprobados en su alcance y learner
 no accede al workspace. Readiness impide enviar una revisión si una unidad
 activa carece de contenido válido y significativo.
 
@@ -510,9 +512,10 @@ calcula SHA-256 y enlaza al digest anterior. `CoursePublication` puede estar
 Un draft nuevo clona estructura con UUID nuevos y contenido v1 conservando
 digests. Publicarlo después crea el release siguiente.
 
-La biblioteca autenticada lee exclusivamente el snapshot. Owner/administrator
-publican, retiran, ven historial y clonan; learner lee; author, reviewer e
-instructor no publican. Las respuestas son `private, no-store`. No hay acceso
+La biblioteca autenticada lee exclusivamente el snapshot. Administrator
+publica, retira y ve historial; learner lee por matrícula; owner no recibe
+acceso académico y author, reviewer e instructor no publican. Las respuestas
+son `private, no-store`. No hay acceso
 anónimo, JWT, browser storage, matrícula, progreso ni evaluación.
 
 - `/organizaciones/[slug]/cursos/[courseSlug]/publicacion`
@@ -576,9 +579,10 @@ pnpm learning:demo
 ```
 
 El comando es idempotente, sólo funciona con `DEBUG=True`, no crea contraseñas
-y conserva progresos/release existentes. Owner y administrator gestionan
-`/aprendizaje/cohortes` y `/aprendizaje/matriculas`; author/reviewer/instructor
-son sólo lectura según capacidades y learner sólo ve sus matrículas.
+y conserva progresos/release existentes. Administrator gestiona
+`/aprendizaje/cohortes` y `/aprendizaje/matriculas`; owner no entra a learning,
+author/reviewer no ven operación, instructor consulta sólo sus grupos y learner
+sólo ve sus matrículas.
 
 | Objetivo learning | Comando |
 | --- | --- |

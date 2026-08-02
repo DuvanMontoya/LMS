@@ -25,6 +25,7 @@ const capabilityLabels: Record<string, string> = {
   'role.assign_owner': 'Asignar o gestionar propietarios',
   'membership_event.view': 'Ver historial de membresía',
   'catalog.view': 'Ver currículo',
+  'catalog.teaching_responsibility.manage': 'Asignar responsabilidades académicas',
   'catalog.manage': 'Administrar currículo',
   'catalog.manage_prerequisites': 'Administrar prerrequisitos',
   'course.authoring.view': 'Ver cursos en autoría',

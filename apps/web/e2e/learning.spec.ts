@@ -59,7 +59,7 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
   await page.getByLabel('Slug (opcional)').fill('cohorte-e2e-funciones');
   await page.getByLabel('Curso').selectOption(courseSlug);
   await page.getByLabel('Release asignado').selectOption('1');
-  await page.getByRole('button', { name: 'Crear cohorte' }).click();
+  await page.getByRole('button', { name: 'Crear grupo de curso' }).click();
   await expect(page).toHaveURL(cohortsPath, { timeout: 20_000 });
   await page.getByRole('link', { name: 'Cohorte E2E de funciones' }).click();
   await expect(
@@ -72,9 +72,9 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
     'learner@organizations.e2e.test',
   );
   await page.getByRole('button', { name: 'Matricular selección' }).click();
-  await expect(page.getByText('learner@organizations.e2e.test')).toBeVisible({
-    timeout: 20_000,
-  });
+  await expect(
+    page.getByText('learner@organizations.e2e.test').last(),
+  ).toBeVisible({ timeout: 20_000 });
 
   const enrollmentLink = page.getByRole('link', { name: 'Ver matrícula' });
   const enrollmentHref = await enrollmentLink.getAttribute('href');
@@ -167,7 +167,7 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
     .click();
   await expect(
     student.getByRole('progressbar', {
-      name: /2 de 2 unidades completadas, 100/,
+      name: /2 de 2 actividades completadas, 100/,
     }),
   ).toBeVisible({ timeout: 20_000 });
   await expectAccessible(student);
@@ -336,7 +336,7 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
   await page.getByLabel('Release asignado').selectOption('2');
   const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 16);
   await page.getByLabel('Inicio de acceso').fill(tomorrow);
-  await page.getByRole('button', { name: 'Crear cohorte' }).click();
+  await page.getByRole('button', { name: 'Crear grupo de curso' }).click();
   await page.getByRole('link', { name: 'Cohorte futura E2E' }).click();
   await addPersonFromDirectory(
     page,

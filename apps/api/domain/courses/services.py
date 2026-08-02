@@ -18,9 +18,10 @@ from domain.catalog.models import (
     Topic,
 )
 from domain.events.services import record_domain_event
+from domain.organizations.capabilities import Capability
 from domain.organizations.choices import MembershipStatus, RoleCode
 from domain.organizations.models import Membership, Organization
-from domain.organizations.policies import active_membership, active_roles
+from domain.organizations.policies import active_roles, has_capability
 
 from .activity_extensions import clone_activity_binding
 from .choices import (
@@ -123,12 +124,13 @@ def assign_course_teaching_exception(
     rationale: str,
 ) -> CourseTeachingException:
     _require(
-        bool(
-            {RoleCode.OWNER, RoleCode.ADMINISTRATOR}
-            & active_roles(active_membership(actor, organization))  # type: ignore[arg-type]
+        has_capability(  # type: ignore[arg-type]
+            actor,  # pyright: ignore[reportArgumentType]
+            organization,
+            Capability.CATALOG_TEACHING_RESPONSIBILITY_MANAGE,
         ),
         CourseAccessDenied,
-        "Sólo owner o administrator asignan excepciones académicas.",
+        "No tienes capacidad para asignar excepciones académicas.",
     )
     _require(
         course.organization_id == organization.id
@@ -159,14 +161,13 @@ def close_course_teaching_exception(
     *, actor: object, exception: CourseTeachingException, ended_on: date
 ) -> CourseTeachingException:
     _require(
-        bool(
-            {RoleCode.OWNER, RoleCode.ADMINISTRATOR}
-            & active_roles(
-                active_membership(actor, exception.course.organization)  # type: ignore[arg-type]
-            )
+        has_capability(  # type: ignore[arg-type]
+            actor,  # pyright: ignore[reportArgumentType]
+            exception.course.organization,
+            Capability.CATALOG_TEACHING_RESPONSIBILITY_MANAGE,
         ),
         CourseAccessDenied,
-        "Sólo owner o administrator cierran excepciones académicas.",
+        "No tienes capacidad para cerrar excepciones académicas.",
     )
     locked = CourseTeachingException.objects.select_for_update().get(pk=exception.pk)
     if locked.ended_at is not None:

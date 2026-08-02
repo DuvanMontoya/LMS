@@ -90,6 +90,9 @@ export async function getCourseCreationContext(slug: string) {
 export async function getCourseWorkspace(slug: string, courseSlug: string) {
   const organization = await getOrganizationForPage(slug);
   if (!canSeeCourses(organization.access.capabilities)) notFound();
+  const canAuthor = organization.access.capabilities.includes(
+    'course.authoring.view',
+  );
   const client = await createPlatformServerClient();
   const [course, revisions, subjects, objectives] = await Promise.all([
     required(
@@ -105,18 +108,23 @@ export async function getCourseWorkspace(slug: string, courseSlug: string) {
       ),
       'No fue posible consultar las revisiones.',
     ) as Promise<RevisionList>,
-    required(
-      client.GET('/api/v1/organizations/{slug}/catalog/subjects/', {
-        params: { path: { slug } },
-      }),
-      'No fue posible consultar las asignaturas.',
-    ) as Promise<SubjectList>,
-    required(
-      client.GET('/api/v1/organizations/{slug}/catalog/learning-objectives/', {
-        params: { path: { slug } },
-      }),
-      'No fue posible consultar los objetivos.',
-    ) as Promise<ObjectiveList>,
+    canAuthor
+      ? (required(
+          client.GET('/api/v1/organizations/{slug}/catalog/subjects/', {
+            params: { path: { slug } },
+          }),
+          'No fue posible consultar las asignaturas.',
+        ) as Promise<SubjectList>)
+      : Promise.resolve([] as SubjectList),
+    canAuthor
+      ? (required(
+          client.GET(
+            '/api/v1/organizations/{slug}/catalog/learning-objectives/',
+            { params: { path: { slug } } },
+          ),
+          'No fue posible consultar los objetivos.',
+        ) as Promise<ObjectiveList>)
+      : Promise.resolve([] as ObjectiveList),
   ]);
   const revision = [...revisions].sort(
     (left, right) => right.number - left.number,
@@ -131,20 +139,24 @@ export async function getCourseWorkspace(slug: string, courseSlug: string) {
       ),
       'No fue posible consultar la estructura.',
     ) as Promise<Outline>,
-    required(
-      client.GET(
-        '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/transitions/',
-        { params: { path } },
-      ),
-      'No fue posible consultar el historial.',
-    ) as Promise<TransitionList>,
-    required(
-      client.GET(
-        '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/readiness/',
-        { params: { path } },
-      ),
-      'No fue posible validar la revisión.',
-    ) as Promise<Readiness>,
+    canAuthor
+      ? (required(
+          client.GET(
+            '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/transitions/',
+            { params: { path } },
+          ),
+          'No fue posible consultar el historial.',
+        ) as Promise<TransitionList>)
+      : Promise.resolve([] as TransitionList),
+    canAuthor
+      ? (required(
+          client.GET(
+            '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/readiness/',
+            { params: { path } },
+          ),
+          'No fue posible validar la revisión.',
+        ) as Promise<Readiness>)
+      : Promise.resolve(null),
   ]);
   const topicLists = await Promise.all(
     subjects.map(
@@ -160,6 +172,7 @@ export async function getCourseWorkspace(slug: string, courseSlug: string) {
   );
   return {
     ...organization,
+    canAuthor,
     course,
     objectives,
     outline,

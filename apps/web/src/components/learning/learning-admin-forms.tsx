@@ -268,7 +268,7 @@ export function CohortCreateForm({
       </Field>
       <Field
         error={form.formState.errors.release_number?.message}
-        hint="La cohorte permanecerá fijada a esta versión."
+        hint="El grupo de curso permanecerá fijado a esta versión."
         label="Release asignado"
         name="cohort-release"
       >
@@ -289,7 +289,7 @@ export function CohortCreateForm({
       </Field>
       <Field
         error={form.formState.errors.academic_group_id?.message}
-        hint="Opcional. Organiza la cohorte institucionalmente; no matricula integrantes por sí solo."
+        hint="Opcional. Organiza el grupo de curso institucionalmente; no matricula integrantes por sí solo."
         label="Grupo académico"
         name="cohort-academic-group"
       >
@@ -341,7 +341,7 @@ export function CohortCreateForm({
       <SubmitState
         disabled={!courses.length || !academicPeriods.length}
         error={mutation.error}
-        label="Crear cohorte"
+        label="Crear grupo de curso"
         pending={mutation.isPending}
       />
     </form>

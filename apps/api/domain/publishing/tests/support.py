@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import date
+
+from domain.catalog.services import assign_subject_teaching_responsibility
 from domain.content.services import save_unit_content
 from domain.content.tests.support import ContentFixtureMixin, full_document
 from domain.courses.services import (
@@ -8,6 +11,8 @@ from domain.courses.services import (
     replace_unit_topics,
     submit_revision_for_review,
 )
+from domain.organizations.choices import RoleCode
+from domain.organizations.models import Membership
 from domain.publishing.services import publish_approved_revision
 
 
@@ -47,8 +52,23 @@ class PublishingFixtureMixin(ContentFixtureMixin):
             revision=revision,
             expected_version=revision.lock_version,
         )
-        revision = approve_revision(
+        reviewer = self.member(
+            owner,
+            organization,
+            RoleCode.REVIEWER,
+            "publication-reviewer@example.test",
+        )
+        assign_subject_teaching_responsibility(
             actor=owner,
+            organization=organization,
+            subject=revision.subject_alignments.get(position=1).subject,
+            membership=Membership.objects.get(organization=organization, user=reviewer),
+            starts_on=date(2020, 1, 1),
+            ends_on=None,
+            rationale="Revisión académica explícita del fixture.",
+        )
+        revision = approve_revision(
+            actor=reviewer,
             organization=organization,
             revision=revision,
             expected_version=revision.lock_version,

@@ -48,6 +48,7 @@ type FieldProps<T extends FieldValues> = {
   error?: string | undefined;
   type?: 'email' | 'password' | 'text';
   autoComplete: string;
+  readOnly?: boolean;
 };
 
 function Field<T extends FieldValues>({
@@ -57,6 +58,7 @@ function Field<T extends FieldValues>({
   error,
   type = 'text',
   autoComplete,
+  readOnly = false,
 }: FieldProps<T>) {
   const id = useId();
   const errorId = `${id}-error`;
@@ -67,6 +69,7 @@ function Field<T extends FieldValues>({
         id={id}
         type={type}
         autoComplete={autoComplete}
+        readOnly={readOnly}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : undefined}
         className="auth-control"
@@ -270,14 +273,20 @@ export function LoginForm({
   );
 }
 
-export function SignUpForm() {
+export function SignUpForm({
+  invitedEmail,
+}: Readonly<{ invitedEmail?: string }> = {}) {
   const router = useRouter();
   const signUp = useSignUp();
   const hydrated = useHydrated();
   const [message, setMessage] = useState<string | null>(null);
   const form = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { email: '', password: '', confirmation: '' },
+    defaultValues: {
+      email: invitedEmail ?? '',
+      password: '',
+      confirmation: '',
+    },
   });
   const onSubmit = async ({ email, password }: SignUpValues) => {
     setMessage(null);
@@ -304,6 +313,7 @@ export function SignUpForm() {
           label="Correo electrónico"
           type="email"
           autoComplete="email"
+          readOnly={Boolean(invitedEmail)}
           register={form.register}
           error={form.formState.errors.email?.message}
         />

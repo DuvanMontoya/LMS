@@ -148,7 +148,7 @@ export default async function GradebookDetailPage({
           </div>
           <form>
             <label className="flex items-center gap-2 text-sm">
-              <span>Cohorte</span>
+              <span>Grupo de curso</span>
               <select
                 className="academic-control"
                 defaultValue={query.cohort ?? ''}
@@ -198,7 +198,7 @@ export default async function GradebookDetailPage({
                   >
                     {summary.learner_name}
                     <span className="block text-xs text-muted-foreground">
-                      {summary.cohort_name ?? 'Sin cohorte'}
+                      {summary.cohort_name ?? 'Sin grupo de curso'}
                     </span>
                   </th>
                   {activeColumns.map((column) => {

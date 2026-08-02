@@ -7,11 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { roleLabel, sortRoles } from '@/lib/organizations/labels';
 import { getAccessContext } from '@/lib/organizations/server';
+import { primaryWorkspaceHref } from '@/lib/organizations/workspace-route';
 
 export default async function OrganizationsPage() {
   const context = await getAccessContext();
   if (context.organizations.length === 1) {
-    redirect(`/organizaciones/${context.organizations[0]!.slug}`);
+    const organization = context.organizations[0]!;
+    redirect(primaryWorkspaceHref(organization.slug, organization.roles));
   }
   return (
     <main className="academic-page">
@@ -45,7 +47,10 @@ export default async function OrganizationsPage() {
             <li key={organization.id}>
               <Link
                 className="group grid gap-4 px-5 py-4 hover:bg-muted/20 sm:grid-cols-[2.5rem_minmax(12rem,1fr)_minmax(10rem,0.7fr)_2rem] sm:items-center"
-                href={`/organizaciones/${organization.slug}`}
+                href={primaryWorkspaceHref(
+                  organization.slug,
+                  organization.roles,
+                )}
               >
                 <span className="grid size-9 place-items-center rounded-md bg-primary/10 text-primary">
                   <Building2 className="size-4" />

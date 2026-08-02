@@ -57,6 +57,11 @@ https://docs.moodle.org/502/en/Restrict_access_settings.
 - Una sesion docente posterior puede ser opcional y contextual al grupo, pero
   no modifica avance, desbloqueo o nota. Volverla obligatoria exige una nueva
   revision/release y una migracion explicita del grupo.
+- Una `CourseGroupActivity` en vivo puede tener varias series. Cada serie
+  declara de forma inmutable si aporta evidencia a `ActivityProgress`; las
+  series suplementarias conservan grupo, periodo, audiencia y contexto, pero
+  sus webhooks no alteran avance. El booleano legado
+  `counts_toward_progress` permanece cerrado para nuevas escrituras.
 
 ## Invariantes y migracion
 

@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { components } from '@/lib/api/generated/platform';
 import { useCreateDiscipline, useCreateSubject } from '@/lib/catalog/hooks';
+import { entitySlug } from '@/lib/catalog/entity-slug';
 
 type Area = components['schemas']['Area'];
 type Discipline = components['schemas']['Discipline'];
@@ -148,16 +149,27 @@ function EntityForm<T extends DisciplineValues | SubjectValues>({
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${selectName}-name`}>Nombre</Label>
-        <Input id={`${selectName}-name`} {...form.register('name' as never)} />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor={`${selectName}-slug`}>Slug</Label>
         <Input
-          className="font-mono"
-          id={`${selectName}-slug`}
-          {...form.register('slug' as never)}
+          autoFocus={embedded}
+          id={`${selectName}-name`}
+          placeholder={
+            selectName === 'area_id'
+              ? 'Ej. Matemáticas'
+              : 'Ej. Álgebra elemental'
+          }
+          {...form.register('name' as never, {
+            onChange: (event) =>
+              form.setValue(
+                'slug' as never,
+                entitySlug(event.target.value) as never,
+                {
+                  shouldValidate: true,
+                },
+              ),
+          })}
         />
       </div>
+      <input type="hidden" {...form.register('slug' as never)} />
       <Button disabled={pending || options.length === 0} type="submit">
         Crear
       </Button>

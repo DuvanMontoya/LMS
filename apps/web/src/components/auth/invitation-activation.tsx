@@ -84,7 +84,7 @@ export function InvitationActivation({ token }: Readonly<{ token: string }>) {
       <div className="flex flex-wrap gap-2">
         {invitationType !== 'existing_user' ? (
           <Button asChild>
-            <Link href="/auth/registro">Crear cuenta</Link>
+            <Link href="/invitaciones/crear-cuenta">Crear cuenta</Link>
           </Button>
         ) : null}
         <Button

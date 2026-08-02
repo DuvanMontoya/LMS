@@ -91,6 +91,10 @@ urlpatterns = [
         BASE + "manual-grading/<uuid:response_id>/",
         views.ManualGradeView.as_view(),
     ),
+    path(
+        BASE + "approved-version-options/",
+        views.ApprovedAssessmentVersionOptionsView.as_view(),
+    ),
     path(BASE, views.AssessmentListCreateView.as_view()),
     path(ASSESSMENT + "versions/", views.AssessmentVersionListView.as_view()),
     path(

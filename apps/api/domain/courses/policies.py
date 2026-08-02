@@ -6,11 +6,9 @@ from django.utils import timezone
 
 from domain.catalog.models import Subject, SubjectTeachingResponsibility
 from domain.organizations.capabilities import Capability
-from domain.organizations.choices import RoleCode
 from domain.organizations.models import Organization
 from domain.organizations.policies import (
     active_membership,
-    active_roles,
     has_capability,
 )
 
@@ -26,8 +24,11 @@ def has_course_academic_responsibility(
     subjects: list[Subject] | None = None,
 ) -> bool:
     membership = active_membership(actor, organization)  # type: ignore[arg-type]
-    roles = active_roles(membership)
-    if {RoleCode.OWNER, RoleCode.ADMINISTRATOR} & roles:
+    if has_capability(  # type: ignore[arg-type]
+        actor,  # pyright: ignore[reportArgumentType]
+        organization,
+        Capability.CATALOG_TEACHING_RESPONSIBILITY_MANAGE,
+    ):
         return True
     if membership is None:
         return False

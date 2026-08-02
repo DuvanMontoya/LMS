@@ -81,7 +81,7 @@ export default async function EnrollmentsPage({
           <Input
             defaultValue={search}
             name="search"
-            placeholder="Correo, curso o cohorte"
+            placeholder="Correo, curso o grupo de curso"
           />
         </label>
         <label className="grid gap-1.5 text-sm font-medium">

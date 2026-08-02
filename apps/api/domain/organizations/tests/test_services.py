@@ -20,6 +20,7 @@ from domain.organizations.services import (
     assign_role,
     create_organization_with_owner,
     reactivate_membership,
+    replace_membership_roles,
     revoke_membership,
     revoke_role,
     suspend_membership,
@@ -126,7 +127,11 @@ class OrganizationServiceTests(TestCase):
             user=second_owner,
             roles={RoleCode.LEARNER},
         )
-        assign_role(actor=owner, membership=second_membership, role=RoleCode.OWNER)
+        replace_membership_roles(
+            actor=owner,
+            membership=second_membership,
+            roles={RoleCode.OWNER},
+        )
         revoke_role(actor=owner, membership=membership, role=RoleCode.OWNER)
         self.assertFalse(
             has_capability(owner, organization, Capability.ORGANIZATION_VIEW)
@@ -143,3 +148,27 @@ class OrganizationServiceTests(TestCase):
         )
         with self.assertRaises(RoleAssignmentDenied):
             assign_role(actor=administrator, membership=membership, role=RoleCode.OWNER)
+
+    def test_owner_and_maker_checker_roles_are_mutually_exclusive(self) -> None:
+        owner, organization = self.create_organization()
+        owner_membership = Membership.objects.get(organization=organization, user=owner)
+        with self.assertRaises(RoleAssignmentDenied):
+            assign_role(
+                actor=owner,
+                membership=owner_membership,
+                role=RoleCode.INSTRUCTOR,
+            )
+
+        author = self.verified_user("author@example.test")
+        author_membership = add_existing_member_with_roles(
+            actor=owner,
+            organization=organization,
+            user=author,
+            roles={RoleCode.AUTHOR},
+        )
+        with self.assertRaises(RoleAssignmentDenied):
+            replace_membership_roles(
+                actor=owner,
+                membership=author_membership,
+                roles={RoleCode.AUTHOR, RoleCode.REVIEWER},
+            )

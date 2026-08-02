@@ -1,6 +1,7 @@
 import { ReviewPanel } from '@/components/courses/review-panel';
 import { PageHeader } from '@/components/platform/page-header';
 import { getCourseWorkspace } from '@/lib/courses/server';
+import { notFound } from 'next/navigation';
 
 export default async function CourseReviewPage({
   params,
@@ -8,6 +9,8 @@ export default async function CourseReviewPage({
   const { courseSlug, slug } = await params;
   const data = await getCourseWorkspace(slug, courseSlug);
   const capabilities = data.access.capabilities;
+  if (!capabilities.includes('course.authoring.view')) notFound();
+  if (!data.readiness) notFound();
   return (
     <main className="academic-page">
       <PageHeader

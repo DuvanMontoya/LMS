@@ -158,3 +158,63 @@ class BootstrapLocalAccessTests(TestCase):
                 organization_slug="academia-local",
                 stdout=StringIO(),
             )
+
+
+class BootstrapLocalPlatformOperatorTests(TestCase):
+    @override_settings(DEBUG=True)
+    def test_syncs_exclusive_verified_operator_and_rotates_password(self) -> None:
+        environment = {
+            "LMS_LOCAL_PLATFORM_OPERATOR_EMAIL": "operator@example.test",
+            "LMS_LOCAL_PLATFORM_OPERATOR_PASSWORD": "InitialPassword42!",
+            "LMS_LOCAL_PLATFORM_OPERATOR_FIRST_NAME": "Robert",
+            "LMS_LOCAL_PLATFORM_OPERATOR_LAST_NAME": "Cardona",
+        }
+        with patch.dict("os.environ", environment):
+            call_command("bootstrap_local_platform_operator", stdout=StringIO())
+        environment["LMS_LOCAL_PLATFORM_OPERATOR_PASSWORD"] = "RotatedPassword42!"
+        with patch.dict("os.environ", environment):
+            call_command("bootstrap_local_platform_operator", stdout=StringIO())
+
+        user = get_user_model().objects.get(email="operator@example.test")
+        self.assertTrue(user.is_active)
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_superuser)
+        self.assertEqual(user.get_full_name(), "Robert Cardona")
+        self.assertTrue(user.check_password("RotatedPassword42!"))
+        self.assertFalse(Membership.objects.filter(user=user).exists())
+        self.assertTrue(
+            EmailAddress.objects.filter(
+                user=user,
+                email=user.email,
+                primary=True,
+                verified=True,
+            ).exists()
+        )
+
+    @override_settings(DEBUG=True)
+    def test_rejects_an_operator_identity_with_tenant_membership(self) -> None:
+        owner = get_user_model().objects.create_user(
+            email="member@example.test", password="OwnerPassword42!"
+        )
+        create_organization_with_owner(
+            actor=owner,
+            name="Institución",
+            slug="institucion-operador",
+        )
+        with patch.dict(
+            "os.environ",
+            {
+                "LMS_LOCAL_PLATFORM_OPERATOR_EMAIL": owner.email,
+                "LMS_LOCAL_PLATFORM_OPERATOR_PASSWORD": "OperatorPassword42!",
+            },
+        ):
+            with self.assertRaisesMessage(CommandError, "membresías institucionales"):
+                call_command("bootstrap_local_platform_operator", stdout=StringIO())
+
+    @override_settings(DEBUG=False)
+    def test_rejects_platform_operator_sync_outside_development(self) -> None:
+        with self.assertRaisesMessage(
+            CommandError,
+            "sólo se permite con DEBUG=True",
+        ):
+            call_command("bootstrap_local_platform_operator", stdout=StringIO())

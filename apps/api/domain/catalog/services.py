@@ -9,9 +9,10 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
+from domain.organizations.capabilities import Capability
 from domain.organizations.choices import MembershipStatus, RoleCode
 from domain.organizations.models import Membership, Organization
-from domain.organizations.policies import active_membership, active_roles
+from domain.organizations.policies import active_roles, has_capability
 
 from .exceptions import (
     ActiveChildrenExist,
@@ -49,8 +50,9 @@ def _manage(actor: object, organization: Organization) -> None:
 
 
 def _manage_responsibilities(actor: object, organization: Organization) -> None:
-    membership = active_membership(actor, organization)  # type: ignore[arg-type]
-    if not ({RoleCode.OWNER, RoleCode.ADMINISTRATOR} & active_roles(membership)):
+    if not has_capability(  # type: ignore[arg-type]
+        actor, organization, Capability.CATALOG_TEACHING_RESPONSIBILITY_MANAGE
+    ):
         raise CatalogAccessDenied()
 
 

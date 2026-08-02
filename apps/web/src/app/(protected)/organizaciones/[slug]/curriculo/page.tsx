@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 import { CurriculumCreateActions } from '@/components/catalog/curriculum-create-actions';
 import { CurriculumExplorer } from '@/components/catalog/curriculum-explorer';
@@ -17,7 +18,7 @@ export default async function CurriculumPage({
 }: Readonly<{ params: Promise<{ slug: string }> }>) {
   const { slug } = await params;
   const { access, organization } = await getOrganizationForPage(slug);
-  if (!access.capabilities.includes('catalog.view')) return null;
+  if (!access.capabilities.includes('catalog.view')) notFound();
   const client = await createPlatformServerClient();
   const [areas, disciplines, subjects] = await Promise.all([
     payload(

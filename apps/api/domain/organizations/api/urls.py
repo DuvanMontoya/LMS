@@ -13,6 +13,21 @@ urlpatterns = [
         name="platform-organization-provision",
     ),
     path(
+        "platform/organizations/<slug:slug>/invitations/",
+        views.PlatformBootstrapInvitationListView.as_view(),
+        name="platform-bootstrap-invitation-list",
+    ),
+    path(
+        "platform/organizations/<slug:slug>/invitations/<uuid:invitation_id>/resend/",
+        views.PlatformBootstrapInvitationResendView.as_view(),
+        name="platform-bootstrap-invitation-resend",
+    ),
+    path(
+        "platform/organizations/<slug:slug>/invitations/<uuid:invitation_id>/revoke/",
+        views.PlatformBootstrapInvitationRevokeView.as_view(),
+        name="platform-bootstrap-invitation-revoke",
+    ),
+    path(
         "organizations/<slug:slug>/",
         views.OrganizationDetailView.as_view(),
         name="organization-detail",
@@ -106,6 +121,11 @@ urlpatterns = [
         "public/invitations/activate/",
         views.InvitationActivationView.as_view(),
         name="invitation-activation",
+    ),
+    path(
+        "public/invitations/signup-context/",
+        views.InvitationSignupContextView.as_view(),
+        name="invitation-signup-context",
     ),
     path(
         "public/invitations/accept/",

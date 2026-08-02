@@ -1,4 +1,5 @@
 import { ConceptForm } from '@/components/catalog/concept-form';
+import { notFound } from 'next/navigation';
 import { ConceptList } from '@/components/catalog/concept-list';
 import { PageHeader } from '@/components/platform/page-header';
 import { createPlatformServerClient } from '@/lib/api/platform-server-client';
@@ -8,6 +9,7 @@ export default async function ConceptsPage({
 }: Readonly<{ params: Promise<{ slug: string }> }>) {
   const { slug } = await params;
   const { access, organization } = await getOrganizationForPage(slug);
+  if (!access.capabilities.includes('catalog.view')) notFound();
   const client = await createPlatformServerClient();
   const { data } = await client.GET(
     '/api/v1/organizations/{slug}/catalog/concepts/',

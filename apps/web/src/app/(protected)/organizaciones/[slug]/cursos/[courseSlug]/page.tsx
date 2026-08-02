@@ -40,14 +40,16 @@ export default async function CourseWorkspacePage({
                 </Link>
               </Button>
             ) : null}
-            <Button asChild size="sm" variant="outline">
-              <Link
-                href={`/organizaciones/${slug}/cursos/${courseSlug}/revision`}
-              >
-                <FileCheck2 data-icon="inline-start" />
-                Revisión
-              </Link>
-            </Button>
+            {data.canAuthor ? (
+              <Button asChild size="sm" variant="outline">
+                <Link
+                  href={`/organizaciones/${slug}/cursos/${courseSlug}/revision`}
+                >
+                  <FileCheck2 data-icon="inline-start" />
+                  Revisión
+                </Link>
+              </Button>
+            ) : null}
           </nav>
         }
         breadcrumbs={[
@@ -55,8 +57,12 @@ export default async function CourseWorkspacePage({
           { href: `/organizaciones/${slug}/cursos`, label: 'Cursos' },
           { label: data.revision.title },
         ]}
-        description={data.revision.summary}
-        eyebrow="Espacio de autoría"
+        description={
+          data.canAuthor
+            ? data.revision.summary
+            : 'Consulta la estructura académica aprobada para tus responsabilidades docentes.'
+        }
+        eyebrow={data.canAuthor ? 'Espacio de autoría' : 'Curso asignado'}
         title={data.revision.title}
       />
       <dl className="mt-5 grid border-y sm:grid-cols-2 lg:grid-cols-4">
@@ -78,32 +84,36 @@ export default async function CourseWorkspacePage({
           value={`${data.outline.modules.length} módulos`}
         />
       </dl>
-      <CourseMetadataForm
-        canManage={canManage}
-        courseSlug={courseSlug}
-        key={data.revision.lock_version}
-        revision={data.revision}
-        slug={slug}
-      />
-      <div className="mt-7 grid gap-6 lg:grid-cols-2">
-        <AlignmentEditor
-          canManage={canManage}
-          courseSlug={courseSlug}
-          objectives={data.objectives}
-          outline={data.outline}
-          slug={slug}
-          subjects={data.subjects}
-        />
-        <ReviewPanel
-          canApprove={capabilities.includes('course.authoring.approve')}
-          canReview={capabilities.includes('course.authoring.review')}
-          canSubmit={capabilities.includes('course.authoring.submit')}
-          courseSlug={courseSlug}
-          readiness={data.readiness}
-          revision={data.revision}
-          slug={slug}
-        />
-      </div>
+      {data.canAuthor && data.readiness ? (
+        <>
+          <CourseMetadataForm
+            canManage={canManage}
+            courseSlug={courseSlug}
+            key={data.revision.lock_version}
+            revision={data.revision}
+            slug={slug}
+          />
+          <div className="mt-7 grid gap-6 lg:grid-cols-2">
+            <AlignmentEditor
+              canManage={canManage}
+              courseSlug={courseSlug}
+              objectives={data.objectives}
+              outline={data.outline}
+              slug={slug}
+              subjects={data.subjects}
+            />
+            <ReviewPanel
+              canApprove={capabilities.includes('course.authoring.approve')}
+              canReview={capabilities.includes('course.authoring.review')}
+              canSubmit={capabilities.includes('course.authoring.submit')}
+              courseSlug={courseSlug}
+              readiness={data.readiness}
+              revision={data.revision}
+              slug={slug}
+            />
+          </div>
+        </>
+      ) : null}
       <section className="mt-7 border-y">
         <header className="border-b px-5 py-4">
           <h2 className="font-semibold">Estructura del curso</h2>
@@ -146,19 +156,21 @@ export default async function CourseWorkspacePage({
                           ? 'Contenido vacío'
                           : 'Sin contenido'}
                     </Badge>
-                    <Button
-                      asChild
-                      className="ml-auto"
-                      size="xs"
-                      variant="ghost"
-                    >
-                      <Link
-                        href={`/organizaciones/${slug}/cursos/${courseSlug}/unidades/${unit.id}/contenido`}
+                    {data.canAuthor ? (
+                      <Button
+                        asChild
+                        className="ml-auto"
+                        size="xs"
+                        variant="ghost"
                       >
-                        Abrir
-                        <ArrowRight data-icon="inline-end" />
-                      </Link>
-                    </Button>
+                        <Link
+                          href={`/organizaciones/${slug}/cursos/${courseSlug}/unidades/${unit.id}/contenido`}
+                        >
+                          Abrir
+                          <ArrowRight data-icon="inline-end" />
+                        </Link>
+                      </Button>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -166,23 +178,25 @@ export default async function CourseWorkspacePage({
           ))}
         </ol>
       </section>
-      <section className="mt-7 border-t pt-5">
-        <h2 className="text-sm font-semibold">Historial de transiciones</h2>
-        <ol className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {data.transitions.map((transition) => (
-            <li
-              className="border-l-2 border-primary pl-3 text-sm"
-              key={transition.id}
-            >
-              <strong>{courseStatusLabel(transition.to_status)}</strong> por{' '}
-              {transition.actor_display}
-              {transition.note ? (
-                <p className="text-foreground/80">{transition.note}</p>
-              ) : null}
-            </li>
-          ))}
-        </ol>
-      </section>
+      {data.canAuthor ? (
+        <section className="mt-7 border-t pt-5">
+          <h2 className="text-sm font-semibold">Historial de transiciones</h2>
+          <ol className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {data.transitions.map((transition) => (
+              <li
+                className="border-l-2 border-primary pl-3 text-sm"
+                key={transition.id}
+              >
+                <strong>{courseStatusLabel(transition.to_status)}</strong> por{' '}
+                {transition.actor_display}
+                {transition.note ? (
+                  <p className="text-foreground/80">{transition.note}</p>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
     </main>
   );
 }

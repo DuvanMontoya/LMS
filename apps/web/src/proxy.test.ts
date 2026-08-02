@@ -53,6 +53,13 @@ describe('route security headers', () => {
     expect(response.headers.get('X-Frame-Options')).toBe('DENY');
   });
 
+  it('keeps the session-bound invited signup route public and non-referring', () => {
+    const response = proxy(publicRequest('/invitaciones/crear-cuenta'));
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(response.headers.get('Referrer-Policy')).toBe('no-referrer');
+  });
+
   it('keeps authentication pages public while applying sensitive-page headers', () => {
     const response = proxy(publicRequest('/auth/iniciar-sesion'));
     expect(response.status).toBe(200);

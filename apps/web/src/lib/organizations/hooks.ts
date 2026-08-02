@@ -58,6 +58,64 @@ export function useProvisionPlatformOrganization() {
   });
 }
 
+export function usePlatformBootstrapInvitations(slug: string | null) {
+  return useQuery({
+    queryKey: ['platform', 'organizations', slug, 'invitations'],
+    enabled: Boolean(slug),
+    queryFn: () =>
+      requireData(
+        platformBrowserClient.GET(
+          '/api/v1/platform/organizations/{slug}/invitations/',
+          { params: { path: { slug: slug ?? '' } } },
+        ),
+      ),
+  });
+}
+
+export function useResendPlatformBootstrapInvitation(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) =>
+      requireData(
+        platformBrowserClient.POST(
+          '/api/v1/platform/organizations/{slug}/invitations/{invitation_id}/resend/',
+          {
+            params: {
+              path: { slug, invitation_id: invitationId },
+            },
+          },
+        ),
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['platform', 'organizations', slug, 'invitations'],
+      });
+    },
+  });
+}
+
+export function useRevokePlatformBootstrapInvitation(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) =>
+      requireData(
+        platformBrowserClient.POST(
+          '/api/v1/platform/organizations/{slug}/invitations/{invitation_id}/revoke/',
+          {
+            params: {
+              path: { slug, invitation_id: invitationId },
+            },
+          },
+        ),
+      ),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['platform', 'organizations', slug, 'invitations'],
+      });
+    },
+  });
+}
+
 export function useOrganization(slug: string) {
   return useQuery({
     queryKey: organizationKeys.detail(slug),

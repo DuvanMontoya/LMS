@@ -58,6 +58,7 @@ from .models import (
     OrganizationMembershipSettings,
 )
 from .policies import (
+    active_roles,
     can_assign_role,
     can_manage_membership,
     has_capability,
@@ -471,6 +472,8 @@ def assign_role(
         raise MembershipNotActive("No se asignan roles a membresías revocadas.")
     if not can_assign_role(actor, locked_membership, role):
         raise RoleAssignmentDenied("No puedes asignar este rol.")
+    current_roles = active_roles(locked_membership)
+    _validate_role_combination(current_roles | {role})
     if MembershipRoleAssignment.objects.filter(
         membership=locked_membership, role=role.value, revoked_at__isnull=True
     ).exists():
@@ -501,6 +504,7 @@ def replace_membership_roles(
         raise RoleAssignmentDenied(
             "Una membresía activa debe conservar al menos un rol."
         )
+    _validate_role_combination(roles)
     active_assignments = {
         RoleCode(assignment.role): assignment
         for assignment in MembershipRoleAssignment.objects.select_for_update().filter(
@@ -567,7 +571,19 @@ def _locked_membership_settings(
 def _validate_roles(roles: set[RoleCode]) -> set[RoleCode]:
     if not roles or RoleCode.OWNER in roles:
         raise RoleAssignmentDenied("Debes indicar roles institucionales no owner.")
+    _validate_role_combination(roles)
     return roles
+
+
+def _validate_role_combination(roles: set[RoleCode]) -> None:
+    if RoleCode.OWNER in roles and roles != {RoleCode.OWNER}:
+        raise RoleAssignmentDenied(
+            "El rol owner es exclusivamente de gobierno institucional."
+        )
+    if {RoleCode.AUTHOR, RoleCode.REVIEWER}.issubset(roles):
+        raise RoleAssignmentDenied(
+            "Autor y revisor son funciones incompatibles para preservar la separación de funciones."
+        )
 
 
 def _create_profile_from_invitation(
@@ -657,14 +673,21 @@ def _send_invitation_email(*, invitation: MembershipInvitation, token: str) -> N
         "platform_name": "Plataforma Académica",
     }
     message = EmailMultiAlternatives(
-        subject="Invitación a la plataforma académica",
+        subject=f"Tu invitación a {invitation.organization.name}",
         body=render_to_string("organizations/email/invitation.txt", context),
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[invitation.email],
         headers={
+            "Message-ID": (
+                f"<membership-invitation-{invitation.id}-"
+                f"{int(invitation.updated_at.timestamp())}@"
+                f"{settings.EMAIL_MESSAGE_ID_DOMAIN}>"
+            ),
             "Resend-Idempotency-Key": (
                 f"membership-invitation-{invitation.id}-{int(invitation.updated_at.timestamp())}"
-            )
+            ),
+            "Auto-Submitted": "auto-generated",
+            "X-Auto-Response-Suppress": "All",
         },
     )
     message.attach_alternative(
@@ -692,11 +715,16 @@ def _send_member_recovery_email(*, membership: Membership, event_id: str) -> Non
         "recovery_url": recovery_url,
     }
     message = EmailMultiAlternatives(
-        subject="Recupera tu acceso a la plataforma académica",
+        subject=f"Recupera tu acceso a {membership.organization.name}",
         body=render_to_string("organizations/email/member_recovery.txt", context),
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[membership.user.email],
-        headers={"Resend-Idempotency-Key": f"member-recovery-{event_id}"},
+        headers={
+            "Message-ID": f"<member-recovery-{event_id}@{settings.EMAIL_MESSAGE_ID_DOMAIN}>",
+            "Resend-Idempotency-Key": f"member-recovery-{event_id}",
+            "Auto-Submitted": "auto-generated",
+            "X-Auto-Response-Suppress": "All",
+        },
     )
     message.attach_alternative(
         render_to_string("organizations/email/member_recovery.html", context),
@@ -1047,6 +1075,11 @@ def resend_invitation(*, actor: User, invitation: MembershipInvitation) -> str:
     _require_capability(
         actor, locked.organization, Capability.MEMBERSHIP_INVITATION_MANAGE
     )
+    return _rotate_invitation_token(actor=actor, invitation=locked)
+
+
+def _rotate_invitation_token(*, actor: User, invitation: MembershipInvitation) -> str:
+    locked = invitation
     _assert_invitation_available(locked)
     token, digest = _new_invitation_token()
     locked.token_digest = digest
@@ -1064,6 +1097,19 @@ def resend_invitation(*, actor: User, invitation: MembershipInvitation) -> str:
         lambda: _send_invitation_email(invitation=locked, token=token)
     )
     return token
+
+
+@transaction.atomic
+def resend_platform_bootstrap_invitation(
+    *, actor: User, invitation: MembershipInvitation
+) -> str:
+    locked = (
+        MembershipInvitation.objects.select_for_update()
+        .select_related("organization")
+        .get(pk=invitation.pk)
+    )
+    _require_platform_bootstrap_invitation(actor=actor, invitation=locked)
+    return _rotate_invitation_token(actor=actor, invitation=locked)
 
 
 @transaction.atomic
@@ -1197,6 +1243,13 @@ def revoke_invitation(
     _require_capability(
         actor, locked.organization, Capability.MEMBERSHIP_INVITATION_MANAGE
     )
+    return _revoke_locked_invitation(actor=actor, invitation=locked)
+
+
+def _revoke_locked_invitation(
+    *, actor: User, invitation: MembershipInvitation
+) -> MembershipInvitation:
+    locked = invitation
     _assert_invitation_available(locked)
     locked.status = InvitationStatus.REVOKED
     locked.revoked_at = timezone.now()
@@ -1208,6 +1261,37 @@ def revoke_invitation(
         event_type=MembershipEventType.INVITATION_REVOKED,
     )
     return locked
+
+
+def _require_platform_bootstrap_invitation(
+    *, actor: User, invitation: MembershipInvitation
+) -> None:
+    if (
+        not is_active_platform_operator(actor)
+        or invitation.organization.status != OrganizationStatus.PENDING_ACTIVATION
+        or invitation.invitation_type
+        not in {
+            InvitationType.INITIAL_OWNER,
+            InvitationType.EXISTING_USER,
+            InvitationType.NEW_USER,
+        }
+    ):
+        raise OrganizationAccessDenied(
+            "La invitación no pertenece a un bootstrap institucional pendiente."
+        )
+
+
+@transaction.atomic
+def revoke_platform_bootstrap_invitation(
+    *, actor: User, invitation: MembershipInvitation
+) -> MembershipInvitation:
+    locked = (
+        MembershipInvitation.objects.select_for_update()
+        .select_related("organization")
+        .get(pk=invitation.pk)
+    )
+    _require_platform_bootstrap_invitation(actor=actor, invitation=locked)
+    return _revoke_locked_invitation(actor=actor, invitation=locked)
 
 
 def begin_invitation_activation(
@@ -1255,13 +1339,21 @@ def _session_invitation(
 
 
 def session_has_valid_signup_invitation(request: HttpRequest) -> bool:
+    return session_signup_invitation(request) is not None
+
+
+def session_signup_invitation(request: HttpRequest) -> MembershipInvitation | None:
+    """Return the invitation that authorizes one exact private signup."""
+
     invitation = _session_invitation(request)
-    return bool(
-        invitation
-        and invitation.existing_user_id is None
-        and invitation.invitation_type
-        in {InvitationType.NEW_USER, InvitationType.INITIAL_OWNER}
-    )
+    if (
+        invitation is None
+        or invitation.existing_user_id is not None
+        or invitation.invitation_type
+        not in {InvitationType.NEW_USER, InvitationType.INITIAL_OWNER}
+    ):
+        return None
+    return invitation
 
 
 @transaction.atomic

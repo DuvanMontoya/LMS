@@ -61,6 +61,9 @@ export async function getSchedulingPage(slug: string) {
 
 export async function getLiveSession(slug: string, sessionId: string) {
   const organization = await getOrganizationForPage(slug);
+  if (!organization.access.capabilities.includes('scheduling.view')) {
+    notFound();
+  }
   const client = await createPlatformServerClient();
   const { data, response } = await client.GET(
     '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/',
@@ -81,6 +84,9 @@ export async function getLiveSessions(
   options: { courseSlug?: string; scope?: 'all' | 'past' | 'upcoming' } = {},
 ) {
   const organization = await getOrganizationForPage(slug);
+  if (!organization.access.capabilities.includes('scheduling.view')) {
+    notFound();
+  }
   const client = await createPlatformServerClient();
   const { data, response } = await client.GET(
     '/api/v1/organizations/{slug}/scheduling/live-sessions/',

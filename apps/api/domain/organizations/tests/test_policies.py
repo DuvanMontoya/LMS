@@ -78,27 +78,17 @@ class OrganizationPolicyTests(TestCase):
                 Capability.ASSESSMENT_AUTHORING_VIEW,
                 Capability.ASSESSMENT_AUTHORING_MANAGE,
                 Capability.ASSESSMENT_AUTHORING_SUBMIT,
-                Capability.ASSESSMENT_DELIVERY_VIEW,
-                Capability.ASSESSMENT_RESULTS_VIEW,
-                Capability.ASSESSMENT_REGRADING_VIEW,
-                Capability.ASSESSMENT_GRADEBOOK_VIEW,
-                Capability.ASSESSMENT_ANALYTICS_VIEW,
             },
             RoleCode.REVIEWER: {
                 Capability.ASSESSMENT_BANK_VIEW,
                 Capability.ASSESSMENT_QUESTION_VIEW,
                 Capability.ASSESSMENT_QUESTION_REVIEW,
+                Capability.ASSESSMENT_QUESTION_APPROVE,
                 Capability.ASSESSMENT_AUTHORING_VIEW,
                 Capability.ASSESSMENT_AUTHORING_REVIEW,
-                Capability.ASSESSMENT_DELIVERY_VIEW,
-                Capability.ASSESSMENT_RESULTS_VIEW,
-                Capability.ASSESSMENT_REGRADING_VIEW,
-                Capability.ASSESSMENT_ANALYTICS_VIEW,
+                Capability.ASSESSMENT_AUTHORING_APPROVE,
             },
             RoleCode.INSTRUCTOR: {
-                Capability.ASSESSMENT_BANK_VIEW,
-                Capability.ASSESSMENT_QUESTION_VIEW,
-                Capability.ASSESSMENT_AUTHORING_VIEW,
                 Capability.ASSESSMENT_DELIVERY_VIEW,
                 Capability.ASSESSMENT_DELIVERY_MANAGE,
                 Capability.ASSESSMENT_GRADING_MANAGE,
@@ -119,20 +109,65 @@ class OrganizationPolicyTests(TestCase):
                 if capability.value.startswith("assessment.")
             }
             self.assertEqual(actual, role_expected, role.value)
-        for role in (RoleCode.OWNER, RoleCode.ADMINISTRATOR):
-            self.assertEqual(
-                {
-                    capability
-                    for capability in ROLE_CAPABILITIES[role]
-                    if capability.value.startswith("assessment.")
-                },
-                {
-                    capability
-                    for capability in Capability
-                    if capability.value.startswith("assessment.")
-                    and capability != Capability.ASSESSMENT_ATTEMPT
-                },
-            )
+        self.assertFalse(
+            {
+                capability
+                for capability in ROLE_CAPABILITIES[RoleCode.OWNER]
+                if capability.value.startswith("assessment.")
+            }
+        )
+        self.assertEqual(
+            {
+                capability
+                for capability in ROLE_CAPABILITIES[RoleCode.ADMINISTRATOR]
+                if capability.value.startswith("assessment.")
+            },
+            {
+                Capability.ASSESSMENT_DELIVERY_VIEW,
+                Capability.ASSESSMENT_DELIVERY_MANAGE,
+                Capability.ASSESSMENT_RESULTS_VIEW,
+                Capability.ASSESSMENT_GRADEBOOK_VIEW,
+                Capability.ASSESSMENT_ANALYTICS_VIEW,
+            },
+        )
+
+    def test_owner_is_governance_only_and_cannot_grade(self) -> None:
+        owner = ROLE_CAPABILITIES[RoleCode.OWNER]
+        self.assertIn(Capability.ROLE_ASSIGN_OWNER, owner)
+        self.assertIn(Capability.MEMBERSHIP_SETTINGS_MANAGE, owner)
+        for forbidden in (
+            Capability.CATALOG_VIEW,
+            Capability.COURSE_AUTHORING_VIEW,
+            Capability.COURSE_RELEASE_PUBLISH,
+            Capability.LEARNING_COHORT_VIEW,
+            Capability.SCHEDULING_VIEW,
+            Capability.ASSESSMENT_RESULTS_VIEW,
+            Capability.ASSESSMENT_GRADING_MANAGE,
+            Capability.ASSESSMENT_GRADEBOOK_MANAGE,
+        ):
+            self.assertNotIn(forbidden, owner)
+
+    def test_content_and_teaching_roles_do_not_share_operational_workspaces(
+        self,
+    ) -> None:
+        operational = {
+            Capability.LEARNING_COHORT_VIEW,
+            Capability.LEARNING_ENROLLMENT_VIEW,
+            Capability.LEARNING_PROGRESS_VIEW,
+            Capability.SCHEDULING_VIEW,
+            Capability.ASSESSMENT_DELIVERY_VIEW,
+            Capability.ASSESSMENT_RESULTS_VIEW,
+            Capability.ASSESSMENT_REGRADING_VIEW,
+            Capability.ASSESSMENT_GRADEBOOK_VIEW,
+            Capability.ASSESSMENT_ANALYTICS_VIEW,
+        }
+        for role in (RoleCode.AUTHOR, RoleCode.REVIEWER):
+            self.assertFalse(ROLE_CAPABILITIES[role] & operational, role.value)
+        instructor = ROLE_CAPABILITIES[RoleCode.INSTRUCTOR]
+        self.assertIn(Capability.CATALOG_TEACHING_RESPONSIBILITY_VIEW, instructor)
+        self.assertNotIn(Capability.CATALOG_VIEW, instructor)
+        self.assertNotIn(Capability.ASSESSMENT_AUTHORING_VIEW, instructor)
+        self.assertNotIn(Capability.ASSESSMENT_BANK_VIEW, instructor)
 
     def test_status_and_organization_scope_remove_capabilities(self) -> None:
         owner = self.verified_user("owner@example.test")

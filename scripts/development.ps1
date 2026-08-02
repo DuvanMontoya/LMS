@@ -61,7 +61,9 @@ function Import-LocalEnvironment {
 
 function Test-Endpoint([string]$Uri) {
     try {
-        $response = Invoke-WebRequest -Uri $Uri -TimeoutSec 2 -SkipHttpErrorCheck
+        # A cold Next.js development route can compile for more than two
+        # seconds even though its registered listener is healthy.
+        $response = Invoke-WebRequest -Uri $Uri -TimeoutSec 8 -SkipHttpErrorCheck
         return $response.StatusCode -ge 200 -and $response.StatusCode -lt 500
     }
     catch {
@@ -94,14 +96,14 @@ function Test-ExpectedProcess([int]$ProcessId, [ValidateSet('api', 'web')][strin
     }
     if ($Kind -eq 'api') {
         return (
-            $process.ExecutablePath -eq $pythonExecutable -and
+            $process.CommandLine -like "*$pythonExecutable*" -and
             $process.CommandLine -like "*manage.py*runserver*0.0.0.0:$apiPort*"
         )
     }
-    return (
-        $process.CommandLine -like "*$nextExecutable*" -and
-        $process.CommandLine -like '*next*dev*127.0.0.1*3000*'
-    )
+    # Next.js replaces/spawns its launcher with start-server.js. Both are the
+    # same registered LMS process; requiring only the transient CLI signature
+    # made Status report a healthy server as stopped.
+    return Test-LmsProcess -ProcessId $ProcessId -Kind 'web'
 }
 
 function Test-LmsProcess([int]$ProcessId, [ValidateSet('api', 'web')][string]$Kind) {
@@ -111,7 +113,7 @@ function Test-LmsProcess([int]$ProcessId, [ValidateSet('api', 'web')][string]$Ki
     }
     if ($Kind -eq 'api') {
         return (
-            $process.ExecutablePath -eq $pythonExecutable -and
+            $process.CommandLine -like "*$pythonExecutable*" -and
             $process.CommandLine -like "*manage.py*runserver*0.0.0.0:$apiPort*"
         )
     }
@@ -175,12 +177,26 @@ function Write-Status {
     Write-Host "Estado: $stateFile"
 }
 
+function Sync-LocalPlatformOperator {
+    if (
+        [string]::IsNullOrWhiteSpace($env:LMS_LOCAL_PLATFORM_OPERATOR_EMAIL) -or
+        [string]::IsNullOrWhiteSpace($env:LMS_LOCAL_PLATFORM_OPERATOR_PASSWORD)
+    ) {
+        return
+    }
+    & $pythonExecutable (Join-Path $apiDirectory 'manage.py') bootstrap_local_platform_operator
+    if ($LASTEXITCODE -ne 0) {
+        throw 'No fue posible sincronizar el operador local de plataforma.'
+    }
+}
+
 function Start-Development {
     if (
         (Test-Endpoint "$apiLoopbackOrigin/health/live/") -and
         (Test-Endpoint 'http://127.0.0.1:3000/') -and
         (Test-RegisteredDevelopment)
     ) {
+        Sync-LocalPlatformOperator
         Write-Host 'El entorno de desarrollo ya está disponible.'
         Write-Status
         return
@@ -200,6 +216,7 @@ function Start-Development {
     if ($LASTEXITCODE -ne 0) {
         throw 'No fue posible aplicar las migraciones locales.'
     }
+    Sync-LocalPlatformOperator
     & pnpm --dir $webDirectory run content:assets:prepare
     if ($LASTEXITCODE -ne 0) {
         throw 'No fue posible preparar los recursos matemáticos locales.'

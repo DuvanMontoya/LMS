@@ -74,9 +74,9 @@ from domain.catalog.services import (
     restore_entity,
     update_entity,
 )
-from domain.organizations.choices import RoleCode
+from domain.organizations.capabilities import Capability
 from domain.organizations.models import Membership, Organization
-from domain.organizations.policies import active_membership, active_roles
+from domain.organizations.policies import has_capability
 from domain.organizations.selectors import organization_visible_to
 
 from .serializers import (
@@ -150,15 +150,25 @@ def _catalog_error(error: CatalogDomainError) -> Response:
 def _can_manage_teaching_responsibilities(
     request: Request, organization: Organization
 ) -> bool:
-    membership = active_membership(request.user, organization)
-    return bool({RoleCode.OWNER, RoleCode.ADMINISTRATOR} & active_roles(membership))
+    return has_capability(
+        request.user,
+        organization,
+        Capability.CATALOG_TEACHING_RESPONSIBILITY_MANAGE,
+    )
 
 
 class SubjectTeachingResponsibilityListCreateView(APIView):
     @extend_schema(responses={200: SubjectTeachingResponsibilitySerializer(many=True)})
     def get(self, request: Request, slug: str) -> Response:
         organization = _organization(request, slug)
-        if not can_view_catalog(request.user, organization):
+        if not (
+            can_view_catalog(request.user, organization)
+            or has_capability(
+                request.user,
+                organization,
+                Capability.CATALOG_TEACHING_RESPONSIBILITY_VIEW,
+            )
+        ):
             raise PermissionDenied("catalog_permission_denied")
         queryset = SubjectTeachingResponsibility.objects.filter(
             subject__discipline__area__organization=organization

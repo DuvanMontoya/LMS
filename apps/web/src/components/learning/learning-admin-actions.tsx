@@ -47,14 +47,14 @@ export function CohortActions({
   if (status === 'archived') return null;
   return (
     <ConfirmAction
-      description="La cohorte dejará de aceptar matrículas nuevas. Su historial, matrículas y progreso permanecerán disponibles."
+      description="El grupo de curso dejará de aceptar matrículas nuevas. Su historial, matrículas y progreso permanecerán disponibles."
       label="Archivar"
       onConfirm={async () => {
         await mutation.mutateAsync(version);
         router.refresh();
       }}
       pending={mutation.isPending}
-      title="Archivar cohorte"
+      title="Archivar grupo de curso"
       variant="outline"
     >
       <Archive />

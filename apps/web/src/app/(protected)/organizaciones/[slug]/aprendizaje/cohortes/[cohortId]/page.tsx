@@ -120,7 +120,7 @@ export default async function CohortDetailPage({
       </div>
       {!data.progress.results.length ? (
         <p className="academic-panel mt-6 border-dashed p-6 text-center text-sm text-muted-foreground">
-          La cohorte todavía no tiene matrículas.
+          El grupo de curso todavía no tiene matrículas.
         </p>
       ) : null}
     </main>

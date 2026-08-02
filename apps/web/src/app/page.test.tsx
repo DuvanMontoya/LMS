@@ -1,18 +1,16 @@
-import { render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 
-vi.mock('@/lib/auth/registration', () => ({
-  isSignupAvailable: vi.fn().mockResolvedValue(true),
+const { redirect } = vi.hoisted(() => ({ redirect: vi.fn() }));
+
+vi.mock('next/navigation', () => ({
+  redirect,
 }));
 
 import Home from './page';
 
 describe('Home', () => {
-  it('renders the institutional gateway heading', async () => {
-    render(await Home());
-
-    expect(
-      screen.getByRole('heading', { name: 'Conocimiento con estructura.' }),
-    ).toBeInTheDocument();
+  it('redirects the private platform root to login', () => {
+    Home();
+    expect(redirect).toHaveBeenCalledWith('/auth/iniciar-sesion');
   });
 });

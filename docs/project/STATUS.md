@@ -1,5 +1,52 @@
 # Project status
 
+## Incorporación privada y superficies por rol — en curso 2026-08-02
+
+- **Decisión:** ADR 0039 separa alta pública de activación por invitación. El
+  registro puede permanecer cerrado mientras una sesión de invitación vigente
+  autoriza exactamente el correo invitado; la organización sólo se activa
+  después de verificarlo y aceptar la membresía owner.
+- **Evidencia PostgreSQL:** las 5 pruebas de configuración/registro pasan. Se
+  comprobó rechazo 403 del alta directa, rechazo 403 al sustituir el correo,
+  contexto privado de invitación y activación posterior a la verificación.
+- **Navegación:** Inicio, Mi perfil, Buscar y Resumen institucional se retiraron
+  del sidebar. La institución y el rol ocupan la cabecera lateral; buscar está
+  junto a notificaciones; `/estudiar` y la raíz institucional redirigen al
+  espacio principal de owner, administrator, author, reviewer, instructor o
+  learner. El plano global no enlaza al tenant.
+- **UI de operación:** el control de instituciones ahora muestra estado global,
+  alta separada y un directorio control-plane con detalle de invitaciones. Los
+  formularios de área, disciplina y asignatura derivan el identificador técnico
+  del nombre y dejan de pedir dos veces la misma identidad.
+- **Correo:** DNS público respondió con DKIM de `resend._domainkey`, SPF y MX en
+  `send.papyros.pro`, y DMARC `p=none`. Los mensajes directos usan Message-ID
+  alineado e idempotencia. Falta inspeccionar encabezados de un mensaje recibido
+  y los diagnósticos de Resend; no se afirma que la colocación en bandeja esté
+  resuelta.
+- **Puertas abiertas:** falta build final, regresión amplia, Chrome de todos los
+  roles en desktop/390 px y proveedor LiveKit real.
+
+## Separación de gobierno y autoridad académica — en curso 2026-08-02
+
+- **Decisión:** ADR 0038 elimina el supuesto `owner = superadministrador
+  académico`. Owner queda exclusivamente en gobierno institucional;
+  administrator opera sin autoría ni calificación; author/reviewer aplican
+  maker-checker; instructor califica únicamente dentro de alcance asignado.
+- **Implementación verificada:** la matriz backend ya da cero capacidades de
+  evaluación al owner y se retiraron bypasses directos owner/administrator de
+  catalog, courses, learning y scheduling. La navegación Vitest verifica la
+  separación de los seis roles. En Chrome, la URL owner directa de gradebooks
+  devolvió 404. El menú de cuenta
+  mostró nombre/avatar y el panel de notificaciones mostró el resumen y “Ver
+  todas las notificaciones”.
+- **Entorno local:** el supervisor reconoce los procesos hijo reales de Django
+  y Next y reporta ambos servicios listos. El operador local se sincroniza por
+  variables ignoradas, exige `DEBUG` y cero membresías; cambiar la contraseña
+  local y reiniciar rota la credencial sin alterar datos de tenant.
+- **Evidencia aún abierta:** falta repetir en Chrome la navegación simplificada
+  y completar 390 px. No se declara cierre hasta completar esas puertas.
+  LiveKit real continúa bloqueado sin proveedor real.
+
 ## Coherencia curricular y operativa unificada — en curso 2026-08-01
 
 - **Decisiones:** ADR 0036 define `CourseActivity` como orden canónico de

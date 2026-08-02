@@ -24,7 +24,7 @@ from domain.organizations.bulk import (
     create_bulk_invitation_preview,
 )
 from domain.organizations.capabilities import Capability
-from domain.organizations.choices import MembershipStatus, RoleCode
+from domain.organizations.choices import MembershipStatus, OrganizationStatus, RoleCode
 from domain.organizations.exceptions import (
     InitialOwnerUnavailable,
     InvalidMembershipTransition,
@@ -77,11 +77,14 @@ from domain.organizations.services import (
     reactivate_membership,
     replace_membership_roles,
     resend_invitation,
+    resend_platform_bootstrap_invitation,
     review_join_request,
     revoke_invitation,
     revoke_membership,
+    revoke_platform_bootstrap_invitation,
     revoke_user_sessions,
     send_member_password_recovery,
+    session_signup_invitation,
     suspend_membership,
     update_member_profile,
     update_membership_settings,
@@ -101,6 +104,7 @@ from .serializers import (
     InvitationCreateSerializer,
     InvitationListQuerySerializer,
     InvitationSerializer,
+    InvitationSignupContextSerializer,
     JoinRequestSerializer,
     ManagedAccountCreateSerializer,
     ManagedAccountEmailCorrectionSerializer,
@@ -203,7 +207,7 @@ def _domain_error_response(error: OrganizationDomainError) -> Response:
         InitialOwnerUnavailable: (
             status.HTTP_400_BAD_REQUEST,
             "initial_owner_unavailable",
-            "La persona propietaria debe tener una cuenta activa y correo verificado.",
+            "El operador no puede recibir invitaciones institucionales ni repetir correos.",
         ),
         InvalidMembershipTransition: (
             status.HTTP_409_CONFLICT,
@@ -339,6 +343,54 @@ class PlatformOrganizationProvisionView(APIView):
             OrganizationSerializer(organization).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class PlatformBootstrapInvitationListView(APIView):
+    @extend_schema(responses={200: InvitationSerializer(many=True)})
+    def get(self, request: Request, slug: str) -> Response:
+        actor = _actor(request)
+        if not is_active_platform_operator(actor):
+            raise PermissionDenied
+        organization = get_object_or_404(Organization, slug=slug)
+        if organization.status != OrganizationStatus.PENDING_ACTIVATION:
+            return Response([])
+        invitations = MembershipInvitation.objects.filter(
+            organization=organization
+        ).order_by("created_at", "id")
+        return Response(InvitationSerializer(invitations, many=True).data)
+
+
+class PlatformBootstrapInvitationActionView(APIView):
+    action = ""
+
+    @extend_schema(request=None, responses={200: InvitationSerializer})
+    def post(self, request: Request, slug: str, invitation_id: str) -> Response:
+        actor = _actor(request)
+        if not is_active_platform_operator(actor):
+            raise PermissionDenied
+        organization = get_object_or_404(Organization, slug=slug)
+        invitation = get_object_or_404(
+            MembershipInvitation, pk=invitation_id, organization=organization
+        )
+        try:
+            if self.action == "resend":
+                resend_platform_bootstrap_invitation(actor=actor, invitation=invitation)
+                invitation.refresh_from_db()
+            else:
+                invitation = revoke_platform_bootstrap_invitation(
+                    actor=actor, invitation=invitation
+                )
+        except OrganizationDomainError as error:
+            return _domain_error_response(error)
+        return Response(InvitationSerializer(invitation).data)
+
+
+class PlatformBootstrapInvitationResendView(PlatformBootstrapInvitationActionView):
+    action = "resend"
+
+
+class PlatformBootstrapInvitationRevokeView(PlatformBootstrapInvitationActionView):
+    action = "revoke"
 
 
 class OrganizationDetailView(APIView):
@@ -842,6 +894,23 @@ class InvitationActivationView(APIView):
         except OrganizationDomainError as error:
             return _domain_error_response(error)
         return Response({"invitation_type": invitation.invitation_type})
+
+
+class InvitationSignupContextView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(responses={200: InvitationSignupContextSerializer})
+    def get(self, request: Request) -> Response:
+        invitation = session_signup_invitation(request._request)
+        if invitation is None:
+            raise Http404
+        return Response(
+            {
+                "email": invitation.email,
+                "invitation_type": invitation.invitation_type,
+                "organization_name": invitation.organization.name,
+            }
+        )
 
 
 class AcceptInvitationView(APIView):

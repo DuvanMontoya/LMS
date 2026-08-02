@@ -45,7 +45,6 @@ import {
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -67,6 +66,7 @@ import {
   sortRoles,
   type OrganizationRole,
 } from '@/lib/organizations/labels';
+import { primaryWorkspaceHref } from '@/lib/organizations/workspace-route';
 
 type ShellOrganization = {
   id: string;
@@ -93,12 +93,12 @@ type NavigationChild = Omit<NavigationItem, 'children' | 'icon'> & {
 
 export function PlatformShell({
   children,
-  email,
+  displayName,
   isPlatformOperator,
   organizations,
 }: Readonly<{
   children: React.ReactNode;
-  email: string;
+  displayName: string;
   isPlatformOperator: boolean;
   organizations: readonly ShellOrganization[];
 }>) {
@@ -124,7 +124,6 @@ export function PlatformShell({
     <SidebarProvider>
       <PlatformSidebar
         activeOrganization={activeOrganization}
-        email={email}
         isPlatformOperator={isPlatformOperator}
         organizations={organizations}
         pathname={pathname}
@@ -136,16 +135,32 @@ export function PlatformShell({
             className="-ml-1"
           />
           <div className="platform-topbar__divider" aria-hidden="true" />
-          <div className="platform-topbar__context">
-            <span>Espacio institucional</span>
-            <p>{activeOrganization?.name ?? 'Plataforma académica'}</p>
-          </div>
-          <span className="platform-topbar__status">Entorno seguro</span>
-          {activeOrganization ? (
-            <NotificationBadge
-              href={`/organizaciones/${activeOrganization.slug}/notificaciones`}
+          <div className="ml-auto flex items-center gap-2">
+            {activeOrganization?.capabilities.some((capability) =>
+              ['search.authoring.use', 'search.institutional.use'].includes(
+                capability,
+              ),
+            ) ? (
+              <Link
+                aria-label="Buscar en la institución"
+                className="grid size-9 place-items-center rounded-full border bg-background text-muted-foreground shadow-xs transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                href={`/organizaciones/${activeOrganization.slug}/buscar`}
+                title="Buscar"
+              >
+                <Search className="size-4" />
+              </Link>
+            ) : null}
+            {activeOrganization ? (
+              <NotificationBadge
+                href={`/organizaciones/${activeOrganization.slug}/notificaciones`}
+              />
+            ) : null}
+            <AccountMenu
+              displayName={displayName}
+              isPlatformOperator={isPlatformOperator}
+              organization={activeOrganization}
             />
-          ) : null}
+          </div>
         </header>
         <div className="platform-content min-w-0 flex-1">{children}</div>
       </SidebarInset>
@@ -155,64 +170,36 @@ export function PlatformShell({
 
 function PlatformSidebar({
   activeOrganization,
-  email,
   isPlatformOperator,
   organizations,
   pathname,
 }: Readonly<{
   activeOrganization?: ShellOrganization | undefined;
-  email: string;
   isPlatformOperator: boolean;
   organizations: readonly ShellOrganization[];
   pathname: string;
 }>) {
   const capabilities = new Set(activeOrganization?.capabilities ?? []);
-  const learnerOnly =
-    activeOrganization?.roles.length === 1 &&
-    activeOrganization.roles[0] === 'learner';
+  const roles = new Set(activeOrganization?.roles ?? []);
+  const ownerGovernance = roles.has('owner');
+  const institutionOperations = roles.has('administrator');
+  const institutionGovernance = ownerGovernance || institutionOperations;
+  const contentWorkspace = roles.has('author') || roles.has('reviewer');
+  const teachingWorkspace = roles.has('instructor');
+  const learnerWorkspace = roles.has('learner');
   const organizationBase = activeOrganization
     ? `/organizaciones/${activeOrganization.slug}`
     : undefined;
   const assessmentWorkspaceActive =
     organizationBase !== undefined &&
     pathname.startsWith(`${organizationBase}/evaluaciones`);
-  const generalNavigation: NavigationItem[] = [
-    {
-      href: '/estudiar',
-      icon: LayoutDashboard,
-      label: 'Inicio',
-      exact: true,
-      visible: !learnerOnly,
-    },
-    ...(activeOrganization && organizationBase
-      ? [
-          {
-            href: `${organizationBase}/miembros/${activeOrganization.membership_id}`,
-            icon: UserRound,
-            label: 'Mi perfil',
-          },
-        ]
-      : []),
-    ...(organizations.length > 1 && organizationBase
-      ? [
-          {
-            href: `${organizationBase}/buscar`,
-            icon: Search,
-            label: 'Buscar',
-          },
-        ]
-      : []),
-    ...(organizations.length > 1
-      ? [
-          {
-            href: '/organizaciones',
-            icon: Building2,
-            label: 'Cambiar organización',
-            exact: true,
-          },
-        ]
-      : []),
-  ];
+  const academicGroupLabel = institutionOperations
+    ? 'Operación académica'
+    : teachingWorkspace && contentWorkspace
+      ? 'Trabajo académico'
+      : teachingWorkspace
+        ? 'Docencia'
+        : 'Autoría y contenido';
   const platformAdministrationNavigation: NavigationItem[] = isPlatformOperator
     ? [
         {
@@ -230,14 +217,47 @@ function PlatformSidebar({
         },
       ]
     : [];
-  const organizationNavigation: NavigationItem[] = organizationBase
+  const learnerNavigation: NavigationItem[] = organizationBase
     ? [
         {
-          href: organizationBase,
-          icon: GraduationCap,
-          label: 'Resumen institucional',
+          activePrefixes: [`${organizationBase}/aprender/`],
           exact: true,
-          visible: !learnerOnly,
+          href: `${organizationBase}/aprendizaje`,
+          icon: NotebookTabs,
+          label: 'Mi aprendizaje',
+          visible: learnerWorkspace,
+        },
+        {
+          href: `${organizationBase}/calendario`,
+          icon: CalendarDays,
+          label: 'Mi calendario',
+          visible: learnerWorkspace && !teachingWorkspace,
+        },
+        {
+          activePrefixes: [`${organizationBase}/clases/`],
+          exact: true,
+          href: `${organizationBase}/clases`,
+          icon: Video,
+          label: 'Mis clases en vivo',
+          visible: learnerWorkspace && !teachingWorkspace,
+        },
+        {
+          href: `${organizationBase}/evaluaciones/asignadas`,
+          icon: ClipboardCheck,
+          label: 'Mis evaluaciones',
+          visible:
+            !assessmentWorkspaceActive &&
+            learnerWorkspace &&
+            capabilities.has('assessment.attempt'),
+        },
+        {
+          href: `${organizationBase}/evaluaciones/calificaciones`,
+          icon: Award,
+          label: 'Mis calificaciones',
+          visible:
+            !assessmentWorkspaceActive &&
+            learnerWorkspace &&
+            capabilities.has('assessment.attempt'),
         },
       ]
     : [];
@@ -247,9 +267,7 @@ function PlatformSidebar({
           href: `${organizationBase}/calendario`,
           icon: CalendarDays,
           label: 'Calendario',
-          visible:
-            capabilities.has('scheduling.view') ||
-            capabilities.has('assessment.attempt'),
+          visible: institutionOperations || teachingWorkspace,
         },
         {
           activePrefixes: [`${organizationBase}/clases/`],
@@ -257,22 +275,28 @@ function PlatformSidebar({
           href: `${organizationBase}/clases`,
           icon: Video,
           label: 'Clases en vivo',
-          visible: capabilities.has('scheduling.view'),
+          visible: institutionOperations || teachingWorkspace,
         },
         {
-          activePrefixes: [`${organizationBase}/aprender/`],
+          href: `${organizationBase}/aprendizaje/mis-asignaturas`,
+          icon: LibraryBig,
+          label: 'Mis asignaturas',
           exact: true,
-          href: `${organizationBase}/aprendizaje`,
-          icon: NotebookTabs,
-          label: 'Mi aprendizaje',
-          visible: capabilities.has('assessment.attempt'),
+          visible: teachingWorkspace,
+        },
+        {
+          href: `${organizationBase}/aprendizaje/cohortes`,
+          icon: GraduationCap,
+          label: 'Mis grupos',
+          visible: teachingWorkspace,
         },
         {
           children: [
             {
               href: `${organizationBase}/aprendizaje/mis-asignaturas`,
-              label: 'Mis asignaturas',
+              label: 'Responsabilidades docentes',
               exact: true,
+              visible: institutionOperations,
             },
             {
               activePrefixes: [`${organizationBase}/curriculo/asignaturas/`],
@@ -302,7 +326,9 @@ function PlatformSidebar({
           href: `${organizationBase}/curriculo`,
           icon: LibraryBig,
           label: 'Currículo',
-          visible: capabilities.has('catalog.view'),
+          visible:
+            (institutionOperations || contentWorkspace) &&
+            capabilities.has('catalog.view'),
         },
         {
           children: [
@@ -321,10 +347,12 @@ function PlatformSidebar({
           ],
           href: `${organizationBase}/cursos`,
           icon: BookOpenCheck,
-          label: 'Cursos',
+          label:
+            teachingWorkspace && !contentWorkspace ? 'Mis cursos' : 'Cursos',
           visible:
-            capabilities.has('course.authoring.view') ||
-            capabilities.has('course.approved.view'),
+            (institutionOperations || contentWorkspace || teachingWorkspace) &&
+            (capabilities.has('course.authoring.view') ||
+              capabilities.has('course.approved.view')),
         },
         {
           children: [
@@ -344,29 +372,17 @@ function PlatformSidebar({
           href: `${organizationBase}/recursos`,
           icon: Images,
           label: 'Recursos',
-          visible: capabilities.has('asset.library.view'),
+          visible:
+            (institutionOperations || contentWorkspace || teachingWorkspace) &&
+            capabilities.has('asset.library.view'),
         },
         {
           href: `${organizationBase}/biblioteca`,
           icon: LibraryBig,
           label: 'Biblioteca',
-          visible: capabilities.has('course.published.view'),
-        },
-        {
-          href: `${organizationBase}/evaluaciones/asignadas`,
-          icon: ClipboardCheck,
-          label: 'Mis evaluaciones',
           visible:
-            !assessmentWorkspaceActive &&
-            capabilities.has('assessment.attempt'),
-        },
-        {
-          href: `${organizationBase}/evaluaciones/calificaciones`,
-          icon: Award,
-          label: 'Mis calificaciones',
-          visible:
-            !assessmentWorkspaceActive &&
-            capabilities.has('assessment.attempt'),
+            (institutionOperations || contentWorkspace || teachingWorkspace) &&
+            capabilities.has('course.published.view'),
         },
         {
           children: [
@@ -390,135 +406,16 @@ function PlatformSidebar({
           label: 'Autoría de evaluaciones',
           visible:
             !assessmentWorkspaceActive &&
+            contentWorkspace &&
             (capabilities.has('assessment.authoring.view') ||
               capabilities.has('assessment.bank.view') ||
               capabilities.has('assessment.question.view')),
-        },
-      ]
-    : [];
-  const assessmentNavigation: NavigationItem[] =
-    organizationBase && assessmentWorkspaceActive
-      ? [
-          {
-            href: `${organizationBase}/evaluaciones`,
-            icon: ClipboardCheck,
-            label: 'Panel de evaluaciones',
-            exact: true,
-            visible: capabilities.has('assessment.authoring.view'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/nueva`,
-            icon: Plus,
-            label: 'Nueva evaluación',
-            exact: true,
-            visible: capabilities.has('assessment.authoring.manage'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/bancos`,
-            icon: NotebookTabs,
-            label: 'Bancos de preguntas',
-            visible:
-              capabilities.has('assessment.bank.view') ||
-              capabilities.has('assessment.question.view'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/entregas`,
-            icon: Send,
-            label: 'Entregas',
-            visible: capabilities.has('assessment.delivery.view'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/resultados`,
-            icon: FileCheck2,
-            label: 'Resultados',
-            visible: capabilities.has('assessment.results.view'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/calificacion-manual`,
-            icon: SquarePen,
-            label: 'Calificación manual',
-            visible: capabilities.has('assessment.grading.manage'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/regrading`,
-            icon: RefreshCcw,
-            label: 'Recalificación',
-            visible: capabilities.has('assessment.regrading.view'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/gradebooks`,
-            icon: BookOpenCheck,
-            label: 'Libros de calificaciones',
-            visible: capabilities.has('assessment.gradebook.view'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/analitica`,
-            icon: BarChart3,
-            label: 'Analítica de ítems',
-            visible: capabilities.has('assessment.analytics.view'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/asignadas`,
-            icon: GraduationCap,
-            label: 'Mis evaluaciones',
-            visible: capabilities.has('assessment.attempt'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/calificaciones`,
-            icon: Award,
-            label: 'Mis calificaciones',
-            visible: capabilities.has('assessment.attempt'),
-          },
-        ]
-      : [];
-  const administrationNavigation: NavigationItem[] = organizationBase
-    ? [
-        {
-          href: `${organizationBase}/miembros`,
-          icon: Users,
-          label: 'Personas',
-          visible: capabilities.has('membership.view'),
-        },
-        {
-          activePrefixes: [
-            `${organizationBase}/aprendizaje/matriculas`,
-            `${organizationBase}/aprendizaje/grupos`,
-            `${organizationBase}/aprendizaje/periodos`,
-          ],
-          children: [
-            {
-              href: `${organizationBase}/aprendizaje/periodos`,
-              label: 'Periodos académicos',
-              visible: capabilities.has('learning.cohort.view'),
-            },
-            {
-              href: `${organizationBase}/aprendizaje/grupos`,
-              label: 'Grupos académicos',
-              visible: capabilities.has('learning.cohort.view'),
-            },
-            {
-              href: `${organizationBase}/aprendizaje/cohortes`,
-              label: 'Mis grupos',
-              visible: capabilities.has('learning.cohort.view'),
-            },
-            {
-              href: `${organizationBase}/aprendizaje/matriculas`,
-              label: 'Matrículas individuales',
-              visible: capabilities.has('learning.enrollment.view'),
-            },
-          ],
-          href: `${organizationBase}/aprendizaje/cohortes`,
-          icon: GraduationCap,
-          label: 'Grupos y matrículas',
-          visible:
-            capabilities.has('learning.cohort.view') ||
-            capabilities.has('learning.enrollment.view'),
         },
         {
           children: [
             {
               href: `${organizationBase}/evaluaciones/entregas`,
-              label: 'Entregas',
+              label: 'Entregas por grupo',
               visible: capabilities.has('assessment.delivery.view'),
             },
             {
@@ -532,43 +429,169 @@ function PlatformSidebar({
               visible: capabilities.has('assessment.grading.manage'),
             },
             {
-              href: `${organizationBase}/evaluaciones/regrading`,
-              label: 'Recalificación',
-              visible: capabilities.has('assessment.regrading.view'),
-            },
-            {
               href: `${organizationBase}/evaluaciones/gradebooks`,
               label: 'Libros de calificaciones',
               visible: capabilities.has('assessment.gradebook.view'),
             },
-            {
-              href: `${organizationBase}/evaluaciones/analitica`,
-              label: 'Analítica',
-              visible: capabilities.has('assessment.analytics.view'),
-            },
           ],
           href: `${organizationBase}/evaluaciones/entregas`,
           icon: ClipboardCheck,
-          label: 'Gestión de evaluaciones',
+          label:
+            institutionOperations && !teachingWorkspace
+              ? 'Entregas y resultados'
+              : 'Evaluación y calificación',
           visible:
+            (institutionOperations || teachingWorkspace) &&
             !assessmentWorkspaceActive &&
-            (capabilities.has('assessment.delivery.view') ||
-              capabilities.has('assessment.results.view') ||
-              capabilities.has('assessment.grading.manage') ||
-              capabilities.has('assessment.regrading.view') ||
-              capabilities.has('assessment.gradebook.view') ||
-              capabilities.has('assessment.analytics.view')),
-        },
-        {
-          href: `${organizationBase}/configuracion`,
-          icon: Settings2,
-          label: 'Configuración institucional',
-          visible:
-            capabilities.has('membership.settings.view') ||
-            capabilities.has('integration.view'),
+            capabilities.has('assessment.delivery.view'),
         },
       ]
     : [];
+  const assessmentNavigation: NavigationItem[] =
+    organizationBase && assessmentWorkspaceActive
+      ? [
+          {
+            href: `${organizationBase}/evaluaciones`,
+            icon: ClipboardCheck,
+            label: 'Panel de evaluaciones',
+            exact: true,
+            visible:
+              contentWorkspace && capabilities.has('assessment.authoring.view'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/nueva`,
+            icon: Plus,
+            label: 'Nueva evaluación',
+            exact: true,
+            visible:
+              contentWorkspace &&
+              capabilities.has('assessment.authoring.manage'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/bancos`,
+            icon: NotebookTabs,
+            label: 'Bancos de preguntas',
+            visible:
+              contentWorkspace &&
+              (capabilities.has('assessment.bank.view') ||
+                capabilities.has('assessment.question.view')),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/entregas`,
+            icon: Send,
+            label: 'Entregas',
+            visible:
+              (institutionOperations || teachingWorkspace) &&
+              capabilities.has('assessment.delivery.view'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/resultados`,
+            icon: FileCheck2,
+            label: 'Resultados',
+            visible:
+              (institutionOperations || teachingWorkspace) &&
+              capabilities.has('assessment.results.view'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/calificacion-manual`,
+            icon: SquarePen,
+            label: 'Calificación manual',
+            visible:
+              (institutionOperations || teachingWorkspace) &&
+              capabilities.has('assessment.grading.manage'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/regrading`,
+            icon: RefreshCcw,
+            label: 'Recalificación',
+            visible:
+              (institutionOperations || teachingWorkspace) &&
+              capabilities.has('assessment.regrading.view'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/gradebooks`,
+            icon: BookOpenCheck,
+            label: 'Libros de calificaciones',
+            visible:
+              (institutionOperations || teachingWorkspace) &&
+              capabilities.has('assessment.gradebook.view'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/analitica`,
+            icon: BarChart3,
+            label: 'Analítica de ítems',
+            visible:
+              (institutionOperations || teachingWorkspace) &&
+              capabilities.has('assessment.analytics.view'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/asignadas`,
+            icon: GraduationCap,
+            label: 'Mis evaluaciones',
+            visible: learnerWorkspace && capabilities.has('assessment.attempt'),
+          },
+          {
+            href: `${organizationBase}/evaluaciones/calificaciones`,
+            icon: Award,
+            label: 'Mis calificaciones',
+            visible: learnerWorkspace && capabilities.has('assessment.attempt'),
+          },
+        ]
+      : [];
+  const administrationNavigation: NavigationItem[] =
+    organizationBase && institutionGovernance
+      ? [
+          {
+            href: `${organizationBase}/miembros`,
+            icon: Users,
+            label: 'Personas',
+            visible: capabilities.has('membership.view'),
+          },
+          {
+            activePrefixes: [
+              `${organizationBase}/aprendizaje/matriculas`,
+              `${organizationBase}/aprendizaje/grupos`,
+              `${organizationBase}/aprendizaje/periodos`,
+            ],
+            children: [
+              {
+                href: `${organizationBase}/aprendizaje/periodos`,
+                label: 'Periodos académicos',
+                visible: capabilities.has('learning.cohort.view'),
+              },
+              {
+                href: `${organizationBase}/aprendizaje/grupos`,
+                label: 'Grupos académicos',
+                visible: capabilities.has('learning.cohort.view'),
+              },
+              {
+                href: `${organizationBase}/aprendizaje/cohortes`,
+                label: 'Grupos de curso',
+                visible: capabilities.has('learning.cohort.view'),
+              },
+              {
+                href: `${organizationBase}/aprendizaje/matriculas`,
+                label: 'Matrículas individuales',
+                visible: capabilities.has('learning.enrollment.view'),
+              },
+            ],
+            href: `${organizationBase}/aprendizaje/cohortes`,
+            icon: GraduationCap,
+            label: 'Grupos y matrículas',
+            visible:
+              capabilities.has('learning.cohort.view') ||
+              capabilities.has('learning.enrollment.view'),
+          },
+          {
+            href: `${organizationBase}/configuracion`,
+            icon: Settings2,
+            label: 'Configuración institucional',
+            visible:
+              capabilities.has('membership.settings.view') ||
+              capabilities.has('integration.view'),
+          },
+        ]
+      : [];
   const courseBase = organizationBase
     ? courseWorkspaceBase(pathname, organizationBase)
     : undefined;
@@ -592,6 +615,7 @@ function PlatformSidebar({
           icon: FileCheck2,
           label: 'Revisión',
           exact: true,
+          visible: contentWorkspace,
         },
         {
           activePrefixes: [`${courseBase}/publicaciones/`],
@@ -608,41 +632,84 @@ function PlatformSidebar({
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader className="border-b border-sidebar-border p-3">
         <SidebarMenu>
-          <SidebarMenuItem>
+          <SidebarMenuItem className="relative">
             <SidebarMenuButton
               asChild
               className="h-11 data-[slot=sidebar-menu-button]:p-2"
               size="lg"
-              tooltip="Plataforma académica"
+              tooltip={activeOrganization?.name ?? 'Control de plataforma'}
             >
-              <Link href="/estudiar">
+              <Link
+                href={
+                  activeOrganization
+                    ? primaryWorkspaceHref(
+                        activeOrganization.slug,
+                        activeOrganization.roles,
+                      )
+                    : '/administracion/organizaciones'
+                }
+              >
                 <span className="grid size-8 shrink-0 place-items-center rounded-md border border-sidebar-border bg-white text-primary shadow-xs">
-                  <GraduationCap className="size-4.5" />
+                  {activeOrganization ? (
+                    <Building2 className="size-4.5" />
+                  ) : (
+                    <GraduationCap className="size-4.5" />
+                  )}
                 </span>
-                <span className="grid min-w-0 flex-1 text-left leading-tight">
-                  <span className="truncate font-semibold">
-                    Plataforma académica
+                {activeOrganization ? (
+                  <OrganizationIdentity organization={activeOrganization} />
+                ) : (
+                  <span className="grid min-w-0 flex-1 text-left leading-tight">
+                    <span className="truncate font-semibold">
+                      Control de plataforma
+                    </span>
+                    <span className="truncate text-xs text-sidebar-foreground/70">
+                      Superadministrador
+                    </span>
                   </span>
-                  <span className="truncate text-xs text-sidebar-foreground/70">
-                    Entorno institucional
-                  </span>
-                </span>
+                )}
               </Link>
             </SidebarMenuButton>
+            {activeOrganization && organizations.length > 1 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    aria-label="Cambiar organización"
+                    className="absolute top-5 right-4 size-7 group-data-[collapsible=icon]:hidden"
+                    size="sm"
+                    tooltip="Cambiar organización"
+                  >
+                    <ChevronDown />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="min-w-72"
+                  side="right"
+                >
+                  <DropdownMenuLabel>Cambiar organización</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {organizations.map((organization) => (
+                    <DropdownMenuItem asChild key={organization.id}>
+                      <Link
+                        href={primaryWorkspaceHref(
+                          organization.slug,
+                          organization.roles,
+                        )}
+                      >
+                        <Building2 />
+                        <OrganizationIdentity organization={organization} />
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
       <SidebarContent>
-        {generalNavigation.some((item) => item.visible !== false) ? (
-          <SidebarGroup>
-            <SidebarGroupLabel>Plataforma</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <NavigationList items={generalNavigation} pathname={pathname} />
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ) : null}
-
         {platformAdministrationNavigation.some(
           (item) => item.visible !== false,
         ) ? (
@@ -657,76 +724,9 @@ function PlatformSidebar({
           </SidebarGroup>
         ) : null}
 
-        {activeOrganization ? (
-          <SidebarGroup>
-            <SidebarGroupLabel>Institución</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  {organizations.length > 1 ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <SidebarMenuButton
-                          className="h-auto min-h-12"
-                          tooltip={`Cambiar ${activeOrganization.name}`}
-                        >
-                          <Building2 />
-                          <OrganizationIdentity
-                            organization={activeOrganization}
-                          />
-                          <ChevronDown className="ml-auto group-data-[collapsible=icon]:hidden" />
-                        </SidebarMenuButton>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="start"
-                        className="min-w-64"
-                        side="right"
-                      >
-                        <DropdownMenuLabel>
-                          Cambiar organización
-                        </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {organizations
-                          .filter(
-                            (organization) =>
-                              organization.id !== activeOrganization.id,
-                          )
-                          .map((organization) => (
-                            <DropdownMenuItem asChild key={organization.id}>
-                              <Link
-                                href={`/organizaciones/${organization.slug}`}
-                              >
-                                <Building2 />
-                                <OrganizationIdentity
-                                  organization={organization}
-                                />
-                              </Link>
-                            </DropdownMenuItem>
-                          ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : (
-                    <div
-                      className="flex min-h-12 items-center gap-2 overflow-hidden rounded-lg px-2 text-sidebar-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-                      title={activeOrganization.name}
-                    >
-                      <Building2 className="size-4 shrink-0" />
-                      <OrganizationIdentity organization={activeOrganization} />
-                    </div>
-                  )}
-                </SidebarMenuItem>
-              </SidebarMenu>
-              <NavigationList
-                items={organizationNavigation}
-                pathname={pathname}
-              />
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ) : null}
-
         {assessmentNavigation.some((item) => item.visible !== false) ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Flujo de evaluaciones</SidebarGroupLabel>
+            <SidebarGroupLabel>Evaluaciones</SidebarGroupLabel>
             <SidebarGroupContent>
               <NavigationList
                 items={assessmentNavigation}
@@ -736,11 +736,18 @@ function PlatformSidebar({
           </SidebarGroup>
         ) : null}
 
+        {learnerNavigation.some((item) => item.visible !== false) ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Mi aprendizaje</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavigationList items={learnerNavigation} pathname={pathname} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
+
         {academicNavigation.some((item) => item.visible !== false) ? (
           <SidebarGroup>
-            <SidebarGroupLabel>
-              {learnerOnly ? 'Mi espacio académico' : 'Gestión académica'}
-            </SidebarGroupLabel>
+            <SidebarGroupLabel>{academicGroupLabel}</SidebarGroupLabel>
             <SidebarGroupContent>
               <NavigationList items={academicNavigation} pathname={pathname} />
             </SidebarGroupContent>
@@ -769,27 +776,92 @@ function PlatformSidebar({
         ) : null}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-3">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <div className="flex items-center gap-2 overflow-hidden rounded-lg p-1.5 group-data-[collapsible=icon]:justify-center">
-              <Avatar className="size-8">
-                <AvatarFallback className="bg-primary/5 text-xs font-semibold text-primary">
-                  {initials(email)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                <p className="truncate text-sm font-medium">{email}</p>
-              </div>
-            </div>
-          </SidebarMenuItem>
-          <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
-            <LogoutButton className="w-full justify-start" compact />
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
+  );
+}
+
+function AccountMenu({
+  displayName,
+  isPlatformOperator,
+  organization,
+}: Readonly<{
+  displayName: string;
+  isPlatformOperator: boolean;
+  organization?: ShellOrganization | undefined;
+}>) {
+  const profileHref = organization
+    ? `/organizaciones/${organization.slug}/miembros/${organization.membership_id}`
+    : '/estudiar';
+  const settingsHref = organization
+    ? `/organizaciones/${organization.slug}/notificaciones/preferencias`
+    : '/administracion/configuracion';
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          aria-label={`Abrir menú de cuenta de ${displayName}`}
+          className="flex h-9 max-w-56 items-center gap-2 rounded-full border bg-background py-1 pr-3 pl-1 shadow-xs transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          type="button"
+        >
+          <Avatar className="size-7">
+            <AvatarFallback className="bg-primary text-[0.65rem] font-semibold text-primary-foreground">
+              {initials(displayName)}
+            </AvatarFallback>
+          </Avatar>
+          <span className="hidden truncate text-sm font-medium sm:block">
+            {displayName}
+          </span>
+          <ChevronDown className="size-3.5 text-muted-foreground" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64 p-1.5">
+        <DropdownMenuLabel className="px-2 py-2">
+          <span className="block truncate text-sm font-semibold">
+            {displayName}
+          </span>
+          <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+            {organization
+              ? sortRoles(organization.roles).map(roleLabel).join(' · ')
+              : isPlatformOperator
+                ? 'Administración de plataforma'
+                : 'Cuenta personal'}
+          </span>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {organization ? (
+          <DropdownMenuItem asChild>
+            <Link href={profileHref}>
+              <UserRound />
+              Mi perfil
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuItem asChild>
+          <Link href={settingsHref}>
+            <Settings2 />
+            {organization ? 'Preferencias' : 'Configuración'}
+          </Link>
+        </DropdownMenuItem>
+        {organization?.capabilities.some((capability) =>
+          ['membership.settings.view', 'integration.view'].includes(capability),
+        ) ? (
+          <DropdownMenuItem asChild>
+            <Link href={`/organizaciones/${organization.slug}/configuracion`}>
+              <Building2 />
+              Configuración institucional
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuSeparator />
+        <div className="p-0.5">
+          <LogoutButton
+            className="w-full justify-start text-destructive hover:text-destructive"
+            compact
+          />
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

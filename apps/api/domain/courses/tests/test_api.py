@@ -163,7 +163,9 @@ class CourseApiTests(CourseFixtureMixin, TestCase):
         )
 
     def test_instructor_filters_cannot_infer_a_newer_draft(self) -> None:
-        owner, organization, *_, revision = self.course_revision()
+        owner, organization, subject, _objective, _topic, revision = (
+            self.course_revision()
+        )
         revision.authoring_status = AuthoringStatus.APPROVED
         revision.title = "Título aprobado"
         revision.summary = "Resumen visible"
@@ -186,8 +188,27 @@ class CourseApiTests(CourseFixtureMixin, TestCase):
             RoleCode.INSTRUCTOR,
             "instructor-filter@example.test",
         )
+        unassigned_instructor = self.member(
+            owner,
+            organization,
+            RoleCode.INSTRUCTOR,
+            "unassigned-instructor@example.test",
+        )
+        membership = Membership.objects.get(organization=organization, user=instructor)
+        assign_subject_teaching_responsibility(
+            actor=owner,
+            organization=organization,
+            subject=subject,
+            membership=membership,
+            starts_on=timezone.localdate(),
+            ends_on=None,
+            rationale="Responsabilidad docente vigente.",
+        )
         client = self.client_for(instructor)
         base = f"/api/v1/organizations/{organization.slug}/courses/"
+        self.assertEqual(
+            self.client_for(unassigned_instructor).get(base).data["count"], 0
+        )
         self.assertEqual(client.get(f"{base}?search=confidencial").data["count"], 0)
         visible = client.get(f"{base}?search=aprobado")
         self.assertEqual(visible.data["count"], 1)

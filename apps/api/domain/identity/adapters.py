@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import cast
 
@@ -60,7 +61,7 @@ class LMSAccountAdapter(DefaultAccountAdapter):
     """Keep allauth authoritative while evaluating live registration policy."""
 
     def is_open_for_signup(self, request: HttpRequest) -> bool:
-        from domain.organizations.services import session_has_valid_signup_invitation
+        from domain.organizations.services import session_signup_invitation
 
         from .models import PlatformRegistrationSettings
 
@@ -70,12 +71,17 @@ class LMSAccountAdapter(DefaultAccountAdapter):
             == PlatformRegistrationSettings.SignupMode.OPEN.value
         ):
             return True
-        if (
-            registration.signup_mode
-            == PlatformRegistrationSettings.SignupMode.INVITE_ONLY.value
-        ):
-            return session_has_valid_signup_invitation(request)
-        return False
+        invitation = session_signup_invitation(request)
+        if invitation is None:
+            return False
+        try:
+            payload = json.loads(request.body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return False
+        submitted_email = payload.get("email") if isinstance(payload, dict) else None
+        return isinstance(submitted_email, str) and (
+            submitted_email.strip().casefold() == invitation.email.casefold()
+        )
 
     def confirm_email(self, request: HttpRequest, email_address: EmailAddress) -> bool:
         confirmed = super().confirm_email(request, email_address)

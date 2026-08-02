@@ -98,7 +98,11 @@ class OrganizationApiTests(TestCase):
 
         created = client.post(
             "/api/v1/platform/organizations/",
-            {"name": "Nueva Academia", "owner_email": designated_owner.email},
+            {
+                "name": "Nueva Academia",
+                "owner_email": designated_owner.email,
+                "administrator_emails": ["initial-admin@example.test"],
+            },
             format="json",
         )
         self.assertEqual(created.status_code, 201)
@@ -125,6 +129,18 @@ class OrganizationApiTests(TestCase):
         self.assertEqual(invitation.status, InvitationStatus.PENDING)
         self.assertEqual(invitation.invitation_type, InvitationType.INITIAL_OWNER)
         self.assertEqual(invitation.invited_roles, [RoleCode.OWNER])
+        control_plane = f"/api/v1/platform/organizations/{pending.slug}/invitations/"
+        invitations = client.get(control_plane)
+        self.assertEqual(invitations.status_code, 200)
+        self.assertEqual(len(invitations.data), 2)
+        administrator_invitation = pending.membership_invitations.get(
+            email="initial-admin@example.test"
+        )
+        resent = client.post(f"{control_plane}{administrator_invitation.id}/resend/")
+        self.assertEqual(resent.status_code, 200)
+        revoked = client.post(f"{control_plane}{administrator_invitation.id}/revoke/")
+        self.assertEqual(revoked.status_code, 200)
+        self.assertEqual(revoked.data["status"], InvitationStatus.REVOKED)
 
     def test_platform_operator_cannot_invite_itself_and_can_invite_new_owner(
         self,
@@ -166,6 +182,12 @@ class OrganizationApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.data["code"], "permission_denied")
+        self.assertEqual(
+            self.client_for(user)
+            .get("/api/v1/platform/organizations/unknown/invitations/")
+            .status_code,
+            403,
+        )
 
     def test_cross_organization_slug_and_membership_are_not_found(self) -> None:
         owner = self.verified_user("owner@example.test")

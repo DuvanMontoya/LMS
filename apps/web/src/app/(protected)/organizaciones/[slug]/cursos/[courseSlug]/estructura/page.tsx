@@ -24,9 +24,13 @@ export default async function CourseStructurePage({
           },
           { label: 'Estructura' },
         ]}
-        description="Ordena una sola secuencia de lecciones, clases en vivo y evaluaciones, con sus políticas académicas y bindings operativos."
-        eyebrow="Autoría estructural"
-        title="Estructura del curso"
+        description={
+          data.canAuthor
+            ? 'Ordena una sola secuencia de lecciones, clases en vivo y evaluaciones, con sus políticas académicas y bindings operativos.'
+            : 'Consulta la secuencia aprobada de lecciones, clases en vivo y evaluaciones de este curso.'
+        }
+        eyebrow={data.canAuthor ? 'Autoría estructural' : 'Curso asignado'}
+        title={data.canAuthor ? 'Estructura del curso' : 'Secuencia del curso'}
       />
       <div className="mt-6">
         <StructureEditor

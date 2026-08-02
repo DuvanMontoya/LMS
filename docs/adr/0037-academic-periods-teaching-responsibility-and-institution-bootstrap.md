@@ -3,7 +3,7 @@
 - Estado: aceptada
 - Fecha: 2026-08-01
 - Responsables: plataforma academica
-- Amplia: ADR 0017, ADR 0018, ADR 0034 y ADR 0035
+- Amplia: ADR 0017, ADR 0018, ADR 0034 y ADR 0035; matizada por ADR 0038
 
 ## Contexto
 
@@ -41,9 +41,10 @@ https://standards.1edtech.org/case/.
   asignaturas; `domain.courses` posee excepciones fechadas sobre cursos. Ninguna
   concede roster, progreso, asistencia o calificaciones.
 - El acceso efectivo a datos operativos exige membresia activa, capability,
-  asignacion activa al grupo de curso y vigencia academica. Owner/admin tienen
-  alcance institucional. Los demas docentes solo ven sus grupos; autor/reviewer
-  no heredan acceso a personas por trabajar contenido.
+  asignacion activa al grupo de curso y vigencia academica. `administrator`
+  conserva alcance operativo institucional; `owner` queda limitado a gobierno
+  por ADR 0038. Los docentes solo ven sus grupos y autor/reviewer no heredan
+  acceso a personas por trabajar contenido.
 - `Organization` incorpora `pending_activation`, `active`, `suspended` y
   `closed`. El operador global crea nombre/slug y una invitacion obligatoria de
   owner, mas invitaciones opcionales de administradores. Nunca recibe
@@ -52,6 +53,11 @@ https://standards.1edtech.org/case/.
   revocable y auditable. Aceptarla crea la primera membresia owner y activa la
   institucion en la misma transaccion. Las invitaciones owner ordinarias siguen
   requiriendo la politica sensible del owner vigente.
+- El plano de plataforma puede listar, reenviar y revocar exclusivamente las
+  invitaciones iniciales de una organizacion pendiente. Reenviar rota el token
+  hasheado y revoca el anterior; al activarse la organizacion, este listado
+  devuelve vacio y cualquier incorporacion posterior vuelve al gobierno del
+  tenant. Una invitacion inicial de administrador nunca activa la organizacion.
 - Una matricula por sincronizacion de grupo es la via normal. Una matricula
   individual conserva origen, motivo, actor y fecha y se presenta como
   excepcion. Ningun cambio reescribe intentos, notas, asistencia o progreso.
@@ -89,4 +95,3 @@ heredadas marcadas para revision. Las nuevas escrituras son fail-closed.
 - Inferir periodos por fecha de creacion: inventa historia academica.
 - Un gradebook por release para todos los grupos: combina docentes, rosters y
   periodos que deben permanecer separados.
-

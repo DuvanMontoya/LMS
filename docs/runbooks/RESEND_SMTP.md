@@ -1,9 +1,12 @@
 # Envío transaccional con Resend SMTP
 
-Estado local al 2026-08-01: `papyros.pro` aparece `verified` en Resend. En
-Hostinger existen DKIM, SPF, MX de `send` y DMARC; los registros web existentes
-no fueron reemplazados. Django autenticó correctamente mediante STARTTLS en
-`smtp.resend.com:587`; todavía no se ha transmitido un correo real.
+Estado revisado al 2026-08-02: DNS público responde con DKIM en
+`resend._domainkey.papyros.pro`, SPF y MX en `send.papyros.pro`, y DMARC
+`v=DMARC1; p=none;`. `papyros.pro` aparecía `verified` en Resend en la revisión
+local anterior. Django autenticó correctamente mediante STARTTLS en
+`smtp.resend.com:587` y ya se observaron mensajes en el buzón, algunos
+clasificados como spam. La autenticación DNS es necesaria, pero no prueba por sí
+sola la colocación en bandeja.
 
 ## Configuración privada local
 
@@ -36,6 +39,13 @@ pnpm notifications:email-smoke
 STARTTLS y autentica contra Resend. No envía mensajes ni necesita un destinatario.
 Un correo real se envía después, con un destinatario de prueba autorizado, para
 comprobar recepción y no sólo transporte.
+
+Cuando un mensaje llegue a spam, el siguiente diagnóstico obligatorio es abrir
+el original recibido y comprobar `Authentication-Results` (`spf`, `dkim` y
+`dmarc`), alineación de `From`/`Return-Path`, Message-ID y cualquier causa que
+muestre Deliverability Insights de Resend. Para correos sensibles de acceso se
+mantiene deshabilitado el tracking de enlaces; habilitarlo no forma parte de
+este runbook.
 
 Tras obtener autorización explícita del destinatario:
 

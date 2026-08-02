@@ -4,7 +4,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from domain.organizations.capabilities import Capability, capabilities_for_roles
-from domain.organizations.choices import RoleCode
 from domain.organizations.models import Membership, Organization
 from domain.organizations.policies import (
     active_membership,
@@ -21,12 +20,11 @@ from .models import CohortStaffAssignment, CourseEnrollment, LearningCohort
 def has_institutional_learning_scope(
     actor: User | None, organization: Organization
 ) -> bool:
-    """Owners and administrators retain institutional scope; nobody else does."""
+    """Institutional scope is an explicit operational grant, never ownership."""
 
-    return bool(
-        {RoleCode.OWNER, RoleCode.ADMINISTRATOR}
-        & active_roles(active_membership(actor, organization))
-    )
+    return has_capability(
+        actor, organization, Capability.LEARNING_COHORT_MANAGE
+    ) or has_capability(actor, organization, Capability.LEARNING_ENROLLMENT_MANAGE)
 
 
 def active_staff_membership(
@@ -56,7 +54,10 @@ def learning_visibility_scope(
         for required in (capability, *additional_capabilities)
     ):
         return None
-    return membership, bool({RoleCode.OWNER, RoleCode.ADMINISTRATOR} & roles)
+    return membership, bool(
+        Capability.LEARNING_COHORT_MANAGE in capabilities
+        or Capability.LEARNING_ENROLLMENT_MANAGE in capabilities
+    )
 
 
 def has_course_group_staff_scope(actor: User | None, cohort: LearningCohort) -> bool:

@@ -45,7 +45,7 @@ describe('LearningProgress', () => {
       />,
     );
     const progress = screen.getByRole('progressbar', {
-      name: '3 de 4 unidades completadas, 75 %',
+      name: '3 de 4 actividades obligatorias completadas, 75 %',
     });
     expect(progress).toHaveAttribute('max', '4');
     expect(progress).toHaveAttribute('value', '3');

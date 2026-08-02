@@ -12,7 +12,10 @@ from domain.learning.models import CourseGroupActivity
 from domain.learning.services import create_academic_period, create_cohort
 from domain.organizations.choices import RoleCode
 from domain.organizations.models import Membership
-from domain.organizations.services import create_organization_with_owner
+from domain.organizations.services import (
+    add_existing_member_with_roles,
+    create_organization_with_owner,
+)
 
 from ..api.serializers import AttemptResultSerializer
 from ..gradebooks import create_gradebook
@@ -180,6 +183,13 @@ class AssessmentApiSecurityTests(AssessmentFixtureMixin, TestCase):
         client = APIClient()
         client.force_authenticate(instructor)
         base = f"/api/v1/organizations/{context['organization'].slug}/assessments"
+        self.assertEqual(client.get(f"{base}/").status_code, 403)
+        options = client.get(f"{base}/approved-version-options/")
+        self.assertEqual(options.status_code, 200)
+        self.assertEqual(
+            {row["id"] for row in options.json()},
+            {str(context["assessment_version"].id)},
+        )
         deliveries = client.get(f"{base}/deliveries/")
         self.assertEqual(deliveries.status_code, 200)
         payload = deliveries.json()
@@ -340,8 +350,28 @@ class AssessmentApiSecurityTests(AssessmentFixtureMixin, TestCase):
         other = create_organization_with_owner(
             actor=outsider, name="Otra institución", slug="otra-institucion"
         )
+        cross_scope_actor = get_user_model().objects.create_user(
+            email="assessment-cross-scope@example.test",
+            password="AssessmentCrossScopePassword!42",
+        )
+        EmailAddress.objects.create(
+            user=cross_scope_actor,
+            email=cross_scope_actor.email,
+            primary=True,
+            verified=True,
+        )
+        add_existing_member_with_roles(
+            actor=outsider,
+            organization=other,
+            user=cross_scope_actor,
+            roles={
+                RoleCode.ADMINISTRATOR,
+                RoleCode.AUTHOR,
+                RoleCode.LEARNER,
+            },
+        )
         client = APIClient()
-        client.force_authenticate(outsider)
+        client.force_authenticate(cross_scope_actor)
         paths = (
             (
                 "post",

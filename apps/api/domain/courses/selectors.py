@@ -36,11 +36,8 @@ def courses_visible_to_actor(
     actor: object, organization: Organization
 ) -> QuerySet[Course]:
     queryset = Course.objects.filter(organization=organization)
+    roles = active_roles(active_membership(actor, organization))  # type: ignore[arg-type]
     if can_view_course_authoring(actor, organization):
-        if {RoleCode.OWNER, RoleCode.ADMINISTRATOR} & active_roles(
-            active_membership(actor, organization)  # type: ignore[arg-type]
-        ):
-            return queryset
         today = timezone.localdate()
         subject_ids = (
             SubjectTeachingResponsibility.objects.filter(
@@ -69,8 +66,37 @@ def courses_visible_to_actor(
             | Q(revisions__subject_alignments__subject_id__in=subject_ids)
         ).distinct()
     if can_view_approved_course(actor, organization):
-        return queryset.filter(
+        approved = queryset.filter(
             revisions__authoring_status=AuthoringStatus.APPROVED
+        ).distinct()
+        if RoleCode.INSTRUCTOR not in roles:
+            return approved
+        today = timezone.localdate()
+        subject_ids = (
+            SubjectTeachingResponsibility.objects.filter(
+                subject__discipline__area__organization=organization,
+                membership__user=actor,
+                membership__status="active",
+                starts_on__lte=today,
+                ended_at__isnull=True,
+            )
+            .filter(Q(ends_on__isnull=True) | Q(ends_on__gte=today))
+            .values_list("subject_id", flat=True)
+        )
+        exception_ids = (
+            CourseTeachingException.objects.filter(
+                course__organization=organization,
+                membership__user=actor,
+                membership__status="active",
+                starts_on__lte=today,
+                ended_at__isnull=True,
+            )
+            .filter(Q(ends_on__isnull=True) | Q(ends_on__gte=today))
+            .values_list("course_id", flat=True)
+        )
+        return approved.filter(
+            Q(id__in=exception_ids)
+            | Q(revisions__subject_alignments__subject_id__in=subject_ids)
         ).distinct()
     return queryset.none()
 

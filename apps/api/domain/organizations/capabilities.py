@@ -27,6 +27,8 @@ class Capability(StrEnum):
     INTEGRATION_VIEW = "integration.view"
     INTEGRATION_MANAGE = "integration.manage"
     CATALOG_VIEW = "catalog.view"
+    CATALOG_TEACHING_RESPONSIBILITY_VIEW = "catalog.teaching_responsibility.view"
+    CATALOG_TEACHING_RESPONSIBILITY_MANAGE = "catalog.teaching_responsibility.manage"
     CATALOG_MANAGE = "catalog.manage"
     CATALOG_MANAGE_PREREQUISITES = "catalog.manage_prerequisites"
     COURSE_AUTHORING_VIEW = "course.authoring.view"
@@ -45,7 +47,6 @@ class Capability(StrEnum):
     LEARNING_ENROLLMENT_VIEW = "learning.enrollment.view"
     LEARNING_ENROLLMENT_MANAGE = "learning.enrollment.manage"
     LEARNING_PROGRESS_VIEW = "learning.progress.view"
-    LEARNING_PROGRESS_MANAGE = "learning.progress.manage"
     SCHEDULING_VIEW = "scheduling.view"
     SCHEDULING_CREATE = "scheduling.create"
     SCHEDULING_MANAGE = "scheduling.manage"
@@ -95,13 +96,77 @@ class Capability(StrEnum):
     NOTIFICATION_PREFERENCES_MANAGE_OWN = "notification.preferences.manage_own"
 
 
-_ALL_CAPABILITIES = frozenset(Capability)
-_ALL_ADMIN_CAPABILITIES = _ALL_CAPABILITIES - frozenset({Capability.ASSESSMENT_ATTEMPT})
 _MEMBER_READ_CAPABILITIES = frozenset(
     {
         Capability.ORGANIZATION_VIEW,
         Capability.NOTIFICATION_PREFERENCES_MANAGE_OWN,
     }
+)
+_ORGANIZATION_GOVERNANCE_CAPABILITIES = _MEMBER_READ_CAPABILITIES | frozenset(
+    {
+        Capability.ORGANIZATION_UPDATE,
+        Capability.MEMBERSHIP_VIEW,
+        Capability.MEMBERSHIP_ADD,
+        Capability.MEMBERSHIP_SUSPEND,
+        Capability.MEMBERSHIP_REACTIVATE,
+        Capability.MEMBERSHIP_REVOKE,
+        Capability.ROLE_VIEW,
+        Capability.ROLE_ASSIGN,
+        Capability.MEMBERSHIP_EVENT_VIEW,
+        Capability.MEMBERSHIP_INVITE,
+        Capability.MEMBERSHIP_INVITATION_MANAGE,
+        Capability.MEMBERSHIP_JOIN_REQUEST_MANAGE,
+        Capability.MEMBERSHIP_PROFILE_MANAGE,
+        Capability.MEMBERSHIP_SETTINGS_VIEW,
+        Capability.MEMBERSHIP_SETTINGS_MANAGE,
+        Capability.MEMBERSHIP_SESSIONS_REVOKE,
+        Capability.MEMBERSHIP_RECOVERY_SEND,
+        Capability.INTEGRATION_VIEW,
+        Capability.INTEGRATION_MANAGE,
+    }
+)
+_INSTITUTION_OPERATIONS_CAPABILITIES = (
+    _ORGANIZATION_GOVERNANCE_CAPABILITIES
+    | frozenset(
+        {
+            Capability.CATALOG_VIEW,
+            Capability.CATALOG_TEACHING_RESPONSIBILITY_MANAGE,
+            Capability.CATALOG_MANAGE,
+            Capability.CATALOG_MANAGE_PREREQUISITES,
+            Capability.COURSE_APPROVED_VIEW,
+            Capability.COURSE_RELEASE_PUBLISH,
+            Capability.COURSE_RELEASE_WITHDRAW,
+            Capability.COURSE_RELEASE_HISTORY_VIEW,
+            Capability.COURSE_PUBLISHED_VIEW,
+            Capability.LEARNING_COHORT_VIEW,
+            Capability.LEARNING_COHORT_MANAGE,
+            Capability.LEARNING_ENROLLMENT_VIEW,
+            Capability.LEARNING_ENROLLMENT_MANAGE,
+            Capability.LEARNING_PROGRESS_VIEW,
+            Capability.SCHEDULING_VIEW,
+            Capability.SCHEDULING_CREATE,
+            Capability.SCHEDULING_MANAGE,
+            Capability.ASSESSMENT_DELIVERY_VIEW,
+            Capability.ASSESSMENT_DELIVERY_MANAGE,
+            Capability.ASSESSMENT_RESULTS_VIEW,
+            Capability.ASSESSMENT_GRADEBOOK_VIEW,
+            Capability.ASSESSMENT_ANALYTICS_VIEW,
+            Capability.ASSET_LIBRARY_VIEW,
+            Capability.ASSET_LIBRARY_MANAGE,
+            Capability.ASSET_UPLOAD,
+            Capability.ASSET_ARCHIVE,
+            Capability.ASSET_ORIGINAL_DOWNLOAD,
+            Capability.ASSET_REPROCESS,
+            Capability.ASSET_SECURITY_VIEW,
+            Capability.PLATFORM_EVENTS_VIEW,
+            Capability.PLATFORM_EVENTS_REPLAY,
+            Capability.PLATFORM_OPERATIONS_VIEW,
+            Capability.PLATFORM_OPERATIONS_MANAGE,
+            Capability.SEARCH_INSTITUTIONAL_USE,
+            Capability.SEARCH_INDEX_VIEW,
+            Capability.SEARCH_INDEX_REBUILD,
+        }
+    )
 )
 _CATALOG_MANAGER_CAPABILITIES = frozenset(
     {
@@ -119,10 +184,6 @@ _COURSE_AUTHOR_CAPABILITIES = frozenset(
         Capability.COURSE_RELEASE_HISTORY_VIEW,
         Capability.COURSE_RELEASE_CREATE_DRAFT,
         Capability.COURSE_PUBLISHED_VIEW,
-        Capability.LEARNING_COHORT_VIEW,
-        Capability.LEARNING_ENROLLMENT_VIEW,
-        Capability.LEARNING_PROGRESS_VIEW,
-        Capability.SCHEDULING_VIEW,
         Capability.ASSESSMENT_BANK_VIEW,
         Capability.ASSESSMENT_BANK_MANAGE,
         Capability.ASSESSMENT_BANK_VERSION,
@@ -132,11 +193,6 @@ _COURSE_AUTHOR_CAPABILITIES = frozenset(
         Capability.ASSESSMENT_AUTHORING_VIEW,
         Capability.ASSESSMENT_AUTHORING_MANAGE,
         Capability.ASSESSMENT_AUTHORING_SUBMIT,
-        Capability.ASSESSMENT_DELIVERY_VIEW,
-        Capability.ASSESSMENT_RESULTS_VIEW,
-        Capability.ASSESSMENT_REGRADING_VIEW,
-        Capability.ASSESSMENT_GRADEBOOK_VIEW,
-        Capability.ASSESSMENT_ANALYTICS_VIEW,
         Capability.ASSET_LIBRARY_VIEW,
         Capability.ASSET_LIBRARY_MANAGE,
         Capability.ASSET_UPLOAD,
@@ -148,9 +204,10 @@ _COURSE_AUTHOR_CAPABILITIES = frozenset(
 
 ROLE_CAPABILITIES = MappingProxyType(
     {
-        RoleCode.OWNER: _ALL_ADMIN_CAPABILITIES,
-        RoleCode.ADMINISTRATOR: _ALL_ADMIN_CAPABILITIES
-        - frozenset({Capability.ROLE_ASSIGN_OWNER}),
+        # Ownership is institutional governance, never an academic super-role.
+        RoleCode.OWNER: _ORGANIZATION_GOVERNANCE_CAPABILITIES
+        | frozenset({Capability.ROLE_ASSIGN_OWNER}),
+        RoleCode.ADMINISTRATOR: _INSTITUTION_OPERATIONS_CAPABILITIES,
         RoleCode.AUTHOR: _MEMBER_READ_CAPABILITIES
         | _CATALOG_MANAGER_CAPABILITIES
         | _COURSE_AUTHOR_CAPABILITIES,
@@ -160,20 +217,17 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.CATALOG_VIEW,
                 Capability.COURSE_AUTHORING_VIEW,
                 Capability.COURSE_AUTHORING_REVIEW,
+                Capability.COURSE_AUTHORING_APPROVE,
                 Capability.COURSE_APPROVED_VIEW,
                 Capability.COURSE_RELEASE_HISTORY_VIEW,
                 Capability.COURSE_PUBLISHED_VIEW,
-                Capability.LEARNING_PROGRESS_VIEW,
-                Capability.SCHEDULING_VIEW,
                 Capability.ASSESSMENT_BANK_VIEW,
                 Capability.ASSESSMENT_QUESTION_VIEW,
                 Capability.ASSESSMENT_QUESTION_REVIEW,
+                Capability.ASSESSMENT_QUESTION_APPROVE,
                 Capability.ASSESSMENT_AUTHORING_VIEW,
                 Capability.ASSESSMENT_AUTHORING_REVIEW,
-                Capability.ASSESSMENT_DELIVERY_VIEW,
-                Capability.ASSESSMENT_RESULTS_VIEW,
-                Capability.ASSESSMENT_REGRADING_VIEW,
-                Capability.ASSESSMENT_ANALYTICS_VIEW,
+                Capability.ASSESSMENT_AUTHORING_APPROVE,
                 Capability.ASSET_LIBRARY_VIEW,
                 Capability.SEARCH_AUTHORING_USE,
             }
@@ -181,7 +235,7 @@ ROLE_CAPABILITIES = MappingProxyType(
         RoleCode.INSTRUCTOR: _MEMBER_READ_CAPABILITIES
         | frozenset(
             {
-                Capability.CATALOG_VIEW,
+                Capability.CATALOG_TEACHING_RESPONSIBILITY_VIEW,
                 Capability.COURSE_APPROVED_VIEW,
                 Capability.COURSE_PUBLISHED_VIEW,
                 Capability.LEARNING_COHORT_VIEW,
@@ -193,9 +247,6 @@ ROLE_CAPABILITIES = MappingProxyType(
                 Capability.LIVE_SESSION_HOST,
                 Capability.LIVE_SESSION_MODERATE,
                 Capability.LIVE_ATTENDANCE_VIEW,
-                Capability.ASSESSMENT_BANK_VIEW,
-                Capability.ASSESSMENT_QUESTION_VIEW,
-                Capability.ASSESSMENT_AUTHORING_VIEW,
                 Capability.ASSESSMENT_DELIVERY_VIEW,
                 Capability.ASSESSMENT_DELIVERY_MANAGE,
                 Capability.ASSESSMENT_GRADING_MANAGE,

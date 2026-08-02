@@ -27,7 +27,10 @@ from domain.learning.models import (
     EnrollmentReleaseAssignment,
     LearningCohort,
 )
-from domain.learning.policies import can_manage_course_group
+from domain.learning.policies import (
+    can_manage_course_group,
+    has_institutional_learning_scope,
+)
 from domain.organizations.models import Organization
 from domain.organizations.selectors import organization_visible_to
 from domain.publishing.models import CourseRelease
@@ -773,6 +776,34 @@ class AssessmentListCreateView(APIView):
             AssessmentRevisionSerializer(revision).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class ApprovedAssessmentVersionOptionsView(APIView):
+    @extend_schema(responses=AssessmentVersionSerializer(many=True))
+    def get(self, request: Request, slug: str) -> ApiResponse:
+        organization = _organization(request, slug)
+        _require(can_manage_deliveries(request.user, organization))
+        versions = AssessmentVersion.objects.filter(
+            assessment__organization=organization
+        )
+        if not has_institutional_learning_scope(request.user, organization):
+            assigned_version_values = CourseGroupActivity.objects.filter(
+                course_group__organization=organization,
+                course_group__staff_assignments__membership__user=request.user,
+                course_group__staff_assignments__membership__status="active",
+                course_group__staff_assignments__ended_at__isnull=True,
+                activity_type="assessment",
+                binding_snapshot__assessment_version_id__isnull=False,
+            ).values_list("binding_snapshot__assessment_version_id", flat=True)
+            assigned_version_ids: list[UUID] = []
+            for value in assigned_version_values:
+                try:
+                    assigned_version_ids.append(UUID(str(value)))
+                except (TypeError, ValueError):
+                    continue
+            versions = versions.filter(pk__in=assigned_version_ids)
+        versions = versions.order_by("title", "-number")
+        return ApiResponse(AssessmentVersionSerializer(versions, many=True).data)
 
 
 class AssessmentDetailView(APIView):

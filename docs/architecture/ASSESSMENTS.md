@@ -14,10 +14,11 @@ importa assessments.
 
 | Rol | Autoría | Entrega y resultados | Experiencia learner |
 |---|---|---|---|
-| Owner / administrator | Todas las capacidades administrativas | Administra y califica | No responde como learner |
-| Author | Administra/versiona bancos; administra y envía preguntas y evaluaciones | Sólo consulta entregas y resultados | No |
-| Reviewer | Consulta y revisa preguntas/evaluaciones; no modifica ni aprueba | Sólo consulta entregas y resultados | No |
-| Instructor | Sólo consulta bancos, preguntas y evaluaciones | Administra entregas, consulta resultados y califica | No |
+| Owner | Ninguna | Ninguna; gobierno no implica autoridad académica | No |
+| Administrator | Ninguna | Administra entregas y consulta resultados/gradebooks; no califica ni recalifica | No |
+| Author | Administra/versiona bancos; crea y envía preguntas y evaluaciones | Ninguna | No |
+| Reviewer | Consulta, revisa y aprueba preguntas/evaluaciones; no crea como author | Ninguna | No |
+| Instructor | Ninguna | Administra entregas y califica sólo grupos asignados | No |
 | Learner | Ninguna | Sólo sus entregas y resultados permitidos | Inicia, responde y envía intentos propios |
 
 La API valida la capacidad específica en cada lectura, escritura y transición.

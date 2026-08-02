@@ -17,9 +17,10 @@ from domain.learning.contracts import (
     deactivate_live_session_requirement,
     register_live_session_requirement,
 )
-from domain.organizations.choices import MembershipStatus, RoleCode
+from domain.organizations.capabilities import Capability
+from domain.organizations.choices import MembershipStatus
 from domain.organizations.models import Membership, Organization
-from domain.organizations.policies import active_roles
+from domain.organizations.policies import has_capability
 
 from .choices import (
     EgressStatus,
@@ -56,8 +57,6 @@ from .recurrence import materialized_windows, rule_until
 if TYPE_CHECKING:
     from domain.learning.models import CourseGroupActivity, LearningCohort
 
-HOST_ROLES = frozenset({RoleCode.OWNER, RoleCode.ADMINISTRATOR, RoleCode.INSTRUCTOR})
-
 
 def _validate_host(
     *,
@@ -69,7 +68,7 @@ def _validate_host(
     if (
         host.organization_id != organization.id
         or host.status != MembershipStatus.ACTIVE
-        or not (active_roles(host) & HOST_ROLES)
+        or not has_capability(host.user, organization, Capability.LIVE_SESSION_HOST)
     ):
         raise SchedulingInvalid("El profesor no es una membresía docente activa.")
     actor_member = actor_membership(actor, organization)

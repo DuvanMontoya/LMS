@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from datetime import date
+
 from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
 
 from domain.catalog.services import (
+    assign_subject_teaching_responsibility,
     create_area,
     create_discipline,
     create_learning_objective,
@@ -12,6 +15,7 @@ from domain.catalog.services import (
 )
 from domain.courses.services import create_course
 from domain.organizations.choices import RoleCode
+from domain.organizations.models import Membership
 from domain.organizations.services import (
     add_existing_member_with_roles,
     create_organization_with_owner,
@@ -27,11 +31,18 @@ class CourseFixtureMixin:
         return user
 
     def curriculum(self, suffix: str = ""):
-        owner = self.user(f"owner{suffix}@example.test")
+        governance_owner = self.user(f"owner{suffix}@example.test")
         organization = create_organization_with_owner(
-            actor=owner,
+            actor=governance_owner,
             name=f"Institución {suffix or 'principal'}",
             slug=f"institucion{suffix}",
+        )
+        owner = self.user(f"academic-operator{suffix}@example.test")
+        add_existing_member_with_roles(
+            actor=governance_owner,
+            organization=organization,
+            user=owner,
+            roles={RoleCode.ADMINISTRATOR, RoleCode.AUTHOR},
         )
         area = create_area(
             actor=owner,
@@ -55,6 +66,15 @@ class CourseFixtureMixin:
             name="Álgebra",
             slug="algebra",
             description="",
+        )
+        assign_subject_teaching_responsibility(
+            actor=owner,
+            organization=organization,
+            subject=subject,
+            membership=Membership.objects.get(organization=organization, user=owner),
+            starts_on=date(2020, 1, 1),
+            ends_on=None,
+            rationale="Responsabilidad explícita del fixture académico.",
         )
         objective = create_learning_objective(
             actor=owner,

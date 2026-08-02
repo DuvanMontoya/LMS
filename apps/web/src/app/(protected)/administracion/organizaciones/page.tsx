@@ -21,9 +21,6 @@ export default async function PlatformOrganizationsPage() {
       <div className="mt-6">
         <PlatformOrganizationProvisioner
           organizations={organizations}
-          membershipOrganizationSlugs={context.organizations.map(
-            (organization) => organization.slug,
-          )}
         />
       </div>
     </main>

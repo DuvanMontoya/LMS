@@ -496,6 +496,14 @@ class InvitationActivationResponseSerializer(serializers.Serializer[object]):
     )
 
 
+class InvitationSignupContextSerializer(serializers.Serializer[object]):
+    email = serializers.EmailField(read_only=True)
+    invitation_type = serializers.ChoiceField(
+        choices=InvitationType.choices, read_only=True
+    )
+    organization_name = serializers.CharField(read_only=True)
+
+
 class BulkInvitationPreviewSerializer(serializers.Serializer[object]):
     file = serializers.FileField(write_only=True, allow_empty_file=False)
 

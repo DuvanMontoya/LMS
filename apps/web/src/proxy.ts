@@ -8,7 +8,9 @@ export function proxy(request: NextRequest) {
     pathname === '/invitaciones/activar' ||
     pathname.startsWith('/invitaciones/activar/') ||
     pathname === '/invitaciones/activar-cuenta' ||
-    pathname.startsWith('/invitaciones/activar-cuenta/');
+    pathname.startsWith('/invitaciones/activar-cuenta/') ||
+    pathname === '/invitaciones/crear-cuenta' ||
+    pathname.startsWith('/invitaciones/crear-cuenta/');
   const isPublicIdentityRoute =
     pathname.startsWith('/auth/') || isInvitationActivation;
 
@@ -97,6 +99,7 @@ export const config = {
     '/invitaciones/aceptar/:path*',
     '/invitaciones/activar/:path*',
     '/invitaciones/activar-cuenta/:path*',
+    '/invitaciones/crear-cuenta/:path*',
     '/organizaciones/:path*',
   ],
 };

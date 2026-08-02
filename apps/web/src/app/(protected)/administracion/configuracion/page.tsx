@@ -18,7 +18,7 @@ export default async function PlatformConfigurationPage() {
         eyebrow="Administración de plataforma"
         title="Registro y acceso"
       />
-      <div className="mt-6 max-w-3xl">
+      <div className="mt-6 max-w-4xl">
         <PlatformRegistrationForm settings={data} />
       </div>
     </main>

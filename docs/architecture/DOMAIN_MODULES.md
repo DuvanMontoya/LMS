@@ -3,7 +3,7 @@
 | Module / initial Django app grouping | Owns and public contract | Invariants and events | Allowed / prohibited dependencies; risk |
 |---|---|---|---|
 | `identity` | Implemented: User, password, groups, permissions, sessions and internal admin. Future: profile, roles and grants. | Custom user exists in `identity.0001`; email uniqueness is case-insensitive in PostgreSQL. | May serve all modules through policy contract; no academic ownership. Risk: role explosion. |
-| `organizations` | Organización con ciclo `pending_activation/active/suspended/closed`, invitación inicial revocable, membresía, roles históricos y eventos. | La primera owner activa el tenant al aceptar; el operador global nunca recibe membresía implícita; el último owner activo no puede retirarse. | Depende sólo de identity; no posee cursos, matrículas ni reglas académicas. |
+| `organizations` | Organización con ciclo `pending_activation/active/suspended/closed`, invitaciones iniciales revocables, membresía, roles históricos y eventos. | La primera owner activa el tenant al aceptar; el operador global sólo administra el bootstrap pendiente y nunca recibe membresía implícita; el último owner activo no puede retirarse. | Depende sólo de identity; no posee cursos, matrículas ni reglas académicas. |
 | `catalog` | Taxonomía y currículo institucional, incluidos objetivos, prerrequisitos y `SubjectTeachingResponsibility` fechada. | Slugs únicos por organización, grafos acíclicos y responsabilidad con cierre append-only; no se elimina físicamente ni concede roster. | Depende de organizations y su policy. Courses consume referencias y responsabilidad; catalog no posee delivery, notas ni intentos. |
 | `courses` | Identidad y revisiones de curso, transiciones, módulos, unidades, `CourseActivity` ordenada, reglas de disponibilidad, política compuesta, esquema de calificación y `CourseTeachingException`. | Una secuencia contiene `lesson/live_class/assessment`; cada mutación exige versión y responsabilidad académica; la excepción es fechada y no concede grupo; aprobación no equivale a publicación. | Lee policy institucional y catálogo. Registros de extensión permiten bindings/readiness sin importar content, publishing, learning, scheduling o assessments. |
 | `content` | Semantic documents, blocks, references, resource links | Validated document schema; no arbitrary executable markup. Emits `content_revised`. | Media and authoring; cannot publish itself. |
@@ -39,7 +39,8 @@ and concepts express conceptual dependency. Neither graph implies a course,
 publication or learner progression.
 
 `SubjectTeachingResponsibility` expresa alcance académico fechado sobre una
-asignatura. Sólo owner/administrator la crea o cierra; una persona elegible
+asignatura. Sólo una capacidad operativa de `administrator` la crea o cierra;
+`owner` no recibe autoridad académica y una persona elegible
 consulta únicamente las propias. No concede acceso a grupos, estudiantes,
 asistencia, intentos ni notas.
 

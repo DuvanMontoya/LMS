@@ -1,6 +1,6 @@
 'use client';
 
-import { LoaderCircle, Save } from 'lucide-react';
+import { LockKeyhole, LoaderCircle, Save, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -13,8 +13,8 @@ export function PlatformRegistrationForm({
   settings,
 }: Readonly<{ settings: components['schemas']['RegistrationSettings'] }>) {
   const update = useUpdatePlatformRegistrationSettings();
-  const [signupMode, setSignupMode] = useState(
-    settings.signup_mode ?? 'closed',
+  const [signupMode, setSignupMode] = useState<'closed' | 'open'>(
+    settings.signup_mode === 'open' ? 'open' : 'closed',
   );
   const [locale, setLocale] = useState(settings.default_locale ?? 'es');
   const [timezone, setTimezone] = useState(settings.default_timezone ?? 'UTC');
@@ -33,43 +33,58 @@ export function PlatformRegistrationForm({
     setLockVersion(updated.lock_version);
     setSuccess(
       updated.signup_mode === 'closed'
-        ? 'Registro cerrado: se ocultaron los enlaces, la ruta pública ya no muestra el formulario y el backend rechaza altas directas.'
-        : updated.signup_mode === 'invite_only'
-          ? 'Registro por invitación: sólo una invitación válida puede abrir y completar el alta.'
-          : 'Registro abierto: el formulario público y su enlace están disponibles.',
+        ? 'Alta pública cerrada. Las invitaciones privadas vigentes continúan funcionando únicamente para el correo invitado.'
+        : 'Alta pública abierta. El formulario general y las invitaciones privadas están disponibles.',
     );
   }
 
   return (
     <form
-      className="space-y-5 rounded-xl border bg-card p-5 shadow-sm"
+      className="space-y-6 rounded-xl border bg-card p-6 shadow-[0_12px_36px_rgb(41_56_82_/_0.06)]"
       onSubmit={(event) => void submit(event)}
     >
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Modo de registro</legend>
+        <legend className="text-base font-semibold">Creación de cuentas</legend>
         <p className="text-xs text-muted-foreground">
-          Esta es la política global de cuentas. El backend, la portada, el
-          inicio de sesión y la ruta de registro la consultan en cada solicitud.
+          Decide si cualquier persona puede iniciar un alta. Las invitaciones
+          institucionales de un solo uso permanecen operativas en ambos modos.
         </p>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {[
-            ['closed', 'Cerrado'],
-            ['invite_only', 'Sólo invitación'],
-            ['open', 'Abierto'],
-          ].map(([value, label]) => (
+            {
+              description:
+                'Sólo pueden crear cuenta quienes tengan una invitación válida.',
+              icon: LockKeyhole,
+              label: 'Alta pública cerrada',
+              value: 'closed',
+            },
+            {
+              description:
+                'Cualquier persona puede iniciar el registro y verificar su correo.',
+              icon: UserPlus,
+              label: 'Alta pública abierta',
+              value: 'open',
+            },
+          ].map(({ description, icon: Icon, label, value }) => (
             <label
-              className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+              className="grid cursor-pointer grid-cols-[1.5rem_minmax(0,1fr)_1rem] gap-3 rounded-lg border p-4 transition-colors has-checked:border-primary has-checked:bg-primary/5"
               key={value}
             >
+              <Icon className="mt-0.5 size-5 text-primary" />
+              <span>
+                <span className="block text-sm font-semibold">{label}</span>
+                <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                  {description}
+                </span>
+              </span>
               <input
                 checked={signupMode === value}
-                className="size-4 accent-primary"
+                className="mt-0.5 size-4 accent-primary"
                 name="signup-mode"
                 onChange={() => setSignupMode(value as typeof signupMode)}
                 type="radio"
                 value={value}
               />
-              {label}
             </label>
           ))}
         </div>

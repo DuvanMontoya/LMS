@@ -14,7 +14,7 @@ export default async function PlatformAdministrationLayout({
   if (!context.is_platform_operator) notFound();
   return (
     <PlatformShell
-      email={session.email}
+      displayName={context.user.display}
       isPlatformOperator={context.is_platform_operator}
       organizations={context.organizations}
     >

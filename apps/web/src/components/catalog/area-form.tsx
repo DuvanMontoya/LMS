@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateArea } from '@/lib/catalog/hooks';
+import { entitySlug } from '@/lib/catalog/entity-slug';
 
 const areaSchema = z.object({
   description: z.string().trim().max(2000),
@@ -49,29 +50,29 @@ export function AreaForm({
 
   const formContent = (
     <form
-      className="grid gap-5 sm:grid-cols-2"
+      className="grid gap-4"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
     >
       <div className="space-y-2">
         <Label htmlFor="area-name">Nombre</Label>
-        <Input id="area-name" {...form.register('name')} />
+        <Input
+          autoFocus={embedded}
+          id="area-name"
+          placeholder="Ej. Ciencias naturales"
+          {...form.register('name', {
+            onChange: (event) =>
+              form.setValue('slug', entitySlug(event.target.value), {
+                shouldValidate: true,
+              }),
+          })}
+        />
         <p className="min-h-5 text-sm text-destructive">
           {form.formState.errors.name?.message}
         </p>
       </div>
+      <input type="hidden" {...form.register('slug')} />
       <div className="space-y-2">
-        <Label htmlFor="area-slug">Slug</Label>
-        <Input
-          className="font-mono"
-          id="area-slug"
-          {...form.register('slug')}
-        />
-        <p className="min-h-5 text-sm text-destructive">
-          {form.formState.errors.slug?.message}
-        </p>
-      </div>
-      <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="area-description">Descripción (opcional)</Label>
         <Textarea
           className="min-h-24"
@@ -79,7 +80,7 @@ export function AreaForm({
           {...form.register('description')}
         />
       </div>
-      <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
+      <div className="flex flex-wrap items-center gap-4">
         <Button disabled={createArea.isPending} type="submit">
           {createArea.isPending ? 'Guardando…' : 'Crear área'}
         </Button>

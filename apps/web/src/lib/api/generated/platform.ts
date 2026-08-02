@@ -133,6 +133,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/assessments/analytics/refresh/': {
     post: operations['organizations_assessments_analytics_refresh_create'];
   };
+  '/api/v1/organizations/{slug}/assessments/approved-version-options/': {
+    get: operations['organizations_assessments_approved_version_options_list'];
+  };
   '/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/': {
     get: operations['assessment_attempt_retrieve'];
   };
@@ -926,6 +929,15 @@ export interface paths {
     /** @description Restricted control-plane endpoint for institutional provisioning. */
     post: operations['platform_organizations_create'];
   };
+  '/api/v1/platform/organizations/{slug}/invitations/': {
+    get: operations['platform_organizations_invitations_list'];
+  };
+  '/api/v1/platform/organizations/{slug}/invitations/{invitation_id}/resend/': {
+    post: operations['platform_organizations_invitations_resend_create'];
+  };
+  '/api/v1/platform/organizations/{slug}/invitations/{invitation_id}/revoke/': {
+    post: operations['platform_organizations_invitations_revoke_create'];
+  };
   '/api/v1/platform/registration-settings/': {
     get: operations['platform_registration_settings_retrieve'];
     put: operations['platform_registration_settings_update'];
@@ -947,6 +959,9 @@ export interface paths {
   };
   '/api/v1/public/invitations/activate/': {
     post: operations['public_invitations_activate_create'];
+  };
+  '/api/v1/public/invitations/signup-context/': {
+    get: operations['public_invitations_signup_context_retrieve'];
   };
   '/api/v1/public/managed-accounts/activate/': {
     post: operations['public_managed_accounts_activate_create'];
@@ -3241,6 +3256,12 @@ export interface components {
       /** @default UTC */
       timezone_name?: string;
       whatsapp?: string;
+    };
+    InvitationSignupContext: {
+      /** Format: email */
+      email: string;
+      invitation_type: components['schemas']['InvitationTypeEnum'];
+      organization_name: string;
     };
     /**
      * @description * `pending` - Pendiente
@@ -6913,6 +6934,20 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['AnalyticsJob'];
+        };
+      };
+    };
+  };
+  organizations_assessments_approved_version_options_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentVersion'][];
         };
       };
     };
@@ -12870,6 +12905,50 @@ export interface operations {
       };
     };
   };
+  platform_organizations_invitations_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Invitation'][];
+        };
+      };
+    };
+  };
+  platform_organizations_invitations_resend_create: {
+    parameters: {
+      path: {
+        invitation_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Invitation'];
+        };
+      };
+    };
+  };
+  platform_organizations_invitations_revoke_create: {
+    parameters: {
+      path: {
+        invitation_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Invitation'];
+        };
+      };
+    };
+  };
   platform_registration_settings_retrieve: {
     responses: {
       200: {
@@ -12959,6 +13038,15 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['InvitationActivationResponse'];
+        };
+      };
+    };
+  };
+  public_invitations_signup_context_retrieve: {
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['InvitationSignupContext'];
         };
       };
     };

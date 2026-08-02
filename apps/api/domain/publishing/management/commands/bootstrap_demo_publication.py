@@ -6,7 +6,11 @@ from django.core.management.base import BaseCommand, CommandError
 
 from domain.courses.choices import AuthoringStatus
 from domain.courses.models import Course, CourseRevision
-from domain.courses.services import approve_revision, submit_revision_for_review
+from domain.courses.services import (
+    approve_revision,
+    confirm_completion_policy,
+    submit_revision_for_review,
+)
 from domain.identity.models import User
 from domain.organizations.models import Organization
 from domain.publishing.services import publish_approved_revision
@@ -39,6 +43,20 @@ class Command(BaseCommand):
         )
         if revision is None:
             raise CommandError("El curso demo no tiene una revisión.")
+        if (
+            revision.authoring_status
+            in {AuthoringStatus.DRAFT, AuthoringStatus.CHANGES_REQUESTED}
+            and revision.completion_policy.confirmed_at is None
+        ):
+            _, revision = confirm_completion_policy(
+                actor=actor,
+                organization=organization,
+                revision=revision,
+                expected_version=revision.lock_version,
+                require_required_activities=True,
+                minimum_grade_basis_points=None,
+                minimum_attendance_basis_points=None,
+            )
         if revision.authoring_status in {
             AuthoringStatus.DRAFT,
             AuthoringStatus.CHANGES_REQUESTED,

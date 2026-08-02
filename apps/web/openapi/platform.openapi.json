@@ -4832,6 +4832,18 @@
         "required": ["email", "roles"],
         "type": "object"
       },
+      "InvitationSignupContext": {
+        "properties": {
+          "email": { "format": "email", "readOnly": true, "type": "string" },
+          "invitation_type": {
+            "allOf": [{ "$ref": "#/components/schemas/InvitationTypeEnum" }],
+            "readOnly": true
+          },
+          "organization_name": { "readOnly": true, "type": "string" }
+        },
+        "required": ["email", "invitation_type", "organization_name"],
+        "type": "object"
+      },
       "InvitationStatusEnum": {
         "description": "* `pending` - Pendiente\n* `accepted` - Aceptada\n* `revoked` - Revocada\n* `expired` - Expirada",
         "enum": ["pending", "accepted", "revoked", "expired"],
@@ -11970,6 +11982,34 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/AnalyticsJob" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/approved-version-options/": {
+      "get": {
+        "operationId": "organizations_assessments_approved_version_options_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/AssessmentVersion" },
+                  "type": "array"
+                }
               }
             },
             "description": ""
@@ -24619,6 +24659,96 @@
         "tags": ["platform"]
       }
     },
+    "/api/v1/platform/organizations/{slug}/invitations/": {
+      "get": {
+        "operationId": "platform_organizations_invitations_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/Invitation" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/organizations/{slug}/invitations/{invitation_id}/resend/": {
+      "post": {
+        "operationId": "platform_organizations_invitations_resend_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Invitation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
+    "/api/v1/platform/organizations/{slug}/invitations/{invitation_id}/revoke/": {
+      "post": {
+        "operationId": "platform_organizations_invitations_revoke_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Invitation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["platform"]
+      }
+    },
     "/api/v1/platform/registration-settings/": {
       "get": {
         "operationId": "platform_registration_settings_retrieve",
@@ -24805,6 +24935,25 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InvitationActivationResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }, {}],
+        "tags": ["public"]
+      }
+    },
+    "/api/v1/public/invitations/signup-context/": {
+      "get": {
+        "operationId": "public_invitations_signup_context_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationSignupContext"
                 }
               }
             },

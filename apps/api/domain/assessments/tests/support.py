@@ -4,6 +4,7 @@ from copy import deepcopy
 from decimal import Decimal
 
 from domain.learning.tests.support import LearningFixtureMixin
+from domain.organizations.choices import RoleCode
 
 from ..choices import AuthoringStatus
 from ..services import (
@@ -126,6 +127,13 @@ class AssessmentFixtureMixin(LearningFixtureMixin):
             )
             learner = membership = release = enrollment = None
 
+        reviewer = self.member(
+            owner,
+            organization,
+            RoleCode.REVIEWER,
+            "assessment-reviewer@example.test",
+        )
+
         bank = create_question_bank(
             actor=owner,
             organization=organization,
@@ -146,7 +154,7 @@ class AssessmentFixtureMixin(LearningFixtureMixin):
             to_status=AuthoringStatus.IN_REVIEW,
         )
         question_revision, question_version = transition_question_revision(
-            actor=owner,
+            actor=reviewer,
             revision=question_revision,
             expected_version=question_revision.lock_version,
             to_status=AuthoringStatus.APPROVED,
@@ -192,7 +200,7 @@ class AssessmentFixtureMixin(LearningFixtureMixin):
             to_status=AuthoringStatus.IN_REVIEW,
         )
         assessment_revision, assessment_version = transition_assessment_revision(
-            actor=owner,
+            actor=reviewer,
             revision=assessment_revision,
             expected_version=assessment_revision.lock_version,
             to_status=AuthoringStatus.APPROVED,

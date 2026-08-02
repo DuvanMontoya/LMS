@@ -12,8 +12,8 @@ from domain.organizations.exceptions import LastOwnerViolation
 from domain.organizations.models import Membership
 from domain.organizations.services import (
     add_existing_member_with_roles,
-    assign_role,
     create_organization_with_owner,
+    replace_membership_roles,
     revoke_membership,
 )
 
@@ -42,8 +42,10 @@ class LastOwnerConcurrencyTests(TransactionTestCase):
             user=second_owner,
             roles={RoleCode.LEARNER},
         )
-        assign_role(
-            actor=first_owner, membership=second_membership, role=RoleCode.OWNER
+        replace_membership_roles(
+            actor=first_owner,
+            membership=second_membership,
+            roles={RoleCode.OWNER},
         )
         first_membership = Membership.objects.get(
             organization=organization, user=first_owner
