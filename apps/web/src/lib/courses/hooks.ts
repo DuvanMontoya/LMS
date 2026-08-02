@@ -292,6 +292,36 @@ export function useReorderStructure(path: RevisionPath) {
   });
 }
 
+export function useReorderActivities(path: RevisionPath) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      body,
+      moduleId,
+    }: {
+      body: components['schemas']['ReplaceOrder'];
+      moduleId: string;
+    }) =>
+      requireData(
+        platformBrowserClient.PUT(
+          '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/activities/order/',
+          {
+            body,
+            params: { path: { ...pathFor(path), module_id: moduleId } },
+          },
+        ),
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: courseKeys.outline(
+          path.slug,
+          path.courseSlug,
+          path.revisionId,
+        ),
+      }),
+  });
+}
+
 export function useSetStructureArchived(path: RevisionPath) {
   return useMutation({
     mutationFn: async ({

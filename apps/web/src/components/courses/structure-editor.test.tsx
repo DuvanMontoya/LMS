@@ -21,7 +21,27 @@ const outline: components['schemas']['Outline'] = {
   learning_objectives: [],
   modules: [
     {
-      activities: [],
+      activities: [
+        {
+          activity_type: 'lesson',
+          availability_rules: [],
+          completion_method: 'manual',
+          created_at: '2026-07-29T00:00:00Z',
+          estimated_duration_minutes: null,
+          id: '00000000-0000-0000-0000-000000000005',
+          learning_objective_ids: [],
+          lesson_unit_id: '00000000-0000-0000-0000-000000000004',
+          minimum_attendance_basis_points: null,
+          minimum_grade_basis_points: null,
+          module_id: '00000000-0000-0000-0000-000000000003',
+          position: 1,
+          required: true,
+          status: 'active',
+          summary: '',
+          title: 'Relaciones',
+          updated_at: '2026-07-29T00:00:00Z',
+        },
+      ],
       archived_at: null,
       created_at: '2026-07-29T00:00:00Z',
       description: '',
@@ -91,8 +111,8 @@ describe('StructureEditor', () => {
       screen.getByRole('heading', { name: 'Estructura del curso' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Contenido académico pendiente/),
-    ).toBeInTheDocument();
+      screen.getAllByText(/Contenido académico pendiente/),
+    ).not.toHaveLength(0);
     expect(screen.getByRole('link', { name: 'Ver contenido' })).toHaveAttribute(
       'href',
       '/organizaciones/institucion/cursos/algebra/unidades/00000000-0000-0000-0000-000000000004/contenido',
@@ -100,5 +120,43 @@ describe('StructureEditor', () => {
     expect(
       screen.queryByRole('button', { name: 'Añadir módulo' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('presents one canonical sequence and progressive creation controls to authors', () => {
+    render(
+      <QueryProvider>
+        <StructureEditor
+          assessmentVersions={[]}
+          canManage
+          courseSlug="algebra"
+          objectives={[]}
+          outline={{
+            ...outline,
+            revision: { ...outline.revision, authoring_status: 'draft' },
+          }}
+          slug="institucion"
+          topics={[]}
+        />
+      </QueryProvider>,
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Secuencia curricular unificada' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Añadir lección')).toBeInTheDocument();
+    expect(
+      screen.getByText('Añadir clase en vivo o evaluación'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Contenido y alineación de las lecciones'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Configurar información y alineación'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: 'Mover «Relaciones» una posición arriba',
+      }),
+    ).toBeDisabled();
   });
 });

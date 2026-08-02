@@ -6,6 +6,7 @@ import {
   BookOpenCheck,
   Building2,
   CalendarDays,
+  CircleHelp,
   ChevronDown,
   ClipboardCheck,
   FileCheck2,
@@ -291,18 +292,13 @@ function PlatformSidebar({
           visible: teachingWorkspace,
         },
         {
+          activePrefixes: [`${organizationBase}/curriculo/asignaturas/`],
           children: [
             {
               href: `${organizationBase}/aprendizaje/mis-asignaturas`,
               label: 'Responsabilidades docentes',
               exact: true,
               visible: institutionOperations,
-            },
-            {
-              activePrefixes: [`${organizationBase}/curriculo/asignaturas/`],
-              href: `${organizationBase}/curriculo`,
-              label: 'Estructura curricular',
-              exact: true,
             },
             {
               href: `${organizationBase}/curriculo/conceptos`,
@@ -333,11 +329,6 @@ function PlatformSidebar({
         {
           children: [
             {
-              href: `${organizationBase}/cursos`,
-              label: 'Todos los cursos',
-              exact: true,
-            },
-            {
               href: `${organizationBase}/cursos/nuevo`,
               icon: Plus,
               label: 'Crear curso',
@@ -356,11 +347,6 @@ function PlatformSidebar({
         },
         {
           children: [
-            {
-              href: `${organizationBase}/recursos`,
-              label: 'Todos los recursos',
-              exact: true,
-            },
             {
               href: `${organizationBase}/recursos/nuevo`,
               icon: Plus,
@@ -387,12 +373,6 @@ function PlatformSidebar({
         {
           children: [
             {
-              href: `${organizationBase}/evaluaciones`,
-              label: 'Evaluaciones',
-              exact: true,
-              visible: capabilities.has('assessment.authoring.view'),
-            },
-            {
               href: `${organizationBase}/evaluaciones/bancos`,
               label: 'Bancos de preguntas',
               exact: true,
@@ -413,11 +393,6 @@ function PlatformSidebar({
         },
         {
           children: [
-            {
-              href: `${organizationBase}/evaluaciones/entregas`,
-              label: 'Entregas por grupo',
-              visible: capabilities.has('assessment.delivery.view'),
-            },
             {
               href: `${organizationBase}/evaluaciones/resultados`,
               label: 'Resultados',
@@ -538,50 +513,9 @@ function PlatformSidebar({
           },
         ]
       : [];
-  const administrationNavigation: NavigationItem[] =
+  const preparationNavigation: NavigationItem[] =
     organizationBase && institutionGovernance
       ? [
-          {
-            href: `${organizationBase}/miembros`,
-            icon: Users,
-            label: 'Personas',
-            visible: capabilities.has('membership.view'),
-          },
-          {
-            activePrefixes: [
-              `${organizationBase}/aprendizaje/matriculas`,
-              `${organizationBase}/aprendizaje/grupos`,
-              `${organizationBase}/aprendizaje/periodos`,
-            ],
-            children: [
-              {
-                href: `${organizationBase}/aprendizaje/periodos`,
-                label: 'Periodos académicos',
-                visible: capabilities.has('learning.cohort.view'),
-              },
-              {
-                href: `${organizationBase}/aprendizaje/grupos`,
-                label: 'Grupos académicos',
-                visible: capabilities.has('learning.cohort.view'),
-              },
-              {
-                href: `${organizationBase}/aprendizaje/cohortes`,
-                label: 'Grupos de curso',
-                visible: capabilities.has('learning.cohort.view'),
-              },
-              {
-                href: `${organizationBase}/aprendizaje/matriculas`,
-                label: 'Matrículas individuales',
-                visible: capabilities.has('learning.enrollment.view'),
-              },
-            ],
-            href: `${organizationBase}/aprendizaje/cohortes`,
-            icon: GraduationCap,
-            label: 'Grupos y matrículas',
-            visible:
-              capabilities.has('learning.cohort.view') ||
-              capabilities.has('learning.enrollment.view'),
-          },
           {
             href: `${organizationBase}/configuracion`,
             icon: Settings2,
@@ -590,8 +524,79 @@ function PlatformSidebar({
               capabilities.has('membership.settings.view') ||
               capabilities.has('integration.view'),
           },
+          {
+            href: `${organizationBase}/miembros`,
+            icon: Users,
+            label: 'Personas',
+            visible: capabilities.has('membership.view'),
+          },
+          {
+            activePrefixes: [
+              `${organizationBase}/aprendizaje/grupos`,
+              `${organizationBase}/aprendizaje/periodos`,
+            ],
+            children: [
+              {
+                href: `${organizationBase}/aprendizaje/grupos`,
+                label: 'Grupos académicos',
+                visible: capabilities.has('learning.cohort.view'),
+              },
+            ],
+            href: `${organizationBase}/aprendizaje/periodos`,
+            icon: CalendarDays,
+            label: 'Periodos académicos',
+            visible: capabilities.has('learning.cohort.view'),
+          },
         ]
       : [];
+  const executionNavigation: NavigationItem[] =
+    organizationBase && institutionGovernance
+      ? [
+          {
+            href: `${organizationBase}/aprendizaje/cohortes`,
+            icon: GraduationCap,
+            label: 'Grupos de curso',
+            visible: capabilities.has('learning.cohort.view'),
+          },
+          {
+            href: `${organizationBase}/aprendizaje/matriculas`,
+            icon: Users,
+            label: 'Matrículas individuales',
+            visible: capabilities.has('learning.enrollment.view'),
+          },
+        ]
+      : [];
+  const orderedAcademicNavigation = orderNavigation(
+    academicNavigation,
+    institutionOperations
+      ? [
+          'Currículo',
+          'Cursos',
+          'Recursos',
+          'Autoría de evaluaciones',
+          'Biblioteca',
+          'Calendario',
+          'Clases en vivo',
+          'Entregas y resultados',
+        ]
+      : contentWorkspace
+        ? [
+            'Currículo',
+            'Cursos',
+            'Recursos',
+            'Autoría de evaluaciones',
+            'Biblioteca',
+          ]
+        : [
+            'Mis asignaturas',
+            'Mis grupos',
+            'Calendario',
+            'Clases en vivo',
+            'Recursos',
+            'Biblioteca',
+            'Evaluación y calificación',
+          ],
+  );
   const courseBase = organizationBase
     ? courseWorkspaceBase(pathname, organizationBase)
     : undefined;
@@ -745,11 +750,30 @@ function PlatformSidebar({
           </SidebarGroup>
         ) : null}
 
-        {academicNavigation.some((item) => item.visible !== false) ? (
+        {preparationNavigation.some((item) => item.visible !== false) ? (
           <SidebarGroup>
-            <SidebarGroupLabel>{academicGroupLabel}</SidebarGroupLabel>
+            <SidebarGroupLabel>1 · Preparación institucional</SidebarGroupLabel>
             <SidebarGroupContent>
-              <NavigationList items={academicNavigation} pathname={pathname} />
+              <NavigationList
+                items={preparationNavigation}
+                pathname={pathname}
+              />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
+
+        {orderedAcademicNavigation.some((item) => item.visible !== false) ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>
+              {institutionOperations
+                ? '2 · Diseño y operación académica'
+                : academicGroupLabel}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavigationList
+                items={orderedAcademicNavigation}
+                pathname={pathname}
+              />
             </SidebarGroupContent>
           </SidebarGroup>
         ) : null}
@@ -763,14 +787,11 @@ function PlatformSidebar({
           </SidebarGroup>
         ) : null}
 
-        {administrationNavigation.some((item) => item.visible !== false) ? (
+        {executionNavigation.some((item) => item.visible !== false) ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Administración institucional</SidebarGroupLabel>
+            <SidebarGroupLabel>3 · Ejecución y matrículas</SidebarGroupLabel>
             <SidebarGroupContent>
-              <NavigationList
-                items={administrationNavigation}
-                pathname={pathname}
-              />
+              <NavigationList items={executionNavigation} pathname={pathname} />
             </SidebarGroupContent>
           </SidebarGroup>
         ) : null}
@@ -796,6 +817,9 @@ function AccountMenu({
   const settingsHref = organization
     ? `/organizaciones/${organization.slug}/notificaciones/preferencias`
     : '/administracion/configuracion';
+  const helpHref = organization
+    ? `/organizaciones/${organization.slug}/ayuda`
+    : '/administracion/ayuda';
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -853,6 +877,12 @@ function AccountMenu({
             </Link>
           </DropdownMenuItem>
         ) : null}
+        <DropdownMenuItem asChild>
+          <Link href={helpHref}>
+            <CircleHelp />
+            Ayuda y guía de uso
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <div className="p-0.5">
           <LogoutButton
@@ -922,6 +952,18 @@ function NavigationList({
           );
         })}
     </SidebarMenu>
+  );
+}
+
+function orderNavigation(
+  items: readonly NavigationItem[],
+  labels: readonly string[],
+) {
+  const priority = new Map(labels.map((label, index) => [label, index]));
+  return [...items].sort(
+    (left, right) =>
+      (priority.get(left.label) ?? labels.length) -
+      (priority.get(right.label) ?? labels.length),
   );
 }
 

@@ -12,8 +12,6 @@ import {
   ChevronUp,
   CircleAlert,
   ClipboardCheck,
-  Clock3,
-  Network,
   Plus,
   Video,
 } from 'lucide-react';
@@ -28,6 +26,7 @@ import {
   useCreateActivity,
   useCreateModule,
   useCreateUnit,
+  useReorderActivities,
   useReorderStructure,
   useReplaceUnitAlignment,
   useSetStructureArchived,
@@ -89,6 +88,7 @@ export function StructureEditor({
   const createUnit = useCreateUnit(path);
   const updateStructure = useUpdateStructure(path);
   const reorder = useReorderStructure(path);
+  const reorderActivities = useReorderActivities(path);
   const archive = useSetStructureArchived(path);
   const unitAlignment = useReplaceUnitAlignment(path);
 
@@ -273,36 +273,38 @@ export function StructureEditor({
     }
   }
 
-  async function moveUnit(
+  async function moveActivity(
     moduleIndex: number,
-    unitIndex: number,
+    activityIndex: number,
     delta: number,
   ) {
     const courseModule = modules[moduleIndex];
     if (!courseModule) return;
-    const units = [...courseModule.units];
-    const target = unitIndex + delta;
-    if (target < 0 || target >= units.length) return;
-    const moving = units[unitIndex];
-    const displaced = units[target];
+    const activities = [...courseModule.activities];
+    const target = activityIndex + delta;
+    if (target < 0 || target >= activities.length) return;
+    const moving = activities[activityIndex];
+    const displaced = activities[target];
     if (!moving || !displaced) return;
-    units[unitIndex] = displaced;
-    units[target] = moving;
+    activities[activityIndex] = displaced;
+    activities[target] = moving;
     try {
-      const result = await reorder.mutateAsync({
+      const result = await reorderActivities.mutateAsync({
         body: {
           expected_version: version,
-          ordered_ids: units
+          ordered_ids: activities
             .filter((item) => item.status === 'active')
             .map((item) => item.id),
         },
         moduleId: courseModule.id,
       });
       const nextModules = [...modules];
-      nextModules[moduleIndex] = { ...courseModule, units };
+      nextModules[moduleIndex] = { ...courseModule, activities };
       setModules(nextModules);
       setVersion(result.lock_version);
-      setMessage(`«${moving.title}» ahora está en la posición ${target + 1}.`);
+      setMessage(
+        `«${moving.title}» ahora está en la posición ${target + 1} de la secuencia.`,
+      );
     } catch (cause) {
       failed(cause);
     }
@@ -365,6 +367,26 @@ export function StructureEditor({
     }
   }
 
+  const activityCount = modules.reduce(
+    (total, courseModule) => total + courseModule.activities.length,
+    0,
+  );
+  const readyLessonCount = modules.reduce(
+    (total, courseModule) =>
+      total +
+      courseModule.units.filter((unit) => unit.content_status === 'ready')
+        .length,
+    0,
+  );
+  const alignedLessonCount = modules.reduce(
+    (total, courseModule) =>
+      total +
+      courseModule.units.filter(
+        (unit) => unit.topics.length || unit.learning_objectives.length,
+      ).length,
+    0,
+  );
+
   return (
     <section aria-labelledby="course-structure">
       <div aria-live="polite" className="mb-4 space-y-2">
@@ -386,8 +408,45 @@ export function StructureEditor({
       <h2 className="sr-only" id="course-structure">
         Estructura del curso
       </h2>
+      <div className="grid overflow-hidden rounded-xl border bg-card shadow-xs sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          {
+            label: 'Módulos',
+            note: 'Bloques pedagógicos',
+            value: modules.filter((item) => item.status === 'active').length,
+          },
+          {
+            label: 'Secuencia',
+            note: 'Actividades ordenadas',
+            value: activityCount,
+          },
+          {
+            label: 'Contenido listo',
+            note: 'Lecciones con versión',
+            value: readyLessonCount,
+          },
+          {
+            label: 'Alineación',
+            note: 'Lecciones vinculadas',
+            value: alignedLessonCount,
+          },
+        ].map((metric, index) => (
+          <div
+            className="border-b p-4 last:border-b-0 sm:even:border-l xl:border-b-0 xl:border-l xl:first:border-l-0"
+            key={metric.label}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                {String(index + 1).padStart(2, '0')} · {metric.label}
+              </span>
+              <strong className="text-xl tabular-nums">{metric.value}</strong>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{metric.note}</p>
+          </div>
+        ))}
+      </div>
       {!editable ? (
-        <Alert className="border-amber-600/20 bg-amber-500/5">
+        <Alert className="mt-4 border-amber-600/20 bg-amber-500/5">
           <CircleAlert className="text-amber-700" />
           <AlertTitle>Solo lectura</AlertTitle>
           <AlertDescription>
@@ -396,25 +455,38 @@ export function StructureEditor({
         </Alert>
       ) : null}
       {canManage && editable ? (
-        <form
-          action={addModule}
-          className="mt-5 flex flex-wrap gap-3 rounded-lg border bg-muted/20 p-3"
-        >
-          <label className="academic-field min-w-64 flex-1">
-            Título del nuevo módulo
-            <input
-              className="academic-control"
-              maxLength={200}
-              name="module-title"
-              ref={moduleTitle}
-              required
-            />
-          </label>
-          <Button className="self-end" type="submit">
-            <Plus />
-            Añadir módulo
-          </Button>
-        </form>
+        <div className="mt-5 rounded-xl border bg-card p-4 shadow-xs md:flex md:items-end md:justify-between md:gap-6">
+          <div className="mb-4 md:mb-0">
+            <p className="text-xs font-semibold tracking-wider text-primary uppercase">
+              Primer paso de esta revisión
+            </p>
+            <h3 className="mt-1 font-semibold">Crea un bloque pedagógico</h3>
+            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+              Cada módulo reúne una etapa del aprendizaje. Después agregarás las
+              actividades en el orden exacto en que las verá el estudiante.
+            </p>
+          </div>
+          <form
+            action={addModule}
+            className="flex min-w-0 flex-1 flex-wrap gap-3 md:max-w-xl"
+          >
+            <label className="academic-field min-w-56 flex-1">
+              Nombre del módulo
+              <input
+                className="academic-control"
+                maxLength={200}
+                name="module-title"
+                placeholder="Ej. Fundamentos de funciones"
+                ref={moduleTitle}
+                required
+              />
+            </label>
+            <Button className="self-end" type="submit">
+              <Plus />
+              Crear módulo
+            </Button>
+          </form>
+        </div>
       ) : null}
       {modules.length ? (
         <ol className="mt-5 space-y-4">
@@ -432,8 +504,10 @@ export function StructureEditor({
                     {module.title}
                   </h3>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {statusLabel(module.status)} · {module.units.length}{' '}
-                    {module.units.length === 1 ? 'unidad' : 'unidades'}
+                    {statusLabel(module.status)} · {module.activities.length}{' '}
+                    {module.activities.length === 1
+                      ? 'actividad'
+                      : 'actividades'}
                   </p>
                 </div>
                 {canManage && editable ? (
@@ -547,451 +621,444 @@ export function StructureEditor({
                 </div>
                 {module.activities.length ? (
                   <ol className="mt-3 grid gap-2">
-                    {module.activities.map((activity) => (
-                      <li
-                        className="flex items-start gap-3 rounded-md border bg-background p-3"
-                        key={activity.id}
-                      >
-                        <span className="mt-0.5 text-primary">
-                          {activity.activity_type === 'live_class' ? (
-                            <Video className="size-4" />
-                          ) : activity.activity_type === 'assessment' ? (
-                            <ClipboardCheck className="size-4" />
-                          ) : (
-                            <BookOpenText className="size-4" />
-                          )}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <strong className="block truncate">
-                            {activity.position}. {activity.title}
-                          </strong>
-                          <small className="text-muted-foreground">
-                            {activityTypeLabel(activity.activity_type)} ·{' '}
-                            {activity.required ? 'Obligatoria' : 'Opcional'} ·{' '}
-                            {activityCompletionLabel(
-                              activity.completion_method,
+                    {module.activities.map((activity, activityIndex) => {
+                      const lesson = activity.lesson_unit_id
+                        ? module.units.find(
+                            (unit) => unit.id === activity.lesson_unit_id,
+                          )
+                        : undefined;
+                      return (
+                        <li
+                          className="flex items-start gap-3 rounded-lg border bg-background p-3 shadow-xs"
+                          key={activity.id}
+                        >
+                          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                            {activity.activity_type === 'live_class' ? (
+                              <Video className="size-4" />
+                            ) : activity.activity_type === 'assessment' ? (
+                              <ClipboardCheck className="size-4" />
+                            ) : (
+                              <BookOpenText className="size-4" />
                             )}
-                          </small>
-                        </div>
-                      </li>
-                    ))}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <strong>
+                                {activity.position}. {activity.title}
+                              </strong>
+                              <Badge className="rounded" variant="outline">
+                                {activityTypeLabel(activity.activity_type)}
+                              </Badge>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {activity.required ? 'Obligatoria' : 'Opcional'} ·{' '}
+                              {activityCompletionLabel(
+                                activity.completion_method,
+                              )}
+                              {activity.estimated_duration_minutes
+                                ? ` · ${activity.estimated_duration_minutes} min`
+                                : ''}
+                            </p>
+                            {activity.summary ? (
+                              <p className="mt-2 text-sm text-muted-foreground">
+                                {activity.summary}
+                              </p>
+                            ) : null}
+                            {lesson ? (
+                              <div className="mt-2">
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                  <span>
+                                    {contentStatusLabels[
+                                      lesson.content_status
+                                    ] ?? lesson.content_status}
+                                  </span>
+                                  <span aria-hidden="true">·</span>
+                                  <span>
+                                    {lesson.topics.length}{' '}
+                                    {lesson.topics.length === 1
+                                      ? 'tema'
+                                      : 'temas'}{' '}
+                                    · {lesson.learning_objectives.length}{' '}
+                                    {lesson.learning_objectives.length === 1
+                                      ? 'objetivo'
+                                      : 'objetivos'}
+                                  </span>
+                                  {lesson.content_version ? (
+                                    <>
+                                      <span aria-hidden="true">·</span>
+                                      <span>
+                                        Versión {lesson.content_version}
+                                      </span>
+                                    </>
+                                  ) : null}
+                                </div>
+                                {lesson.status === 'active' ? (
+                                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                                    <Button asChild size="sm" variant="outline">
+                                      <Link
+                                        href={`/organizaciones/${slug}/cursos/${courseSlug}/unidades/${lesson.id}/contenido`}
+                                      >
+                                        <BookOpenText />
+                                        {canManage && editable
+                                          ? 'Editar contenido'
+                                          : 'Ver contenido'}
+                                      </Link>
+                                    </Button>
+                                    {canManage && editable ? (
+                                      <details className="w-full rounded-lg border bg-muted/10 px-3 py-2 sm:w-auto sm:min-w-80 sm:flex-1">
+                                        <summary
+                                          aria-label={`Configurar lección «${lesson.title}»`}
+                                          className="cursor-pointer text-sm font-medium"
+                                        >
+                                          Configurar información y alineación
+                                        </summary>
+                                        <div className="mt-3 grid gap-4 xl:grid-cols-2">
+                                          <form
+                                            action={(formData) =>
+                                              editUnit(lesson.id, formData)
+                                            }
+                                            className="grid content-start gap-3 rounded-lg border bg-card p-3"
+                                          >
+                                            <p className="text-sm font-semibold">
+                                              Información de la lección
+                                            </p>
+                                            <label className="academic-field">
+                                              Título
+                                              <input
+                                                className="academic-control"
+                                                defaultValue={lesson.title}
+                                                maxLength={200}
+                                                name="unit-title"
+                                                required
+                                              />
+                                            </label>
+                                            <label className="academic-field">
+                                              Resumen
+                                              <textarea
+                                                className="academic-control min-h-20"
+                                                defaultValue={lesson.summary}
+                                                maxLength={1200}
+                                                name="unit-summary"
+                                              />
+                                            </label>
+                                            <label className="academic-field">
+                                              Duración (minutos)
+                                              <input
+                                                className="academic-control"
+                                                defaultValue={
+                                                  lesson.estimated_duration_minutes ??
+                                                  ''
+                                                }
+                                                min={1}
+                                                name="unit-duration"
+                                                type="number"
+                                              />
+                                            </label>
+                                            <Button
+                                              className="w-fit"
+                                              size="sm"
+                                              type="submit"
+                                            >
+                                              Guardar información
+                                            </Button>
+                                          </form>
+                                          <div className="grid gap-3">
+                                            <form
+                                              action={(formData) =>
+                                                saveUnitAlignment(
+                                                  lesson.id,
+                                                  'topics',
+                                                  formData,
+                                                )
+                                              }
+                                              className="rounded-lg border bg-card p-3"
+                                            >
+                                              <fieldset>
+                                                <legend className="text-sm font-semibold">
+                                                  Temas
+                                                </legend>
+                                                <div className="mt-2 max-h-44 space-y-1 overflow-y-auto">
+                                                  {topics.length ? (
+                                                    topics.map((topic) => (
+                                                      <label
+                                                        className="flex gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                                                        key={topic.id}
+                                                      >
+                                                        <input
+                                                          className="mt-0.5 size-4 accent-primary"
+                                                          defaultChecked={lesson.topics.some(
+                                                            (item) =>
+                                                              item.topic.id ===
+                                                              topic.id,
+                                                          )}
+                                                          name="topics"
+                                                          type="checkbox"
+                                                          value={topic.id}
+                                                        />
+                                                        {topic.title}
+                                                      </label>
+                                                    ))
+                                                  ) : (
+                                                    <p className="text-sm text-muted-foreground">
+                                                      No hay temas disponibles.
+                                                    </p>
+                                                  )}
+                                                </div>
+                                              </fieldset>
+                                              <Button
+                                                className="mt-3"
+                                                size="sm"
+                                                type="submit"
+                                                variant="outline"
+                                              >
+                                                {topics.length
+                                                  ? 'Guardar temas'
+                                                  : 'Limpiar temas'}
+                                              </Button>
+                                            </form>
+                                            <form
+                                              action={(formData) =>
+                                                saveUnitAlignment(
+                                                  lesson.id,
+                                                  'objectives',
+                                                  formData,
+                                                )
+                                              }
+                                              className="rounded-lg border bg-card p-3"
+                                            >
+                                              <fieldset>
+                                                <legend className="text-sm font-semibold">
+                                                  Objetivos
+                                                </legend>
+                                                <div className="mt-2 max-h-44 space-y-1 overflow-y-auto">
+                                                  {objectives.length ? (
+                                                    objectives.map(
+                                                      (objective) => (
+                                                        <label
+                                                          className="flex gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                                                          key={objective.id}
+                                                        >
+                                                          <input
+                                                            className="mt-0.5 size-4 accent-primary"
+                                                            defaultChecked={lesson.learning_objectives.some(
+                                                              (item) =>
+                                                                item
+                                                                  .learning_objective
+                                                                  .id ===
+                                                                objective.id,
+                                                            )}
+                                                            name="objectives"
+                                                            type="checkbox"
+                                                            value={objective.id}
+                                                          />
+                                                          <span>
+                                                            <strong>
+                                                              {objective.code}
+                                                            </strong>{' '}
+                                                            —{' '}
+                                                            {
+                                                              objective.statement
+                                                            }
+                                                          </span>
+                                                        </label>
+                                                      ),
+                                                    )
+                                                  ) : (
+                                                    <p className="text-sm text-muted-foreground">
+                                                      No hay objetivos
+                                                      disponibles.
+                                                    </p>
+                                                  )}
+                                                </div>
+                                              </fieldset>
+                                              <Button
+                                                className="mt-3"
+                                                size="sm"
+                                                type="submit"
+                                                variant="outline"
+                                              >
+                                                {objectives.length
+                                                  ? 'Guardar objetivos'
+                                                  : 'Limpiar objetivos'}
+                                              </Button>
+                                            </form>
+                                          </div>
+                                        </div>
+                                        <div className="mt-3 flex justify-end border-t pt-3">
+                                          <Button
+                                            onClick={() =>
+                                              setArchived(
+                                                lesson.id,
+                                                'unit',
+                                                false,
+                                              )
+                                            }
+                                            size="sm"
+                                            type="button"
+                                            variant="outline"
+                                          >
+                                            <Archive /> Archivar lección
+                                          </Button>
+                                        </div>
+                                      </details>
+                                    ) : null}
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
+                          {canManage && editable ? (
+                            <div className="flex shrink-0 gap-1">
+                              <Button
+                                aria-label={`Mover «${activity.title}» una posición arriba`}
+                                disabled={activityIndex === 0}
+                                onClick={() =>
+                                  moveActivity(moduleIndex, activityIndex, -1)
+                                }
+                                size="icon-sm"
+                                title="Mover arriba"
+                                type="button"
+                                variant="ghost"
+                              >
+                                <ChevronUp />
+                              </Button>
+                              <Button
+                                aria-label={`Mover «${activity.title}» una posición abajo`}
+                                disabled={
+                                  activityIndex === module.activities.length - 1
+                                }
+                                onClick={() =>
+                                  moveActivity(moduleIndex, activityIndex, 1)
+                                }
+                                size="icon-sm"
+                                title="Mover abajo"
+                                type="button"
+                                variant="ghost"
+                              >
+                                <ChevronDown />
+                              </Button>
+                            </div>
+                          ) : null}
+                        </li>
+                      );
+                    })}
                   </ol>
                 ) : null}
                 {canManage && editable && module.status === 'active' ? (
-                  <details className="mt-3 rounded-md border bg-background px-3 py-2">
-                    <summary className="cursor-pointer text-sm font-medium">
-                      Añadir clase en vivo o evaluación
-                    </summary>
-                    <form
-                      action={(formData) => addActivity(module.id, formData)}
-                      className="mt-3 grid gap-3 md:grid-cols-2"
-                    >
-                      <label className="academic-field">
-                        Tipo
-                        <select
-                          className="academic-control"
-                          name="activity-type"
-                        >
-                          <option value="live_class">Clase en vivo</option>
-                          <option value="assessment">Evaluación</option>
-                        </select>
-                      </label>
-                      <label className="academic-field md:col-span-2">
-                        Versión aprobada de evaluación
-                        <select
-                          className="academic-control"
-                          name="assessment-version"
-                        >
-                          <option value="">
-                            Selecciona si el tipo es evaluación
-                          </option>
-                          {assessmentVersions.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.label}
+                  <div className="mt-3 grid gap-2 lg:grid-cols-2">
+                    <details className="rounded-lg border bg-background px-3 py-2">
+                      <summary className="cursor-pointer text-sm font-medium">
+                        Añadir lección
+                      </summary>
+                      <form
+                        action={(formData) => addUnit(module.id, formData)}
+                        className="mt-3 grid gap-3"
+                      >
+                        <label className="academic-field">
+                          Título de la lección
+                          <input
+                            className="academic-control"
+                            maxLength={200}
+                            name="unit-title"
+                            placeholder="Ej. Dominio y rango de una función"
+                            required
+                          />
+                        </label>
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          Se crea la lección y su actividad en la secuencia. El
+                          contenido y la alineación se completan después.
+                        </p>
+                        <Button className="w-fit" type="submit">
+                          <Plus /> Crear lección
+                        </Button>
+                      </form>
+                    </details>
+                    <details className="rounded-lg border bg-background px-3 py-2">
+                      <summary className="cursor-pointer text-sm font-medium">
+                        Añadir clase en vivo o evaluación
+                      </summary>
+                      <form
+                        action={(formData) => addActivity(module.id, formData)}
+                        className="mt-3 grid gap-3 md:grid-cols-2"
+                      >
+                        <label className="academic-field">
+                          Tipo
+                          <select
+                            className="academic-control"
+                            name="activity-type"
+                          >
+                            <option value="live_class">Clase en vivo</option>
+                            <option value="assessment">Evaluación</option>
+                          </select>
+                        </label>
+                        <label className="academic-field md:col-span-2">
+                          Versión aprobada de evaluación
+                          <select
+                            className="academic-control"
+                            name="assessment-version"
+                          >
+                            <option value="">
+                              Selecciona si el tipo es evaluación
                             </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="academic-field">
-                        Título
-                        <input
-                          className="academic-control"
-                          maxLength={200}
-                          name="activity-title"
-                          required
-                        />
-                      </label>
-                      <label className="academic-field md:col-span-2">
-                        Resumen
-                        <textarea
-                          className="academic-control min-h-20"
-                          maxLength={1200}
-                          name="activity-summary"
-                        />
-                      </label>
-                      <label className="academic-field">
-                        Duración estimada (minutos)
-                        <input
-                          className="academic-control"
-                          min={1}
-                          name="activity-duration"
-                          type="number"
-                        />
-                      </label>
-                      <label className="academic-field">
-                        Umbral de asistencia/nota (%)
-                        <input
-                          className="academic-control"
-                          max={100}
-                          min={0}
-                          name="activity-threshold"
-                          type="number"
-                        />
-                      </label>
-                      <label className="flex items-center gap-2 text-sm font-medium">
-                        <input
-                          defaultChecked
-                          name="activity-required"
-                          type="checkbox"
-                        />
-                        Actividad obligatoria
-                      </label>
-                      <Button className="w-fit" type="submit">
-                        <Plus /> Añadir actividad
-                      </Button>
-                    </form>
-                  </details>
+                            {assessmentVersions.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="academic-field">
+                          Título
+                          <input
+                            className="academic-control"
+                            maxLength={200}
+                            name="activity-title"
+                            required
+                          />
+                        </label>
+                        <label className="academic-field md:col-span-2">
+                          Resumen
+                          <textarea
+                            className="academic-control min-h-20"
+                            maxLength={1200}
+                            name="activity-summary"
+                          />
+                        </label>
+                        <label className="academic-field">
+                          Duración estimada (minutos)
+                          <input
+                            className="academic-control"
+                            min={1}
+                            name="activity-duration"
+                            type="number"
+                          />
+                        </label>
+                        <label className="academic-field">
+                          Umbral de asistencia/nota (%)
+                          <input
+                            className="academic-control"
+                            max={100}
+                            min={0}
+                            name="activity-threshold"
+                            type="number"
+                          />
+                        </label>
+                        <label className="flex items-center gap-2 text-sm font-medium">
+                          <input
+                            defaultChecked
+                            name="activity-required"
+                            type="checkbox"
+                          />
+                          Actividad obligatoria
+                        </label>
+                        <Button className="w-fit" type="submit">
+                          <Plus /> Añadir actividad
+                        </Button>
+                      </form>
+                    </details>
+                  </div>
                 ) : null}
               </section>
-              {module.units.length ? (
-                <ol className="divide-y">
-                  {module.units.map((unit, unitIndex) => (
-                    <li
-                      className="px-5 py-4 transition-colors hover:bg-muted/15"
-                      key={unit.id}
-                    >
-                      <div className="flex flex-wrap justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="font-semibold">
-                              {unit.position ?? 'Archivada'}. {unit.title}
-                            </h4>
-                            <Badge
-                              className="rounded"
-                              variant={
-                                unit.content_status === 'ready'
-                                  ? 'secondary'
-                                  : 'outline'
-                              }
-                            >
-                              {contentStatusLabels[unit.content_status] ??
-                                unit.content_status}
-                            </Badge>
-                          </div>
-                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                            <span className="inline-flex items-center gap-1">
-                              <BookOpenText className="size-3.5" />
-                              {unit.content_version
-                                ? `Versión ${unit.content_version}`
-                                : 'Sin versión'}
-                            </span>
-                            <span className="inline-flex items-center gap-1">
-                              <Network className="size-3.5" />
-                              {unit.topics.length}{' '}
-                              {unit.topics.length === 1 ? 'tema' : 'temas'} ·{' '}
-                              {unit.learning_objectives.length}{' '}
-                              {unit.learning_objectives.length === 1
-                                ? 'objetivo'
-                                : 'objetivos'}
-                            </span>
-                            {unit.estimated_duration_minutes ? (
-                              <span className="inline-flex items-center gap-1">
-                                <Clock3 className="size-3.5" />
-                                {unit.estimated_duration_minutes} min
-                              </span>
-                            ) : null}
-                          </div>
-                          {unit.status === 'active' ? (
-                            <Button
-                              asChild
-                              className="mt-3"
-                              size="sm"
-                              variant="outline"
-                            >
-                              <Link
-                                href={`/organizaciones/${slug}/cursos/${courseSlug}/unidades/${unit.id}/contenido`}
-                              >
-                                <BookOpenText />
-                                {canManage && editable
-                                  ? 'Editar contenido'
-                                  : 'Ver contenido'}
-                              </Link>
-                            </Button>
-                          ) : null}
-                          {canManage && editable && unit.status === 'active' ? (
-                            <details className="mt-3 rounded-lg border bg-muted/10 px-3 py-2">
-                              <summary
-                                aria-label={`Editar unidad «${unit.title}»`}
-                                className="cursor-pointer text-sm font-medium"
-                              >
-                                Editar información
-                              </summary>
-                              <form
-                                action={(formData) =>
-                                  editUnit(unit.id, formData)
-                                }
-                                className="mt-3 grid gap-3"
-                              >
-                                <label className="academic-field">
-                                  Título
-                                  <input
-                                    aria-label={`Nuevo título de unidad «${unit.title}»`}
-                                    className="academic-control"
-                                    defaultValue={unit.title}
-                                    maxLength={200}
-                                    name="unit-title"
-                                    required
-                                  />
-                                </label>
-                                <label className="academic-field">
-                                  Resumen
-                                  <textarea
-                                    className="academic-control min-h-20"
-                                    defaultValue={unit.summary}
-                                    maxLength={1200}
-                                    name="unit-summary"
-                                  />
-                                </label>
-                                <label className="academic-field">
-                                  Duración (minutos)
-                                  <input
-                                    className="academic-control"
-                                    defaultValue={
-                                      unit.estimated_duration_minutes ?? ''
-                                    }
-                                    min={1}
-                                    name="unit-duration"
-                                    type="number"
-                                  />
-                                </label>
-                                <Button
-                                  aria-label={`Guardar unidad «${unit.title}»`}
-                                  className="w-fit"
-                                  size="sm"
-                                  type="submit"
-                                  variant="outline"
-                                >
-                                  Guardar cambios
-                                </Button>
-                              </form>
-                            </details>
-                          ) : null}
-                          {canManage && editable && unit.status === 'active' ? (
-                            <details className="mt-2 rounded-lg border bg-muted/10 px-3 py-2">
-                              <summary className="cursor-pointer text-sm font-medium">
-                                Alineación curricular
-                              </summary>
-                              <div className="mt-3 grid gap-4 xl:grid-cols-2">
-                                <form
-                                  action={(formData) =>
-                                    saveUnitAlignment(
-                                      unit.id,
-                                      'topics',
-                                      formData,
-                                    )
-                                  }
-                                  className="rounded-lg border bg-card p-3"
-                                >
-                                  <fieldset>
-                                    <legend className="text-sm font-semibold">
-                                      Temas
-                                    </legend>
-                                    <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
-                                      {topics.length ? (
-                                        topics.map((topic) => (
-                                          <label
-                                            className="flex gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-                                            key={topic.id}
-                                          >
-                                            <input
-                                              className="mt-0.5 size-4 accent-primary"
-                                              defaultChecked={unit.topics.some(
-                                                (item) =>
-                                                  item.topic.id === topic.id,
-                                              )}
-                                              name="topics"
-                                              type="checkbox"
-                                              value={topic.id}
-                                            />
-                                            {topic.title}
-                                          </label>
-                                        ))
-                                      ) : (
-                                        <p className="text-sm text-muted-foreground">
-                                          No hay temas disponibles.
-                                        </p>
-                                      )}
-                                    </div>
-                                  </fieldset>
-                                  <Button
-                                    className="mt-3"
-                                    size="sm"
-                                    type="submit"
-                                    variant="outline"
-                                  >
-                                    {topics.length
-                                      ? 'Guardar temas'
-                                      : 'Limpiar temas'}
-                                  </Button>
-                                </form>
-                                <form
-                                  action={(formData) =>
-                                    saveUnitAlignment(
-                                      unit.id,
-                                      'objectives',
-                                      formData,
-                                    )
-                                  }
-                                  className="rounded-lg border bg-card p-3"
-                                >
-                                  <fieldset>
-                                    <legend className="text-sm font-semibold">
-                                      Objetivos
-                                    </legend>
-                                    <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
-                                      {objectives.length ? (
-                                        objectives.map((objective) => (
-                                          <label
-                                            className="flex gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-                                            key={objective.id}
-                                          >
-                                            <input
-                                              className="mt-0.5 size-4 accent-primary"
-                                              defaultChecked={unit.learning_objectives.some(
-                                                (item) =>
-                                                  item.learning_objective.id ===
-                                                  objective.id,
-                                              )}
-                                              name="objectives"
-                                              type="checkbox"
-                                              value={objective.id}
-                                            />
-                                            <span>
-                                              <strong>{objective.code}</strong>{' '}
-                                              — {objective.statement}
-                                            </span>
-                                          </label>
-                                        ))
-                                      ) : (
-                                        <p className="text-sm text-muted-foreground">
-                                          No hay objetivos disponibles.
-                                        </p>
-                                      )}
-                                    </div>
-                                  </fieldset>
-                                  <Button
-                                    className="mt-3"
-                                    size="sm"
-                                    type="submit"
-                                    variant="outline"
-                                  >
-                                    {objectives.length
-                                      ? 'Guardar objetivos'
-                                      : 'Limpiar objetivos'}
-                                  </Button>
-                                </form>
-                              </div>
-                            </details>
-                          ) : null}
-                        </div>
-                        {canManage && editable ? (
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              aria-label={`Mover «${unit.title}» una posición arriba`}
-                              disabled={
-                                unitIndex === 0 || unit.status !== 'active'
-                              }
-                              onClick={() =>
-                                moveUnit(moduleIndex, unitIndex, -1)
-                              }
-                              size="icon-sm"
-                              title="Mover arriba"
-                              type="button"
-                              variant="outline"
-                            >
-                              <ChevronUp />
-                            </Button>
-                            <Button
-                              aria-label={`Mover «${unit.title}» una posición abajo`}
-                              disabled={
-                                unitIndex === module.units.length - 1 ||
-                                unit.status !== 'active'
-                              }
-                              onClick={() =>
-                                moveUnit(moduleIndex, unitIndex, 1)
-                              }
-                              size="icon-sm"
-                              title="Mover abajo"
-                              type="button"
-                              variant="outline"
-                            >
-                              <ChevronDown />
-                            </Button>
-                            <Button
-                              aria-label={`${unit.status === 'archived' ? 'Restaurar' : 'Archivar'} unidad «${unit.title}»`}
-                              onClick={() =>
-                                setArchived(
-                                  unit.id,
-                                  'unit',
-                                  unit.status === 'archived',
-                                )
-                              }
-                              size="icon-sm"
-                              title={
-                                unit.status === 'archived'
-                                  ? 'Restaurar'
-                                  : 'Archivar'
-                              }
-                              type="button"
-                              variant="outline"
-                            >
-                              {unit.status === 'archived' ? (
-                                <ArchiveRestore />
-                              ) : (
-                                <Archive />
-                              )}
-                            </Button>
-                          </div>
-                        ) : null}
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="px-5 py-6 text-sm text-muted-foreground">
-                  Este módulo todavía no tiene unidades.
-                </p>
-              )}
-              {canManage && editable && module.status === 'active' ? (
-                <form
-                  action={(formData) => addUnit(module.id, formData)}
-                  className="flex flex-wrap gap-3 border-t border-border bg-muted/10 px-5 py-4"
-                >
-                  <label className="academic-field min-w-56 flex-1">
-                    Título de la nueva unidad
-                    <input
-                      className="academic-control"
-                      maxLength={200}
-                      name="unit-title"
-                      required
-                    />
-                  </label>
-                  <Button className="self-end" type="submit" variant="outline">
-                    <Plus />
-                    Añadir unidad
-                  </Button>
-                </form>
-              ) : null}
             </li>
           ))}
         </ol>

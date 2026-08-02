@@ -40,6 +40,18 @@ https://resend.com/docs/dashboard/emails/deliverability-insights.
 - El sidebar no contiene Inicio, Mi perfil, Buscar ni Resumen institucional. La
   institución y los roles ocupan su cabecera; perfil y preferencias permanecen
   en el menú de cuenta; buscar y notificaciones son acciones del header.
+- La navegación institucional sigue dependencias de trabajo, no el orden
+  histórico de módulos técnicos: preparación institucional, diseño académico y
+  ejecución con grupos y matrículas. Un hijo que conduce al mismo destino que
+  su padre no se muestra de nuevo.
+- El menú de cuenta incorpora `Ayuda y guía de uso` inmediatamente antes de
+  cerrar sesión. La ayuda explica la secuencia completa, las diferencias entre
+  conceptos y un caso verificable; conserva todos los pasos, pero sólo enlaza
+  acciones autorizadas por las capacidades del usuario.
+- La autoría de estructura representa cada `CourseActivity` una sola vez. La
+  lección contiene allí mismo estado, alineación, versión y acceso al contenido;
+  no se vuelve a listar como una unidad paralela. El orden mixto usa el contrato
+  canónico `/activities/order/`.
 - `/estudiar` y la raíz compatible de organización redirigen al trabajo
   principal existente: owner a Personas, administrator a Grupos de curso,
   instructor a Mis asignaturas, author/reviewer a Cursos y learner a Mi
@@ -57,6 +69,12 @@ Cerrar el alta pública ya no rompe la incorporación delegada. La diferencia
 entre una invitación y un formulario público se valida en el backend y no en un
 parámetro de URL. Las rutas históricas siguen siendo compatibles mediante
 redirección, pero dejan de producir pantallas redundantes.
+
+El sidebar se convierte en una guía progresiva para administradores sin alterar
+la navegación prioritaria de docentes o estudiantes. La ayuda es una superficie
+de conocimiento, no una fuente paralela de permisos: las acciones continúan
+fallando de forma segura en servidor y sus enlaces se derivan del contexto de
+acceso vigente.
 
 La entregabilidad continúa dependiendo de reputación, contenido, autenticación
 observada por el receptor y política del buzón. El código puede garantizar

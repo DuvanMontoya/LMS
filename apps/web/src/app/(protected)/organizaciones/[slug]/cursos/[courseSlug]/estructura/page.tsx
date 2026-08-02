@@ -1,5 +1,9 @@
+import { CircleHelp } from 'lucide-react';
+import Link from 'next/link';
+
 import { PageHeader } from '@/components/platform/page-header';
 import { StructureEditor } from '@/components/courses/structure-editor';
+import { Button } from '@/components/ui/button';
 import { getApprovedAssessmentVersionOptions } from '@/lib/assessments/server';
 import { getCourseWorkspace } from '@/lib/courses/server';
 
@@ -16,6 +20,14 @@ export default async function CourseStructurePage({
   return (
     <main className="academic-page">
       <PageHeader
+        actions={
+          <Button asChild variant="outline">
+            <Link href={`/organizaciones/${slug}/ayuda`}>
+              <CircleHelp />
+              Ver guía de creación
+            </Link>
+          </Button>
+        }
         breadcrumbs={[
           { href: `/organizaciones/${slug}/cursos`, label: 'Cursos' },
           {
@@ -26,8 +38,8 @@ export default async function CourseStructurePage({
         ]}
         description={
           data.canAuthor
-            ? 'Ordena una sola secuencia de lecciones, clases en vivo y evaluaciones, con sus políticas académicas y bindings operativos.'
-            : 'Consulta la secuencia aprobada de lecciones, clases en vivo y evaluaciones de este curso.'
+            ? 'Construye el recorrido real del estudiante: organiza módulos y ordena lecciones, clases en vivo y evaluaciones en una sola secuencia.'
+            : 'Consulta el recorrido aprobado de lecciones, clases en vivo y evaluaciones de este curso.'
         }
         eyebrow={data.canAuthor ? 'Autoría estructural' : 'Curso asignado'}
         title={data.canAuthor ? 'Estructura del curso' : 'Secuencia del curso'}

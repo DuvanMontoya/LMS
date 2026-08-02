@@ -1,4 +1,10 @@
-import { cleanup, render, within } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react';
 import { vi } from 'vitest';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -81,6 +87,24 @@ describe('PlatformShell role navigation', () => {
       }
       cleanup();
     }
+  });
+
+  it('places the contextual help immediately before sign out in the account menu', async () => {
+    renderNavigation('administrator', []);
+    fireEvent.pointerDown(
+      screen.getByRole('button', {
+        name: 'Abrir menú de cuenta de Cuenta administrator',
+      }),
+    );
+    const help = await screen.findByRole('menuitem', {
+      name: 'Ayuda y guía de uso',
+    });
+    const signOut = screen.getByRole('button', { name: 'Cerrar sesión' });
+
+    expect(help).toHaveAttribute('href', '/organizaciones/academia/ayuda');
+    expect(
+      help.compareDocumentPosition(signOut) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('keeps authors and reviewers out of teaching operations', () => {
@@ -218,7 +242,15 @@ describe('PlatformShell role navigation', () => {
       'membership.settings.view',
     ]);
 
-    expect(navigation.getByText('Operación académica')).toBeInTheDocument();
+    expect(
+      navigation.getByText('1 · Preparación institucional'),
+    ).toBeInTheDocument();
+    expect(
+      navigation.getByText('2 · Diseño y operación académica'),
+    ).toBeInTheDocument();
+    expect(
+      navigation.getByText('3 · Ejecución y matrículas'),
+    ).toBeInTheDocument();
     expect(navigation.getByRole('link', { name: 'Currículo' })).toBeVisible();
     expect(
       navigation.getByRole('link', { name: 'Entregas y resultados' }),
@@ -229,6 +261,22 @@ describe('PlatformShell role navigation', () => {
     expect(
       navigation.queryByRole('link', { name: 'Calificación manual' }),
     ).not.toBeInTheDocument();
+
+    const configuration = navigation.getByRole('link', {
+      name: 'Configuración institucional',
+    });
+    const curriculum = navigation.getByRole('link', { name: 'Currículo' });
+    const courseGroup = navigation.getByRole('link', {
+      name: 'Grupos de curso',
+    });
+    expect(
+      configuration.compareDocumentPosition(curriculum) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      curriculum.compareDocumentPosition(courseGroup) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });
 

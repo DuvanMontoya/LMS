@@ -83,7 +83,10 @@ export function NotificationBadge({ href }: Readonly<{ href: string }>) {
           ) : null}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[22rem] max-w-[calc(100vw-1rem)] p-0">
+      <DropdownMenuContent
+        align="end"
+        className="w-[22rem] max-w-[calc(100vw-1rem)] p-0"
+      >
         <DropdownMenuLabel className="flex items-center justify-between px-4 py-3">
           <span className="text-base font-semibold">Notificaciones</span>
           {count ? (
@@ -139,7 +142,10 @@ export function NotificationBadge({ href }: Readonly<{ href: string }>) {
         <DropdownMenuSeparator className="m-0" />
         <div className="p-1.5">
           <DropdownMenuItem asChild>
-            <Link className="justify-center py-2 font-medium text-primary" href={href}>
+            <Link
+              className="justify-center py-2 font-medium text-primary"
+              href={href}
+            >
               Ver todas las notificaciones
             </Link>
           </DropdownMenuItem>

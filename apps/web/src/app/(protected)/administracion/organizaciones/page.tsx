@@ -19,9 +19,7 @@ export default async function PlatformOrganizationsPage() {
         title="Instituciones"
       />
       <div className="mt-6">
-        <PlatformOrganizationProvisioner
-          organizations={organizations}
-        />
+        <PlatformOrganizationProvisioner organizations={organizations} />
       </div>
     </main>
   );

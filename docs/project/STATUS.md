@@ -13,7 +13,19 @@
   del sidebar. La institución y el rol ocupan la cabecera lateral; buscar está
   junto a notificaciones; `/estudiar` y la raíz institucional redirigen al
   espacio principal de owner, administrator, author, reviewer, instructor o
-  learner. El plano global no enlaza al tenant.
+  learner. El plano global no enlaza al tenant. Para la operación institucional,
+  el orden visible ahora es preparación → diseño académico → ejecución y se
+  eliminaron hijos que repetían exactamente el enlace padre.
+- **Ayuda contextual:** el menú de la cuenta ofrece `Ayuda y guía de uso` antes
+  de cerrar sesión. La nueva superficie explica en ocho pasos currículo,
+  periodos, personas, curso, revisión, release, grupo de curso y matrícula;
+  distingue los conceptos con ejemplos y sólo enlaza acciones autorizadas por
+  las capacidades vigentes.
+- **Autoría de curso:** la estructura ya no representa una lección dos veces.
+  Cada actividad canónica contiene tipo, política, estado de contenido,
+  alineación, versión y acceso al contenido en una sola tarjeta. La edición
+  avanzada permanece dentro de esa tarjeta y el orden mixto llama al endpoint
+  unificado de actividades.
 - **UI de operación:** el control de instituciones ahora muestra estado global,
   alta separada y un directorio control-plane con detalle de invitaciones. Los
   formularios de área, disciplina y asignatura derivan el identificador técnico
@@ -23,8 +35,19 @@
   alineado e idempotencia. Falta inspeccionar encabezados de un mensaje recibido
   y los diagnósticos de Resend; no se afirma que la colocación en bandeja esté
   resuelta.
-- **Puertas abiertas:** falta build final, regresión amplia, Chrome de todos los
-  roles en desktop/390 px y proveedor LiveKit real.
+- **Evidencia web actual:** Prettier, ESLint, TypeScript, las **76/76** pruebas
+  Vitest y el build de Next.js 16.2.12 pasaron. La matriz de los seis roles pasó
+  orden, rutas esperadas, rutas prohibidas, landing exacto y ausencia de overflow
+  a 390 px. Chrome real verificó la sesión administrator, la estructura sin
+  duplicados, el centro de ayuda, el menú de cuenta y 390 px con
+  `scrollWidth == clientWidth`.
+- **Evidencia API actual:** las suites combinadas de identidad e incorporación
+  pasaron **18/18** sobre PostgreSQL y `organizations:check` confirmó Django,
+  migraciones, schema, OpenAPI y cliente sincronizados.
+- **Puertas abiertas:** falta inspeccionar `Authentication-Results` de un correo
+  realmente recibido y los diagnósticos del proveedor. LiveKit real continúa
+  bloqueado sin proveedor externo; no se infiere conectividad productiva desde
+  el stub local.
 
 ## Separación de gobierno y autoridad académica — en curso 2026-08-02
 
