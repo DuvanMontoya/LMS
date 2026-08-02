@@ -16,20 +16,26 @@ async function login(
   await page.getByLabel('Correo electrónico').fill(email);
   await page.getByLabel('Contraseña').fill(requiredPassword);
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
-  await expect(page).toHaveURL(next);
+  await expect(page).toHaveURL(next, { timeout: 15_000 });
 }
 
 async function logout(page: import('@playwright/test').Page) {
   await page.goto('/estudiar');
+  const accountMenu = page.getByRole('button', {
+    name: /Abrir menú de cuenta/,
+  });
+  await expect(accountMenu).toBeVisible({ timeout: 15_000 });
+  await accountMenu.click();
   await page.getByRole('button', { name: 'Cerrar sesión' }).click();
-  await expect(page).toHaveURL('/auth/iniciar-sesion');
+  await expect(page).toHaveURL('/auth/iniciar-sesion', { timeout: 15_000 });
 }
 
 test.describe.serial('institutional organization access', () => {
   test('each role reaches every route exposed in its sidebar without a 404', async ({
     page,
   }) => {
-    test.slow();
+    // The matrix follows every distinct sidebar link across six isolated roles.
+    test.setTimeout(10 * 60_000);
     const roleLandings: ReadonlyArray<readonly [string, string]> = [
       [
         'owner@organizations.e2e.test',
@@ -134,7 +140,10 @@ test.describe.serial('institutional organization access', () => {
 
     await expect(
       page.getByRole('region', { name: 'Acceso a la creación de cursos' }),
-    ).toContainText('Crear y editar cursos corresponde al rol Autor');
+    ).toContainText('no la autoría del curso');
+    await expect(
+      page.getByRole('region', { name: 'Acceso a la creación de cursos' }),
+    ).toContainText('consultar cursos aprobados y operar sus releases');
     await expect(
       page.getByRole('link', { name: 'Gestionar roles' }),
     ).toHaveAttribute('href', `/organizaciones/${organizationSlug}/miembros`);

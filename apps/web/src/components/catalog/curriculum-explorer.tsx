@@ -9,7 +9,7 @@ import {
   Search,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { NamedEntityActions } from '@/components/catalog/named-entity-actions';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +45,7 @@ export function CurriculumExplorer({
     id: areas[0]?.id ?? '',
     kind: 'area',
   }));
+  const inspectorRef = useRef<HTMLElement>(null);
   const normalizedSearch = search.trim().toLocaleLowerCase('es-CO');
   const matches = (item: { name: string; status: string }) =>
     (status === 'all' || item.status === status) &&
@@ -65,10 +66,25 @@ export function CurriculumExplorer({
   );
   const selected = resolveSelection(selection, areas, disciplines, subjects);
 
+  function selectEntity(nextSelection: Selection) {
+    setSelection(nextSelection);
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+      window.requestAnimationFrame(() => {
+        inspectorRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      });
+    }
+  }
+
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
-      <div className="grid border-b bg-muted/20 lg:grid-cols-[22rem_minmax(0,1fr)]">
-        <div className="border-b p-4 lg:border-r lg:border-b-0">
+    <div
+      className="overflow-hidden rounded-xl border bg-card shadow-sm"
+      data-testid="curriculum-explorer"
+    >
+      <div className="grid border-b bg-muted/20 lg:grid-cols-[20rem_minmax(0,1fr)]">
+        <div className="border-b p-3 lg:border-r lg:border-b-0">
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -81,7 +97,7 @@ export function CurriculumExplorer({
             />
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
           <Inventory
             label={areas.length === 1 ? 'área' : 'áreas'}
             value={areas.length}
@@ -114,18 +130,21 @@ export function CurriculumExplorer({
         </div>
       </div>
 
-      <div className="grid min-h-[30rem] lg:grid-cols-[22rem_minmax(0,1fr)]">
+      <div className="grid lg:grid-cols-[20rem_minmax(0,1fr)]">
         <aside
           aria-label="Árbol curricular"
           className="border-b bg-muted/10 lg:border-r lg:border-b-0"
         >
-          <div className="border-b px-4 py-3">
+          <div className="flex items-center justify-between border-b px-4 py-3">
             <p className="text-[0.6875rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">
-              Jerarquía curricular
+              Mapa curricular
             </p>
+            <span className="text-[0.6875rem] text-muted-foreground">
+              Área · disciplina · asignatura
+            </span>
           </div>
           {visibleAreas.length ? (
-            <div className="max-h-[42rem] overflow-y-auto p-2">
+            <div className="max-h-[22rem] overflow-y-auto p-2 lg:max-h-[34rem]">
               {visibleAreas.map((area) => {
                 const areaMatches = matches(area);
                 const children = disciplines.filter(
@@ -141,7 +160,7 @@ export function CurriculumExplorer({
                       icon={Layers3}
                       label={area.name}
                       onSelect={() =>
-                        setSelection({ id: area.id, kind: 'area' })
+                        selectEntity({ id: area.id, kind: 'area' })
                       }
                       status={area.status}
                     />
@@ -171,7 +190,7 @@ export function CurriculumExplorer({
                             icon={Network}
                             label={discipline.name}
                             onSelect={() =>
-                              setSelection({
+                              selectEntity({
                                 id: discipline.id,
                                 kind: 'discipline',
                               })
@@ -189,7 +208,7 @@ export function CurriculumExplorer({
                               key={subject.id}
                               label={subject.name}
                               onSelect={() =>
-                                setSelection({
+                                selectEntity({
                                   id: subject.id,
                                   kind: 'subject',
                                 })
@@ -215,7 +234,12 @@ export function CurriculumExplorer({
           )}
         </aside>
 
-        <section aria-live="polite" className="min-w-0">
+        <section
+          aria-live="polite"
+          className="min-w-0 scroll-mt-20"
+          data-testid="curriculum-inspector"
+          ref={inspectorRef}
+        >
           {selected ? (
             <EntityInspector
               areas={areas}
@@ -223,7 +247,7 @@ export function CurriculumExplorer({
               disciplines={disciplines}
               entity={selected.entity}
               kind={selected.kind}
-              onSelect={setSelection}
+              onSelect={selectEntity}
               slug={slug}
               subjects={subjects}
             />
@@ -300,25 +324,32 @@ function EntityInspector({
       : kind === 'discipline'
         ? 'Disciplina'
         : 'Asignatura';
+  const EntityIcon =
+    kind === 'area' ? Layers3 : kind === 'discipline' ? Network : BookOpen;
 
   return (
     <div>
-      <header className="border-b px-5 py-5 sm:px-7 sm:py-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-[0.6875rem] font-semibold tracking-[0.1em] text-primary uppercase">
-              {kindLabel}
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <h2 className="text-2xl font-semibold tracking-tight">
-                {entity.name}
-              </h2>
-              <StatusLabel status={entity.status} />
+      <header className="border-b px-5 py-4 sm:px-6 sm:py-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <div className="mt-0.5 grid size-10 shrink-0 place-items-center rounded-lg border bg-muted/30 text-primary shadow-xs">
+              <EntityIcon className="size-4" />
             </div>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-              {entity.description ||
-                'Esta entidad no tiene una descripción institucional.'}
-            </p>
+            <div className="min-w-0">
+              <p className="text-[0.6875rem] font-semibold tracking-[0.1em] text-primary uppercase">
+                {kindLabel}
+              </p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
+                <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                  {entity.name}
+                </h2>
+                <StatusLabel status={entity.status} />
+              </div>
+              <p className="mt-1.5 max-w-3xl text-sm leading-6 text-muted-foreground">
+                {entity.description ||
+                  'Esta entidad no tiene una descripción institucional.'}
+              </p>
+            </div>
           </div>
           {canManage ? (
             <NamedEntityActions entity={entity} kind={kind} slug={slug} />
@@ -326,83 +357,68 @@ function EntityInspector({
         </div>
       </header>
 
-      <div className="grid divide-y xl:grid-cols-[minmax(0,1fr)_18rem] xl:divide-x xl:divide-y-0">
-        <div className="p-5 sm:p-7">
+      <div className="p-5 sm:p-6">
+        <div className="flex items-baseline justify-between gap-3">
           <h3 className="text-sm font-semibold">
             {kind === 'subject'
-              ? 'Ubicación curricular'
+              ? 'Ruta curricular'
               : kind === 'area'
-                ? 'Disciplinas vinculadas'
-                : 'Asignaturas vinculadas'}
+                ? 'Disciplinas'
+                : 'Asignaturas'}
           </h3>
-          {kind === 'subject' ? (
-            <Hierarchy area={area} discipline={discipline} entity={entity} />
-          ) : related.length ? (
-            <ul className="mt-4 divide-y border-y">
-              {related.map((item) => {
-                const itemKind =
-                  kind === 'area'
-                    ? ('discipline' as const)
-                    : ('subject' as const);
-                return (
-                  <li key={item.id}>
-                    <button
-                      className="group flex w-full items-center gap-3 px-1 py-3 text-left hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      onClick={() => onSelect({ id: item.id, kind: itemKind })}
-                      type="button"
-                    >
-                      {kind === 'area' ? (
-                        <Network className="size-4 text-muted-foreground group-hover:text-primary" />
-                      ) : (
-                        <BookOpen className="size-4 text-muted-foreground group-hover:text-primary" />
-                      )}
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                        {item.name}
-                      </span>
-                      <StatusLabel status={item.status} />
-                      <ChevronRight className="size-4 text-muted-foreground" />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="mt-3 border-y py-5 text-sm text-muted-foreground">
-              No hay entidades vinculadas en este nivel.
-            </p>
-          )}
-
-          {kind === 'subject' ? (
-            <Button asChild className="mt-6">
-              <Link
-                href={`/organizaciones/${slug}/curriculo/asignaturas/${entity.id}`}
-              >
-                Abrir asignatura
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
+          {kind !== 'subject' && related.length ? (
+            <span className="text-xs text-muted-foreground">
+              Selecciona para explorar
+            </span>
           ) : null}
         </div>
+        {kind === 'subject' ? (
+          <Hierarchy area={area} discipline={discipline} entity={entity} />
+        ) : related.length ? (
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
+            {related.map((item) => {
+              const itemKind =
+                kind === 'area'
+                  ? ('discipline' as const)
+                  : ('subject' as const);
+              return (
+                <li key={item.id}>
+                  <button
+                    className="group flex min-h-14 w-full items-center gap-3 rounded-lg border bg-background px-3 py-2.5 text-left shadow-xs transition-[border-color,box-shadow,color] hover:border-primary/35 hover:text-primary hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => onSelect({ id: item.id, kind: itemKind })}
+                    type="button"
+                  >
+                    {kind === 'area' ? (
+                      <Network className="size-4 text-muted-foreground group-hover:text-primary" />
+                    ) : (
+                      <BookOpen className="size-4 text-muted-foreground group-hover:text-primary" />
+                    )}
+                    <span className="min-w-0 flex-1 text-sm font-medium">
+                      {item.name}
+                    </span>
+                    <StatusLabel status={item.status} />
+                    <ChevronRight className="size-4 text-muted-foreground" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="mt-3 rounded-lg border border-dashed bg-muted/10 px-4 py-5 text-sm text-muted-foreground">
+            No hay entidades vinculadas en este nivel.
+          </p>
+        )}
 
-        <aside className="bg-muted/10 p-5 sm:p-6">
-          <h3 className="text-[0.6875rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">
-            Identidad técnica
-          </h3>
-          <dl className="mt-4 space-y-4 text-sm">
-            <Metadata label="Slug" value={entity.slug} mono />
-            <Metadata label="Estado" value={statusText(entity.status)} />
-            <Metadata
-              label={kind === 'subject' ? 'Nivel' : 'Elementos dependientes'}
-              value={
-                kind === 'subject'
-                  ? 'Asignatura'
-                  : `${related.length} ${
-                      kind === 'area' ? 'disciplinas' : 'asignaturas'
-                    }`
-              }
-            />
-          </dl>
-        </aside>
+        {kind === 'subject' ? (
+          <Button asChild className="mt-4">
+            <Link
+              href={`/organizaciones/${slug}/curriculo/asignaturas/${entity.id}`}
+            >
+              Abrir asignatura
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
+        ) : null}
       </div>
     </div>
   );
@@ -418,7 +434,7 @@ function Hierarchy({
   entity: Area | Discipline | Subject;
 }>) {
   return (
-    <ol className="mt-4 flex flex-wrap items-center gap-2 border-y py-4 text-sm">
+    <ol className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/15 px-4 py-3 text-sm">
       <li className="font-medium">{area?.name ?? 'Área no disponible'}</li>
       <li aria-hidden="true">
         <ChevronRight className="size-4 text-muted-foreground" />
@@ -445,21 +461,6 @@ function Inventory({
       </span>
       {label}
     </p>
-  );
-}
-
-function Metadata({
-  label,
-  mono = false,
-  value,
-}: Readonly<{ label: string; mono?: boolean; value: string }>) {
-  return (
-    <div>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={cn('mt-1 break-words font-medium', mono && 'font-mono')}>
-        {value}
-      </dd>
-    </div>
   );
 }
 

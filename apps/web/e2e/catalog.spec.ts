@@ -30,6 +30,10 @@ test('owner sees the curriculum hierarchy in Chromium', async ({ page }) => {
   await expect(
     page.getByRole('heading', { name: 'Matemáticas Activo', exact: true }),
   ).toBeVisible();
+  await expect(page.getByText('Identidad técnica')).toHaveCount(0);
+  await expect(page.getByTestId('curriculum-inspector')).not.toContainText(
+    'Slug',
+  );
   await page.setViewportSize({ height: 844, width: 390 });
   expect(
     await page.evaluate(

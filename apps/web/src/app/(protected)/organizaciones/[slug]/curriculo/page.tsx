@@ -60,15 +60,15 @@ export default async function CurriculumPage({
           { href: `/organizaciones/${slug}`, label: organization.name },
           { label: 'Currículo' },
         ]}
-        description="Organiza áreas, disciplinas y asignaturas. Una asignatura describe el saber curricular; los cursos se crean y versionan en un espacio distinto."
+        description="Diseña la estructura de conocimiento de la institución y conecta cada área con sus disciplinas y asignaturas."
         eyebrow="Currículo institucional"
         title="Currículo"
       />
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-sm font-semibold">Estructura académica</h2>
+          <h2 className="text-sm font-semibold">Mapa curricular</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Explora la jerarquía y selecciona un elemento para administrarlo.
+            Explora la jerarquía y selecciona un elemento para ver su contexto.
           </p>
         </div>
         {canManage ? (

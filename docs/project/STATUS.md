@@ -2,15 +2,35 @@
 
 ## Navegación institucional y secuencia de trabajo — en curso 2026-08-02
 
+- **Currículo compacto y contextual (2026-08-02):** la ruta institucional de
+  currículo conserva búsqueda, filtros, jerarquía, permisos y acciones, pero
+  elimina el panel redundante de identidad técnica (`slug`, estado y conteo de
+  dependencias). El inspector usa ahora el ancho disponible para relaciones
+  navegables, reduce el árbol a una superficie desplazable y lleva la selección
+  al detalle en pantallas menores de 1024 px. La comprobación real en Chrome
+  cubrió escritorio y 390 × 844 sin desbordamiento; TypeScript y ESLint pasan.
+  `web:format:check` continúa bloqueado únicamente por el `tsconfig.json`
+  previamente modificado y fuera del alcance de este cambio; los tres archivos
+  editados del currículo sí fueron formateados con Prettier.
+
 - **Auditoría de roles y retorno autenticado (2026-08-02):** se detectó que un
   `next` válido pero fuera de las capacidades del rol permitía iniciar sesión y
   terminaba en una 404 (por ejemplo, owner → currículo). La continuación de
   login ahora compara la familia de ruta con las capacidades efectivas y envía
   al workspace principal autorizado sin sustituir la autorización de Server
   Components/API. README diferencia explícitamente asignatura, curso, sección,
-  grupo y matrícula, y documenta facultades y límites de cada rol. Pendiente:
-  ejecutar las validaciones y la nueva comprobación Chrome para todos los roles
-  antes de marcar esta auditoría como cerrada.
+  grupo y matrícula, y documenta facultades y límites de cada rol. La prueba
+  unitaria del destino posterior al login, el sanitizador de retorno, los
+  formularios de autenticación y el sidebar pasan 25/25; TypeScript, ESLint y
+  Prettier también pasan. Las 8 pruebas PostgreSQL de la matriz de políticas
+  pasan. Chrome verificó propietario, administrador, autor, revisor, docente y
+  estudiante con sus workspaces reales; a 390 px, Currículo no desborda. La
+  matriz aislada `organizations:e2e` ya pasa: recorre, con sesión independiente
+  por rol, cada enlace único expuesto en el sidebar de owner, administrator,
+  author, reviewer, instructor y learner sin recibir 404. Se corrigió su
+  cierre de sesión para abrir primero el menú de cuenta y se aumentó sólo el
+  tiempo de esta matriz completa; la evidencia tomó 7.1 min de Playwright más
+  preparación/limpieza de la base efímera.
 
 - **Auditoría de rutas:** el sidebar global es estable: no revela ni reemplaza
   secciones al entrar en cursos o evaluaciones. Las pantallas de detalle y
