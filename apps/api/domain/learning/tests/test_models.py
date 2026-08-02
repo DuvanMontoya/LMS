@@ -44,6 +44,7 @@ class LearningModelTests(LearningFixtureMixin, TestCase):
             organization=organization,
             course=revision.course,
             release=release,
+            migration_review_required=True,
             name="Grupo de curso histórico",
         )
         enrollment = enroll_member(
@@ -118,6 +119,7 @@ class LearningModelTests(LearningFixtureMixin, TestCase):
             organization=organization,
             course=revision.course,
             release=release,
+            migration_review_required=True,
             name="Cohorte inmutable",
         )
         student = get_user_model().objects.create_user(

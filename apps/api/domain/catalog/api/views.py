@@ -15,7 +15,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from domain.catalog.exceptions import CatalogDomainError, PrerequisiteCycle
+from domain.catalog.exceptions import (
+    CatalogAccessDenied,
+    CatalogDomainError,
+    PrerequisiteCycle,
+)
 from domain.catalog.filters import (
     AreaFilter,
     ConceptFilter,
@@ -33,6 +37,7 @@ from domain.catalog.models import (
     LearningObjectiveConcept,
     Subject,
     SubjectPrerequisite,
+    SubjectTeachingResponsibility,
     Topic,
     TopicConcept,
 )
@@ -52,6 +57,8 @@ from domain.catalog.services import (
     archive_learning_objective,
     archive_subject,
     archive_topic_subtree,
+    assign_subject_teaching_responsibility,
+    close_subject_teaching_responsibility,
     create_area,
     create_child_topic,
     create_concept,
@@ -67,11 +74,15 @@ from domain.catalog.services import (
     restore_entity,
     update_entity,
 )
-from domain.organizations.models import Organization
+from domain.organizations.choices import RoleCode
+from domain.organizations.models import Membership, Organization
+from domain.organizations.policies import active_membership, active_roles
 from domain.organizations.selectors import organization_visible_to
 
 from .serializers import (
     AreaSerializer,
+    AssignSubjectTeachingResponsibilitySerializer,
+    CloseTeachingResponsibilitySerializer,
     ConceptAssociationEntrySerializer,
     ConceptSerializer,
     CreateAreaSerializer,
@@ -87,6 +98,7 @@ from .serializers import (
     ReplaceConceptAssociationsSerializer,
     ReplaceSubjectPrerequisitesSerializer,
     SubjectSerializer,
+    SubjectTeachingResponsibilitySerializer,
     TopicSerializer,
     UpdateAreaSerializer,
     UpdateConceptSerializer,
@@ -113,6 +125,11 @@ def _visible(request: Request, organization: Organization):
 
 
 def _catalog_error(error: CatalogDomainError) -> Response:
+    if isinstance(error, CatalogAccessDenied):
+        return Response(
+            {"code": "catalog_permission_denied", "detail": "Sin acceso."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
     if isinstance(error, PrerequisiteCycle):
         return Response(
             {
@@ -128,6 +145,88 @@ def _catalog_error(error: CatalogDomainError) -> Response:
         },
         status=status.HTTP_400_BAD_REQUEST,
     )
+
+
+def _can_manage_teaching_responsibilities(
+    request: Request, organization: Organization
+) -> bool:
+    membership = active_membership(request.user, organization)
+    return bool({RoleCode.OWNER, RoleCode.ADMINISTRATOR} & active_roles(membership))
+
+
+class SubjectTeachingResponsibilityListCreateView(APIView):
+    @extend_schema(responses={200: SubjectTeachingResponsibilitySerializer(many=True)})
+    def get(self, request: Request, slug: str) -> Response:
+        organization = _organization(request, slug)
+        if not can_view_catalog(request.user, organization):
+            raise PermissionDenied("catalog_permission_denied")
+        queryset = SubjectTeachingResponsibility.objects.filter(
+            subject__discipline__area__organization=organization
+        ).select_related("subject", "membership__user")
+        if not _can_manage_teaching_responsibilities(request, organization):
+            queryset = queryset.filter(membership__user=request.user)
+        return Response(
+            SubjectTeachingResponsibilitySerializer(queryset, many=True).data
+        )
+
+    @extend_schema(
+        request=AssignSubjectTeachingResponsibilitySerializer,
+        responses={201: SubjectTeachingResponsibilitySerializer},
+    )
+    def post(self, request: Request, slug: str) -> Response:
+        organization = _organization(request, slug)
+        serializer = AssignSubjectTeachingResponsibilitySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        subject = get_object_or_404(
+            Subject,
+            pk=data["subject_id"],
+            discipline__area__organization=organization,
+        )
+        membership = get_object_or_404(
+            Membership, pk=data["membership_id"], organization=organization
+        )
+        try:
+            responsibility = assign_subject_teaching_responsibility(
+                actor=request.user,
+                organization=organization,
+                subject=subject,
+                membership=membership,
+                starts_on=data["starts_on"],
+                ends_on=data.get("ends_on"),
+                rationale=data["rationale"],
+            )
+        except CatalogDomainError as error:
+            return _catalog_error(error)
+        return Response(
+            SubjectTeachingResponsibilitySerializer(responsibility).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CloseSubjectTeachingResponsibilityView(APIView):
+    @extend_schema(
+        request=CloseTeachingResponsibilitySerializer,
+        responses={200: SubjectTeachingResponsibilitySerializer},
+    )
+    def post(self, request: Request, slug: str, responsibility_id: str) -> Response:
+        organization = _organization(request, slug)
+        serializer = CloseTeachingResponsibilitySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        responsibility = get_object_or_404(
+            SubjectTeachingResponsibility,
+            pk=responsibility_id,
+            subject__discipline__area__organization=organization,
+        )
+        try:
+            result = close_subject_teaching_responsibility(
+                actor=request.user,
+                responsibility=responsibility,
+                ended_on=serializer.validated_data["ended_on"],
+            )
+        except CatalogDomainError as error:
+            return _catalog_error(error)
+        return Response(SubjectTeachingResponsibilitySerializer(result).data)
 
 
 class CatalogFilteredListView(APIView):

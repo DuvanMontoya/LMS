@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from datetime import date
+
 from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from domain.catalog.exceptions import (
@@ -17,9 +20,11 @@ from domain.catalog.models import (
     CatalogStatus,
     ConceptPrerequisite,
     SubjectPrerequisite,
+    SubjectTeachingResponsibility,
     Topic,
     TopicConcept,
 )
+from domain.catalog.selectors import responsible_subjects_for_actor
 from domain.catalog.services import (
     archive_area,
     archive_concept,
@@ -27,6 +32,8 @@ from domain.catalog.services import (
     archive_entity,
     archive_subject,
     archive_topic_subtree,
+    assign_subject_teaching_responsibility,
+    close_subject_teaching_responsibility,
     create_area,
     create_child_topic,
     create_concept,
@@ -40,10 +47,58 @@ from domain.catalog.services import (
     replace_topic_concepts,
     restore_entity,
 )
-from domain.organizations.services import create_organization_with_owner
+from domain.organizations.choices import RoleCode
+from domain.organizations.models import Membership
+from domain.organizations.services import (
+    add_existing_member_with_roles,
+    create_organization_with_owner,
+)
 
 
 class CatalogServiceTests(TestCase):
+    def test_subject_responsibility_is_scoped_dated_and_history_preserving(
+        self,
+    ) -> None:
+        owner, organization, _area, _discipline, subject = self.curriculum()
+        instructor = self.user("responsible-instructor@example.test")
+        add_existing_member_with_roles(
+            actor=owner,
+            organization=organization,
+            user=instructor,
+            roles={RoleCode.INSTRUCTOR},
+        )
+        membership = Membership.objects.get(organization=organization, user=instructor)
+        responsibility = assign_subject_teaching_responsibility(
+            actor=owner,
+            organization=organization,
+            subject=subject,
+            membership=membership,
+            starts_on=date.today(),
+            ends_on=None,
+            rationale="Responsabilidad académica anual.",
+        )
+        self.assertEqual(
+            list(
+                responsible_subjects_for_actor(
+                    actor=instructor, organization=organization
+                )
+            ),
+            [subject],
+        )
+        with self.assertRaisesMessage(ValidationError, "no se elimina físicamente"):
+            responsibility.delete()
+        close_subject_teaching_responsibility(
+            actor=owner,
+            responsibility=responsibility,
+            ended_on=date.today(),
+        )
+        self.assertFalse(
+            responsible_subjects_for_actor(
+                actor=instructor, organization=organization
+            ).exists()
+        )
+        self.assertEqual(SubjectTeachingResponsibility.objects.count(), 1)
+
     def user(self, email: str):
         user = get_user_model().objects.create_user(
             email=email, password="Password123!x"

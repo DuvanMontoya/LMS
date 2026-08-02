@@ -7,12 +7,26 @@ from django.db.models import Prefetch
 
 from domain.assets.models import AssetVariant
 from domain.assets.selectors import preferred_variants
+from domain.catalog.models import (
+    Concept,
+    ConceptPrerequisite,
+    LearningObjectiveConcept,
+    SubjectPrerequisite,
+    Topic,
+    TopicConcept,
+)
 from domain.content.canonical import content_digest
 from domain.content.models import ContentAssetReference, UnitContentDocument
 from domain.content.schemas import CURRENT_CONTENT_SCHEMA_VERSION, migrate_document
 from domain.content.validators import validate_content
+from domain.courses.activity_extensions import activity_binding_snapshot
 from domain.courses.choices import AuthoringStatus, CourseStatus, StructureStatus
 from domain.courses.models import (
+    CourseActivity,
+    CourseActivityAvailabilityRule,
+    CourseActivityLearningObjective,
+    CourseCompletionPolicy,
+    CourseGradeCategory,
     CourseModule,
     CourseRevision,
     CourseRevisionLearningObjective,
@@ -67,9 +81,27 @@ def release_revision_queryset():
         )
         .order_by("position", "id")
     )
+    activity_objectives = CourseActivityLearningObjective.objects.select_related(
+        "learning_objective"
+    ).order_by("position")
+    activity_rules = CourseActivityAvailabilityRule.objects.select_related(
+        "prerequisite_activity", "learning_objective"
+    ).order_by("position")
+    activities = (
+        CourseActivity.objects.filter(status=StructureStatus.ACTIVE)
+        .select_related("lesson_unit")
+        .prefetch_related(
+            Prefetch("objective_alignments", queryset=activity_objectives),
+            Prefetch("availability_rules", queryset=activity_rules),
+        )
+        .order_by("position", "id")
+    )
     modules = (
         CourseModule.objects.filter(status=StructureStatus.ACTIVE)
-        .prefetch_related(Prefetch("units", queryset=units))
+        .prefetch_related(
+            Prefetch("units", queryset=units),
+            Prefetch("activities", queryset=activities),
+        )
         .order_by("position", "id")
     )
     return CourseRevision.objects.select_related(
@@ -88,6 +120,12 @@ def release_revision_queryset():
             ).order_by("position"),
         ),
         Prefetch("modules", queryset=modules),
+        Prefetch(
+            "grade_categories",
+            queryset=CourseGradeCategory.objects.prefetch_related(
+                "graded_activities"
+            ).order_by("position", "id"),
+        ),
     )
 
 
@@ -172,6 +210,7 @@ def build_release_snapshot(
     asset_versions: dict[str, Any] = {}
     unit_count = 0
     topic_count = 0
+    used_topic_ids: set[Any] = set()
     for module in revision.modules.all():
         units: list[dict[str, Any]] = []
         for unit in module.units.all():
@@ -215,12 +254,64 @@ def build_release_snapshot(
             )
             unit_count += 1
             topic_count += len(topics)
+            used_topic_ids.update(link.topic_id for link in unit.topic_alignments.all())
+        activities = [
+            {
+                "id": str(activity.id),
+                "type": activity.activity_type,
+                "title": activity.title,
+                "summary": activity.summary,
+                "estimated_duration_minutes": activity.estimated_duration_minutes,
+                "position": activity.position,
+                "required": activity.required,
+                "completion_policy": {
+                    "method": activity.completion_method,
+                    "minimum_attendance_basis_points": (
+                        activity.minimum_attendance_basis_points
+                    ),
+                    "minimum_grade_basis_points": activity.minimum_grade_basis_points,
+                },
+                "availability_rules": [
+                    {
+                        "type": rule.rule_type,
+                        "prerequisite_activity_id": (
+                            str(rule.prerequisite_activity_id)
+                            if rule.prerequisite_activity_id
+                            else None
+                        ),
+                        "learning_objective_id": (
+                            str(rule.learning_objective_id)
+                            if rule.learning_objective_id
+                            else None
+                        ),
+                        "threshold_basis_points": rule.threshold_basis_points,
+                        "available_at": (
+                            rule.available_at.isoformat() if rule.available_at else None
+                        ),
+                        "position": rule.position,
+                    }
+                    for rule in activity.availability_rules.all()
+                ],
+                "learning_objectives": [
+                    {
+                        "id": str(link.learning_objective_id),
+                        "code": link.learning_objective.code,
+                        "statement": link.learning_objective.statement,
+                        "position": link.position,
+                    }
+                    for link in activity.objective_alignments.all()
+                ],
+                "binding": activity_binding_snapshot(activity),
+            }
+            for activity in module.activities.all()
+        ]
         modules.append(
             {
                 "id": str(module.id),
                 "title": module.title,
                 "description": module.description,
                 "position": module.position,
+                "activities": activities,
                 "units": units,
             }
         )
@@ -234,6 +325,42 @@ def build_release_snapshot(
         raise ReleaseSnapshotTooLarge(
             "El release supera el máximo de referencias a temas."
         )
+    topic_links = list(
+        TopicConcept.objects.filter(topic_id__in=used_topic_ids)
+        .select_related("topic", "concept")
+        .order_by("topic_id", "position")
+    )
+    objective_ids = [
+        link.learning_objective_id for link in revision.objective_alignments.all()
+    ]
+    objective_links = list(
+        LearningObjectiveConcept.objects.filter(learning_objective_id__in=objective_ids)
+        .select_related("learning_objective", "concept")
+        .order_by("learning_objective_id", "position")
+    )
+    concept_ids = {
+        *(link.concept_id for link in topic_links),
+        *(link.concept_id for link in objective_links),
+    }
+    concept_edges = list(
+        ConceptPrerequisite.objects.filter(concept_id__in=concept_ids)
+        .select_related("concept", "prerequisite")
+        .order_by("concept_id", "prerequisite_id")
+    )
+    concept_ids.update(edge.prerequisite_id for edge in concept_edges)
+    concepts = list(Concept.objects.filter(id__in=concept_ids).order_by("slug", "id"))
+    subject_ids = [link.subject_id for link in revision.subject_alignments.all()]
+    subject_edges = list(
+        SubjectPrerequisite.objects.filter(subject_id__in=subject_ids)
+        .select_related("subject", "prerequisite")
+        .order_by("subject_id", "prerequisite_id")
+    )
+    topics_used = list(
+        Topic.objects.filter(id__in=used_topic_ids)
+        .select_related("subject")
+        .order_by("subject_id", "path")
+    )
+    completion_policy = CourseCompletionPolicy.objects.get(revision=revision)
     snapshot: dict[str, Any] = {
         "schema_version": CURRENT_RELEASE_SCHEMA_VERSION,
         "release_number": release_number,
@@ -256,7 +383,93 @@ def build_release_snapshot(
         },
         "curriculum": {
             "subjects": subjects,
+            "topics": [
+                {
+                    "id": str(topic.id),
+                    "slug": topic.slug,
+                    "title": topic.title,
+                    "subject_id": str(topic.subject_id),
+                }
+                for topic in topics_used
+            ],
+            "concepts": [
+                {
+                    "id": str(concept.id),
+                    "slug": concept.slug,
+                    "name": concept.name,
+                    "definition": concept.definition,
+                }
+                for concept in concepts
+            ],
             "learning_objectives": objectives,
+            "topic_concepts": [
+                {
+                    "topic_id": str(link.topic_id),
+                    "concept_id": str(link.concept_id),
+                    "position": link.position,
+                }
+                for link in topic_links
+            ],
+            "objective_concepts": [
+                {
+                    "learning_objective_id": str(link.learning_objective_id),
+                    "concept_id": str(link.concept_id),
+                    "position": link.position,
+                }
+                for link in objective_links
+            ],
+            "subject_prerequisites": [
+                {
+                    "subject_id": str(edge.subject_id),
+                    "prerequisite_id": str(edge.prerequisite_id),
+                    "prerequisite_slug": edge.prerequisite.slug,
+                    "prerequisite_name": edge.prerequisite.name,
+                    "kind": edge.kind,
+                    "rationale": edge.rationale,
+                }
+                for edge in subject_edges
+            ],
+            "concept_prerequisites": [
+                {
+                    "concept_id": str(edge.concept_id),
+                    "prerequisite_id": str(edge.prerequisite_id),
+                    "kind": edge.kind,
+                    "rationale": edge.rationale,
+                }
+                for edge in concept_edges
+            ],
+        },
+        "completion_policy": {
+            "version": completion_policy.lock_version,
+            "require_required_activities": (
+                completion_policy.require_required_activities
+            ),
+            "minimum_grade_basis_points": (
+                completion_policy.minimum_grade_basis_points
+            ),
+            "minimum_attendance_basis_points": (
+                completion_policy.minimum_attendance_basis_points
+            ),
+        },
+        "grading_scheme": {
+            "categories": [
+                {
+                    "id": str(category.id),
+                    "code": category.code,
+                    "title": category.title,
+                    "position": category.position,
+                    "weight_basis_points": category.weight_basis_points,
+                    "activities": [
+                        {
+                            "activity_id": str(item.activity_id),
+                            "weight_basis_points": item.weight_basis_points,
+                            "required": item.required,
+                        }
+                        for item in category.graded_activities.all()
+                    ],
+                }
+                for category in revision.grade_categories.all()
+            ]
         },
         "modules": modules,
         "assets": [
@@ -313,6 +526,52 @@ def release_outline(snapshot: object) -> list[dict[str, Any]]:
             "title": module["title"],
             "description": module["description"],
             "position": module["position"],
+            "activities": [
+                {
+                    "id": activity["id"],
+                    "type": activity["type"],
+                    "title": activity["title"],
+                    "summary": activity["summary"],
+                    "estimated_duration_minutes": activity[
+                        "estimated_duration_minutes"
+                    ],
+                    "position": activity["position"],
+                    "required": activity["required"],
+                    "completion_policy": deep_json_copy(activity["completion_policy"]),
+                    "availability_rules": deep_json_copy(
+                        activity["availability_rules"]
+                    ),
+                    "binding": deep_json_copy(activity["binding"]),
+                }
+                for activity in (
+                    module["activities"]
+                    if snapshot["schema_version"] >= 3
+                    else [
+                        {
+                            "id": unit["id"],
+                            "type": "lesson",
+                            "title": unit["title"],
+                            "summary": unit["summary"],
+                            "estimated_duration_minutes": unit[
+                                "estimated_duration_minutes"
+                            ],
+                            "position": unit["position"],
+                            "required": True,
+                            "completion_policy": {
+                                "method": "view",
+                                "minimum_attendance_basis_points": None,
+                                "minimum_grade_basis_points": None,
+                            },
+                            "availability_rules": [],
+                            "binding": {
+                                "provider": "content",
+                                "unit_id": unit["id"],
+                            },
+                        }
+                        for unit in module["units"]
+                    ]
+                )
+            ],
             "units": [
                 {
                     "id": unit["id"],
@@ -326,6 +585,21 @@ def release_outline(snapshot: object) -> list[dict[str, Any]]:
         }
         for module in snapshot["modules"]
     ]
+
+
+def release_activity(snapshot: object, activity_id: str) -> dict[str, Any]:
+    outline = release_outline(snapshot)
+    for module in outline:
+        for activity in module["activities"]:
+            if activity["id"] == activity_id:
+                result = deep_json_copy(activity)
+                result["module"] = {
+                    "id": module["id"],
+                    "title": module["title"],
+                    "position": module["position"],
+                }
+                return result
+    raise ReleaseSnapshotInvalid("La actividad no existe en el snapshot.")
 
 
 def release_unit(snapshot: object, unit_id: str) -> dict[str, Any]:
@@ -348,16 +622,17 @@ def release_previous_next(snapshot: object, unit_id: str) -> dict[str, Any | Non
     outline = release_outline(snapshot)
     flattened = [
         {
-            "id": unit["id"],
-            "title": unit["title"],
+            "id": activity["id"],
+            "title": activity["title"],
+            "type": activity["type"],
             "module_id": module["id"],
             "module_title": module["title"],
         }
         for module in outline
-        for unit in module["units"]
+        for activity in module["activities"]
     ]
-    for index, unit in enumerate(flattened):
-        if unit["id"] == unit_id:
+    for index, activity in enumerate(flattened):
+        if activity["id"] == unit_id:
             return {
                 "position": index + 1,
                 "total": len(flattened),
@@ -366,4 +641,4 @@ def release_previous_next(snapshot: object, unit_id: str) -> dict[str, Any | Non
                 if index + 1 < len(flattened)
                 else None,
             }
-    raise ReleaseSnapshotInvalid("La unidad no existe en el snapshot.")
+    raise ReleaseSnapshotInvalid("La actividad no existe en el snapshot.")

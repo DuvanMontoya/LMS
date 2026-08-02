@@ -235,6 +235,7 @@ class RegradeJobAttemptSerializer(serializers.ModelSerializer):
 
 class GradebookCreateSerializer(StrictInputSerializer):
     course_release_id = serializers.UUIDField()
+    course_group_id = serializers.UUIDField()
 
 
 class GradebookColumnCreateSerializer(AssessmentExpectedVersionSerializer):
@@ -289,6 +290,9 @@ class GradebookSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "course_release_id",
+            "course_group_id",
+            "academic_period_id",
+            "migration_review_required",
             "course_title",
             "release_number",
             "status",

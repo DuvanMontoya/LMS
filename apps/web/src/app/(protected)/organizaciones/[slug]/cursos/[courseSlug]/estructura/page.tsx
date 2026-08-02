@@ -1,5 +1,6 @@
 import { PageHeader } from '@/components/platform/page-header';
 import { StructureEditor } from '@/components/courses/structure-editor';
+import { getApprovedAssessmentVersionOptions } from '@/lib/assessments/server';
 import { getCourseWorkspace } from '@/lib/courses/server';
 
 export default async function CourseStructurePage({
@@ -7,6 +8,11 @@ export default async function CourseStructurePage({
 }: Readonly<{ params: Promise<{ courseSlug: string; slug: string }> }>) {
   const { courseSlug, slug } = await params;
   const data = await getCourseWorkspace(slug, courseSlug);
+  const assessmentVersions = data.access.capabilities.includes(
+    'assessment.authoring.view',
+  )
+    ? await getApprovedAssessmentVersionOptions(slug)
+    : [];
   return (
     <main className="academic-page">
       <PageHeader
@@ -18,12 +24,13 @@ export default async function CourseStructurePage({
           },
           { label: 'Estructura' },
         ]}
-        description="Organiza módulos y unidades, y accede al contenido académico semántico de cada unidad."
+        description="Ordena una sola secuencia de lecciones, clases en vivo y evaluaciones, con sus políticas académicas y bindings operativos."
         eyebrow="Autoría estructural"
         title="Estructura del curso"
       />
       <div className="mt-6">
         <StructureEditor
+          assessmentVersions={assessmentVersions}
           canManage={data.access.capabilities.includes(
             'course.authoring.manage',
           )}

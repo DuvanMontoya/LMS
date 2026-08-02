@@ -7,37 +7,56 @@ import { createPlatformServerClient } from '@/lib/api/platform-server-client';
 import { getOrganizationForPage } from '@/lib/organizations/server';
 
 export type LiveSessionDetail = components['schemas']['LiveSessionDetail'];
-type CoursePage = components['schemas']['CoursePage'];
 
 export async function getSchedulingPage(slug: string) {
   const organization = await getOrganizationForPage(slug);
+  if (!organization.access.capabilities.includes('scheduling.view')) {
+    notFound();
+  }
   const canCreate =
     organization.access.capabilities.includes('scheduling.create');
-  let courses: components['schemas']['CourseList'][] = [];
+  let courseActivities: components['schemas']['CourseGroupActivityRead'][] = [];
   let participantOptions: components['schemas']['ParticipantOption'][] = [];
   if (canCreate) {
     const client = await createPlatformServerClient();
-    const [courseRequest, participantRequest] = await Promise.all([
-      client.GET('/api/v1/organizations/{slug}/courses/', {
-        params: {
-          path: { slug },
-          query: { page_size: 100, status: 'active' },
+    const [activityRequest, participantRequest] = await Promise.all([
+      client.GET(
+        '/api/v1/organizations/{slug}/learning/course-group-activities/',
+        {
+          params: {
+            path: { slug },
+            query: { activity_type: 'live_class' },
+          },
+          cache: 'no-store',
         },
-        cache: 'no-store',
-      }),
+      ),
       client.GET(
         '/api/v1/organizations/{slug}/scheduling/participant-options/',
         { params: { path: { slug } }, cache: 'no-store' },
       ),
     ]);
-    if (!courseRequest.response.ok || !courseRequest.data)
-      throw new Error('No fue posible consultar los cursos.');
+    if (
+      activityRequest.response.status === 403 ||
+      activityRequest.response.status === 404
+    ) {
+      notFound();
+    }
+    if (!activityRequest.response.ok || !activityRequest.data)
+      throw new Error(
+        'No fue posible consultar las actividades de tus grupos.',
+      );
+    if (
+      participantRequest.response.status === 403 ||
+      participantRequest.response.status === 404
+    ) {
+      notFound();
+    }
     if (!participantRequest.response.ok || !participantRequest.data)
       throw new Error('No fue posible consultar los participantes.');
-    courses = (courseRequest.data as CoursePage).results;
+    courseActivities = activityRequest.data;
     participantOptions = participantRequest.data;
   }
-  return { ...organization, canCreate, courses, participantOptions };
+  return { ...organization, canCreate, courseActivities, participantOptions };
 }
 
 export async function getLiveSession(slug: string, sessionId: string) {

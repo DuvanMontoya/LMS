@@ -1,3 +1,6 @@
+import uuid
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.test import TestCase
@@ -5,19 +8,217 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from domain.learning.choices import AcademicGroupLevel, AcademicGroupRole
+from domain.learning.choices import (
+    AcademicGroupLevel,
+    AcademicGroupRole,
+    AcademicPeriodType,
+    CohortStaffRole,
+)
+from domain.learning.models import CourseGroupActivity
 from domain.learning.services import (
     create_academic_group,
+    create_academic_period,
     create_cohort,
     enroll_member,
     replace_academic_group_roster,
+    replace_cohort_staff,
 )
+from domain.organizations.choices import RoleCode
 from domain.organizations.models import Membership
 
 from .support import LearningFixtureMixin
 
 
 class LearningApiTests(LearningFixtureMixin, TestCase):
+    def test_course_group_activity_options_are_scoped_to_assigned_staff(self) -> None:
+        (
+            owner,
+            _learner,
+            organization,
+            _learner_membership,
+            revision,
+            module,
+            _unit,
+            _publication,
+            release,
+            _enrollment,
+        ) = self.learning_context()
+        period = create_academic_period(
+            actor=owner,
+            organization=organization,
+            name="Periodo de opciones",
+            slug="periodo-opciones",
+            period_type=AcademicPeriodType.TERM,
+            starts_on=timezone.localdate(),
+            ends_on=timezone.localdate() + timedelta(days=90),
+        )
+        cohort = create_cohort(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            release=release,
+            academic_period=period,
+            name="Grupo asignado",
+        )
+        instructor = self.member(
+            owner, organization, RoleCode.INSTRUCTOR, "group-teacher@example.test"
+        )
+        other = self.member(
+            owner, organization, RoleCode.INSTRUCTOR, "other-group@example.test"
+        )
+        instructor_membership = Membership.objects.get(
+            organization=organization, user=instructor
+        )
+        cohort = replace_cohort_staff(
+            actor=owner,
+            cohort=cohort,
+            expected_cohort_version=cohort.lock_version,
+            staff=[
+                {
+                    "membership_id": instructor_membership.id,
+                    "role": CohortStaffRole.INSTRUCTOR,
+                }
+            ],
+        )
+        activity = CourseGroupActivity.objects.create(
+            course_group=cohort,
+            academic_period=period,
+            course_release=release,
+            source_activity_id=uuid.uuid4(),
+            source_module_id=module.id,
+            activity_type="live_class",
+            module_title=module.title,
+            title="Clase curricular del grupo",
+            module_position=1,
+            position=2,
+            required=True,
+            completion_policy={"method": "attendance"},
+            availability_rules=[],
+            binding_snapshot={"minimum_attended_occurrences": 1},
+            release_snapshot_digest=release.snapshot_digest,
+        )
+        url = (
+            f"/api/v1/organizations/{organization.slug}/learning/"
+            "course-group-activities/?activity_type=live_class"
+        )
+        instructor_client = APIClient()
+        instructor_client.force_authenticate(instructor)
+        listed = instructor_client.get(url)
+        self.assertEqual(listed.status_code, 200, listed.data)
+        self.assertEqual([row["id"] for row in listed.data], [str(activity.id)])
+        other_client = APIClient()
+        other_client.force_authenticate(other)
+        self.assertEqual(other_client.get(url).data, [])
+
+    def test_group_learner_uses_unified_activity_outline_and_detail(self) -> None:
+        (
+            owner,
+            _learner,
+            organization,
+            _membership,
+            revision,
+            _module,
+            unit,
+            _publication,
+            release,
+            _enrollment,
+        ) = self.learning_context()
+        period = create_academic_period(
+            actor=owner,
+            organization=organization,
+            name="Semestre uno",
+            slug="semestre-uno",
+            period_type=AcademicPeriodType.SEMESTER,
+            starts_on=timezone.localdate(),
+            ends_on=timezone.localdate() + timedelta(days=120),
+        )
+        cohort = create_cohort(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            release=release,
+            academic_period=period,
+            name="Grupo con actividades",
+        )
+        learner = get_user_model().objects.create_user(
+            email="activity-learner@example.test",
+            password="StrongLearningPassword!42",
+        )
+        membership = Membership.objects.create(
+            organization=organization,
+            user=learner,
+            status_changed_by=owner,
+            status_changed_at=timezone.now(),
+        )
+        enrollment = enroll_member(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            membership=membership,
+            cohort=cohort,
+        )
+        client = APIClient()
+        client.force_authenticate(learner)
+        base = (
+            f"/api/v1/organizations/{organization.slug}/learning/me/"
+            f"enrollments/{enrollment.id}"
+        )
+        outline = client.get(f"{base}/outline/")
+        self.assertEqual(outline.status_code, 200, outline.data)
+        activities = outline.data["modules"][0]["activities"]
+        self.assertEqual(len(activities), 1)
+        self.assertEqual(activities[0]["type"], "lesson")
+        self.assertEqual(activities[0]["source_activity_id"], unit.id)
+        self.assertIn("/actividades/", activities[0]["href"])
+        detail = client.get(f"{base}/activities/{activities[0]['id']}/")
+        self.assertEqual(detail.status_code, 200, detail.data)
+        self.assertEqual(detail.data["activity"]["type"], "lesson")
+        self.assertEqual(detail.data["lesson"]["unit_id"], unit.id)
+        self.assertEqual(detail.data["navigation"]["total"], 1)
+
+    def test_new_course_group_requires_an_academic_period(self) -> None:
+        (
+            owner,
+            _learner,
+            organization,
+            _membership,
+            revision,
+            _module,
+            _unit,
+            _publication,
+            release,
+            _enrollment,
+        ) = self.learning_context()
+        client = APIClient()
+        client.force_authenticate(owner)
+        base = f"/api/v1/organizations/{organization.slug}/learning"
+        payload = {
+            "course_slug": revision.course.slug,
+            "release_number": release.number,
+            "name": "Grupo 2026",
+        }
+        missing = client.post(f"{base}/cohorts/", payload, format="json")
+        self.assertEqual(missing.status_code, 400, missing.data)
+        self.assertIn("academic_period_id", missing.data)
+
+        period = client.post(
+            f"{base}/academic-periods/",
+            {
+                "name": "Año académico 2026",
+                "slug": "ano-2026",
+                "period_type": "school_year",
+                "starts_on": "2026-01-01",
+                "ends_on": "2026-12-31",
+            },
+            format="json",
+        )
+        self.assertEqual(period.status_code, 201, period.data)
+        payload["academic_period_id"] = period.data["id"]
+        created = client.post(f"{base}/cohorts/", payload, format="json")
+        self.assertEqual(created.status_code, 201, created.data)
+        self.assertEqual(created.data["academic_period_id"], period.data["id"])
+        self.assertFalse(created.data["migration_review_required"])
+
     def test_roster_read_is_searchable_and_stale_write_returns_conflict(self) -> None:
         (
             owner,
@@ -116,6 +317,7 @@ class LearningApiTests(LearningFixtureMixin, TestCase):
             organization=organization,
             course=revision.course,
             release=release,
+            migration_review_required=True,
             name="Cohorte para ordenar",
         )
         client = APIClient()
@@ -168,6 +370,7 @@ class LearningApiTests(LearningFixtureMixin, TestCase):
             organization=organization,
             course=revision.course,
             release=release,
+            migration_review_required=True,
             name="Cohorte para presupuesto",
         )
         cohort_user = get_user_model().objects.create_user(
@@ -197,7 +400,7 @@ class LearningApiTests(LearningFixtureMixin, TestCase):
             (student, f"{base}/me/enrollments/{enrollment.id}/units/{unit.id}/", 8),
             (admin, f"{base}/enrollments/", 8),
             (admin, f"{base}/cohorts/{cohort.id}/progress/", 10),
-            (admin, f"{base}/enrollments/{cohort_enrollment.id}/progress/", 6),
+            (admin, f"{base}/enrollments/{cohort_enrollment.id}/progress/", 7),
         ]
         for client, path, budget in calls:
             with self.subTest(path=path), CaptureQueriesContext(connection) as queries:

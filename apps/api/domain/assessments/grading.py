@@ -460,4 +460,28 @@ def create_attempt_grade(
     from .gradebooks import refresh_gradebook_for_attempt
 
     refresh_gradebook_for_attempt(attempt=locked)
+    group_activity_id = locked.delivery_assignment.delivery.course_group_activity_id
+    if group_activity_id is not None:
+        from domain.learning.contracts import record_group_activity_assessment_result
+
+        mastered_objective_ids = (
+            [
+                str(objective_id)
+                for objective_id in locked.assessment_version.source_revision.objective_links.values_list(
+                    "objective_id", flat=True
+                )
+            ]
+            if grade.passed is True
+            else []
+        )
+        record_group_activity_assessment_result(
+            actor=actor,
+            group_activity_id=group_activity_id,
+            release_assignment_id=locked.delivery_assignment.release_assignment_id,
+            grade_version_id=grade.id,
+            occurred_at=now,
+            grade_basis_points=grade.percent_basis_points,
+            passed=grade.passed,
+            mastered_objective_ids=mastered_objective_ids,
+        )
     return grade

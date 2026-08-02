@@ -4,18 +4,70 @@ from rest_framework import serializers
 
 from domain.catalog.models import LearningObjective, Subject, Topic
 
-from ..choices import SubjectAlignmentType
+from ..choices import (
+    ActivityCompletionMethod,
+    ActivityType,
+    AvailabilityRuleType,
+    SubjectAlignmentType,
+)
 from ..models import (
     Course,
+    CourseActivity,
+    CourseActivityAvailabilityRule,
+    CourseCompletionPolicy,
+    CourseGradeCategory,
+    CourseGradedActivity,
     CourseModule,
     CourseRevision,
     CourseRevisionLearningObjective,
     CourseRevisionSubject,
     CourseRevisionTransition,
+    CourseTeachingException,
     CourseUnit,
     CourseUnitLearningObjective,
     CourseUnitTopic,
 )
+
+
+class CourseTeachingExceptionSerializer(serializers.ModelSerializer):
+    course_id = serializers.UUIDField(read_only=True)
+    course_slug = serializers.CharField(source="course.slug", read_only=True)
+    membership_id = serializers.UUIDField(read_only=True)
+    member_email = serializers.EmailField(
+        source="membership.user.email", read_only=True
+    )
+    created_by_id = serializers.UUIDField(read_only=True)
+    ended_by_id = serializers.UUIDField(read_only=True, allow_null=True)
+
+    class Meta:
+        model = CourseTeachingException
+        fields = (
+            "id",
+            "course_id",
+            "course_slug",
+            "membership_id",
+            "member_email",
+            "starts_on",
+            "ends_on",
+            "rationale",
+            "created_by_id",
+            "created_at",
+            "ended_by_id",
+            "ended_at",
+        )
+        read_only_fields = fields
+
+
+class AssignCourseTeachingExceptionSerializer(serializers.Serializer):
+    course_id = serializers.UUIDField()
+    membership_id = serializers.UUIDField()
+    starts_on = serializers.DateField()
+    ends_on = serializers.DateField(required=False, allow_null=True)
+    rationale = serializers.CharField(max_length=1000)
+
+
+class CloseCourseTeachingExceptionSerializer(serializers.Serializer):
+    ended_on = serializers.DateField()
 
 
 class ExpectedVersionSerializer(serializers.Serializer):
@@ -279,6 +331,185 @@ class ReplaceOrderSerializer(ExpectedVersionSerializer):
     )
 
 
+class ActivityAvailabilityRuleSerializer(serializers.ModelSerializer):
+    prerequisite_activity_id = serializers.UUIDField(read_only=True, allow_null=True)
+    learning_objective_id = serializers.UUIDField(read_only=True, allow_null=True)
+
+    class Meta:
+        model = CourseActivityAvailabilityRule
+        fields = (
+            "id",
+            "rule_type",
+            "prerequisite_activity_id",
+            "learning_objective_id",
+            "threshold_basis_points",
+            "available_at",
+            "position",
+        )
+        read_only_fields = fields
+
+
+class CourseActivitySerializer(serializers.ModelSerializer):
+    module_id = serializers.UUIDField(read_only=True)
+    lesson_unit_id = serializers.UUIDField(read_only=True, allow_null=True)
+    learning_objective_ids = serializers.SerializerMethodField()
+    availability_rules = ActivityAvailabilityRuleSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = CourseActivity
+        fields = (
+            "id",
+            "module_id",
+            "activity_type",
+            "lesson_unit_id",
+            "title",
+            "summary",
+            "estimated_duration_minutes",
+            "required",
+            "completion_method",
+            "minimum_attendance_basis_points",
+            "minimum_grade_basis_points",
+            "status",
+            "position",
+            "learning_objective_ids",
+            "availability_rules",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = fields
+
+    def get_learning_objective_ids(self, activity: CourseActivity) -> list[str]:
+        return [
+            str(link.learning_objective_id)
+            for link in activity.objective_alignments.all()
+        ]
+
+
+class CourseActivityMutationSerializer(CourseActivitySerializer):
+    lock_version = serializers.IntegerField(read_only=True)
+
+    class Meta(CourseActivitySerializer.Meta):
+        fields = (*CourseActivitySerializer.Meta.fields, "lock_version")
+        read_only_fields = fields
+
+
+class CourseActivityCreateSerializer(ExpectedVersionSerializer):
+    activity_type = serializers.ChoiceField(choices=ActivityType.choices)
+    title = serializers.CharField(max_length=200)
+    summary = serializers.CharField(max_length=1200, required=False, allow_blank=True)
+    estimated_duration_minutes = serializers.IntegerField(
+        min_value=1, required=False, allow_null=True
+    )
+    required = serializers.BooleanField(default=True)
+    completion_method = serializers.ChoiceField(
+        choices=ActivityCompletionMethod.choices
+    )
+    minimum_attendance_basis_points = serializers.IntegerField(
+        min_value=1, max_value=10_000, required=False, allow_null=True
+    )
+    minimum_grade_basis_points = serializers.IntegerField(
+        min_value=0, max_value=10_000, required=False, allow_null=True
+    )
+
+    def validate_activity_type(self, value: str) -> str:
+        if value == ActivityType.LESSON.value:
+            raise serializers.ValidationError(
+                "Las lecciones se crean mediante una unidad de contenido."
+            )
+        return value
+
+
+class ActivityAvailabilityRuleInputSerializer(serializers.Serializer):
+    rule_type = serializers.ChoiceField(choices=AvailabilityRuleType.choices)
+    prerequisite_activity_id = serializers.UUIDField(required=False, allow_null=True)
+    learning_objective_id = serializers.UUIDField(required=False, allow_null=True)
+    threshold_basis_points = serializers.IntegerField(
+        min_value=0, max_value=10_000, required=False, allow_null=True
+    )
+    available_at = serializers.DateTimeField(required=False, allow_null=True)
+
+
+class ReplaceActivityRulesSerializer(ExpectedVersionSerializer):
+    rules = ActivityAvailabilityRuleInputSerializer(many=True, max_length=100)
+
+
+class CourseCompletionPolicySerializer(serializers.ModelSerializer):
+    confirmed_by_id = serializers.UUIDField(read_only=True, allow_null=True)
+
+    class Meta:
+        model = CourseCompletionPolicy
+        fields = (
+            "require_required_activities",
+            "minimum_grade_basis_points",
+            "minimum_attendance_basis_points",
+            "confirmed_by_id",
+            "confirmed_at",
+            "lock_version",
+            "updated_at",
+        )
+        read_only_fields = fields
+
+
+class ConfirmCompletionPolicySerializer(ExpectedVersionSerializer):
+    require_required_activities = serializers.BooleanField()
+    minimum_grade_basis_points = serializers.IntegerField(
+        min_value=0, max_value=10_000, required=False, allow_null=True
+    )
+    minimum_attendance_basis_points = serializers.IntegerField(
+        min_value=0, max_value=10_000, required=False, allow_null=True
+    )
+
+
+class GradedActivityInputSerializer(serializers.Serializer):
+    activity_id = serializers.UUIDField()
+    weight_basis_points = serializers.IntegerField(min_value=1, max_value=10_000)
+    required = serializers.BooleanField(default=True)
+
+
+class GradeCategoryInputSerializer(serializers.Serializer):
+    code = serializers.SlugField(max_length=64)
+    title = serializers.CharField(max_length=120)
+    weight_basis_points = serializers.IntegerField(min_value=1, max_value=10_000)
+    activities = GradedActivityInputSerializer(many=True, allow_empty=False)
+
+
+class ReplaceGradingSchemeSerializer(ExpectedVersionSerializer):
+    categories = GradeCategoryInputSerializer(many=True, max_length=50)
+
+
+class GradedActivitySerializer(serializers.ModelSerializer):
+    activity_id = serializers.UUIDField(read_only=True)
+
+    class Meta:
+        model = CourseGradedActivity
+        fields = ("id", "activity_id", "weight_basis_points", "required")
+        read_only_fields = fields
+
+
+class GradeCategorySerializer(serializers.ModelSerializer):
+    activities = GradedActivitySerializer(
+        source="graded_activities", many=True, read_only=True
+    )
+
+    class Meta:
+        model = CourseGradeCategory
+        fields = (
+            "id",
+            "code",
+            "title",
+            "position",
+            "weight_basis_points",
+            "activities",
+        )
+        read_only_fields = fields
+
+
+class GradingSchemeResponseSerializer(serializers.Serializer):
+    categories = GradeCategorySerializer(many=True)
+    revision_id = serializers.UUIDField()
+    revision_lock_version = serializers.IntegerField()
+
+
 class UnitSerializer(serializers.ModelSerializer):
     module_id = serializers.UUIDField(source="module.id", read_only=True)
 
@@ -393,9 +624,10 @@ class OutlineUnitSerializer(UnitSerializer):
 
 class OutlineModuleSerializer(ModuleSerializer):
     units = OutlineUnitSerializer(many=True, read_only=True)
+    activities = CourseActivitySerializer(many=True, read_only=True)
 
     class Meta(ModuleSerializer.Meta):
-        fields = (*ModuleSerializer.Meta.fields, "units")
+        fields = (*ModuleSerializer.Meta.fields, "activities", "units")
 
 
 class OutlineSerializer(serializers.Serializer):

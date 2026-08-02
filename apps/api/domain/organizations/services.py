@@ -25,6 +25,7 @@ from .choices import (
     JoinRequestStatus,
     MembershipEventType,
     MembershipStatus,
+    OrganizationStatus,
     RoleCode,
     normalize_member_type,
 )
@@ -174,13 +175,17 @@ def create_organization_with_owner(
 
 @transaction.atomic
 def provision_platform_organization(
-    *, actor: User, name: str, owner_email: str
+    *,
+    actor: User,
+    name: str,
+    owner_email: str,
+    administrator_emails: tuple[str, ...] = (),
 ) -> Organization:
     """Provision an institution from the platform control plane.
 
     The public identifier is generated server-side so an operator never has to
-    invent or coordinate an institutional code.  The designated owner receives
-    the real tenant membership; the platform operator does not inherit it.
+    invent or coordinate an institutional code. The designated owner receives
+    a one-time invitation; the platform operator does not inherit membership.
     The transaction uses a short random suffix and retries the vanishingly rare
     uniqueness collision.
     """
@@ -189,18 +194,17 @@ def provision_platform_organization(
         raise OrganizationAccessDenied("Solo el superadministrador crea instituciones.")
 
     normalized_owner_email = owner_email.strip().lower()
-    owner = (
-        get_user_model()
-        .objects.filter(email__iexact=normalized_owner_email, is_active=True)
-        .first()
+    normalized_administrators = tuple(
+        dict.fromkeys(email.strip().lower() for email in administrator_emails)
     )
     if (
-        owner is None
-        or owner.pk == actor.pk
-        or not EmailAddress.objects.filter(user=owner, verified=True).exists()
+        not normalized_owner_email
+        or normalized_owner_email == actor.email.strip().lower()
+        or actor.email.strip().lower() in normalized_administrators
+        or normalized_owner_email in normalized_administrators
     ):
         raise InitialOwnerUnavailable(
-            "La persona propietaria debe tener una cuenta activa y correo verificado."
+            "El operador no puede ser miembro y las invitaciones no se repiten."
         )
 
     normalized_name = name.strip()
@@ -209,12 +213,51 @@ def provision_platform_organization(
         generated_slug = f"{base[:73].rstrip('-')}-{secrets.token_hex(3)}"
         try:
             with transaction.atomic():
-                return create_organization_with_owner(
-                    actor=owner,
-                    created_by=actor,
+                organization = Organization(
                     name=normalized_name,
                     slug=generated_slug,
+                    status=OrganizationStatus.PENDING_ACTIVATION,
+                    activated_at=None,
                 )
+                organization.full_clean()
+                organization.save()
+                membership_settings = OrganizationMembershipSettings.objects.create(
+                    organization=organization, updated_by=actor
+                )
+                owner_user = (
+                    get_user_model()
+                    .objects.filter(email__iexact=normalized_owner_email)
+                    .first()
+                )
+                _create_platform_bootstrap_invitation(
+                    actor=actor,
+                    organization=organization,
+                    membership_settings=membership_settings,
+                    email=normalized_owner_email,
+                    roles={RoleCode.OWNER},
+                    invitation_type=InvitationType.INITIAL_OWNER,
+                    existing_user=owner_user,
+                )
+                for administrator_email in normalized_administrators:
+                    existing_user = (
+                        get_user_model()
+                        .objects.filter(email__iexact=administrator_email)
+                        .first()
+                    )
+                    _create_platform_bootstrap_invitation(
+                        actor=actor,
+                        organization=organization,
+                        membership_settings=membership_settings,
+                        email=administrator_email,
+                        roles={RoleCode.ADMINISTRATOR},
+                        invitation_type=(
+                            InvitationType.EXISTING_USER
+                            if existing_user is not None
+                            else InvitationType.NEW_USER
+                        ),
+                        existing_user=existing_user,
+                    )
+                return organization
         except IntegrityError:
             if Organization.objects.filter(slug=generated_slug).exists():
                 continue
@@ -222,6 +265,45 @@ def provision_platform_organization(
     raise OrganizationAccessDenied(
         "No fue posible generar un código institucional único."
     )
+
+
+def _create_platform_bootstrap_invitation(
+    *,
+    actor: User,
+    organization: Organization,
+    membership_settings: OrganizationMembershipSettings,
+    email: str,
+    roles: set[RoleCode],
+    invitation_type: InvitationType,
+    existing_user: User | None = None,
+) -> MembershipInvitation:
+    """Create a control-plane invitation without granting tenant capability."""
+
+    token, digest = _new_invitation_token()
+    invitation = MembershipInvitation(
+        organization=organization,
+        email=email,
+        existing_user=existing_user,
+        invited_roles=sorted(role.value for role in roles),
+        invitation_type=invitation_type,
+        token_digest=digest,
+        expires_at=timezone.now()
+        + timedelta(hours=membership_settings.invitation_expiry_hours),
+        invited_by=actor,
+    )
+    invitation.full_clean()
+    invitation.save()
+    _record_event(
+        organization=organization,
+        membership=None,
+        actor=actor,
+        event_type=MembershipEventType.INVITATION_CREATED,
+        details={"invitation_type": invitation_type.value},
+    )
+    transaction.on_commit(
+        lambda: _send_invitation_email(invitation=invitation, token=token)
+    )
+    return invitation
 
 
 @transaction.atomic
@@ -1174,7 +1256,12 @@ def _session_invitation(
 
 def session_has_valid_signup_invitation(request: HttpRequest) -> bool:
     invitation = _session_invitation(request)
-    return bool(invitation and invitation.invitation_type == InvitationType.NEW_USER)
+    return bool(
+        invitation
+        and invitation.existing_user_id is None
+        and invitation.invitation_type
+        in {InvitationType.NEW_USER, InvitationType.INITIAL_OWNER}
+    )
 
 
 @transaction.atomic
@@ -1210,6 +1297,13 @@ def accept_session_invitation(*, request: HttpRequest, user: User) -> Membership
         request.session.pop("organization_invitation_digest", None)
         return membership
     _assert_invitation_available(locked)
+    if (
+        locked.organization.status == OrganizationStatus.PENDING_ACTIVATION
+        and locked.invitation_type != InvitationType.INITIAL_OWNER
+    ):
+        raise InvitationUnavailable(
+            "La persona propietaria debe activar primero la institución."
+        )
     membership = _create_active_membership(
         organization=locked.organization,
         user=user,
@@ -1217,6 +1311,16 @@ def accept_session_invitation(*, request: HttpRequest, user: User) -> Membership
         roles={RoleCode(role) for role in locked.invited_roles},
         invitation=locked,
     )
+    if locked.invitation_type == InvitationType.INITIAL_OWNER:
+        organization = Organization.objects.select_for_update().get(
+            pk=locked.organization_id
+        )
+        if organization.status != OrganizationStatus.PENDING_ACTIVATION:
+            raise InvitationUnavailable("La institución ya fue activada.")
+        organization.status = OrganizationStatus.ACTIVE
+        organization.activated_at = timezone.now()
+        organization.full_clean()
+        organization.save(update_fields=("status", "activated_at", "updated_at"))
     locked.status = InvitationStatus.ACCEPTED
     locked.accepted_at = timezone.now()
     locked.save(update_fields=("status", "accepted_at", "updated_at"))
@@ -1236,7 +1340,10 @@ def complete_onboarding_after_email_verification(
     *, request: HttpRequest, user: User
 ) -> None:
     invitation = _session_invitation(request)
-    if invitation and invitation.invitation_type == InvitationType.NEW_USER:
+    if invitation and invitation.invitation_type in {
+        InvitationType.NEW_USER,
+        InvitationType.INITIAL_OWNER,
+    }:
         accept_session_invitation(request=request, user=user)
     join_slug = request.session.pop("organization_join_slug", None)
     if isinstance(join_slug, str):

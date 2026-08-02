@@ -11,9 +11,11 @@ import {
   ChevronDown,
   ChevronUp,
   CircleAlert,
+  ClipboardCheck,
   Clock3,
   Network,
   Plus,
+  Video,
 } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -22,6 +24,8 @@ import { Button } from '@/components/ui/button';
 import type { components } from '@/lib/api/generated/platform';
 import {
   RevisionConflictError,
+  useBindActivity,
+  useCreateActivity,
   useCreateModule,
   useCreateUnit,
   useReorderStructure,
@@ -53,6 +57,7 @@ function statusLabel(value: string) {
 }
 
 export function StructureEditor({
+  assessmentVersions,
   canManage,
   courseSlug,
   objectives,
@@ -60,6 +65,7 @@ export function StructureEditor({
   slug,
   topics,
 }: Readonly<{
+  assessmentVersions: Array<{ id: string; label: string }>;
   canManage: boolean;
   courseSlug: string;
   objectives: Objective[];
@@ -78,6 +84,8 @@ export function StructureEditor({
   const moduleTitle = useRef<HTMLInputElement>(null);
   const path = { courseSlug, revisionId: outline.revision.id, slug };
   const createModule = useCreateModule(path);
+  const createActivity = useCreateActivity(path);
+  const bindActivity = useBindActivity(path);
   const createUnit = useCreateUnit(path);
   const updateStructure = useUpdateStructure(path);
   const reorder = useReorderStructure(path);
@@ -124,6 +132,72 @@ export function StructureEditor({
       });
       setVersion((current) => current + 1);
       setMessage('Unidad creada.');
+      router.refresh();
+    } catch (cause) {
+      failed(cause);
+    }
+  }
+
+  async function addActivity(moduleId: string, formData: FormData) {
+    setError('');
+    const activityType = String(formData.get('activity-type')) as
+      'assessment' | 'live_class';
+    const threshold = formData.get('activity-threshold')
+      ? Number(formData.get('activity-threshold')) * 100
+      : null;
+    const duration = formData.get('activity-duration')
+      ? Number(formData.get('activity-duration'))
+      : null;
+    const assessmentVersionId = String(
+      formData.get('assessment-version') ?? '',
+    );
+    if (activityType === 'assessment' && !assessmentVersionId) {
+      setError('Selecciona una versión aprobada de evaluación.');
+      return;
+    }
+    try {
+      const created = await createActivity.mutateAsync({
+        body: {
+          activity_type: activityType,
+          completion_method:
+            activityType === 'live_class' ? 'attendance' : 'pass',
+          estimated_duration_minutes: duration,
+          expected_version: version,
+          minimum_attendance_basis_points:
+            activityType === 'live_class' ? threshold : null,
+          minimum_grade_basis_points:
+            activityType === 'assessment' ? threshold : null,
+          required: formData.get('activity-required') === 'on',
+          summary: String(formData.get('activity-summary') ?? ''),
+          title: String(formData.get('activity-title') ?? ''),
+        },
+        moduleId,
+      });
+      const binding = await bindActivity.mutateAsync(
+        activityType === 'assessment'
+          ? {
+              activityId: created.id,
+              body: {
+                assessment_version_id: assessmentVersionId,
+                expected_revision_version: created.lock_version,
+              },
+              kind: 'assessment',
+            }
+          : {
+              activityId: created.id,
+              body: {
+                expected_revision_version: created.lock_version,
+                minimum_attendance_minutes:
+                  duration && threshold
+                    ? Math.max(1, Math.ceil((duration * threshold) / 10000))
+                    : duration,
+                minimum_attended_occurrences: 1,
+              },
+              kind: 'live_class',
+            },
+      );
+      setVersion(binding.revision_lock_version);
+      setMessage('Actividad curricular y binding operativo creados.');
       router.refresh();
     } catch (cause) {
       failed(cause);
@@ -456,6 +530,139 @@ export function StructureEditor({
                   </form>
                 </details>
               ) : null}
+              <section className="border-b bg-muted/5 px-5 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="font-semibold">
+                      Secuencia curricular unificada
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      Lecciones, clases en vivo y evaluaciones comparten el
+                      mismo orden.
+                    </p>
+                  </div>
+                  <Badge variant="outline">
+                    {module.activities.length} actividades
+                  </Badge>
+                </div>
+                {module.activities.length ? (
+                  <ol className="mt-3 grid gap-2">
+                    {module.activities.map((activity) => (
+                      <li
+                        className="flex items-start gap-3 rounded-md border bg-background p-3"
+                        key={activity.id}
+                      >
+                        <span className="mt-0.5 text-primary">
+                          {activity.activity_type === 'live_class' ? (
+                            <Video className="size-4" />
+                          ) : activity.activity_type === 'assessment' ? (
+                            <ClipboardCheck className="size-4" />
+                          ) : (
+                            <BookOpenText className="size-4" />
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <strong className="block truncate">
+                            {activity.position}. {activity.title}
+                          </strong>
+                          <small className="text-muted-foreground">
+                            {activityTypeLabel(activity.activity_type)} ·{' '}
+                            {activity.required ? 'Obligatoria' : 'Opcional'} ·{' '}
+                            {activityCompletionLabel(
+                              activity.completion_method,
+                            )}
+                          </small>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                ) : null}
+                {canManage && editable && module.status === 'active' ? (
+                  <details className="mt-3 rounded-md border bg-background px-3 py-2">
+                    <summary className="cursor-pointer text-sm font-medium">
+                      Añadir clase en vivo o evaluación
+                    </summary>
+                    <form
+                      action={(formData) => addActivity(module.id, formData)}
+                      className="mt-3 grid gap-3 md:grid-cols-2"
+                    >
+                      <label className="academic-field">
+                        Tipo
+                        <select
+                          className="academic-control"
+                          name="activity-type"
+                        >
+                          <option value="live_class">Clase en vivo</option>
+                          <option value="assessment">Evaluación</option>
+                        </select>
+                      </label>
+                      <label className="academic-field md:col-span-2">
+                        Versión aprobada de evaluación
+                        <select
+                          className="academic-control"
+                          name="assessment-version"
+                        >
+                          <option value="">
+                            Selecciona si el tipo es evaluación
+                          </option>
+                          {assessmentVersions.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="academic-field">
+                        Título
+                        <input
+                          className="academic-control"
+                          maxLength={200}
+                          name="activity-title"
+                          required
+                        />
+                      </label>
+                      <label className="academic-field md:col-span-2">
+                        Resumen
+                        <textarea
+                          className="academic-control min-h-20"
+                          maxLength={1200}
+                          name="activity-summary"
+                        />
+                      </label>
+                      <label className="academic-field">
+                        Duración estimada (minutos)
+                        <input
+                          className="academic-control"
+                          min={1}
+                          name="activity-duration"
+                          type="number"
+                        />
+                      </label>
+                      <label className="academic-field">
+                        Umbral de asistencia/nota (%)
+                        <input
+                          className="academic-control"
+                          max={100}
+                          min={0}
+                          name="activity-threshold"
+                          type="number"
+                        />
+                      </label>
+                      <label className="flex items-center gap-2 text-sm font-medium">
+                        <input
+                          defaultChecked
+                          name="activity-required"
+                          type="checkbox"
+                        />
+                        Actividad obligatoria
+                      </label>
+                      <Button className="w-fit" type="submit">
+                        <Plus /> Añadir actividad
+                      </Button>
+                    </form>
+                  </details>
+                ) : null}
+              </section>
               {module.units.length ? (
                 <ol className="divide-y">
                   {module.units.map((unit, unitIndex) => (
@@ -795,4 +1002,16 @@ export function StructureEditor({
       )}
     </section>
   );
+}
+
+function activityTypeLabel(value: string) {
+  if (value === 'live_class') return 'Clase en vivo';
+  if (value === 'assessment') return 'Evaluación';
+  return 'Lección';
+}
+
+function activityCompletionLabel(value: string) {
+  if (value === 'attendance') return 'Finaliza por asistencia';
+  if (value === 'pass') return 'Finaliza al aprobar';
+  return 'Finaliza manualmente';
 }

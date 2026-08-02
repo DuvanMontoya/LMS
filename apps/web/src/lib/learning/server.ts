@@ -12,6 +12,8 @@ export type LearningOutline =
   operations['organizations_learning_me_enrollments_outline_retrieve']['responses'][200]['content']['application/json'];
 export type LearningUnit =
   operations['organizations_learning_me_enrollments_units_retrieve']['responses'][200]['content']['application/json'];
+export type LearningActivity =
+  operations['organizations_learning_me_enrollments_activities_retrieve']['responses'][200]['content']['application/json'];
 export type CohortPage =
   operations['learning_cohorts_list']['responses'][200]['content']['application/json'];
 export type AcademicGroupPage =
@@ -59,8 +61,17 @@ export type LearningAcademicGroupOption = {
   section: string;
 };
 
+export type LearningAcademicPeriodOption = {
+  endsOn: string;
+  id: string;
+  name: string;
+  startsOn: string;
+  type: components['schemas']['PeriodTypeEnum'];
+};
+
 export type LearningAdminOptions = {
   academicGroups: LearningAcademicGroupOption[];
+  academicPeriods: LearningAcademicPeriodOption[];
   cohorts: LearningCohortOption[];
   courses: LearningCourseOption[];
 };
@@ -108,6 +119,19 @@ export async function getAcademicGroups(slug: string) {
   return { ...organization, groups };
 }
 
+export async function getAcademicPeriods(slug: string) {
+  const organization = await getOrganizationForPage(slug);
+  const client = await createPlatformServerClient();
+  const periods = await required(
+    client.GET('/api/v1/organizations/{slug}/learning/academic-periods/', {
+      params: { path: { slug }, query: { page_size: 100 } },
+      cache: 'no-store',
+    }),
+    'No fue posible consultar los periodos académicos.',
+  );
+  return { ...organization, periods };
+}
+
 export async function getLearningOutline(slug: string, enrollmentId: string) {
   const organization = await getOrganizationForPage(slug);
   const client = await createPlatformServerClient();
@@ -143,6 +167,32 @@ export async function getLearningUnit(
     ),
     'No fue posible consultar la unidad asignada.',
   )) as LearningUnit;
+  return { ...organization, enrollmentId, payload };
+}
+
+export async function getLearningActivity(
+  slug: string,
+  enrollmentId: string,
+  activityId: string,
+) {
+  const organization = await getOrganizationForPage(slug);
+  const client = await createPlatformServerClient();
+  const payload = (await required(
+    client.GET(
+      '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/activities/{activity_instance_id}/',
+      {
+        params: {
+          path: {
+            slug,
+            enrollment_id: enrollmentId,
+            activity_instance_id: activityId,
+          },
+        },
+        cache: 'no-store',
+      },
+    ),
+    'No fue posible consultar la actividad asignada.',
+  )) as LearningActivity;
   return { ...organization, enrollmentId, payload };
 }
 
@@ -298,35 +348,46 @@ async function getLearningAdminOptionsFromClient(
   client: PlatformServerClient,
   slug: string,
 ): Promise<LearningAdminOptions> {
-  const [courses, cohorts, academicGroups] = await Promise.all([
-    required(
-      client.GET('/api/v1/organizations/{slug}/courses/', {
-        params: {
-          path: { slug },
-          query: { ordering: 'title', page_size: 100, status: 'active' },
-        },
-        cache: 'no-store',
-      }),
-      'No fue posible consultar los cursos disponibles.',
-    ) as Promise<CoursePage>,
-    required(
-      client.GET('/api/v1/organizations/{slug}/learning/cohorts/', {
-        params: {
-          path: { slug },
-          query: { ordering: 'name', page_size: 100, status: 'active' },
-        },
-        cache: 'no-store',
-      }),
-      'No fue posible consultar las cohortes disponibles.',
-    ) as Promise<CohortPage>,
-    required(
-      client.GET('/api/v1/organizations/{slug}/learning/academic-groups/', {
-        params: { path: { slug }, query: { page_size: 100 } },
-        cache: 'no-store',
-      }),
-      'No fue posible consultar los grupos académicos disponibles.',
-    ) as Promise<AcademicGroupPage>,
-  ]);
+  const [courses, cohorts, academicGroups, academicPeriods] = await Promise.all(
+    [
+      required(
+        client.GET('/api/v1/organizations/{slug}/courses/', {
+          params: {
+            path: { slug },
+            query: { ordering: 'title', page_size: 100, status: 'active' },
+          },
+          cache: 'no-store',
+        }),
+        'No fue posible consultar los cursos disponibles.',
+      ) as Promise<CoursePage>,
+      required(
+        client.GET('/api/v1/organizations/{slug}/learning/cohorts/', {
+          params: {
+            path: { slug },
+            query: { ordering: 'name', page_size: 100, status: 'active' },
+          },
+          cache: 'no-store',
+        }),
+        'No fue posible consultar las cohortes disponibles.',
+      ) as Promise<CohortPage>,
+      required(
+        client.GET('/api/v1/organizations/{slug}/learning/academic-groups/', {
+          params: { path: { slug }, query: { page_size: 100 } },
+          cache: 'no-store',
+        }),
+        'No fue posible consultar los grupos académicos disponibles.',
+      ) as Promise<AcademicGroupPage>,
+      required(
+        client.GET('/api/v1/organizations/{slug}/learning/academic-periods/', {
+          params: { path: { slug }, query: { page_size: 100 } },
+          cache: 'no-store',
+        }),
+        'No fue posible consultar los periodos académicos disponibles.',
+      ) as Promise<
+        operations['learning_academic_periods_list']['responses'][200]['content']['application/json']
+      >,
+    ],
+  );
 
   const courseOptions = await Promise.all(
     courses.results.map(async (course) => {
@@ -371,6 +432,15 @@ async function getLearningAdminOptionsFromClient(
         name: group.name,
         section: group.section ?? '',
       })),
+    academicPeriods: academicPeriods.results
+      .filter((period) => period.status === 'active')
+      .map((period) => ({
+        endsOn: period.ends_on,
+        id: period.id,
+        name: period.name,
+        startsOn: period.starts_on,
+        type: period.period_type,
+      })),
     cohorts: cohorts.results.map((cohort) => ({
       courseSlug: cohort.course_slug,
       courseTitle: cohort.course_title,
@@ -384,5 +454,10 @@ async function getLearningAdminOptionsFromClient(
 }
 
 function emptyAdminOptions(): LearningAdminOptions {
-  return { academicGroups: [], cohorts: [], courses: [] };
+  return {
+    academicGroups: [],
+    academicPeriods: [],
+    cohorts: [],
+    courses: [],
+  };
 }

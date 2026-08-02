@@ -18,7 +18,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from domain.catalog.models import LearningObjective, Subject, Topic
-from domain.organizations.models import Organization
+from domain.organizations.choices import RoleCode
+from domain.organizations.models import Membership, Organization
+from domain.organizations.policies import active_membership, active_roles
 from domain.organizations.selectors import organization_visible_to
 
 from ..choices import AuthoringStatus, StructureStatus
@@ -38,7 +40,14 @@ from ..exceptions import (
     CourseSlugReserved,
     CourseStructureInvalid,
 )
-from ..models import Course, CourseModule, CourseRevision, CourseUnit
+from ..models import (
+    Course,
+    CourseActivity,
+    CourseModule,
+    CourseRevision,
+    CourseTeachingException,
+    CourseUnit,
+)
 from ..policies import (
     can_manage_course,
     can_view_approved_course,
@@ -54,13 +63,24 @@ from ..selectors import (
     revisions_visible_to_actor,
 )
 from ..services import (
+    AvailabilityRuleInput,
+    GradeCategoryInput,
+    GradedActivityInput,
     approve_revision,
     archive_course,
     archive_module,
     archive_unit,
+    assign_course_teaching_exception,
+    close_course_teaching_exception,
+    confirm_completion_policy,
+    create_activity,
     create_course,
     create_module,
     create_unit,
+    replace_activity_availability_rules,
+    replace_activity_learning_objectives,
+    replace_activity_order,
+    replace_grading_scheme,
     replace_module_order,
     replace_revision_learning_objectives,
     replace_revision_subjects,
@@ -78,11 +98,21 @@ from ..services import (
 )
 from .filters import CourseFilter
 from .serializers import (
+    AssignCourseTeachingExceptionSerializer,
+    CloseCourseTeachingExceptionSerializer,
+    ConfirmCompletionPolicySerializer,
+    CourseActivityCreateSerializer,
+    CourseActivityMutationSerializer,
+    CourseActivitySerializer,
+    CourseCompletionPolicySerializer,
     CourseCreateSerializer,
     CourseListSerializer,
     CoursePageSerializer,
     CourseSerializer,
+    CourseTeachingExceptionSerializer,
     ExpectedVersionSerializer,
+    GradeCategorySerializer,
+    GradingSchemeResponseSerializer,
     ModuleCreateSerializer,
     ModuleMutationSerializer,
     ModuleSerializer,
@@ -90,6 +120,8 @@ from .serializers import (
     MutationResultSerializer,
     OutlineSerializer,
     ReadinessSerializer,
+    ReplaceActivityRulesSerializer,
+    ReplaceGradingSchemeSerializer,
     ReplaceObjectivesSerializer,
     ReplaceOrderSerializer,
     ReplaceSubjectsSerializer,
@@ -146,6 +178,92 @@ def _revision(request: Request, course: Any, revision_id: str) -> CourseRevision
 def _require_manage(request: Request, organization: Organization) -> None:
     if not can_manage_course(request.user, organization):
         raise PermissionDenied("course_permission_denied")
+
+
+def _can_manage_teaching_exceptions(
+    request: Request, organization: Organization
+) -> bool:
+    membership = active_membership(request.user, organization)
+    return bool({RoleCode.OWNER, RoleCode.ADMINISTRATOR} & active_roles(membership))
+
+
+class CourseTeachingExceptionListCreateView(APIView):
+    @extend_schema(responses={200: CourseTeachingExceptionSerializer(many=True)})
+    def get(self, request: Request, slug: str) -> Response:
+        organization = _organization(request, slug)
+        membership = active_membership(request.user, organization)
+        roles = active_roles(membership)
+        if not roles & {
+            RoleCode.OWNER,
+            RoleCode.ADMINISTRATOR,
+            RoleCode.AUTHOR,
+            RoleCode.REVIEWER,
+            RoleCode.INSTRUCTOR,
+        }:
+            raise PermissionDenied("course_permission_denied")
+        queryset = CourseTeachingException.objects.filter(
+            course__organization=organization
+        ).select_related("course", "membership__user")
+        if not _can_manage_teaching_exceptions(request, organization):
+            queryset = queryset.filter(membership__user=request.user)
+        return Response(CourseTeachingExceptionSerializer(queryset, many=True).data)
+
+    @extend_schema(
+        request=AssignCourseTeachingExceptionSerializer,
+        responses={201: CourseTeachingExceptionSerializer},
+    )
+    def post(self, request: Request, slug: str) -> Response:
+        organization = _organization(request, slug)
+        serializer = AssignCourseTeachingExceptionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        course = get_object_or_404(
+            Course, pk=data["course_id"], organization=organization
+        )
+        membership = get_object_or_404(
+            Membership, pk=data["membership_id"], organization=organization
+        )
+        try:
+            exception = assign_course_teaching_exception(
+                actor=request.user,
+                organization=organization,
+                course=course,
+                membership=membership,
+                starts_on=data["starts_on"],
+                ends_on=data.get("ends_on"),
+                rationale=data["rationale"],
+            )
+        except CourseDomainError as error:
+            return _domain_error(error)
+        return Response(
+            CourseTeachingExceptionSerializer(exception).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CloseCourseTeachingExceptionView(APIView):
+    @extend_schema(
+        request=CloseCourseTeachingExceptionSerializer,
+        responses={200: CourseTeachingExceptionSerializer},
+    )
+    def post(self, request: Request, slug: str, exception_id: str) -> Response:
+        organization = _organization(request, slug)
+        serializer = CloseCourseTeachingExceptionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        exception = get_object_or_404(
+            CourseTeachingException,
+            pk=exception_id,
+            course__organization=organization,
+        )
+        try:
+            result = close_course_teaching_exception(
+                actor=request.user,
+                exception=exception,
+                ended_on=serializer.validated_data["ended_on"],
+            )
+        except CourseDomainError as error:
+            return _domain_error(error)
+        return Response(CourseTeachingExceptionSerializer(result).data)
 
 
 def _require_course_view(request: Request, organization: Organization) -> None:
@@ -585,6 +703,25 @@ def _unit(revision: CourseRevision, unit_id: str) -> CourseUnit:
         ) from error
 
 
+def _activity(revision: CourseRevision, activity_id: str) -> CourseActivity:
+    try:
+        return get_object_or_404(
+            CourseActivity.objects.select_related(
+                "module", "lesson_unit"
+            ).prefetch_related(
+                "objective_alignments__learning_objective",
+                "availability_rules__prerequisite_activity",
+                "availability_rules__learning_objective",
+            ),
+            pk=activity_id,
+            module__revision=revision,
+        )
+    except Http404 as error:
+        raise NotFound(
+            {"code": "activity_not_found", "detail": "La actividad no existe."}
+        ) from error
+
+
 class ModuleListCreateView(APIView):
     @extend_schema(responses={200: ModuleSerializer(many=True)})
     def get(
@@ -758,6 +895,347 @@ class ArchiveModuleView(ModuleActionView):
 
 class RestoreModuleView(ModuleActionView):
     action = "restore"
+
+
+class ActivityListCreateView(APIView):
+    @extend_schema(responses={200: CourseActivitySerializer(many=True)})
+    def get(
+        self,
+        request: Request,
+        slug: str,
+        course_slug: str,
+        revision_id: str,
+        module_id: str,
+    ) -> Response:
+        organization = _organization(request, slug)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        activities = (
+            _module(revision, module_id)
+            .activities.select_related("lesson_unit")
+            .prefetch_related(
+                "objective_alignments__learning_objective",
+                "availability_rules__prerequisite_activity",
+                "availability_rules__learning_objective",
+            )
+            .order_by("position", "created_at")
+        )
+        return Response(CourseActivitySerializer(activities, many=True).data)
+
+    @extend_schema(
+        request=CourseActivityCreateSerializer,
+        responses={201: CourseActivityMutationSerializer},
+    )
+    def post(
+        self,
+        request: Request,
+        slug: str,
+        course_slug: str,
+        revision_id: str,
+        module_id: str,
+    ) -> Response:
+        organization = _organization(request, slug)
+        _require_manage(request, organization)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        serializer = CourseActivityCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
+        expected_version = data.pop("expected_version")
+        try:
+            activity, locked = create_activity(
+                actor=request.user,
+                organization=organization,
+                module=_module(revision, module_id, include_archived=False),
+                expected_version=expected_version,
+                **data,
+            )
+        except CourseDomainError as error:
+            return _domain_error(error)
+        payload = CourseActivitySerializer(activity).data
+        payload["lock_version"] = locked.lock_version
+        return Response(payload, status=status.HTTP_201_CREATED)
+
+
+class ActivityOrderView(APIView):
+    @extend_schema(
+        request=ReplaceOrderSerializer, responses={200: MutationResultSerializer}
+    )
+    def put(
+        self,
+        request: Request,
+        slug: str,
+        course_slug: str,
+        revision_id: str,
+        module_id: str,
+    ) -> Response:
+        organization = _organization(request, slug)
+        _require_manage(request, organization)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        serializer = ReplaceOrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            result = replace_activity_order(
+                actor=request.user,
+                organization=organization,
+                module=_module(revision, module_id, include_archived=False),
+                **serializer.validated_data,
+            )
+        except CourseDomainError as error:
+            return _domain_error(error)
+        return _mutation(result)
+
+
+class ActivityDetailView(APIView):
+    @extend_schema(responses={200: CourseActivitySerializer})
+    def get(
+        self,
+        request: Request,
+        slug: str,
+        course_slug: str,
+        revision_id: str,
+        activity_id: str,
+    ) -> Response:
+        organization = _organization(request, slug)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        return Response(CourseActivitySerializer(_activity(revision, activity_id)).data)
+
+
+class ActivityObjectiveView(APIView):
+    @extend_schema(
+        request=ReplaceObjectivesSerializer, responses={200: MutationResultSerializer}
+    )
+    def put(
+        self,
+        request: Request,
+        slug: str,
+        course_slug: str,
+        revision_id: str,
+        activity_id: str,
+    ) -> Response:
+        organization = _organization(request, slug)
+        _require_manage(request, organization)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        serializer = ReplaceObjectivesSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            result = replace_activity_learning_objectives(
+                actor=request.user,
+                organization=organization,
+                activity=_activity(revision, activity_id),
+                expected_version=data["expected_version"],
+                learning_objectives=_scoped_objectives(
+                    organization, data["learning_objective_ids"]
+                ),
+            )
+        except CourseDomainError as error:
+            return _domain_error(error)
+        return _mutation(result)
+
+
+class ActivityAvailabilityRulesView(APIView):
+    @extend_schema(
+        request=ReplaceActivityRulesSerializer,
+        responses={200: MutationResultSerializer},
+    )
+    def put(
+        self,
+        request: Request,
+        slug: str,
+        course_slug: str,
+        revision_id: str,
+        activity_id: str,
+    ) -> Response:
+        organization = _organization(request, slug)
+        _require_manage(request, organization)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        serializer = ReplaceActivityRulesSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        prerequisite_ids = {
+            row["prerequisite_activity_id"]
+            for row in data["rules"]
+            if row.get("prerequisite_activity_id")
+        }
+        objective_ids = {
+            row["learning_objective_id"]
+            for row in data["rules"]
+            if row.get("learning_objective_id")
+        }
+        prerequisites = {
+            row.id: row
+            for row in CourseActivity.objects.filter(
+                id__in=prerequisite_ids, module__revision=revision
+            ).select_related("module__revision")
+        }
+        if len(prerequisites) != len(prerequisite_ids):
+            return _domain_error(
+                CourseCrossOrganizationRelation(
+                    "Una actividad requerida no pertenece a la revisión."
+                )
+            )
+        objectives = {
+            row.id: row for row in _scoped_objectives(organization, list(objective_ids))
+        }
+        rules = [
+            AvailabilityRuleInput(
+                rule_type=row["rule_type"],
+                prerequisite_activity=prerequisites.get(
+                    row.get("prerequisite_activity_id")
+                ),
+                learning_objective=objectives.get(row.get("learning_objective_id")),
+                threshold_basis_points=row.get("threshold_basis_points"),
+                available_at=row.get("available_at"),
+            )
+            for row in data["rules"]
+        ]
+        try:
+            result = replace_activity_availability_rules(
+                actor=request.user,
+                organization=organization,
+                activity=_activity(revision, activity_id),
+                expected_version=data["expected_version"],
+                rules=rules,
+            )
+        except CourseDomainError as error:
+            return _domain_error(error)
+        return _mutation(result)
+
+
+class CompletionPolicyView(APIView):
+    @extend_schema(responses={200: CourseCompletionPolicySerializer})
+    def get(
+        self, request: Request, slug: str, course_slug: str, revision_id: str
+    ) -> Response:
+        organization = _organization(request, slug)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        return Response(
+            CourseCompletionPolicySerializer(revision.completion_policy).data
+        )
+
+    @extend_schema(
+        request=ConfirmCompletionPolicySerializer,
+        responses={200: CourseCompletionPolicySerializer},
+    )
+    def put(
+        self, request: Request, slug: str, course_slug: str, revision_id: str
+    ) -> Response:
+        organization = _organization(request, slug)
+        _require_manage(request, organization)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        serializer = ConfirmCompletionPolicySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            policy, locked = confirm_completion_policy(
+                actor=request.user,
+                organization=organization,
+                revision=revision,
+                **serializer.validated_data,
+            )
+        except CourseDomainError as error:
+            return _domain_error(error)
+        payload = CourseCompletionPolicySerializer(policy).data
+        payload["revision_id"] = locked.id
+        payload["revision_lock_version"] = locked.lock_version
+        return Response(payload)
+
+
+class GradingSchemeView(APIView):
+    @extend_schema(responses={200: GradeCategorySerializer(many=True)})
+    def get(
+        self, request: Request, slug: str, course_slug: str, revision_id: str
+    ) -> Response:
+        organization = _organization(request, slug)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        categories = revision.grade_categories.prefetch_related(
+            "graded_activities"
+        ).all()
+        return Response(GradeCategorySerializer(categories, many=True).data)
+
+    @extend_schema(
+        request=ReplaceGradingSchemeSerializer,
+        responses={200: GradingSchemeResponseSerializer},
+    )
+    def put(
+        self, request: Request, slug: str, course_slug: str, revision_id: str
+    ) -> Response:
+        organization = _organization(request, slug)
+        _require_manage(request, organization)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        serializer = ReplaceGradingSchemeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        category_rows = serializer.validated_data["categories"]
+        activity_ids = {
+            item["activity_id"]
+            for category in category_rows
+            for item in category["activities"]
+        }
+        activities = {
+            activity.id: activity
+            for activity in CourseActivity.objects.filter(
+                module__revision=revision, id__in=activity_ids
+            ).select_related("module__revision")
+        }
+        if len(activities) != len(activity_ids):
+            return _domain_error(
+                CourseCrossOrganizationRelation(
+                    "Una evaluación no pertenece a la revisión."
+                )
+            )
+        categories = [
+            GradeCategoryInput(
+                code=category["code"],
+                title=category["title"],
+                weight_basis_points=category["weight_basis_points"],
+                activities=[
+                    GradedActivityInput(
+                        activity=activities[item["activity_id"]],
+                        weight_basis_points=item["weight_basis_points"],
+                        required=item["required"],
+                    )
+                    for item in category["activities"]
+                ],
+            )
+            for category in category_rows
+        ]
+        try:
+            created, locked = replace_grading_scheme(
+                actor=request.user,
+                organization=organization,
+                revision=revision,
+                expected_version=serializer.validated_data["expected_version"],
+                categories=categories,
+            )
+        except CourseDomainError as error:
+            return _domain_error(error)
+        loaded = revision.grade_categories.filter(
+            id__in=[row.id for row in created]
+        ).prefetch_related("graded_activities")
+        payload = {
+            "categories": GradeCategorySerializer(loaded, many=True).data,
+            "revision_id": locked.id,
+            "revision_lock_version": locked.lock_version,
+        }
+        return Response(payload)
 
 
 class UnitListCreateView(APIView):

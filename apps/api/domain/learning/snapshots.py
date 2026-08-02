@@ -8,6 +8,7 @@ from typing import Any
 from domain.publishing.integrity import verify_release
 from domain.publishing.models import CourseRelease
 from domain.publishing.snapshots import (
+    release_activity,
     release_outline,
     release_previous_next,
     release_unit,
@@ -39,6 +40,15 @@ def snapshot_unit(release: CourseRelease, unit_id: uuid.UUID) -> dict[str, Any]:
     except Exception as error:
         raise LearningUnitNotFound(
             "La unidad no existe en el release asignado."
+        ) from error
+
+
+def snapshot_activity(release: CourseRelease, activity_id: uuid.UUID) -> dict[str, Any]:
+    try:
+        return release_activity(verified_snapshot(release), str(activity_id))
+    except Exception as error:
+        raise LearningUnitNotFound(
+            "La actividad no existe en el release asignado."
         ) from error
 
 

@@ -43,7 +43,6 @@ type ReleaseOption = {
   courseTitle: string;
   id: string;
   number: number;
-  units: { id: string; title: string }[];
 };
 
 export function DeliveryManager({
@@ -67,10 +66,6 @@ export function DeliveryManager({
   const [opensAt, setOpensAt] = useState('');
   const [closesAt, setClosesAt] = useState('');
   const [releaseId, setReleaseId] = useState('');
-  const [unitId, setUnitId] = useState('');
-  const selectedRelease = releaseOptions.find(
-    (release) => release.id === releaseId,
-  );
   const create = useAssessmentMutation(() =>
     createAssessmentDelivery(slug, {
       assessment_version_id: versionId,
@@ -78,7 +73,6 @@ export function DeliveryManager({
       course_release_id: releaseId || null,
       name,
       opens_at: opensAt ? new Date(opensAt).toISOString() : null,
-      unit_id: unitId || null,
     }),
   );
   const activeCount = deliveries.results.filter(
@@ -161,33 +155,13 @@ export function DeliveryManager({
               <select
                 className="academic-control"
                 id="delivery-release"
-                onChange={(event) => {
-                  setReleaseId(event.target.value);
-                  setUnitId('');
-                }}
+                onChange={(event) => setReleaseId(event.target.value)}
                 value={releaseId}
               >
                 <option value="">Entrega institucional sin release</option>
                 {releaseOptions.map((release) => (
                   <option key={release.id} value={release.id}>
                     {release.courseTitle} · release {release.number}
-                  </option>
-                ))}
-              </select>
-              <Label htmlFor="delivery-unit">
-                Unidad del snapshot (opcional)
-              </Label>
-              <select
-                className="academic-control"
-                disabled={!selectedRelease}
-                id="delivery-unit"
-                onChange={(event) => setUnitId(event.target.value)}
-                value={unitId}
-              >
-                <option value="">Sin unidad específica</option>
-                {selectedRelease?.units.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.title}
                   </option>
                 ))}
               </select>
@@ -214,7 +188,6 @@ export function DeliveryManager({
                     setName('');
                     setVersionId('');
                     setReleaseId('');
-                    setUnitId('');
                     setOpensAt('');
                     setClosesAt('');
                     router.refresh();

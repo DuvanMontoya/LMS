@@ -40,19 +40,26 @@ import {
   type CalendarEvent,
 } from '@/lib/scheduling/api';
 
-type CourseOption = { slug: string; title: string };
+type CourseActivityOption = {
+  courseGroupId: string;
+  courseGroupName: string;
+  courseSlug: string;
+  id: string;
+  label: string;
+  required: boolean;
+};
 type ParticipantOption = { membershipId: string; display: string };
 type RecurrenceScope = 'occurrence' | 'following' | 'series';
 type MoveInfo = EventDropInfo | EventResizeDoneInfo;
 
 export function AcademicCalendar({
   canCreate,
-  courses,
+  courseActivities,
   participantOptions,
   slug,
 }: Readonly<{
   canCreate: boolean;
-  courses: CourseOption[];
+  courseActivities: CourseActivityOption[];
   participantOptions: ParticipantOption[];
   slug: string;
 }>) {
@@ -235,7 +242,7 @@ export function AcademicCalendar({
       />
       <CreateEventDialog
         canCreate={canCreate}
-        courses={courses}
+        courseActivities={courseActivities}
         participantOptions={participantOptions}
         slug={slug}
         startsAt={createStart}
@@ -369,7 +376,7 @@ function EventDialog({
 
 function CreateEventDialog({
   canCreate,
-  courses,
+  courseActivities,
   onClose,
   onCreated,
   participantOptions,
@@ -378,7 +385,7 @@ function CreateEventDialog({
   timeZone,
 }: Readonly<{
   canCreate: boolean;
-  courses: CourseOption[];
+  courseActivities: CourseActivityOption[];
   onClose: () => void;
   onCreated: () => Promise<void>;
   participantOptions: ParticipantOption[];
@@ -386,8 +393,8 @@ function CreateEventDialog({
   startsAt: string | null;
   timeZone: string;
 }>) {
-  const [courseSlug, setCourseSlug] = useState(courses[0]?.slug ?? '');
-  const [countsTowardProgress, setCountsTowardProgress] = useState(false);
+  const [activityId, setActivityId] = useState(courseActivities[0]?.id ?? '');
+  const [contributesToActivity, setContributesToActivity] = useState(true);
   const [submissionError, setSubmissionError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   if (!canCreate || !startsAt) return null;
@@ -399,11 +406,16 @@ function CreateEventDialog({
           onSubmit={(event) => {
             event.preventDefault();
             const data = new FormData(event.currentTarget);
+            const selectedActivity = courseActivities.find(
+              (activity) => activity.id === activityId,
+            );
             setSubmissionError('');
             setSubmitting(true);
             void createCalendarEvent(slug, {
-              course_slug: courseSlug || null,
-              participant_membership_ids: courseSlug
+              course_group_activity_id: selectedActivity?.id ?? null,
+              course_group_id: selectedActivity?.courseGroupId ?? null,
+              course_slug: selectedActivity?.courseSlug ?? null,
+              participant_membership_ids: selectedActivity
                 ? []
                 : data.getAll('participants').map(String),
               title: String(data.get('title')),
@@ -413,13 +425,11 @@ function CreateEventDialog({
               starts_at: new Date(String(data.get('startsAt'))).toISOString(),
               duration_minutes: Number(data.get('duration')),
               rrule: String(data.get('rrule') ?? ''),
-              counts_toward_progress: Boolean(
-                courseSlug && countsTowardProgress,
-              ),
-              attendance_threshold_minutes:
-                courseSlug && countsTowardProgress
-                  ? Number(data.get('attendanceThreshold'))
-                  : null,
+              counts_toward_progress: false,
+              contributes_to_activity_progress: selectedActivity
+                ? contributesToActivity
+                : null,
+              attendance_threshold_minutes: null,
             })
               .then(onCreated)
               .catch((caught) =>
@@ -449,22 +459,22 @@ function CreateEventDialog({
             Vinculación académica
             <select
               className="academic-select"
-              name="course"
-              value={courseSlug}
+              name="course_group_activity"
+              value={activityId}
               onChange={(event) => {
-                setCourseSlug(event.target.value);
-                if (!event.target.value) setCountsTowardProgress(false);
+                setActivityId(event.target.value);
+                setContributesToActivity(Boolean(event.target.value));
               }}
             >
               <option value="">Sesión independiente (sin curso)</option>
-              {courses.map((course) => (
-                <option key={course.slug} value={course.slug}>
-                  {course.title}
+              {courseActivities.map((activity) => (
+                <option key={activity.id} value={activity.id}>
+                  {activity.label}
                 </option>
               ))}
             </select>
           </Label>
-          {!courseSlug ? (
+          {!activityId ? (
             <fieldset className="grid gap-2 rounded-lg border p-3">
               <legend className="px-1 text-sm font-medium">
                 Participantes invitados
@@ -491,30 +501,23 @@ function CreateEventDialog({
             </fieldset>
           ) : (
             <fieldset className="grid gap-2 rounded-lg border p-3">
-              <legend className="px-1 text-sm font-medium">Progreso</legend>
+              <legend className="px-1 text-sm font-medium">
+                Ejecución de la actividad
+              </legend>
               <Label className="flex items-center gap-2 font-normal">
                 <input
-                  checked={countsTowardProgress}
+                  checked={contributesToActivity}
                   onChange={(event) =>
-                    setCountsTowardProgress(event.target.checked)
+                    setContributesToActivity(event.target.checked)
                   }
                   type="checkbox"
                 />
-                Esta clase es requisito para completar el curso
+                Esta serie aporta evidencia de asistencia a la actividad
               </Label>
-              {countsTowardProgress ? (
-                <Label>
-                  Asistencia mínima en minutos
-                  <Input
-                    name="attendanceThreshold"
-                    type="number"
-                    min={1}
-                    max={720}
-                    defaultValue={45}
-                    required
-                  />
-                </Label>
-              ) : null}
+              <p className="text-xs text-muted-foreground">
+                Desmárcala para una sesión suplementaria: seguirá visible en el
+                grupo, pero no completará ni desbloqueará la actividad.
+              </p>
             </fieldset>
           )}
           <Label>

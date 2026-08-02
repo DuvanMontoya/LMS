@@ -6,6 +6,14 @@ BASE = "organizations/<slug:slug>/courses/"
 REVISION = BASE + "<slug:course_slug>/revisions/<uuid:revision_id>/"
 
 urlpatterns = [
+    path(
+        BASE + "teaching-exceptions/",
+        views.CourseTeachingExceptionListCreateView.as_view(),
+    ),
+    path(
+        BASE + "teaching-exceptions/<uuid:exception_id>/close/",
+        views.CloseCourseTeachingExceptionView.as_view(),
+    ),
     path(BASE, views.CourseListCreateView.as_view()),
     path(BASE + "<slug:course_slug>/", views.CourseDetailView.as_view()),
     path(BASE + "<slug:course_slug>/archive/", views.ArchiveCourseView.as_view()),
@@ -36,6 +44,28 @@ urlpatterns = [
         REVISION + "modules/<uuid:module_id>/units/order/",
         views.UnitOrderView.as_view(),
     ),
+    path(
+        REVISION + "modules/<uuid:module_id>/activities/",
+        views.ActivityListCreateView.as_view(),
+    ),
+    path(
+        REVISION + "modules/<uuid:module_id>/activities/order/",
+        views.ActivityOrderView.as_view(),
+    ),
+    path(
+        REVISION + "activities/<uuid:activity_id>/",
+        views.ActivityDetailView.as_view(),
+    ),
+    path(
+        REVISION + "activities/<uuid:activity_id>/learning-objectives/",
+        views.ActivityObjectiveView.as_view(),
+    ),
+    path(
+        REVISION + "activities/<uuid:activity_id>/availability-rules/",
+        views.ActivityAvailabilityRulesView.as_view(),
+    ),
+    path(REVISION + "completion-policy/", views.CompletionPolicyView.as_view()),
+    path(REVISION + "grading-scheme/", views.GradingSchemeView.as_view()),
     path(REVISION + "units/<uuid:unit_id>/", views.UnitDetailView.as_view()),
     path(
         REVISION + "units/<uuid:unit_id>/archive/",

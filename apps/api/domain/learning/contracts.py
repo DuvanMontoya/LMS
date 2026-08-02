@@ -14,6 +14,7 @@ from domain.publishing.choices import PublicationStatus
 from .access import access_state
 from .choices import AccessState, EnrollmentStatus, EnrollmentWindowMode
 from .models import (
+    ActivityProgress,
     CohortStaffAssignment,
     CourseEnrollment,
     EnrollmentCohortAssignment,
@@ -22,6 +23,23 @@ from .models import (
 )
 
 EXTERNAL_REQUIREMENT_LIVE_SESSION = "live_session"
+
+
+def group_activity_available_for_release_assignment(
+    *, group_activity_id: uuid.UUID, release_assignment_id: uuid.UUID
+) -> bool:
+    return ActivityProgress.objects.filter(
+        group_activity_id=group_activity_id,
+        course_progress__release_assignment_id=release_assignment_id,
+        status__in=[
+            "available",
+            "in_progress",
+            "completed",
+            "passed",
+            "failed",
+            "waived",
+        ],
+    ).exists()
 
 
 def register_live_session_requirement(
@@ -69,6 +87,48 @@ def complete_live_session_requirement(
         source_id=source_id,
         completed_at=completed_at,
         evidence=evidence,
+    )
+
+
+def complete_group_activity_attendance(
+    *,
+    actor: object,
+    group_activity_id: uuid.UUID,
+    completed_at: datetime,
+    evidence: dict[str, object],
+) -> bool:
+    from .services import complete_activity_from_attendance
+
+    return complete_activity_from_attendance(
+        actor=actor,
+        group_activity_id=group_activity_id,
+        completed_at=completed_at,
+        evidence=evidence,
+    )
+
+
+def record_group_activity_assessment_result(
+    *,
+    actor: object | None,
+    group_activity_id: uuid.UUID,
+    release_assignment_id: uuid.UUID,
+    grade_version_id: uuid.UUID,
+    occurred_at: datetime,
+    grade_basis_points: int | None,
+    passed: bool | None,
+    mastered_objective_ids: list[str] | None = None,
+) -> bool:
+    from .services import record_activity_from_assessment
+
+    return record_activity_from_assessment(
+        actor=actor,
+        group_activity_id=group_activity_id,
+        release_assignment_id=release_assignment_id,
+        grade_version_id=grade_version_id,
+        occurred_at=occurred_at,
+        grade_basis_points=grade_basis_points,
+        passed=passed,
+        mastered_objective_ids=mastered_objective_ids,
     )
 
 

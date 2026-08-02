@@ -3,16 +3,16 @@
 | Module / initial Django app grouping | Owns and public contract | Invariants and events | Allowed / prohibited dependencies; risk |
 |---|---|---|---|
 | `identity` | Implemented: User, password, groups, permissions, sessions and internal admin. Future: profile, roles and grants. | Custom user exists in `identity.0001`; email uniqueness is case-insensitive in PostgreSQL. | May serve all modules through policy contract; no academic ownership. Risk: role explosion. |
-| `organizations` | Implemented: organization, membership, historical role assignment and membership event API. | A UUID membership has at most one non-revoked row per user/organization; active owner cannot be last removed; role history is append/revoke. | Depends only on identity; cannot own courses, enrolments or academic rules. |
-| `catalog` | Implemented: area, discipline, subject, materialized-path topic tree, reusable concept, learning objective, ordered concept associations and prerequisite edges. Future: competencies and learning paths. | UUID/slug uniqueness is scoped by organization; topic structural fields remain owned by Treebeard; both prerequisite graphs are acyclic; archived entities cannot receive new associations. | Depends on organizations and identity policy only. Courses may read its public services, but catalog never owns enrolment, delivery, grades or attempts. |
-| `courses` | Implemented: stable Course identity, authoring revisions, append-only transitions, ordered modules/units and curriculum alignments. | At most one open revision; active positions are contiguous from 1; deferred uniqueness supports reorder; every mutation uses `expected_version`; approved structure is not publication. | Reads organization policy and catalog references; never owns taxonomy, semantic content, publication, enrolment, evaluations or grades. |
+| `organizations` | Organización con ciclo `pending_activation/active/suspended/closed`, invitación inicial revocable, membresía, roles históricos y eventos. | La primera owner activa el tenant al aceptar; el operador global nunca recibe membresía implícita; el último owner activo no puede retirarse. | Depende sólo de identity; no posee cursos, matrículas ni reglas académicas. |
+| `catalog` | Taxonomía y currículo institucional, incluidos objetivos, prerrequisitos y `SubjectTeachingResponsibility` fechada. | Slugs únicos por organización, grafos acíclicos y responsabilidad con cierre append-only; no se elimina físicamente ni concede roster. | Depende de organizations y su policy. Courses consume referencias y responsabilidad; catalog no posee delivery, notas ni intentos. |
+| `courses` | Identidad y revisiones de curso, transiciones, módulos, unidades, `CourseActivity` ordenada, reglas de disponibilidad, política compuesta, esquema de calificación y `CourseTeachingException`. | Una secuencia contiene `lesson/live_class/assessment`; cada mutación exige versión y responsabilidad académica; la excepción es fechada y no concede grupo; aprobación no equivale a publicación. | Lee policy institucional y catálogo. Registros de extensión permiten bindings/readiness sin importar content, publishing, learning, scheduling o assessments. |
 | `content` | Semantic documents, blocks, references, resource links | Validated document schema; no arbitrary executable markup. Emits `content_revised`. | Media and authoring; cannot publish itself. |
 | `publishing` | Implemented: publication channel, immutable complete releases, integrity chain, withdrawal, draft cloning entry point and authenticated library. | Release/event rows are append-only and protected by PostgreSQL triggers; active points only to the newest release; reads use snapshots only. | Reads public courses/content/organization contracts. Courses and content never import publishing; no enrolment, progress, evaluation or delivery state. |
 | `authoring` | Draft, review, publication, immutable snapshots/history | Published revision immutable; restoration creates a new revision. Emits `published`, `publication_retracted`. | Courses/content/assessments; cannot alter attempts. |
 | `enrollments` | Enrolment, access window, status; future cohorts | Active access is evaluated at delivery time; historical enrolment facts retained. | Identity/courses/publication; no grading policy. |
-| `learning` | Grupos académicos reutilizables, grupos de curso release-pinned, roster/staff histórico, matrículas, delivery, continuidad y requisitos externos. | Una matrícula conserva release/progreso; roster y staff son hechos auditables, con a lo sumo una asignación de grupo de curso activa. La política de ventana puede heredarse o excepcionarse explícitamente. Emite `learning_event` y eventos de roster. | Puede leer organizations/courses/publishing; no posee score ni importa scheduling/assessments. Expone contratos acotados de matrícula y asignación efectiva. |
-| `scheduling` | Course-linked or standalone series, explicit standalone audiences, bounded occurrences, live-session lifecycle, attendance segments and LiveKit webhook ledger. | PostgreSQL is authoritative; every live occurrence has one immutable room name; recurring sets are bounded; signed webhooks are idempotent and attendance is append-only by connection segment. | Reads organization policies, courses and public enrollment/progress contracts from learning. Existing academic domains never import scheduling. LiveKit and FullCalendar are adapters, not sources of truth. |
-| `assessments` | Implemented: banks, question/assessment revisions and immutable versions, deliveries, assignments, attempts, responses, deterministic initial scoring and manual decisions. Future: pools, regrading, gradebook and analytics. | Public/grading snapshots are separate; one open revision and one in-progress attempt; final order is materialized; versions/items/decisions/events are trigger-protected. | Reads organization policy, catalog objectives, publishing releases and learning assignments. Reverse imports are prohibited. ADR 0023 intentionally groups the initial attempt/grading lifecycle here. |
+| `learning` | `AcademicPeriod`, grupos académicos, grupos de curso release-pinned, roster/staff histórico, matrículas, `CourseGroupActivity`, progreso/evidencia append-only y continuidad. | Todo grupo nuevo cita periodo y release; cada actividad materializada coincide con snapshot/grupo; progreso compuesto separa completitud, nota, asistencia y dominio. | Puede leer organizations/courses/publishing; no importa scheduling/assessments ni posee score. Expone contratos acotados de asignación y proyección. |
+| `scheduling` | Series/ocurrencias, sesiones LiveKit, asistencia, binding curricular de `live_class` y registro extensible de calendario. | PostgreSQL es autoridad; binding y política de asistencia son inmutables; webhooks idempotentes y segmentos append-only. | Lee organizations/courses y contratos públicos de learning. FullCalendar es UI; assessments registra providers sin importación inversa. |
+| `assessments` | Bancos, versiones, deliveries group-scoped, assignments, intentos, scoring, regrading, gradebooks por grupo/periodo, analítica y binding curricular de `assessment`. | Snapshots público/grading separados; binding a versión aprobada inmutable; un intento en curso; grades/decisiones/eventos protegidos y calendario sin material de grading. | Lee policy, catálogo, publishing y contratos de learning. Registra readiness/snapshot/calendario; los dominios anteriores no lo importan. |
 | `attempts` | Future extraction candidate, not a Django app in Phase 13. | Any extraction must preserve IDs, snapshots, events and transactions. | Must not be created without a new ADR and migration plan. |
 | `grading` | Future advanced grading/gradebook boundary, not a Django app in Phase 13. | Regrading and projections must cite immutable inputs and preserve decisions. | Initial deterministic/manual grading remains in assessments under ADR 0023. |
 | `progress` | Completion, mastery, progression projection | Derived records identify rules/version/input cutoff; historical results are not silently recomputed. | Learning/grading; no source-of-truth attempt data. |
@@ -38,6 +38,11 @@ The two prerequisite graphs are independent: subjects express subject sequence,
 and concepts express conceptual dependency. Neither graph implies a course,
 publication or learner progression.
 
+`SubjectTeachingResponsibility` expresa alcance académico fechado sobre una
+asignatura. Sólo owner/administrator la crea o cierra; una persona elegible
+consulta únicamente las propias. No concede acceso a grupos, estudiantes,
+asistencia, intentos ni notas.
+
 # Courses boundary
 
 `courses` owns every write to course identity, revisions, transitions, modules,
@@ -54,6 +59,12 @@ métricas, digest, API y renderer frontend. Puede importar el modelo público de
 unidad y las políticas institucionales; `courses` no importa `content`.
 `courses.readiness` y `courses.extensions` exponen registries estables y
 agnósticos: `ContentConfig.ready()` registra providers sin consultar la base.
+
+`CourseActivity` es el orden curricular canónico y `CourseUnit` conserva el
+contrato semántico de una actividad `lesson`. Los bindings de clases y
+evaluaciones se registran mediante extensiones estables. Toda escritura de
+servicio vuelve a comprobar responsabilidad por asignatura o una
+`CourseTeachingException` activa, incluso si se omite el selector HTTP.
 
 Sólo servicios de `content` escriben sus tablas y siempre lo hacen dentro de una
 transacción que bloquea la revisión y la unidad propietarias. El módulo no posee
@@ -78,6 +89,11 @@ Publishing, courses y content no importan learning. Assessments consume el
 grupo efectivo como snapshot y scheduling usa su contrato público, sin invertir
 la dependencia. Véanse `LEARNING.md`, ADR 0022 y ADR 0035.
 
+ADR 0036/0037 amplían esta frontera: `AcademicPeriod` gobierna cada grupo nuevo,
+`CourseGroupActivity` materializa el release v3 y `ActivityProgress` conserva
+evidencia y eventos append-only. `CourseProgress` es una proyección compuesta;
+ningún delivery operativo modifica el snapshot publicado.
+
 # Assessments boundary
 
 `assessments` posee el corte completo de Phase 13: banco, autoría, versiones,
@@ -92,6 +108,11 @@ servicios de assessments; no introduce un dominio ni persistencia alterna.
 Redis no contiene grades. `courses`, `content`, `publishing` y `learning`
 continúan sin importar assessments; el gradebook no modifica `CourseProgress`.
 
+El gradebook nuevo se identifica por grupo de curso y release, por lo que el
+periodo se deriva del mismo grupo. `AssessmentActivityBinding` enlaza una única
+versión aprobada y el provider de calendario proyecta sólo apertura/cierre y
+deep link autorizados, nunca seed, respuesta esperada o payload de grading.
+
 # Scheduling boundary
 
 `domain.scheduling` posee series de curso o independientes, audiencias
@@ -101,6 +122,10 @@ referenciar organizaciones/cursos y usar contratos públicos de learning para
 matrícula y requisitos de progreso; learning no importa scheduling. LiveKit
 sólo ejecuta audio/video/pantalla y FullCalendar representa mediante la API.
 Véanse ADR 0031 y ADR 0032.
+
+`LiveClassActivityBinding` fija la política de asistencia de autoría y cada
+ocurrencia curricular cita `CourseGroupActivity`. El registro de providers de
+calendario evita que scheduling importe dominios operativos.
 
 ### Assets
 

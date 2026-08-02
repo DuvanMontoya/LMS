@@ -37,6 +37,8 @@ export type AnalyticsSnapshot = components['schemas']['AnalyticsSnapshot'];
 export type GradingRevision = components['schemas']['GradingRevision'];
 type EnrollmentPage =
   operations['learning_enrollments_list']['responses'][200]['content']['application/json'];
+type CohortPage =
+  operations['learning_cohorts_list']['responses'][200]['content']['application/json'];
 
 async function required<T>(
   request: Promise<{ data?: T; response: Response }>,
@@ -122,6 +124,32 @@ export async function getAssessments(slug: string) {
     'No fue posible consultar las evaluaciones.',
   )) as AssessmentPage;
   return { ...organization, assessments };
+}
+
+export async function getApprovedAssessmentVersionOptions(slug: string) {
+  const data = await getAssessments(slug);
+  const client = await createPlatformServerClient();
+  const options = await Promise.all(
+    data.assessments.results.map(async (assessment) => {
+      const versions = (await required(
+        client.GET(
+          '/api/v1/organizations/{slug}/assessments/{assessment_slug}/versions/',
+          {
+            params: {
+              path: { assessment_slug: assessment.slug, slug },
+            },
+            cache: 'no-store',
+          },
+        ),
+        'No fue posible consultar las versiones aprobadas.',
+      )) as AssessmentVersion[];
+      return versions.map((version) => ({
+        id: version.id,
+        label: `${version.title} · versión ${version.number}`,
+      }));
+    }),
+  );
+  return options.flat();
 }
 
 export async function getAssessmentCreationContext(slug: string) {
@@ -444,35 +472,7 @@ export async function getAssessmentDeliveries(slug: string) {
       });
     }
   }
-  const releaseOptions = await Promise.all(
-    [...releaseById.values()].map(async (release) => {
-      const { data, response } = await client.GET(
-        '/api/v1/organizations/{slug}/courses/{course_slug}/releases/{release_number}/outline/',
-        {
-          params: {
-            path: {
-              course_slug: release.courseSlug,
-              release_number: release.number,
-              slug,
-            },
-          },
-          cache: 'no-store',
-        },
-      );
-      return {
-        ...release,
-        units:
-          response.ok && data
-            ? data.modules.flatMap((module) =>
-                module.units.map((unit) => ({
-                  id: unit.id,
-                  title: unit.title,
-                })),
-              )
-            : [],
-      };
-    }),
-  );
+  const releaseOptions = [...releaseById.values()];
   return {
     ...organization,
     canManage,
@@ -670,7 +670,7 @@ export async function getGradebooks(slug: string) {
   const canManage = organization.access.capabilities.includes(
     'assessment.gradebook.manage',
   );
-  const [gradebooks, deliveries] = await Promise.all([
+  const [gradebooks, deliveries, cohorts] = await Promise.all([
     required(
       client.GET('/api/v1/organizations/{slug}/assessments/gradebooks/', {
         params: { path: { slug } },
@@ -687,10 +687,23 @@ export async function getGradebooks(slug: string) {
           'No fue posible consultar las entregas disponibles.',
         ) as Promise<AssessmentDeliveryPage>)
       : Promise.resolve(null),
+    canManage
+      ? (required(
+          client.GET('/api/v1/organizations/{slug}/learning/cohorts/', {
+            params: {
+              path: { slug },
+              query: { ordering: 'name', page_size: 100, status: 'active' },
+            },
+            cache: 'no-store',
+          }),
+          'No fue posible consultar los grupos de curso disponibles.',
+        ) as Promise<CohortPage>)
+      : Promise.resolve(null),
   ]);
   return {
     ...organization,
     canManage,
+    cohorts: cohorts?.results ?? [],
     deliveries: deliveries?.results ?? [],
     gradebooks,
   };

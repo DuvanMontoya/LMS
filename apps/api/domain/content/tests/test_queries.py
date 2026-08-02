@@ -8,6 +8,7 @@ from rest_framework.test import APIClient
 from domain.content.services import save_unit_content
 from domain.courses.readiness import revision_readiness_issues
 from domain.courses.selectors import course_outline
+from domain.courses.services import confirm_completion_policy
 
 from .support import ContentFixtureMixin, full_document
 
@@ -54,6 +55,15 @@ class ContentQueryShapeTests(ContentFixtureMixin, TestCase):
             expected_document_version=0,
             schema_version=1,
             content=full_document(),
+        )
+        _, revision = confirm_completion_policy(
+            actor=owner,
+            organization=organization,
+            revision=revision,
+            expected_version=revision.lock_version,
+            require_required_activities=True,
+            minimum_grade_basis_points=None,
+            minimum_attendance_basis_points=None,
         )
         with CaptureQueriesContext(connection) as outline_queries:
             outline = course_outline(owner, revision.course, str(revision.id))

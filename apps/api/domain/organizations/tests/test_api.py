@@ -5,8 +5,13 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from domain.organizations.capabilities import Capability
-from domain.organizations.choices import RoleCode
+from domain.organizations.choices import (
+    InvitationStatus,
+    InvitationType,
+    OrganizationStatus,
+    RoleCode,
+)
+from domain.organizations.models import MembershipInvitation, Organization
 from domain.organizations.services import (
     add_existing_member_with_roles,
     create_organization_with_owner,
@@ -113,13 +118,15 @@ class OrganizationApiTests(TestCase):
         )
         owner_context = self.client_for(designated_owner).get("/api/v1/access/context/")
         self.assertEqual(owner_context.status_code, 200)
-        self.assertEqual(len(owner_context.data["organizations"]), 1)
-        access = owner_context.data["organizations"][0]
-        self.assertEqual(access["slug"], created.data["slug"])
-        self.assertEqual(access["roles"], [RoleCode.OWNER])
-        self.assertIn(Capability.MEMBERSHIP_ADD.value, access["capabilities"])
+        self.assertEqual(owner_context.data["organizations"], [])
+        pending = Organization.objects.get(slug=created.data["slug"])
+        self.assertEqual(pending.status, OrganizationStatus.PENDING_ACTIVATION)
+        invitation = pending.membership_invitations.get(email=designated_owner.email)
+        self.assertEqual(invitation.status, InvitationStatus.PENDING)
+        self.assertEqual(invitation.invitation_type, InvitationType.INITIAL_OWNER)
+        self.assertEqual(invitation.invited_roles, [RoleCode.OWNER])
 
-    def test_platform_operator_cannot_make_itself_or_an_unknown_user_owner(
+    def test_platform_operator_cannot_invite_itself_and_can_invite_new_owner(
         self,
     ) -> None:
         operator = self.verified_user("operator@example.test")
@@ -128,15 +135,26 @@ class OrganizationApiTests(TestCase):
         operator.save(update_fields=["is_superuser", "is_staff"])
         client = self.client_for(operator)
 
-        for owner_email in (operator.email, "missing@example.test"):
-            response = client.post(
-                "/api/v1/platform/organizations/",
-                {"name": "Nueva Academia", "owner_email": owner_email},
-                format="json",
-            )
-            self.assertEqual(response.status_code, 400)
-            self.assertEqual(response.data["code"], "initial_owner_unavailable")
-        self.assertEqual(client.get("/api/v1/organizations/").data, [])
+        rejected = client.post(
+            "/api/v1/platform/organizations/",
+            {"name": "Nueva Academia", "owner_email": operator.email},
+            format="json",
+        )
+        self.assertEqual(rejected.status_code, 400)
+        self.assertEqual(rejected.data["code"], "initial_owner_unavailable")
+
+        created = client.post(
+            "/api/v1/platform/organizations/",
+            {"name": "Nueva Academia", "owner_email": "missing@example.test"},
+            format="json",
+        )
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(created.data["status"], OrganizationStatus.PENDING_ACTIVATION)
+        invitation = MembershipInvitation.objects.get(
+            organization__slug=created.data["slug"], email="missing@example.test"
+        )
+        self.assertEqual(invitation.invitation_type, InvitationType.INITIAL_OWNER)
+        self.assertIsNone(invitation.existing_user_id)
 
     def test_non_platform_user_cannot_provision_an_institution(self) -> None:
         user = self.verified_user("user@example.test")

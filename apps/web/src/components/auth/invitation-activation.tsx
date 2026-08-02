@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { platformBrowserClient } from '@/lib/api/platform-browser-client';
 
 type State = 'loading' | 'ready' | 'error';
-type InvitationType = 'existing_user' | 'managed_account' | 'new_user';
+type InvitationType =
+  'existing_user' | 'initial_owner' | 'managed_account' | 'new_user';
 
 export function InvitationActivation({ token }: Readonly<{ token: string }>) {
   const router = useRouter();
@@ -75,7 +76,9 @@ export function InvitationActivation({ token }: Readonly<{ token: string }>) {
         <p className="mt-1 text-muted-foreground">
           {invitationType === 'existing_user'
             ? 'Inicia sesión con el correo invitado para aceptar la membresía institucional.'
-            : 'Crea tu cuenta con el correo invitado. La membresía se creará sólo después de verificar el correo.'}
+            : invitationType === 'initial_owner'
+              ? 'Crea la cuenta del propietario inicial con el correo invitado. La institución se activará sólo después de verificarlo.'
+              : 'Crea tu cuenta con el correo invitado. La membresía se creará sólo después de verificar el correo.'}
         </p>
       </div>
       <div className="flex flex-wrap gap-2">

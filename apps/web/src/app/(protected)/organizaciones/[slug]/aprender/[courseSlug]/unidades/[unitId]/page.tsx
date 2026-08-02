@@ -61,10 +61,9 @@ export default async function LearningUnitPage({
     .findIndex((unit) => unit.id === unitId);
   const totalUnits = outlineData.outline.progress.total_units;
   const totalActivities =
-    totalUnits + outlineData.outline.progress.total_required_activities;
+    outlineData.outline.progress.completion.total_required;
   const completedActivities =
-    outlineData.outline.progress.completed_units +
-    outlineData.outline.progress.completed_required_activities;
+    outlineData.outline.progress.completion.completed_required;
 
   return (
     <main

@@ -119,8 +119,11 @@ class AssessmentFixtureMixin(LearningFixtureMixin):
                 enrollment,
             ) = self.learning_context()
             objective = revision.objective_alignments.first().learning_objective
+            course_revision = revision
         else:
-            owner, organization, _, objective, _, _ = self.course_revision()
+            owner, organization, _, objective, _, course_revision = (
+                self.course_revision()
+            )
             learner = membership = release = enrollment = None
 
         bank = create_question_bank(
@@ -199,6 +202,7 @@ class AssessmentFixtureMixin(LearningFixtureMixin):
             "owner": owner,
             "learner": learner,
             "organization": organization,
+            "course_revision": course_revision,
             "membership": membership,
             "release": release,
             "enrollment": enrollment,

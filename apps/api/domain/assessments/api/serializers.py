@@ -452,7 +452,7 @@ class DeliveryCreateSerializer(StrictInputSerializer):
     assessment_version_id = serializers.UUIDField()
     name = serializers.CharField(max_length=200)
     course_release_id = serializers.UUIDField(required=False, allow_null=True)
-    unit_id = serializers.UUIDField(required=False, allow_null=True)
+    course_group_activity_id = serializers.UUIDField(required=False, allow_null=True)
     opens_at = serializers.DateTimeField(required=False, allow_null=True)
     closes_at = serializers.DateTimeField(required=False, allow_null=True)
 
@@ -481,6 +481,8 @@ class DeliverySerializer(serializers.ModelSerializer):
             "course_release_id",
             "course_release_title",
             "course_release_number",
+            "course_group_activity_id",
+            "migration_review_required",
             "unit_id",
             "name",
             "status",
@@ -749,3 +751,15 @@ class PendingManualSerializer(serializers.Serializer):
     response_status = serializers.ChoiceField(choices=ResponseStatus.choices)
     current_score = serializers.DecimalField(max_digits=12, decimal_places=3)
     decision_history = ManualGradeDecisionSerializer(many=True)
+
+
+class AssessmentActivityBindingInputSerializer(serializers.Serializer):
+    assessment_version_id = serializers.UUIDField()
+    expected_revision_version = serializers.IntegerField(min_value=1)
+
+
+class AssessmentActivityBindingSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    activity_id = serializers.UUIDField()
+    assessment_version_id = serializers.UUIDField()
+    revision_lock_version = serializers.IntegerField()

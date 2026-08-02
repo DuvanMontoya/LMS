@@ -1,20 +1,26 @@
 # pyright: reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportAttributeAccessIssue=false
 from __future__ import annotations
 
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch, Q, QuerySet
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
+from domain.catalog.models import SubjectTeachingResponsibility
+from domain.organizations.choices import RoleCode
 from domain.organizations.models import Organization
+from domain.organizations.policies import active_membership, active_roles
 
 from .choices import AuthoringStatus, StructureStatus
 from .extensions import enrich_outline
 from .models import (
     Course,
+    CourseActivity,
     CourseModule,
     CourseRevision,
     CourseRevisionLearningObjective,
     CourseRevisionSubject,
     CourseRevisionTransition,
+    CourseTeachingException,
     CourseUnit,
     CourseUnitLearningObjective,
     CourseUnitTopic,
@@ -31,7 +37,37 @@ def courses_visible_to_actor(
 ) -> QuerySet[Course]:
     queryset = Course.objects.filter(organization=organization)
     if can_view_course_authoring(actor, organization):
-        return queryset
+        if {RoleCode.OWNER, RoleCode.ADMINISTRATOR} & active_roles(
+            active_membership(actor, organization)  # type: ignore[arg-type]
+        ):
+            return queryset
+        today = timezone.localdate()
+        subject_ids = (
+            SubjectTeachingResponsibility.objects.filter(
+                subject__discipline__area__organization=organization,
+                membership__user=actor,
+                membership__status="active",
+                starts_on__lte=today,
+                ended_at__isnull=True,
+            )
+            .filter(Q(ends_on__isnull=True) | Q(ends_on__gte=today))
+            .values_list("subject_id", flat=True)
+        )
+        exception_ids = (
+            CourseTeachingException.objects.filter(
+                course__organization=organization,
+                membership__user=actor,
+                membership__status="active",
+                starts_on__lte=today,
+                ended_at__isnull=True,
+            )
+            .filter(Q(ends_on__isnull=True) | Q(ends_on__gte=today))
+            .values_list("course_id", flat=True)
+        )
+        return queryset.filter(
+            Q(id__in=exception_ids)
+            | Q(revisions__subject_alignments__subject_id__in=subject_ids)
+        ).distinct()
     if can_view_approved_course(actor, organization):
         return queryset.filter(
             revisions__authoring_status=AuthoringStatus.APPROVED
@@ -91,8 +127,18 @@ def revision_outline_queryset(course: Course) -> QuerySet[CourseRevision]:
         )
         .order_by("position", "created_at")
     )
+    activity_queryset = (
+        CourseActivity.objects.select_related("lesson_unit")
+        .prefetch_related(
+            "objective_alignments__learning_objective",
+            "availability_rules__prerequisite_activity",
+            "availability_rules__learning_objective",
+        )
+        .order_by("position", "created_at")
+    )
     module_queryset = CourseModule.objects.prefetch_related(
-        Prefetch("units", queryset=unit_queryset)
+        Prefetch("units", queryset=unit_queryset),
+        Prefetch("activities", queryset=activity_queryset),
     ).order_by("position", "created_at")
     return (
         CourseRevision.objects.filter(course=course)

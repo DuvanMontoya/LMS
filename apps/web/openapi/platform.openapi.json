@@ -163,6 +163,72 @@
         "required": ["email", "id", "joined_at", "membership_id", "role"],
         "type": "object"
       },
+      "AcademicPeriodCreate": {
+        "properties": {
+          "ends_on": { "format": "date", "type": "string" },
+          "name": { "maxLength": 160, "type": "string" },
+          "parent_id": { "format": "uuid", "nullable": true, "type": "string" },
+          "period_type": { "$ref": "#/components/schemas/PeriodTypeEnum" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "starts_on": { "format": "date", "type": "string" }
+        },
+        "required": ["ends_on", "name", "period_type", "slug", "starts_on"],
+        "type": "object"
+      },
+      "AcademicPeriodRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "ends_on": { "format": "date", "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "lock_version": {
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "name": { "maxLength": 160, "type": "string" },
+          "parent_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "period_type": { "$ref": "#/components/schemas/PeriodTypeEnum" },
+          "slug": {
+            "maxLength": 80,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "starts_on": { "format": "date", "type": "string" },
+          "status": {
+            "$ref": "#/components/schemas/AssessmentGradebookColumnStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "ends_on",
+          "id",
+          "name",
+          "parent_id",
+          "period_type",
+          "slug",
+          "starts_on",
+          "updated_at"
+        ],
+        "type": "object"
+      },
       "AccessContext": {
         "properties": {
           "is_platform_operator": { "readOnly": true, "type": "boolean" },
@@ -221,6 +287,122 @@
       "ActionEnum": {
         "description": "* `suspend` - suspend\n* `reactivate` - reactivate\n* `revoke` - revoke",
         "enum": ["suspend", "reactivate", "revoke"],
+        "type": "string"
+      },
+      "ActivityAvailabilityRule": {
+        "properties": {
+          "available_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "learning_objective_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "position": { "readOnly": true, "type": "integer" },
+          "prerequisite_activity_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "rule_type": {
+            "allOf": [{ "$ref": "#/components/schemas/RuleTypeEnum" }],
+            "readOnly": true
+          },
+          "threshold_basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "available_at",
+          "id",
+          "learning_objective_id",
+          "position",
+          "prerequisite_activity_id",
+          "rule_type",
+          "threshold_basis_points"
+        ],
+        "type": "object"
+      },
+      "ActivityAvailabilityRuleInput": {
+        "properties": {
+          "available_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "learning_objective_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "prerequisite_activity_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "rule_type": { "$ref": "#/components/schemas/RuleTypeEnum" },
+          "threshold_basis_points": {
+            "maximum": 10000,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": ["rule_type"],
+        "type": "object"
+      },
+      "ActivityOutline": {
+        "properties": {
+          "availability_rules": {
+            "items": { "additionalProperties": {}, "type": "object" },
+            "type": "array"
+          },
+          "binding": { "additionalProperties": {}, "type": "object" },
+          "blocked_reason": { "nullable": true, "type": "string" },
+          "completion_policy": { "additionalProperties": {}, "type": "object" },
+          "estimated_duration_minutes": { "nullable": true, "type": "integer" },
+          "href": { "type": "string" },
+          "id": { "format": "uuid", "type": "string" },
+          "is_current": { "type": "boolean" },
+          "position": { "type": "integer" },
+          "required": { "type": "boolean" },
+          "source_activity_id": { "format": "uuid", "type": "string" },
+          "status": { "type": "string" },
+          "summary": { "type": "string" },
+          "title": { "type": "string" },
+          "type": { "type": "string" }
+        },
+        "required": [
+          "availability_rules",
+          "binding",
+          "blocked_reason",
+          "completion_policy",
+          "estimated_duration_minutes",
+          "href",
+          "id",
+          "is_current",
+          "position",
+          "required",
+          "source_activity_id",
+          "status",
+          "summary",
+          "title",
+          "type"
+        ],
+        "type": "object"
+      },
+      "ActivityTypeEnum": {
+        "description": "* `lesson` - Lección\n* `live_class` - Clase en vivo\n* `assessment` - Evaluación",
+        "enum": ["lesson", "live_class", "assessment"],
         "type": "string"
       },
       "AddMember": {
@@ -468,6 +650,29 @@
           "status",
           "title"
         ],
+        "type": "object"
+      },
+      "AssessmentActivityBinding": {
+        "properties": {
+          "activity_id": { "format": "uuid", "type": "string" },
+          "assessment_version_id": { "format": "uuid", "type": "string" },
+          "id": { "format": "uuid", "type": "string" },
+          "revision_lock_version": { "type": "integer" }
+        },
+        "required": [
+          "activity_id",
+          "assessment_version_id",
+          "id",
+          "revision_lock_version"
+        ],
+        "type": "object"
+      },
+      "AssessmentActivityBindingInput": {
+        "properties": {
+          "assessment_version_id": { "format": "uuid", "type": "string" },
+          "expected_revision_version": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["assessment_version_id", "expected_revision_version"],
         "type": "object"
       },
       "AssessmentAssignmentStatus": {
@@ -1292,6 +1497,28 @@
         ],
         "type": "string"
       },
+      "AssignCourseTeachingException": {
+        "properties": {
+          "course_id": { "format": "uuid", "type": "string" },
+          "ends_on": { "format": "date", "nullable": true, "type": "string" },
+          "membership_id": { "format": "uuid", "type": "string" },
+          "rationale": { "maxLength": 1000, "type": "string" },
+          "starts_on": { "format": "date", "type": "string" }
+        },
+        "required": ["course_id", "membership_id", "rationale", "starts_on"],
+        "type": "object"
+      },
+      "AssignSubjectTeachingResponsibility": {
+        "properties": {
+          "ends_on": { "format": "date", "nullable": true, "type": "string" },
+          "membership_id": { "format": "uuid", "type": "string" },
+          "rationale": { "maxLength": 1000, "type": "string" },
+          "starts_on": { "format": "date", "type": "string" },
+          "subject_id": { "format": "uuid", "type": "string" }
+        },
+        "required": ["membership_id", "rationale", "starts_on", "subject_id"],
+        "type": "object"
+      },
       "AssignmentCreate": {
         "properties": {
           "release_assignment_id": { "format": "uuid", "type": "string" },
@@ -1588,6 +1815,7 @@
       },
       "CalendarExtendedProps": {
         "properties": {
+          "activityRequired": { "type": "boolean" },
           "attendanceThresholdMinutes": { "nullable": true, "type": "integer" },
           "canDelete": { "type": "boolean" },
           "canEdit": { "type": "boolean" },
@@ -1596,6 +1824,11 @@
           "canShareScreen": { "type": "boolean" },
           "canStart": { "type": "boolean" },
           "countsTowardProgress": { "type": "boolean" },
+          "courseGroupActivityId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
           "courseGroupId": {
             "format": "uuid",
             "nullable": true,
@@ -1608,6 +1841,7 @@
           "description": { "type": "string" },
           "eventType": { "type": "string" },
           "hostName": { "type": "string" },
+          "href": { "nullable": true, "type": "string" },
           "liveStatus": { "nullable": true, "type": "string" },
           "occurrenceStatus": { "type": "string" },
           "occurrenceVersion": { "type": "integer" },
@@ -1615,6 +1849,7 @@
           "sessionId": { "format": "uuid", "nullable": true, "type": "string" }
         },
         "required": [
+          "activityRequired",
           "attendanceThresholdMinutes",
           "canDelete",
           "canEdit",
@@ -1623,6 +1858,7 @@
           "canShareScreen",
           "canStart",
           "countsTowardProgress",
+          "courseGroupActivityId",
           "courseGroupId",
           "courseGroupName",
           "courseId",
@@ -1661,6 +1897,16 @@
         ],
         "type": "string"
       },
+      "CloseCourseTeachingException": {
+        "properties": { "ended_on": { "format": "date", "type": "string" } },
+        "required": ["ended_on"],
+        "type": "object"
+      },
+      "CloseTeachingResponsibility": {
+        "properties": { "ended_on": { "format": "date", "type": "string" } },
+        "required": ["ended_on"],
+        "type": "object"
+      },
       "CognitiveLevelEnum": {
         "description": "* `remember` - Recordar\n* `understand` - Comprender\n* `apply` - Aplicar\n* `analyze` - Analizar\n* `evaluate` - Evaluar\n* `create` - Crear",
         "enum": [
@@ -1685,6 +1931,7 @@
             "nullable": true,
             "type": "string"
           },
+          "academic_period_id": { "format": "uuid", "type": "string" },
           "access_ends_at": {
             "format": "date-time",
             "nullable": true,
@@ -1712,7 +1959,12 @@
             "type": "array"
           }
         },
-        "required": ["course_slug", "name", "release_number"],
+        "required": [
+          "academic_period_id",
+          "course_slug",
+          "name",
+          "release_number"
+        ],
         "type": "object"
       },
       "CohortEnrollmentBatch": {
@@ -1767,6 +2019,17 @@
             "readOnly": true,
             "type": "string"
           },
+          "academic_period_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "academic_period_name": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
           "access_ends_at": {
             "format": "date-time",
             "nullable": true,
@@ -1778,6 +2041,11 @@
             "type": "string"
           },
           "course_group_version": { "type": "integer" },
+          "course_release_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
           "course_slug": { "type": "string" },
           "course_title": { "type": "string" },
           "created_at": {
@@ -1788,6 +2056,7 @@
           "description": { "maxLength": 2000, "type": "string" },
           "enrollment_count": { "readOnly": true, "type": "integer" },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "migration_review_required": { "type": "boolean" },
           "name": { "maxLength": 200, "type": "string" },
           "release_number": { "type": "integer" },
           "roster_mode": {
@@ -1812,7 +2081,10 @@
         "required": [
           "academic_group_id",
           "academic_group_name",
+          "academic_period_id",
+          "academic_period_name",
           "course_group_version",
+          "course_release_id",
           "course_slug",
           "course_title",
           "created_at",
@@ -1987,6 +2259,28 @@
         "required": ["expected_progress_version"],
         "type": "object"
       },
+      "CompletionBlocker": {
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        },
+        "required": ["code", "message"],
+        "type": "object"
+      },
+      "CompletionMethodEnum": {
+        "description": "* `view` - Ver la actividad\n* `manual` - Marcación explícita\n* `attendance` - Cumplir asistencia\n* `submission` - Enviar intento\n* `grade` - Recibir calificación\n* `pass` - Aprobar",
+        "enum": ["view", "manual", "attendance", "submission", "grade", "pass"],
+        "type": "string"
+      },
+      "CompletionProjection": {
+        "properties": {
+          "completed_required": { "type": "integer" },
+          "satisfied": { "type": "boolean" },
+          "total_required": { "type": "integer" }
+        },
+        "required": ["completed_required", "satisfied", "total_required"],
+        "type": "object"
+      },
       "CompletionResult": {
         "properties": {
           "already_completed": { "type": "boolean" },
@@ -2019,6 +2313,26 @@
           "entity_id": { "format": "uuid", "type": "string" }
         },
         "required": ["concept_ids", "entity_id"],
+        "type": "object"
+      },
+      "ConfirmCompletionPolicy": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "minimum_attendance_basis_points": {
+            "maximum": 10000,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "minimum_grade_basis_points": {
+            "maximum": 10000,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "require_required_activities": { "type": "boolean" }
+        },
+        "required": ["expected_version", "require_required_activities"],
         "type": "object"
       },
       "ContentCurrent": {
@@ -2192,10 +2506,258 @@
         "required": ["archived_at", "created_at", "id", "slug", "status"],
         "type": "object"
       },
+      "CourseActivity": {
+        "properties": {
+          "activity_type": {
+            "allOf": [{ "$ref": "#/components/schemas/ActivityTypeEnum" }],
+            "readOnly": true
+          },
+          "availability_rules": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityAvailabilityRule"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "completion_method": {
+            "allOf": [{ "$ref": "#/components/schemas/CompletionMethodEnum" }],
+            "readOnly": true
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "estimated_duration_minutes": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "learning_objective_ids": {
+            "items": { "type": "string" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "lesson_unit_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "minimum_attendance_basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "minimum_grade_basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "module_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "position": { "nullable": true, "readOnly": true, "type": "integer" },
+          "required": { "readOnly": true, "type": "boolean" },
+          "status": { "readOnly": true, "type": "string" },
+          "summary": { "readOnly": true, "type": "string" },
+          "title": { "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "activity_type",
+          "availability_rules",
+          "completion_method",
+          "created_at",
+          "estimated_duration_minutes",
+          "id",
+          "learning_objective_ids",
+          "lesson_unit_id",
+          "minimum_attendance_basis_points",
+          "minimum_grade_basis_points",
+          "module_id",
+          "position",
+          "required",
+          "status",
+          "summary",
+          "title",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "CourseActivityCreate": {
+        "properties": {
+          "activity_type": { "$ref": "#/components/schemas/ActivityTypeEnum" },
+          "completion_method": {
+            "$ref": "#/components/schemas/CompletionMethodEnum"
+          },
+          "estimated_duration_minutes": {
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "minimum_attendance_basis_points": {
+            "maximum": 10000,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "minimum_grade_basis_points": {
+            "maximum": 10000,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "required": { "default": true, "type": "boolean" },
+          "summary": { "maxLength": 1200, "type": "string" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": [
+          "activity_type",
+          "completion_method",
+          "expected_version",
+          "title"
+        ],
+        "type": "object"
+      },
+      "CourseActivityMutation": {
+        "properties": {
+          "activity_type": {
+            "allOf": [{ "$ref": "#/components/schemas/ActivityTypeEnum" }],
+            "readOnly": true
+          },
+          "availability_rules": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityAvailabilityRule"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "completion_method": {
+            "allOf": [{ "$ref": "#/components/schemas/CompletionMethodEnum" }],
+            "readOnly": true
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "estimated_duration_minutes": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "learning_objective_ids": {
+            "items": { "type": "string" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "lesson_unit_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "minimum_attendance_basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "minimum_grade_basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "module_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "position": { "nullable": true, "readOnly": true, "type": "integer" },
+          "required": { "readOnly": true, "type": "boolean" },
+          "status": { "readOnly": true, "type": "string" },
+          "summary": { "readOnly": true, "type": "string" },
+          "title": { "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "activity_type",
+          "availability_rules",
+          "completion_method",
+          "created_at",
+          "estimated_duration_minutes",
+          "id",
+          "learning_objective_ids",
+          "lesson_unit_id",
+          "lock_version",
+          "minimum_attendance_basis_points",
+          "minimum_grade_basis_points",
+          "module_id",
+          "position",
+          "required",
+          "status",
+          "summary",
+          "title",
+          "updated_at"
+        ],
+        "type": "object"
+      },
       "CourseAuthoringStatus": {
         "description": "* `draft` - Borrador\n* `in_review` - En revisión\n* `changes_requested` - Cambios solicitados\n* `approved` - Aprobada",
         "enum": ["draft", "in_review", "changes_requested", "approved"],
         "type": "string"
+      },
+      "CourseCompletionPolicy": {
+        "properties": {
+          "confirmed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "confirmed_by_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "lock_version": { "readOnly": true, "type": "integer" },
+          "minimum_attendance_basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "minimum_grade_basis_points": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "require_required_activities": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirmed_at",
+          "confirmed_by_id",
+          "lock_version",
+          "minimum_attendance_basis_points",
+          "minimum_grade_basis_points",
+          "require_required_activities",
+          "updated_at"
+        ],
+        "type": "object"
       },
       "CourseCreate": {
         "properties": {
@@ -2231,6 +2793,54 @@
           "title": { "maxLength": 200, "type": "string" }
         },
         "required": ["primary_subject_id", "slug", "summary", "title"],
+        "type": "object"
+      },
+      "CourseGroupActivityRead": {
+        "properties": {
+          "academic_period_name": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "activity_type": {
+            "allOf": [{ "$ref": "#/components/schemas/ActivityTypeEnum" }],
+            "readOnly": true
+          },
+          "course_group_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "course_group_name": { "readOnly": true, "type": "string" },
+          "course_slug": { "readOnly": true, "type": "string" },
+          "course_title": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "module_position": { "readOnly": true, "type": "integer" },
+          "module_title": { "readOnly": true, "type": "string" },
+          "position": { "readOnly": true, "type": "integer" },
+          "required": { "readOnly": true, "type": "boolean" },
+          "source_activity_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "title": { "readOnly": true, "type": "string" }
+        },
+        "required": [
+          "academic_period_name",
+          "activity_type",
+          "course_group_id",
+          "course_group_name",
+          "course_slug",
+          "course_title",
+          "id",
+          "module_position",
+          "module_title",
+          "position",
+          "required",
+          "source_activity_id",
+          "title"
+        ],
         "type": "object"
       },
       "CourseLifecycleStatus": {
@@ -2308,6 +2918,68 @@
           "title": { "type": "string" }
         },
         "required": ["id", "slug", "title"],
+        "type": "object"
+      },
+      "CourseTeachingException": {
+        "properties": {
+          "course_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "course_slug": { "readOnly": true, "type": "string" },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_by_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "ended_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "ended_by_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "ends_on": {
+            "format": "date",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "member_email": {
+            "format": "email",
+            "readOnly": true,
+            "type": "string"
+          },
+          "membership_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "rationale": { "readOnly": true, "type": "string" },
+          "starts_on": { "format": "date", "readOnly": true, "type": "string" }
+        },
+        "required": [
+          "course_id",
+          "course_slug",
+          "created_at",
+          "created_by_id",
+          "ended_at",
+          "ended_by_id",
+          "ends_on",
+          "id",
+          "member_email",
+          "membership_id",
+          "rationale",
+          "starts_on"
+        ],
         "type": "object"
       },
       "CreateArea": {
@@ -2456,6 +3128,12 @@
             "readOnly": true,
             "type": "string"
           },
+          "course_group_activity_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
           "course_release_id": {
             "format": "uuid",
             "nullable": true,
@@ -2479,6 +3157,7 @@
           },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
           "lock_version": { "readOnly": true, "type": "integer" },
+          "migration_review_required": { "readOnly": true, "type": "boolean" },
           "name": { "readOnly": true, "type": "string" },
           "opens_at": {
             "format": "date-time",
@@ -2516,12 +3195,14 @@
           "assessment_version_id",
           "assessment_version_number",
           "closes_at",
+          "course_group_activity_id",
           "course_release_id",
           "course_release_number",
           "course_release_title",
           "created_at",
           "id",
           "lock_version",
+          "migration_review_required",
           "name",
           "opens_at",
           "status",
@@ -2592,6 +3273,11 @@
             "nullable": true,
             "type": "string"
           },
+          "course_group_activity_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
           "course_release_id": {
             "format": "uuid",
             "nullable": true,
@@ -2602,8 +3288,7 @@
             "format": "date-time",
             "nullable": true,
             "type": "string"
-          },
-          "unit_id": { "format": "uuid", "nullable": true, "type": "string" }
+          }
         },
         "required": ["assessment_version_id", "name"],
         "type": "object"
@@ -3089,7 +3774,16 @@
             "nullable": true,
             "type": "integer"
           },
+          "contributes_to_activity_progress": {
+            "nullable": true,
+            "type": "boolean"
+          },
           "counts_toward_progress": { "default": false, "type": "boolean" },
+          "course_group_activity_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
           "course_group_id": {
             "format": "uuid",
             "nullable": true,
@@ -3277,8 +3971,62 @@
         "required": ["authorization_url"],
         "type": "object"
       },
+      "GradeCategory": {
+        "properties": {
+          "activities": {
+            "items": { "$ref": "#/components/schemas/GradedActivity" },
+            "readOnly": true,
+            "type": "array"
+          },
+          "code": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "position": { "readOnly": true, "type": "integer" },
+          "title": { "readOnly": true, "type": "string" },
+          "weight_basis_points": { "readOnly": true, "type": "integer" }
+        },
+        "required": [
+          "activities",
+          "code",
+          "id",
+          "position",
+          "title",
+          "weight_basis_points"
+        ],
+        "type": "object"
+      },
+      "GradeCategoryInput": {
+        "properties": {
+          "activities": {
+            "items": { "$ref": "#/components/schemas/GradedActivityInput" },
+            "type": "array"
+          },
+          "code": {
+            "maxLength": 64,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "title": { "maxLength": 120, "type": "string" },
+          "weight_basis_points": {
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": ["activities", "code", "title", "weight_basis_points"],
+        "type": "object"
+      },
       "Gradebook": {
         "properties": {
+          "academic_period_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
           "activated_at": {
             "format": "date-time",
             "nullable": true,
@@ -3289,6 +4037,12 @@
             "items": { "$ref": "#/components/schemas/GradebookColumn" },
             "readOnly": true,
             "type": "array"
+          },
+          "course_group_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
           },
           "course_release_id": {
             "format": "uuid",
@@ -3303,6 +4057,7 @@
           },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
           "lock_version": { "readOnly": true, "type": "integer" },
+          "migration_review_required": { "readOnly": true, "type": "boolean" },
           "release_number": { "readOnly": true, "type": "integer" },
           "status": {
             "allOf": [
@@ -3317,13 +4072,16 @@
           }
         },
         "required": [
+          "academic_period_id",
           "activated_at",
           "columns",
+          "course_group_id",
           "course_release_id",
           "course_title",
           "created_at",
           "id",
           "lock_version",
+          "migration_review_required",
           "release_number",
           "status",
           "updated_at"
@@ -3442,9 +4200,10 @@
       },
       "GradebookCreate": {
         "properties": {
+          "course_group_id": { "format": "uuid", "type": "string" },
           "course_release_id": { "format": "uuid", "type": "string" }
         },
-        "required": ["course_release_id"],
+        "required": ["course_group_id", "course_release_id"],
         "type": "object"
       },
       "GradebookEntry": {
@@ -3584,6 +4343,33 @@
         ],
         "type": "object"
       },
+      "GradedActivity": {
+        "properties": {
+          "activity_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "required": { "readOnly": true, "type": "boolean" },
+          "weight_basis_points": { "readOnly": true, "type": "integer" }
+        },
+        "required": ["activity_id", "id", "required", "weight_basis_points"],
+        "type": "object"
+      },
+      "GradedActivityInput": {
+        "properties": {
+          "activity_id": { "format": "uuid", "type": "string" },
+          "required": { "default": true, "type": "boolean" },
+          "weight_basis_points": {
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": ["activity_id", "weight_basis_points"],
+        "type": "object"
+      },
       "GradingPolicy": {
         "properties": {
           "assessment_version_id": {
@@ -3666,6 +4452,18 @@
           "snapshot_digest",
           "source"
         ],
+        "type": "object"
+      },
+      "GradingSchemeResponse": {
+        "properties": {
+          "categories": {
+            "items": { "$ref": "#/components/schemas/GradeCategory" },
+            "type": "array"
+          },
+          "revision_id": { "format": "uuid", "type": "string" },
+          "revision_lock_version": { "type": "integer" }
+        },
+        "required": ["categories", "revision_id", "revision_lock_version"],
         "type": "object"
       },
       "HealthCheck": {
@@ -4040,8 +4838,13 @@
         "type": "string"
       },
       "InvitationTypeEnum": {
-        "description": "* `existing_user` - Usuario existente\n* `new_user` - Usuario nuevo\n* `managed_account` - Cuenta administrada",
-        "enum": ["existing_user", "new_user", "managed_account"],
+        "description": "* `existing_user` - Usuario existente\n* `new_user` - Usuario nuevo\n* `managed_account` - Cuenta administrada\n* `initial_owner` - Propietario inicial",
+        "enum": [
+          "existing_user",
+          "new_user",
+          "managed_account",
+          "initial_owner"
+        ],
         "type": "string"
       },
       "Item": {
@@ -4309,6 +5112,26 @@
         ],
         "type": "string"
       },
+      "LearningActivity": {
+        "properties": {
+          "activity": { "additionalProperties": {}, "type": "object" },
+          "course": { "additionalProperties": {}, "type": "object" },
+          "lesson": { "additionalProperties": {}, "type": "object" },
+          "module": { "additionalProperties": {}, "type": "object" },
+          "navigation": { "additionalProperties": {}, "type": "object" },
+          "progress": { "$ref": "#/components/schemas/Progress" },
+          "release_number": { "type": "integer" }
+        },
+        "required": [
+          "activity",
+          "course",
+          "module",
+          "navigation",
+          "progress",
+          "release_number"
+        ],
+        "type": "object"
+      },
       "LearningAssetAccess": {
         "properties": {
           "asset_version_ids": {
@@ -4492,6 +5315,44 @@
         ],
         "type": "object"
       },
+      "LiveClassActivityBinding": {
+        "properties": {
+          "activity_id": { "format": "uuid", "type": "string" },
+          "id": { "format": "uuid", "type": "string" },
+          "minimum_attendance_minutes": { "nullable": true, "type": "integer" },
+          "minimum_attended_occurrences": { "type": "integer" },
+          "revision_lock_version": { "type": "integer" }
+        },
+        "required": [
+          "activity_id",
+          "id",
+          "minimum_attendance_minutes",
+          "minimum_attended_occurrences",
+          "revision_lock_version"
+        ],
+        "type": "object"
+      },
+      "LiveClassActivityBindingInput": {
+        "properties": {
+          "expected_revision_version": { "minimum": 1, "type": "integer" },
+          "minimum_attendance_minutes": {
+            "maximum": 720,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          },
+          "minimum_attended_occurrences": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_revision_version",
+          "minimum_attended_occurrences"
+        ],
+        "type": "object"
+      },
       "LiveConnection": {
         "properties": {
           "serverUrl": { "type": "string" },
@@ -4503,6 +5364,7 @@
       },
       "LiveSessionDetail": {
         "properties": {
+          "activity_required": { "type": "boolean" },
           "attendanceThresholdMinutes": { "nullable": true, "type": "integer" },
           "canDelete": { "type": "boolean" },
           "canEdit": { "type": "boolean" },
@@ -4515,6 +5377,11 @@
             "additionalProperties": {},
             "nullable": true,
             "type": "object"
+          },
+          "course_group_activity_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
           },
           "course_group_id": {
             "format": "uuid",
@@ -4533,6 +5400,7 @@
           "title": { "type": "string" }
         },
         "required": [
+          "activity_required",
           "attendanceThresholdMinutes",
           "canDelete",
           "canEdit",
@@ -4542,6 +5410,7 @@
           "canStart",
           "countsTowardProgress",
           "course",
+          "course_group_activity_id",
           "course_group_id",
           "course_group_name",
           "description",
@@ -4729,6 +5598,22 @@
           "response_id",
           "score",
           "sequence"
+        ],
+        "type": "object"
+      },
+      "MasteryProjection": {
+        "properties": {
+          "evidenced_count": { "type": "integer" },
+          "evidenced_objective_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "type": "array"
+          },
+          "total_objectives": { "type": "integer" }
+        },
+        "required": [
+          "evidenced_count",
+          "evidenced_objective_ids",
+          "total_objectives"
         ],
         "type": "object"
       },
@@ -5083,6 +5968,10 @@
       },
       "ModuleOutline": {
         "properties": {
+          "activities": {
+            "items": { "$ref": "#/components/schemas/ActivityOutline" },
+            "type": "array"
+          },
           "description": { "type": "string" },
           "id": { "format": "uuid", "type": "string" },
           "position": { "type": "integer" },
@@ -5092,7 +5981,14 @@
             "type": "array"
           }
         },
-        "required": ["description", "id", "position", "title", "units"],
+        "required": [
+          "activities",
+          "description",
+          "id",
+          "position",
+          "title",
+          "units"
+        ],
         "type": "object"
       },
       "ModuleUpdate": {
@@ -5303,13 +6199,19 @@
       },
       "Organization": {
         "properties": {
+          "activated_at": {
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
           "name": { "maxLength": 160, "type": "string" },
           "slug": {
             "pattern": "^[-a-zA-Z0-9_]+$",
             "readOnly": true,
             "type": "string"
-          }
+          },
+          "status": { "$ref": "#/components/schemas/OrganizationStatusEnum" }
         },
         "required": ["id", "name", "slug"],
         "type": "object"
@@ -5383,6 +6285,11 @@
         ],
         "type": "string"
       },
+      "OrganizationStatusEnum": {
+        "description": "* `pending_activation` - Pendiente de activación\n* `active` - Activa\n* `suspended` - Suspendida\n* `closed` - Cerrada",
+        "enum": ["pending_activation", "active", "suspended", "closed"],
+        "type": "string"
+      },
       "OrganizationUpdate": {
         "properties": { "name": { "maxLength": 160, "type": "string" } },
         "required": ["name"],
@@ -5425,6 +6332,11 @@
       },
       "OutlineModule": {
         "properties": {
+          "activities": {
+            "items": { "$ref": "#/components/schemas/CourseActivity" },
+            "readOnly": true,
+            "type": "array"
+          },
           "archived_at": {
             "format": "date-time",
             "nullable": true,
@@ -5458,6 +6370,7 @@
           }
         },
         "required": [
+          "activities",
           "archived_at",
           "created_at",
           "description",
@@ -5566,6 +6479,19 @@
           "previous": { "format": "uri", "nullable": true, "type": "string" },
           "results": {
             "items": { "$ref": "#/components/schemas/AcademicGroupRosterRead" },
+            "type": "array"
+          }
+        },
+        "required": ["count", "next", "previous", "results"],
+        "type": "object"
+      },
+      "PaginatedAcademicPeriod": {
+        "properties": {
+          "count": { "type": "integer" },
+          "next": { "format": "uri", "nullable": true, "type": "string" },
+          "previous": { "format": "uri", "nullable": true, "type": "string" },
+          "results": {
+            "items": { "$ref": "#/components/schemas/AcademicPeriodRead" },
             "type": "array"
           }
         },
@@ -5776,9 +6702,26 @@
         ],
         "type": "object"
       },
+      "PeriodTypeEnum": {
+        "description": "* `school_year` - Año escolar\n* `term` - Periodo\n* `semester` - Semestre\n* `trimester` - Trimestre\n* `quarter` - Cuatrimestre\n* `grading_period` - Periodo de calificación",
+        "enum": [
+          "school_year",
+          "term",
+          "semester",
+          "trimester",
+          "quarter",
+          "grading_period"
+        ],
+        "type": "string"
+      },
       "PlatformOrganizationProvision": {
-        "description": "The operator supplies an institution and its initial verified owner.",
+        "description": "The operator supplies an institution and bootstrap invitations.",
         "properties": {
+          "administrator_emails": {
+            "items": { "format": "email", "type": "string" },
+            "maxItems": 20,
+            "type": "array"
+          },
           "name": { "maxLength": 160, "type": "string" },
           "owner_email": { "format": "email", "type": "string" }
         },
@@ -5977,6 +6920,11 @@
       },
       "Progress": {
         "properties": {
+          "attendance": { "$ref": "#/components/schemas/ThresholdProjection" },
+          "blockers": {
+            "items": { "$ref": "#/components/schemas/CompletionBlocker" },
+            "type": "array"
+          },
           "completed_at": {
             "format": "date-time",
             "nullable": true,
@@ -5984,11 +6932,15 @@
           },
           "completed_required_activities": { "type": "integer" },
           "completed_units": { "type": "integer" },
+          "completion": { "$ref": "#/components/schemas/CompletionProjection" },
+          "grade": { "$ref": "#/components/schemas/ThresholdProjection" },
+          "is_complete": { "type": "boolean" },
           "last_activity_at": {
             "format": "date-time",
             "nullable": true,
             "type": "string"
           },
+          "mastery": { "$ref": "#/components/schemas/MasteryProjection" },
           "percent": {
             "format": "decimal",
             "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
@@ -6006,10 +6958,16 @@
           "total_units": { "type": "integer" }
         },
         "required": [
+          "attendance",
+          "blockers",
           "completed_at",
           "completed_required_activities",
           "completed_units",
+          "completion",
+          "grade",
+          "is_complete",
           "last_activity_at",
+          "mastery",
           "percent",
           "percent_basis_points",
           "progress_version",
@@ -6837,6 +7795,19 @@
         "required": ["expected_enrollment_version", "target_release_number"],
         "type": "object"
       },
+      "ReplaceActivityRules": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityAvailabilityRuleInput"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["expected_version", "rules"],
+        "type": "object"
+      },
       "ReplaceConceptAssociations": {
         "properties": {
           "concept_ids": {
@@ -6846,6 +7817,17 @@
           }
         },
         "required": ["concept_ids"],
+        "type": "object"
+      },
+      "ReplaceGradingScheme": {
+        "properties": {
+          "categories": {
+            "items": { "$ref": "#/components/schemas/GradeCategoryInput" },
+            "type": "array"
+          },
+          "expected_version": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["categories", "expected_version"],
         "type": "object"
       },
       "ReplaceObjectives": {
@@ -6938,11 +7920,16 @@
       },
       "Resume": {
         "properties": {
+          "activity_instance_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
           "href": { "nullable": true, "type": "string" },
           "node_id": { "format": "uuid", "nullable": true, "type": "string" },
           "unit_id": { "format": "uuid", "nullable": true, "type": "string" }
         },
-        "required": ["href", "node_id", "unit_id"],
+        "required": ["activity_instance_id", "href", "node_id", "unit_id"],
         "type": "object"
       },
       "Revision": {
@@ -7049,6 +8036,18 @@
         },
         "required": ["alignment_type", "id", "position", "subject"],
         "type": "object"
+      },
+      "RuleTypeEnum": {
+        "description": "* `activity_completed` - Actividad completada\n* `activity_passed` - Actividad aprobada\n* `minimum_grade` - Calificación mínima\n* `objective_mastered` - Objetivo dominado\n* `available_from` - Disponible desde\n* `available_until` - Disponible hasta",
+        "enum": [
+          "activity_completed",
+          "activity_passed",
+          "minimum_grade",
+          "objective_mastered",
+          "available_from",
+          "available_until"
+        ],
+        "type": "string"
       },
       "SchedulingError": {
         "properties": {
@@ -7441,6 +8440,81 @@
           "status": { "readOnly": true, "type": "string" }
         },
         "required": ["id", "name", "slug", "status"],
+        "type": "object"
+      },
+      "SubjectTeachingResponsibility": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_by_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "ended_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "ended_by_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "ends_on": {
+            "format": "date",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "member_email": {
+            "format": "email",
+            "readOnly": true,
+            "type": "string"
+          },
+          "membership_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "rationale": { "readOnly": true, "type": "string" },
+          "starts_on": { "format": "date", "readOnly": true, "type": "string" },
+          "subject_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "subject_name": { "readOnly": true, "type": "string" }
+        },
+        "required": [
+          "created_at",
+          "created_by_id",
+          "ended_at",
+          "ended_by_id",
+          "ends_on",
+          "id",
+          "member_email",
+          "membership_id",
+          "rationale",
+          "starts_on",
+          "subject_id",
+          "subject_name"
+        ],
+        "type": "object"
+      },
+      "ThresholdProjection": {
+        "properties": {
+          "basis_points": { "nullable": true, "type": "integer" },
+          "minimum_basis_points": { "nullable": true, "type": "integer" },
+          "satisfied": { "type": "boolean" }
+        },
+        "required": ["basis_points", "minimum_basis_points", "satisfied"],
         "type": "object"
       },
       "Topic": {
@@ -11060,6 +12134,59 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/AttemptResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/course-activities/{activity_id}/binding/": {
+      "post": {
+        "operationId": "assessment_course_activity_binding_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentActivityBindingInput"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentActivityBindingInput"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentActivityBindingInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentActivityBinding"
+                }
               }
             },
             "description": ""
@@ -16194,6 +17321,134 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/catalog/teaching-responsibilities/": {
+      "get": {
+        "operationId": "organizations_catalog_teaching_responsibilities_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SubjectTeachingResponsibility"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_catalog_teaching_responsibilities_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignSubjectTeachingResponsibility"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignSubjectTeachingResponsibility"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignSubjectTeachingResponsibility"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectTeachingResponsibility"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/catalog/teaching-responsibilities/{responsibility_id}/close/": {
+      "post": {
+        "operationId": "organizations_catalog_teaching_responsibilities_close_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "responsibility_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseTeachingResponsibility"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseTeachingResponsibility"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseTeachingResponsibility"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectTeachingResponsibility"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/catalog/topic-concepts/": {
       "get": {
         "description": "Return visible topic-to-concept associations in one organization-scoped query.",
@@ -16561,6 +17816,134 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Revision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/teaching-exceptions/": {
+      "get": {
+        "operationId": "organizations_courses_teaching_exceptions_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CourseTeachingException"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_courses_teaching_exceptions_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignCourseTeachingException"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignCourseTeachingException"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignCourseTeachingException"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseTeachingException"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/teaching-exceptions/{exception_id}/close/": {
+      "post": {
+        "operationId": "organizations_courses_teaching_exceptions_close_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exception_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseCourseTeachingException"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseCourseTeachingException"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseCourseTeachingException"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseTeachingException"
+                }
               }
             },
             "description": ""
@@ -17152,6 +18535,163 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/activities/{activity_id}/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_activities_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CourseActivity" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/activities/{activity_id}/availability-rules/": {
+      "put": {
+        "operationId": "organizations_courses_revisions_activities_availability_rules_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReplaceActivityRules" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ReplaceActivityRules" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ReplaceActivityRules" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MutationResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/activities/{activity_id}/learning-objectives/": {
+      "put": {
+        "operationId": "organizations_courses_revisions_activities_learning_objectives_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReplaceObjectives" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ReplaceObjectives" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ReplaceObjectives" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MutationResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/approve/": {
       "post": {
         "operationId": "organizations_courses_revisions_approve_create",
@@ -17194,6 +18734,193 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Revision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/completion-policy/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_completion_policy_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseCompletionPolicy"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "operationId": "organizations_courses_revisions_completion_policy_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmCompletionPolicy"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmCompletionPolicy"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmCompletionPolicy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseCompletionPolicy"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/grading-scheme/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_grading_scheme_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/GradeCategory" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "operationId": "organizations_courses_revisions_grading_scheme_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReplaceGradingScheme" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ReplaceGradingScheme" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ReplaceGradingScheme" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradingSchemeResponse"
+                }
               }
             },
             "description": ""
@@ -17521,6 +19248,166 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ModuleMutation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/activities/": {
+      "get": {
+        "operationId": "organizations_courses_revisions_modules_activities_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": { "$ref": "#/components/schemas/CourseActivity" },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "organizations_courses_revisions_modules_activities_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CourseActivityCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/CourseActivityCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/CourseActivityCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseActivityMutation"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/activities/order/": {
+      "put": {
+        "operationId": "organizations_courses_revisions_modules_activities_order_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "module_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReplaceOrder" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/ReplaceOrder" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/ReplaceOrder" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MutationResult" }
               }
             },
             "description": ""
@@ -19477,6 +21364,86 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/learning/academic-periods/": {
+      "get": {
+        "operationId": "learning_academic_periods_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedAcademicPeriod"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "learning_academic_periods_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AcademicPeriodCreate" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/AcademicPeriodCreate" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/AcademicPeriodCreate" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AcademicPeriodRead" }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/learning/cohorts/": {
       "get": {
         "operationId": "learning_cohorts_list",
@@ -20051,6 +22018,42 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/learning/course-group-activities/": {
+      "get": {
+        "operationId": "organizations_learning_course_group_activities_list",
+        "parameters": [
+          {
+            "description": "Filtra lesson, live_class o assessment.",
+            "in": "query",
+            "name": "activity_type",
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CourseGroupActivityRead"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/learning/enrollments/": {
       "get": {
         "operationId": "learning_enrollments_list",
@@ -20554,6 +22557,51 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/MyLearning" }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/activities/{activity_instance_id}/": {
+      "get": {
+        "operationId": "organizations_learning_me_enrollments_activities_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_instance_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LearningActivity" }
               }
             },
             "description": ""
@@ -21779,6 +23827,59 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/course-activities/{activity_id}/binding/": {
+      "post": {
+        "operationId": "scheduling_course_activity_binding_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveClassActivityBindingInput"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveClassActivityBindingInput"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveClassActivityBindingInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveClassActivityBinding"
+                }
               }
             },
             "description": ""

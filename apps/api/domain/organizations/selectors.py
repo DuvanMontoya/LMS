@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from django.db.models import Prefetch, QuerySet
 from django.shortcuts import get_object_or_404
 
-from .choices import MembershipStatus
+from .choices import MembershipStatus, OrganizationStatus
 from .models import Membership, MembershipRoleAssignment, Organization
 
 if TYPE_CHECKING:
@@ -14,7 +14,9 @@ if TYPE_CHECKING:
 
 def organizations_visible_to(actor: User) -> QuerySet[Organization]:
     return Organization.objects.filter(
-        memberships__user=actor, memberships__status=MembershipStatus.ACTIVE.value
+        memberships__user=actor,
+        memberships__status=MembershipStatus.ACTIVE.value,
+        status=OrganizationStatus.ACTIVE,
     ).distinct()
 
 

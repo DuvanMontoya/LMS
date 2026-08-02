@@ -4,8 +4,8 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from types import MappingProxyType
 
-from .choices import CourseStatus, StructureStatus, SubjectAlignmentType
-from .models import CourseRevision
+from .choices import ActivityType, CourseStatus, StructureStatus, SubjectAlignmentType
+from .models import CourseCompletionPolicy, CourseRevision
 
 type ReadinessIssue = dict[str, str]
 type ReadinessProvider = Callable[[CourseRevision], list[ReadinessIssue]]
@@ -101,12 +101,16 @@ def revision_readiness_issues(revision: CourseRevision) -> list[ReadinessIssue]:
                 f"learning_objectives.{row.learning_objective_id}",
                 "Un objetivo alineado está archivado.",
             )
+    course_objective_ids = {row.learning_objective_id for row in objectives}
 
     modules = list(
         revision.modules.filter(status=StructureStatus.ACTIVE)
         .prefetch_related(
             "units__topic_alignments__topic",
             "units__objective_alignments__learning_objective",
+            "activities__objective_alignments__learning_objective",
+            "activities__availability_rules__prerequisite_activity",
+            "activities__availability_rules__learning_objective",
         )
         .order_by("position")
     )
@@ -128,18 +132,80 @@ def revision_readiness_issues(revision: CourseRevision) -> list[ReadinessIssue]:
         ]
         units.sort(key=lambda unit: unit.position or 0)
         module_path = f"modules.{module.id}"
-        if not units:
+        activities = [
+            activity
+            for activity in module.activities.all()
+            if activity.status == StructureStatus.ACTIVE
+        ]
+        activities.sort(key=lambda activity: activity.position or 0)
+        if not activities:
+            add(
+                "module_without_activity",
+                module_path,
+                "Cada módulo activo debe contener al menos una actividad activa.",
+            )
+        if not units and not activities:
             add(
                 "module_without_unit",
                 module_path,
                 "Cada módulo activo debe contener al menos una unidad activa.",
             )
-        if not _contiguous(unit.position for unit in units):
+        if not _contiguous(activity.position for activity in activities):
             add(
-                "unit_order_invalid",
-                f"{module_path}.units",
-                "El orden de unidades no es contiguo.",
+                "activity_order_invalid",
+                f"{module_path}.activities",
+                "El orden de actividades no es contiguo.",
             )
+        active_lesson_unit_ids = {
+            activity.lesson_unit_id
+            for activity in activities
+            if activity.activity_type == ActivityType.LESSON
+        }
+        if active_lesson_unit_ids != {unit.id for unit in units}:
+            add(
+                "lesson_unit_mapping_invalid",
+                f"{module_path}.activities",
+                "Cada unidad activa debe tener exactamente una actividad de lección.",
+            )
+        for activity in activities:
+            activity_path = f"{module_path}.activities.{activity.id}"
+            activity_objectives = list(activity.objective_alignments.all())
+            if not activity_objectives:
+                add(
+                    "activity_without_learning_objective",
+                    activity_path,
+                    "Cada actividad debe cubrir al menos un objetivo del curso.",
+                )
+            if not _contiguous(link.position for link in activity_objectives):
+                add(
+                    "activity_objective_order_invalid",
+                    f"{activity_path}.learning_objectives",
+                    "El orden de objetivos de la actividad no es contiguo.",
+                )
+            for link in activity_objectives:
+                if link.learning_objective_id not in course_objective_ids:
+                    add(
+                        "activity_objective_outside_course",
+                        f"{activity_path}.learning_objectives.{link.learning_objective_id}",
+                        "La actividad usa un objetivo ajeno al curso.",
+                    )
+            rules = list(activity.availability_rules.all())
+            if not _contiguous(rule.position for rule in rules):
+                add(
+                    "activity_rule_order_invalid",
+                    f"{activity_path}.availability_rules",
+                    "El orden de reglas de disponibilidad no es contiguo.",
+                )
+            for rule in rules:
+                if (
+                    rule.prerequisite_activity_id
+                    and rule.prerequisite_activity.module.revision_id != revision.id
+                ):
+                    add(
+                        "activity_rule_outside_revision",
+                        f"{activity_path}.availability_rules.{rule.id}",
+                        "La regla usa una actividad de otra revisión.",
+                    )
         for unit in units:
             unit_path = f"{module_path}.units.{unit.id}"
             objective_links = list(unit.objective_alignments.all())
@@ -176,6 +242,101 @@ def revision_readiness_issues(revision: CourseRevision) -> list[ReadinessIssue]:
                         f"{unit_path}.topics.{link.topic_id}",
                         "Un tema de la unidad está archivado.",
                     )
+
+    activity_edges: dict[object, set[object]] = {}
+    active_activities: list[object] = []
+    for module in modules:
+        for activity in module.activities.all():
+            if activity.status != StructureStatus.ACTIVE:
+                continue
+            active_activities.append(activity)
+            activity_edges.setdefault(activity.id, set())
+            for rule in activity.availability_rules.all():
+                if rule.prerequisite_activity_id:
+                    activity_edges[activity.id].add(rule.prerequisite_activity_id)
+
+    visiting: set[object] = set()
+    visited: set[object] = set()
+
+    def visit(activity_id: object) -> bool:
+        if activity_id in visiting:
+            return True
+        if activity_id in visited:
+            return False
+        visiting.add(activity_id)
+        if any(
+            visit(required_id) for required_id in activity_edges.get(activity_id, set())
+        ):
+            return True
+        visiting.remove(activity_id)
+        visited.add(activity_id)
+        return False
+
+    if any(visit(activity_id) for activity_id in activity_edges):
+        add(
+            "activity_availability_cycle",
+            "activities.availability_rules",
+            "Las reglas de disponibilidad contienen un ciclo.",
+        )
+
+    completion_policy = getattr(revision, "_readiness_completion_policy", None)
+    if completion_policy is None:
+        completion_policy = CourseCompletionPolicy.objects.filter(
+            revision=revision
+        ).first()
+    if completion_policy is None or completion_policy.confirmed_at is None:
+        add(
+            "completion_policy_confirmation_required",
+            "completion_policy",
+            "La política compuesta debe confirmarse antes de aprobar.",
+        )
+
+    categories = list(revision.grade_categories.prefetch_related("graded_activities"))
+    if (
+        completion_policy is not None
+        and completion_policy.minimum_grade_basis_points is not None
+        and not categories
+    ):
+        add(
+            "grading_scheme_required",
+            "grading_scheme",
+            "La nota mínima exige un esquema de calificación completo.",
+        )
+    if (
+        completion_policy is not None
+        and completion_policy.minimum_attendance_basis_points is not None
+        and not any(
+            activity.activity_type == ActivityType.LIVE_CLASS and activity.required
+            for activity in active_activities
+        )
+    ):
+        add(
+            "required_live_activity_required",
+            "completion_policy.minimum_attendance_basis_points",
+            "La asistencia mínima exige al menos una clase en vivo obligatoria.",
+        )
+    if (
+        categories
+        and sum(category.weight_basis_points for category in categories) != 10_000
+    ):
+        add(
+            "grade_category_weights_invalid",
+            "grading_scheme.categories",
+            "Los pesos de categorías deben sumar 10 000 puntos base.",
+        )
+    for category in categories:
+        items = list(category.graded_activities.all())
+        if not items or sum(item.weight_basis_points for item in items) != 10_000:
+            add(
+                "grade_item_weights_invalid",
+                f"grading_scheme.categories.{category.id}",
+                "Los pesos de actividades calificables deben sumar 10 000 puntos base.",
+            )
+    # Extension providers share the already-loaded authoring graph. These
+    # request-scoped attributes are deliberately non-persistent and keep the
+    # stable provider signature while avoiding one query per domain provider.
+    revision._readiness_active_activities = tuple(active_activities)
+    revision._readiness_course_objective_ids = frozenset(course_objective_ids)
     for provider_name in sorted(_READINESS_PROVIDERS):
         issues.extend(_READINESS_PROVIDERS[provider_name](revision))
     return issues

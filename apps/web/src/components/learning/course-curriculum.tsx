@@ -1,9 +1,13 @@
 import {
+  CalendarClock,
   CheckCircle2,
   Circle,
   CircleDot,
+  ClipboardCheck,
   Clock3,
+  LockKeyhole,
   PlayCircle,
+  Video,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -12,11 +16,13 @@ import type { components } from '@/lib/api/generated/platform';
 type LearningModule = components['schemas']['ModuleOutline'];
 
 export function CourseCurriculum({
+  currentActivityId,
   currentUnitId,
   modules,
   variant = 'course',
 }: Readonly<{
   currentUnitId?: string;
+  currentActivityId?: string;
   modules: readonly LearningModule[];
   variant?: 'course' | 'player';
 }>) {
@@ -34,42 +40,62 @@ export function CourseCurriculum({
             {variant === 'course' && module.description ? (
               <p>{module.description}</p>
             ) : null}
-            <small>
-              {module.units.length}{' '}
-              {module.units.length === 1 ? 'lección' : 'lecciones'}
-            </small>
+            <small>{activityCountLabel(module.activities.length)}</small>
           </header>
           <ol>
-            {module.units.map((unit) => {
-              const current = unit.id === currentUnitId || unit.is_current;
-              return (
-                <li key={unit.id}>
-                  <Link
-                    aria-current={current ? 'step' : undefined}
-                    data-current={current ? 'true' : undefined}
-                    href={unit.href}
-                  >
-                    <UnitState status={unit.status} />
-                    <span>
-                      <strong>
-                        {module.position}.{unit.position} {unit.title}
-                      </strong>
-                      {variant === 'course' && unit.summary ? (
-                        <small>{unit.summary}</small>
-                      ) : null}
-                    </span>
-                    {unit.estimated_duration_minutes ? (
-                      <small className="course-curriculum__duration">
-                        <Clock3 />
-                        {unit.estimated_duration_minutes} min
-                      </small>
-                    ) : current ? (
-                      <PlayCircle
-                        aria-hidden="true"
-                        className="course-curriculum__play"
-                      />
+            {module.activities.map((activity) => {
+              const current =
+                activity.id === currentActivityId ||
+                activity.source_activity_id === currentUnitId ||
+                activity.is_current;
+              const blocked = activity.status === 'locked';
+              const content = (
+                <>
+                  <ActivityState status={activity.status} />
+                  <span>
+                    <strong>
+                      {module.position}.{activity.position} {activity.title}
+                    </strong>
+                    {variant === 'course' && activity.summary ? (
+                      <small>{activity.summary}</small>
                     ) : null}
-                  </Link>
+                    <small className="course-curriculum__kind">
+                      <ActivityKind type={activity.type} />
+                      {activityTypeLabel(activity.type)}
+                      {activity.required ? ' · Obligatoria' : ' · Opcional'}
+                    </small>
+                    {blocked && activity.blocked_reason ? (
+                      <small>{activity.blocked_reason}</small>
+                    ) : null}
+                  </span>
+                  {activity.estimated_duration_minutes ? (
+                    <small className="course-curriculum__duration">
+                      <Clock3 />
+                      {activity.estimated_duration_minutes} min
+                    </small>
+                  ) : current ? (
+                    <PlayCircle
+                      aria-hidden="true"
+                      className="course-curriculum__play"
+                    />
+                  ) : null}
+                </>
+              );
+              return (
+                <li key={activity.id}>
+                  {blocked ? (
+                    <span aria-disabled="true" data-current="false">
+                      {content}
+                    </span>
+                  ) : (
+                    <Link
+                      aria-current={current ? 'step' : undefined}
+                      data-current={current ? 'true' : undefined}
+                      href={activity.href}
+                    >
+                      {content}
+                    </Link>
+                  )}
                 </li>
               );
             })}
@@ -80,13 +106,22 @@ export function CourseCurriculum({
   );
 }
 
-function UnitState({ status }: Readonly<{ status: string }>) {
-  if (status === 'completed') {
+function ActivityState({ status }: Readonly<{ status: string }>) {
+  if (['completed', 'passed', 'waived'].includes(status)) {
     return (
       <CheckCircle2
         aria-label="Completada"
         className="course-curriculum__state"
         data-status="completed"
+      />
+    );
+  }
+  if (status === 'locked') {
+    return (
+      <LockKeyhole
+        aria-label="Bloqueada"
+        className="course-curriculum__state"
+        data-status="locked"
       />
     );
   }
@@ -106,4 +141,20 @@ function UnitState({ status }: Readonly<{ status: string }>) {
       data-status="not_started"
     />
   );
+}
+
+function ActivityKind({ type }: Readonly<{ type: string }>) {
+  if (type === 'live_class') return <Video aria-hidden="true" />;
+  if (type === 'assessment') return <ClipboardCheck aria-hidden="true" />;
+  return <CalendarClock aria-hidden="true" />;
+}
+
+function activityTypeLabel(type: string) {
+  if (type === 'live_class') return 'Clase en vivo';
+  if (type === 'assessment') return 'Evaluación';
+  return 'Lección';
+}
+
+function activityCountLabel(count: number) {
+  return `${count} ${count === 1 ? 'actividad' : 'actividades'}`;
 }

@@ -6,6 +6,15 @@ class CohortStatus(models.TextChoices):
     ARCHIVED = "archived", "Archivada"
 
 
+class AcademicPeriodType(models.TextChoices):
+    SCHOOL_YEAR = "school_year", "Año escolar"
+    TERM = "term", "Periodo"
+    SEMESTER = "semester", "Semestre"
+    TRIMESTER = "trimester", "Trimestre"
+    QUARTER = "quarter", "Cuatrimestre"
+    GRADING_PERIOD = "grading_period", "Periodo de calificación"
+
+
 class AcademicGroupLevel(models.TextChoices):
     EARLY_CHILDHOOD = "early_childhood", "Primera infancia"
     PRESCHOOL = "preschool", "Preescolar"
@@ -98,6 +107,25 @@ class UnitProgressStatus(models.TextChoices):
     COMPLETED = "completed", "Completada"
 
 
+class ActivityProgressStatus(models.TextChoices):
+    LOCKED = "locked", "Bloqueada"
+    AVAILABLE = "available", "Disponible"
+    IN_PROGRESS = "in_progress", "En progreso"
+    COMPLETED = "completed", "Completada"
+    PASSED = "passed", "Aprobada"
+    FAILED = "failed", "No aprobada"
+    MISSED = "missed", "No asistida"
+    WAIVED = "waived", "Exenta"
+
+
+class ActivityProgressSource(models.TextChoices):
+    LESSON = "lesson", "Lección"
+    ATTENDANCE = "attendance", "Asistencia"
+    ASSESSMENT = "assessment", "Evaluación"
+    MANUAL = "manual", "Ajuste manual"
+    MIGRATION = "migration", "Migración"
+
+
 class LearningEventType(models.TextChoices):
     ENROLLMENT_CREATED = "enrollment_created", "Matrícula creada"
     ENROLLMENT_SUSPENDED = "enrollment_suspended", "Matrícula suspendida"
@@ -114,6 +142,10 @@ class LearningEventType(models.TextChoices):
     REQUIREMENT_COMPLETED = (
         "requirement_completed",
         "Requisito externo completado",
+    )
+    ACTIVITY_STATE_CHANGED = (
+        "activity_state_changed",
+        "Estado de actividad actualizado",
     )
 
 

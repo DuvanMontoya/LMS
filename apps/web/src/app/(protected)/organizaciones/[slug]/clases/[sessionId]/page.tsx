@@ -1,4 +1,5 @@
 import { Clock3, UserRound } from 'lucide-react';
+import { redirect } from 'next/navigation';
 
 import { LiveClassroom } from '@/components/scheduling/live-classroom';
 import { PageHeader } from '@/components/platform/page-header';
@@ -9,6 +10,19 @@ export default async function LiveClassPage({
 }: Readonly<{ params: Promise<{ sessionId: string; slug: string }> }>) {
   const { sessionId, slug } = await params;
   const data = await getLiveSession(slug, sessionId);
+  const courseSlug =
+    data.session.course && typeof data.session.course.slug === 'string'
+      ? data.session.course.slug
+      : null;
+  if (
+    data.session.course_group_activity_id &&
+    courseSlug &&
+    data.access.capabilities.includes('assessment.attempt')
+  ) {
+    redirect(
+      `/organizaciones/${slug}/aprender/${courseSlug}/actividades/${data.session.course_group_activity_id}`,
+    );
+  }
   return (
     <main className="academic-page live-class-page" id="contenido-principal">
       <PageHeader

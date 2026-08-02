@@ -3,7 +3,11 @@ from __future__ import annotations
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from domain.courses.services import approve_revision, submit_revision_for_review
+from domain.courses.services import (
+    approve_revision,
+    confirm_completion_policy,
+    submit_revision_for_review,
+)
 from domain.learning.services import enroll_member
 from domain.organizations.models import Membership
 from domain.publishing.services import (
@@ -63,6 +67,15 @@ class LearningFixtureMixin(PublishingFixtureMixin):
             course=revision.course,
             release_number=release.number,
             expected_publication_version=publication.lock_version,
+        )
+        _, draft = confirm_completion_policy(
+            actor=owner,
+            organization=organization,
+            revision=draft,
+            expected_version=draft.lock_version,
+            require_required_activities=True,
+            minimum_grade_basis_points=None,
+            minimum_attendance_basis_points=None,
         )
         draft = submit_revision_for_review(
             actor=owner,

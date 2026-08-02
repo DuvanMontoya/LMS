@@ -11,6 +11,7 @@ from django.db import models
 from django.db.models import F, Q
 from django.db.models.functions import Lower, Trim
 
+from domain.courses.choices import ActivityType
 from domain.courses.models import Course
 from domain.organizations.models import Membership, Organization
 from domain.publishing.models import CourseRelease
@@ -19,6 +20,9 @@ from .choices import (
     AcademicGroupLevel,
     AcademicGroupMemberStatus,
     AcademicGroupRole,
+    AcademicPeriodType,
+    ActivityProgressSource,
+    ActivityProgressStatus,
     AssignmentReason,
     CohortRosterMode,
     CohortStaffRole,
@@ -39,6 +43,94 @@ class NoPhysicalDeleteModel(models.Model):
 
     def delete(self, *args: Any, **kwargs: Any) -> tuple[int, dict[str, int]]:
         raise ValidationError("Este historial no se elimina físicamente.")
+
+
+class AcademicPeriod(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, related_name="academic_periods"
+    )
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="children",
+    )
+    name = models.CharField(max_length=160)
+    slug = models.SlugField(max_length=80)
+    period_type = models.CharField(max_length=24, choices=AcademicPeriodType.choices)
+    starts_on = models.DateField()
+    ends_on = models.DateField()
+    status = models.CharField(
+        max_length=16, choices=CohortStatus.choices, default=CohortStatus.ACTIVE
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="academic_periods_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="academic_periods_updated",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+    lock_version = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                Lower("slug"), "organization", name="learning_period_org_slug_ci"
+            ),
+            models.CheckConstraint(
+                condition=Q(starts_on__lte=F("ends_on")),
+                name="learning_period_date_window",
+            ),
+            models.CheckConstraint(
+                condition=Q(parent__isnull=True) | ~Q(parent=F("id")),
+                name="learning_period_not_self_parent",
+            ),
+            models.CheckConstraint(
+                condition=Q(lock_version__gt=0),
+                name="learning_period_lock_positive",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["organization", "starts_on", "ends_on"],
+                name="learn_period_org_dates_ix",
+            )
+        ]
+        ordering = ("starts_on", "ends_on", "name", "id")
+
+    def __str__(self) -> str:
+        return f"{self.organization.slug}:{self.name}"
+
+    def clean(self) -> None:
+        super().clean()
+        self.name = self.name.strip()
+        self.slug = self.slug.strip().lower()
+        if not self.name:
+            raise ValidationError({"name": "El nombre es obligatorio."})
+        if self.parent_id:
+            if self.parent.organization_id != self.organization_id:
+                raise ValidationError(
+                    {"parent": "El periodo pertenece a otra organización."}
+                )
+            if (
+                self.starts_on < self.parent.starts_on
+                or self.ends_on > self.parent.ends_on
+            ):
+                raise ValidationError(
+                    {"parent": "El periodo debe quedar dentro de su periodo padre."}
+                )
+            ancestor = self.parent
+            while ancestor is not None:
+                if ancestor.pk == self.pk:
+                    raise ValidationError({"parent": "La jerarquía contiene un ciclo."})
+                ancestor = ancestor.parent
 
 
 class AcademicGroup(NoPhysicalDeleteModel):
@@ -162,6 +254,14 @@ class LearningCohort(NoPhysicalDeleteModel):
     release = models.ForeignKey(
         CourseRelease, on_delete=models.PROTECT, related_name="learning_cohorts"
     )
+    academic_period = models.ForeignKey(
+        AcademicPeriod,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="course_groups",
+    )
+    migration_review_required = models.BooleanField(default=False)
     academic_group = models.ForeignKey(
         AcademicGroup,
         null=True,
@@ -256,6 +356,10 @@ class LearningCohort(NoPhysicalDeleteModel):
                 fields=["course", "status"], name="learn_cohort_course_state_ix"
             ),
             models.Index(fields=["release"], name="learn_cohort_release_ix"),
+            models.Index(
+                fields=["academic_period", "status"],
+                name="learn_cohort_period_state_ix",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -280,6 +384,12 @@ class LearningCohort(NoPhysicalDeleteModel):
             or self.release.course.organization_id != self.organization_id
         ):
             raise ValidationError({"release": "El release no pertenece al curso."})
+        if self.academic_period_id and (
+            self.academic_period.organization_id != self.organization_id
+        ):
+            raise ValidationError(
+                {"academic_period": "El periodo pertenece a otra organización."}
+            )
         if self.pk and self.release_id:
             original_release_id = (
                 type(self)
@@ -1050,4 +1160,206 @@ class LearningEvent(NoPhysicalDeleteModel):
     def save(self, *args: Any, **kwargs: Any) -> None:
         if not self._state.adding:
             raise ValidationError("Los eventos de aprendizaje son inmutables.")
+        super().save(*args, **kwargs)
+
+
+class CourseGroupActivity(NoPhysicalDeleteModel):
+    """Release-pinned operational activity materialized for one course group."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    course_group = models.ForeignKey(
+        LearningCohort,
+        on_delete=models.PROTECT,
+        related_name="activity_instances",
+    )
+    academic_period = models.ForeignKey(
+        AcademicPeriod,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="course_group_activities",
+    )
+    course_release = models.ForeignKey(
+        CourseRelease,
+        on_delete=models.PROTECT,
+        related_name="course_group_activities",
+    )
+    source_activity_id = models.UUIDField()
+    source_module_id = models.UUIDField()
+    activity_type = models.CharField(max_length=24, choices=ActivityType.choices)
+    module_title = models.CharField(max_length=200)
+    title = models.CharField(max_length=200)
+    summary = models.TextField(max_length=1200, blank=True)
+    module_position = models.PositiveIntegerField()
+    position = models.PositiveIntegerField()
+    required = models.BooleanField(default=True)
+    completion_policy = models.JSONField(default=dict)
+    availability_rules = models.JSONField(default=list, blank=True)
+    binding_snapshot = models.JSONField(default=dict)
+    release_snapshot_digest = models.CharField(max_length=64)
+    migration_review_required = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["course_group", "source_activity_id"],
+                name="learn_group_activity_source_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["course_group", "module_position", "position"],
+                name="learn_group_activity_position_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(module_position__gt=0) & Q(position__gt=0),
+                name="learn_group_activity_position_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(release_snapshot_digest__regex=r"^[0-9a-f]{64}$"),
+                name="learn_group_activity_digest_sha256",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["course_group", "module_position", "position"],
+                name="learn_group_activity_order_ix",
+            ),
+            models.Index(
+                fields=["activity_type", "migration_review_required"],
+                name="learn_group_activity_type_ix",
+            ),
+        ]
+        ordering = ("module_position", "position", "id")
+
+    def __str__(self) -> str:
+        return f"{self.course_group_id}:{self.activity_type}:{self.title}"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.course_group_id and self.course_release_id:
+            if self.course_group.release_id != self.course_release_id:
+                raise ValidationError(
+                    {"course_release": "La actividad usa otro release."}
+                )
+        if self.academic_period_id != self.course_group.academic_period_id:
+            raise ValidationError(
+                {"academic_period": "La actividad usa otro periodo académico."}
+            )
+        if not isinstance(self.completion_policy, dict):
+            raise ValidationError({"completion_policy": "La política es inválida."})
+        if not isinstance(self.availability_rules, list):
+            raise ValidationError(
+                {"availability_rules": "Las reglas de disponibilidad son inválidas."}
+            )
+        if not isinstance(self.binding_snapshot, dict):
+            raise ValidationError({"binding_snapshot": "El binding es inválido."})
+
+
+class ActivityProgress(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    course_progress = models.ForeignKey(
+        CourseProgress, on_delete=models.PROTECT, related_name="activity_progress"
+    )
+    group_activity = models.ForeignKey(
+        CourseGroupActivity,
+        on_delete=models.PROTECT,
+        related_name="learner_progress",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=ActivityProgressStatus.choices,
+        default=ActivityProgressStatus.AVAILABLE,
+    )
+    evidence = models.JSONField(default=dict)
+    source = models.CharField(max_length=16, choices=ActivityProgressSource.choices)
+    policy_version = models.PositiveIntegerField(default=1)
+    lock_version = models.PositiveIntegerField(default=1)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    state_changed_at = models.DateTimeField()
+    state_changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="activity_progress_changes",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["course_progress", "group_activity"],
+                name="learn_activity_progress_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(policy_version__gt=0) & Q(lock_version__gt=0),
+                name="learn_activity_progress_versions_positive",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["course_progress", "status"],
+                name="learn_act_progress_state_ix",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.course_progress_id}:{self.group_activity_id}:{self.status}"
+
+    def clean(self) -> None:
+        super().clean()
+        assignment = self.course_progress.release_assignment
+        enrollment = assignment.enrollment
+        if self.group_activity.course_release_id != assignment.release_id:
+            raise ValidationError(
+                {"group_activity": "La actividad pertenece a otro release."}
+            )
+        cohort = enrollment.effective_cohort
+        if cohort is None or cohort.id != self.group_activity.course_group_id:
+            raise ValidationError(
+                {"group_activity": "La actividad pertenece a otro grupo de curso."}
+            )
+        if not isinstance(self.evidence, dict):
+            raise ValidationError({"evidence": "La evidencia debe ser un objeto."})
+
+
+class ActivityProgressEvent(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    activity_progress = models.ForeignKey(
+        ActivityProgress, on_delete=models.PROTECT, related_name="events"
+    )
+    previous_status = models.CharField(
+        max_length=16,
+        choices=ActivityProgressStatus.choices,
+        blank=True,
+        default="",
+    )
+    new_status = models.CharField(max_length=16, choices=ActivityProgressStatus.choices)
+    source = models.CharField(max_length=16, choices=ActivityProgressSource.choices)
+    policy_version = models.PositiveIntegerField()
+    evidence = models.JSONField(default=dict)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="activity_progress_events",
+    )
+    occurred_at = models.DateTimeField()
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["activity_progress", "occurred_at"],
+                name="learn_activity_event_time_ix",
+            )
+        ]
+        ordering = ("occurred_at", "id")
+
+    def __str__(self) -> str:
+        return f"{self.activity_progress_id}:{self.occurred_at.isoformat()}"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if not self._state.adding:
+            raise ValidationError("Los eventos de actividad son inmutables.")
         super().save(*args, **kwargs)

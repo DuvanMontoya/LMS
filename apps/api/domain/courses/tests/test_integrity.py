@@ -1,26 +1,93 @@
 from __future__ import annotations
 
+from datetime import date
+
 from django.test import TestCase
 
 from domain.catalog.models import CatalogStatus
 from domain.catalog.services import create_learning_objective, create_subject
 from domain.courses.exceptions import (
+    CourseAccessDenied,
     CourseCrossOrganizationRelation,
     CourseCurriculumAlignmentInvalid,
     CourseRevisionNotReady,
 )
+from domain.courses.selectors import courses_visible_to_actor
 from domain.courses.services import (
+    assign_course_teaching_exception,
+    close_course_teaching_exception,
     create_module,
     create_unit,
     replace_unit_learning_objectives,
     replace_unit_topics,
     submit_revision_for_review,
 )
+from domain.organizations.choices import RoleCode
+from domain.organizations.models import Membership
 
 from .support import CourseFixtureMixin
 
 
 class CourseIntegrityTests(CourseFixtureMixin, TestCase):
+    def test_course_exception_scopes_authoring_without_granting_group_access(
+        self,
+    ) -> None:
+        owner, organization, *_, revision = self.course_revision()
+        author = self.member(
+            owner, organization, RoleCode.AUTHOR, "scoped-author@example.test"
+        )
+        membership = Membership.objects.get(organization=organization, user=author)
+        self.assertFalse(
+            courses_visible_to_actor(author, organization)
+            .filter(pk=revision.course_id)
+            .exists()
+        )
+        with self.assertRaises(CourseAccessDenied):
+            create_module(
+                actor=author,
+                organization=organization,
+                revision=revision,
+                expected_version=revision.lock_version,
+                title="Bypass sin responsabilidad",
+            )
+        exception = assign_course_teaching_exception(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            membership=membership,
+            starts_on=date.today(),
+            ends_on=None,
+            rationale="Excepción por experiencia específica.",
+        )
+        self.assertTrue(
+            courses_visible_to_actor(author, organization)
+            .filter(pk=revision.course_id)
+            .exists()
+        )
+        _, revision = create_module(
+            actor=author,
+            organization=organization,
+            revision=revision,
+            expected_version=revision.lock_version,
+            title="Módulo autorizado por excepción",
+        )
+        close_course_teaching_exception(
+            actor=owner, exception=exception, ended_on=date.today()
+        )
+        self.assertFalse(
+            courses_visible_to_actor(author, organization)
+            .filter(pk=revision.course_id)
+            .exists()
+        )
+        with self.assertRaises(CourseAccessDenied):
+            create_module(
+                actor=author,
+                organization=organization,
+                revision=revision,
+                expected_version=revision.lock_version,
+                title="Bypass tras cierre",
+            )
+
     def test_readiness_identifies_module_and_unit_gaps(self) -> None:
         owner, organization, *_, revision = self.course_revision()
         module, revision = create_module(

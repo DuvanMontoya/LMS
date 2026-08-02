@@ -22,10 +22,13 @@ from domain.learning.exceptions import LearningDomainError
 from domain.learning.models import (
     AcademicGroup,
     AcademicGroupMember,
+    AcademicPeriod,
     CohortStaffAssignment,
     CourseEnrollment,
+    CourseGroupActivity,
     LearningCohort,
 )
+from domain.learning.policies import has_institutional_learning_scope
 from domain.learning.selectors import (
     academic_groups_visible_to_actor,
     cohort_progress_summary,
@@ -33,6 +36,7 @@ from domain.learning.selectors import (
     cohorts_visible_to_actor,
     enrollment_visible_to_actor,
     enrollments_visible_to_actor,
+    learning_activity,
     learning_outline,
     learning_unit,
     my_active_enrollments,
@@ -46,6 +50,7 @@ from domain.learning.services import (
     complete_unit,
     confirm_cohort_roster_sync,
     create_academic_group,
+    create_academic_period,
     create_cohort,
     enroll_cohort_members,
     enroll_member,
@@ -72,6 +77,8 @@ from .serializers import (
     AcademicGroupReadSerializer,
     AcademicGroupRosterReadSerializer,
     AcademicGroupRosterSerializer,
+    AcademicPeriodCreateSerializer,
+    AcademicPeriodReadSerializer,
     CohortCreateSerializer,
     CohortEnrollmentBatchSerializer,
     CohortReadSerializer,
@@ -83,11 +90,13 @@ from .serializers import (
     CohortVersionSerializer,
     CompleteUnitSerializer,
     CompletionResultSerializer,
+    CourseGroupActivityReadSerializer,
     EnrollmentCreateSerializer,
     EnrollmentIndividualizeSerializer,
     EnrollmentLifecycleSerializer,
     EnrollmentReadSerializer,
     ErrorSerializer,
+    LearningActivitySerializer,
     LearningAssetAccessResponseSerializer,
     LearningAssetAccessSerializer,
     LearningOutlineSerializer,
@@ -95,6 +104,7 @@ from .serializers import (
     MyLearningSerializer,
     PaginatedAcademicGroupRosterSerializer,
     PaginatedAcademicGroupSerializer,
+    PaginatedAcademicPeriodSerializer,
     PaginatedCohortProgressSerializer,
     PaginatedCohortSerializer,
     PaginatedCohortStaffSerializer,
@@ -109,6 +119,33 @@ class LearningPagination(PageNumberPagination):
     page_size = 25
     page_size_query_param = "page_size"
     max_page_size = 100
+
+
+class CourseGroupActivityListView(APIView):
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "activity_type",
+                str,
+                description="Filtra lesson, live_class o assessment.",
+            )
+        ],
+        responses={200: CourseGroupActivityReadSerializer(many=True)},
+    )
+    def get(self, request: Request, slug: str) -> Response:
+        organization = _organization(request, slug)
+        queryset = (
+            CourseGroupActivity.objects.filter(
+                course_group__in=cohorts_visible_to_actor(request.user, organization),
+                migration_review_required=False,
+            )
+            .select_related("course_group__course", "course_release", "academic_period")
+            .order_by("course_group__name", "module_position", "position", "id")
+        )
+        activity_type = request.query_params.get("activity_type", "").strip()
+        if activity_type:
+            queryset = queryset.filter(activity_type=activity_type)
+        return Response(CourseGroupActivityReadSerializer(queryset, many=True).data)
 
 
 class PositionThrottle(SimpleRateThrottle):
@@ -129,6 +166,62 @@ class PositionThrottle(SimpleRateThrottle):
             return super().allow_request(request, view)
         except Exception:
             return True
+
+
+class AcademicPeriodListCreateView(APIView):
+    @extend_schema(
+        operation_id="learning_academic_periods_list",
+        responses={200: PaginatedAcademicPeriodSerializer, 403: ErrorSerializer},
+    )
+    def get(self, request: Request, slug: str) -> Response:
+        organization = _organization(request, slug)
+        if not has_institutional_learning_scope(request.user, organization):
+            return Response(
+                {"code": "learning_permission_denied", "detail": "Sin acceso."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return _paginate(
+            request,
+            AcademicPeriod.objects.filter(organization=organization),
+            AcademicPeriodReadSerializer,
+            self,
+        )
+
+    @extend_schema(
+        operation_id="learning_academic_periods_create",
+        request=AcademicPeriodCreateSerializer,
+        responses={201: AcademicPeriodReadSerializer, 403: ErrorSerializer},
+    )
+    def post(self, request: Request, slug: str) -> Response:
+        organization = _organization(request, slug)
+        serializer = AcademicPeriodCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        parent = (
+            get_object_or_404(
+                AcademicPeriod, organization=organization, pk=data["parent_id"]
+            )
+            if data.get("parent_id")
+            else None
+        )
+        result = _domain_call(
+            lambda: create_academic_period(
+                actor=request.user,
+                organization=organization,
+                parent=parent,
+                name=data["name"],
+                slug=data["slug"],
+                period_type=data["period_type"],
+                starts_on=data["starts_on"],
+                ends_on=data["ends_on"],
+            )
+        )
+        if isinstance(result, Response):
+            return result
+        return Response(
+            AcademicPeriodReadSerializer(result).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class AcademicGroupListCreateView(APIView):
@@ -336,12 +429,18 @@ class CohortListCreateView(APIView):
             if data.get("academic_group_id")
             else None
         )
+        academic_period = get_object_or_404(
+            AcademicPeriod,
+            organization=organization,
+            pk=data["academic_period_id"],
+        )
         result = _domain_call(
             lambda: create_cohort(
                 actor=request.user,
                 organization=organization,
                 course=course,
                 release=release,
+                academic_period=academic_period,
                 academic_group=academic_group,
                 name=data["name"],
                 slug=data.get("slug"),
@@ -846,6 +945,28 @@ class MyOutlineView(APIView):
             lambda: (
                 require_learning_access(actor=request.user, enrollment=enrollment),
                 learning_outline(enrollment),
+            )[1]
+        )
+        return result if isinstance(result, Response) else Response(result)
+
+
+class MyActivityView(APIView):
+    @extend_schema(responses={200: LearningActivitySerializer, 404: ErrorSerializer})
+    def get(
+        self,
+        request: Request,
+        slug: str,
+        enrollment_id: uuid.UUID,
+        activity_instance_id: uuid.UUID,
+    ) -> Response:
+        organization = _organization(request, slug)
+        enrollment = my_enrollment(request.user, organization, enrollment_id)
+        from domain.learning.access import require_learning_access
+
+        result = _domain_call(
+            lambda: (
+                require_learning_access(actor=request.user, enrollment=enrollment),
+                learning_activity(enrollment, activity_instance_id),
             )[1]
         )
         return result if isinstance(result, Response) else Response(result)

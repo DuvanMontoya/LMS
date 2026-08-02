@@ -16,11 +16,14 @@ from domain.organizations.models import Membership, Organization
 from domain.publishing.choices import PublicationStatus
 from domain.publishing.integrity import verify_release
 from domain.publishing.models import CoursePublication, CourseRelease
+from domain.publishing.snapshots import release_outline
 
 from .access import require_learning_access
 from .choices import (
     AcademicGroupMemberStatus,
     AcademicGroupRole,
+    ActivityProgressSource,
+    ActivityProgressStatus,
     AssignmentReason,
     CohortRosterMode,
     CohortStatus,
@@ -33,6 +36,7 @@ from .choices import (
     UnitProgressStatus,
 )
 from .exceptions import (
+    AcademicPeriodRequired,
     AccessWindowInvalid,
     CohortArchived,
     CohortReleaseImmutable,
@@ -50,8 +54,12 @@ from .exceptions import (
 from .models import (
     AcademicGroup,
     AcademicGroupMember,
+    AcademicPeriod,
+    ActivityProgress,
+    ActivityProgressEvent,
     CohortStaffAssignment,
     CourseEnrollment,
+    CourseGroupActivity,
     CourseProgress,
     EnrollmentCohortAssignment,
     EnrollmentReleaseAssignment,
@@ -129,6 +137,102 @@ def _active_publication(course: Course) -> CoursePublication:
     if publication is None or publication.status != PublicationStatus.ACTIVE:
         raise LearningReleaseInvalid("El curso no tiene publicación activa.")
     return publication
+
+
+@transaction.atomic
+def create_academic_period(
+    *,
+    actor: object,
+    organization: Organization,
+    name: str,
+    slug: str,
+    period_type: str,
+    starts_on: object,
+    ends_on: object,
+    parent: AcademicPeriod | None = None,
+) -> AcademicPeriod:
+    if not can_manage_cohorts(actor, organization):  # type: ignore[arg-type]
+        raise LearningPermissionDenied("No puede administrar periodos académicos.")
+    if parent is not None and parent.organization_id != organization.id:
+        raise LearningPermissionDenied(
+            "El periodo padre pertenece a otra organización."
+        )
+    period = AcademicPeriod(
+        organization=organization,
+        parent=parent,
+        name=name,
+        slug=slugify(slug),
+        period_type=period_type,
+        starts_on=starts_on,
+        ends_on=ends_on,
+        created_by=actor,
+        updated_by=actor,
+    )
+    period.full_clean()
+    period.save()
+    return period
+
+
+def _materialize_course_group_activities(cohort: LearningCohort) -> None:
+    outline = release_outline(cohort.release.snapshot)
+    rows: list[CourseGroupActivity] = []
+    for module in outline:
+        for activity in module["activities"]:
+            rows.append(
+                CourseGroupActivity(
+                    course_group=cohort,
+                    academic_period=cohort.academic_period,
+                    course_release=cohort.release,
+                    source_activity_id=activity["id"],
+                    source_module_id=module["id"],
+                    activity_type=activity["type"],
+                    module_title=module["title"],
+                    title=activity["title"],
+                    summary=activity["summary"],
+                    module_position=module["position"],
+                    position=activity["position"],
+                    required=activity["required"],
+                    completion_policy=activity["completion_policy"],
+                    availability_rules=activity["availability_rules"],
+                    binding_snapshot=activity["binding"],
+                    release_snapshot_digest=cohort.release.snapshot_digest,
+                    migration_review_required=cohort.migration_review_required,
+                )
+            )
+    for row in rows:
+        row.full_clean()
+    CourseGroupActivity.objects.bulk_create(rows)
+
+
+def _initialize_activity_progress(
+    *, progress: CourseProgress, cohort: LearningCohort, actor: object, now: datetime
+) -> None:
+    for group_activity in cohort.activity_instances.all():
+        status = (
+            ActivityProgressStatus.LOCKED
+            if group_activity.availability_rules
+            else ActivityProgressStatus.AVAILABLE
+        )
+        activity_progress = ActivityProgress.objects.create(
+            course_progress=progress,
+            group_activity=group_activity,
+            status=status,
+            evidence={"initialized_from_release": cohort.release.snapshot_digest},
+            source=ActivityProgressSource.MANUAL,
+            state_changed_at=now,
+            state_changed_by=actor,
+        )
+        ActivityProgressEvent.objects.create(
+            activity_progress=activity_progress,
+            previous_status="",
+            new_status=status,
+            source=ActivityProgressSource.MANUAL,
+            policy_version=1,
+            evidence={"initialized": True},
+            actor=actor,
+            occurred_at=now,
+        )
+    _refresh_activity_availability(progress=progress, actor=actor, now=now)
 
 
 @transaction.atomic
@@ -295,6 +399,8 @@ def create_cohort(
     organization: Organization,
     course: Course,
     release: CourseRelease,
+    academic_period: AcademicPeriod | None = None,
+    migration_review_required: bool = False,
     academic_group: AcademicGroup | None = None,
     name: str,
     slug: str | None = None,
@@ -311,6 +417,16 @@ def create_cohort(
     _validate_release(organization=organization, course=course, release=release)
     if academic_group and academic_group.organization_id != organization.id:
         raise LearningPermissionDenied("El grupo pertenece a otra organización.")
+    if academic_period is None and not migration_review_required:
+        raise AcademicPeriodRequired(
+            "Todo grupo de curso nuevo exige un periodo académico."
+        )
+    if academic_period is not None and migration_review_required:
+        raise AcademicPeriodRequired(
+            "La revisión de migración sólo aplica a grupos heredados sin periodo."
+        )
+    if academic_period and academic_period.organization_id != organization.id:
+        raise LearningPermissionDenied("El periodo pertenece a otra organización.")
     resolved_roster_mode = roster_mode or (
         CohortRosterMode.SYNCED if academic_group else CohortRosterMode.MANUAL
     )
@@ -318,6 +434,8 @@ def create_cohort(
         organization=organization,
         course=course,
         release=release,
+        academic_period=academic_period,
+        migration_review_required=migration_review_required,
         academic_group=academic_group,
         name=name,
         slug=slugify(slug or name),
@@ -330,6 +448,7 @@ def create_cohort(
     )
     cohort.full_clean()
     cohort.save()
+    _materialize_course_group_activities(cohort)
     replace_cohort_staff(
         actor=actor,
         cohort=cohort,
@@ -896,6 +1015,9 @@ def _create_enrollment_rows(
         )
         cohort_assignment.full_clean()
         cohort_assignment.save()
+        _initialize_activity_progress(
+            progress=progress, cohort=cohort, actor=actor, now=now
+        )
     _event(
         event_type=LearningEventType.ENROLLMENT_CREATED,
         enrollment=enrollment,
@@ -1305,7 +1427,450 @@ def _locked_student_state(
     return enrollment, access.assignment, progress
 
 
+def _lesson_activity_progress(
+    *, progress: CourseProgress, unit_id: uuid.UUID
+) -> ActivityProgress | None:
+    return (
+        ActivityProgress.objects.select_for_update()
+        .select_related("group_activity")
+        .filter(
+            course_progress=progress,
+            group_activity__activity_type="lesson",
+            group_activity__binding_snapshot__unit_id=str(unit_id),
+        )
+        .first()
+    )
+
+
+def _transition_activity_progress(
+    *,
+    activity_progress: ActivityProgress | None,
+    status: str,
+    actor: object,
+    now: datetime,
+    evidence: dict[str, object],
+    source: str = ActivityProgressSource.LESSON,
+) -> None:
+    if activity_progress is None:
+        return
+    if activity_progress.status == status and activity_progress.evidence == evidence:
+        return
+    if (
+        activity_progress.status == ActivityProgressStatus.LOCKED
+        and status != ActivityProgressStatus.AVAILABLE.value
+    ):
+        raise LearningPermissionDenied("La actividad todavía no está disponible.")
+    previous_status = activity_progress.status
+    activity_progress.status = status
+    activity_progress.source = source
+    activity_progress.evidence = evidence
+    activity_progress.started_at = activity_progress.started_at or now
+    activity_progress.completed_at = (
+        now
+        if status
+        in {
+            ActivityProgressStatus.COMPLETED,
+            ActivityProgressStatus.PASSED,
+            ActivityProgressStatus.WAIVED,
+        }
+        else None
+    )
+    activity_progress.state_changed_at = now
+    activity_progress.state_changed_by = actor
+    activity_progress.lock_version += 1
+    activity_progress.full_clean()
+    activity_progress.save()
+    ActivityProgressEvent.objects.create(
+        activity_progress=activity_progress,
+        previous_status=previous_status,
+        new_status=status,
+        source=source,
+        policy_version=activity_progress.policy_version,
+        evidence=evidence,
+        actor=actor,
+        occurred_at=now,
+    )
+
+
+def _refresh_activity_availability(
+    *, progress: CourseProgress, actor: object, now: datetime
+) -> None:
+    rows = list(
+        ActivityProgress.objects.select_for_update()
+        .select_related("group_activity")
+        .filter(course_progress=progress)
+    )
+    by_source_id = {str(row.group_activity.source_activity_id): row for row in rows}
+    completed = {
+        ActivityProgressStatus.COMPLETED,
+        ActivityProgressStatus.PASSED,
+        ActivityProgressStatus.WAIVED,
+    }
+    mastered_objectives = {
+        str(objective_id)
+        for row in rows
+        for objective_id in row.evidence.get("mastered_objective_ids", [])
+    }
+    for row in rows:
+        if row.status != ActivityProgressStatus.LOCKED:
+            continue
+        satisfied = True
+        for rule in row.group_activity.availability_rules:
+            rule_type = rule.get("type")
+            prerequisite = by_source_id.get(rule.get("prerequisite_activity_id"))
+            if rule_type == "activity_completed":
+                satisfied = (
+                    prerequisite is not None and prerequisite.status in completed
+                )
+            elif rule_type == "activity_passed":
+                satisfied = (
+                    prerequisite is not None
+                    and prerequisite.status == ActivityProgressStatus.PASSED
+                )
+            elif rule_type == "minimum_grade":
+                satisfied = prerequisite is not None and int(
+                    prerequisite.evidence.get("grade_basis_points", -1)
+                ) >= int(rule.get("threshold_basis_points") or 0)
+            elif rule_type == "objective_mastered":
+                satisfied = (
+                    str(rule.get("learning_objective_id")) in mastered_objectives
+                )
+            elif rule_type in {"available_from", "available_until"}:
+                boundary = datetime.fromisoformat(str(rule.get("available_at")))
+                satisfied = (
+                    now >= boundary
+                    if rule_type == "available_from"
+                    else now <= boundary
+                )
+            if not satisfied:
+                break
+        if satisfied:
+            _transition_activity_progress(
+                activity_progress=row,
+                status=ActivityProgressStatus.AVAILABLE,
+                actor=actor,
+                now=now,
+                evidence={"availability_rules_satisfied": True},
+            )
+
+
+@transaction.atomic
+def record_activity_from_assessment(
+    *,
+    actor: object | None,
+    group_activity_id: uuid.UUID,
+    release_assignment_id: uuid.UUID,
+    grade_version_id: uuid.UUID,
+    occurred_at: datetime,
+    grade_basis_points: int | None,
+    passed: bool | None,
+    mastered_objective_ids: list[str] | None = None,
+) -> bool:
+    group_activity = CourseGroupActivity.objects.select_related(
+        "course_group", "course_release"
+    ).get(pk=group_activity_id, activity_type="assessment")
+    progress = CourseProgress.objects.select_for_update().get(
+        release_assignment_id=release_assignment_id,
+        release_assignment__release=group_activity.course_release,
+        release_assignment__enrollment__cohort_assignments__cohort=(
+            group_activity.course_group
+        ),
+        release_assignment__enrollment__cohort_assignments__ended_at__isnull=True,
+    )
+    activity_progress = ActivityProgress.objects.select_for_update().get(
+        course_progress=progress, group_activity=group_activity
+    )
+    method = group_activity.completion_policy.get("method")
+    if method == "submission":
+        new_status = ActivityProgressStatus.COMPLETED
+    elif method == "grade":
+        new_status = (
+            ActivityProgressStatus.COMPLETED
+            if grade_basis_points is not None
+            else ActivityProgressStatus.IN_PROGRESS
+        )
+    elif method == "pass":
+        new_status = (
+            ActivityProgressStatus.PASSED
+            if passed is True
+            else ActivityProgressStatus.FAILED
+            if passed is False
+            else ActivityProgressStatus.IN_PROGRESS
+        )
+    else:
+        raise LearningProgressConflict(
+            "La política de evaluación del release no es válida."
+        )
+    evidence: dict[str, object] = {
+        "grade_version_id": str(grade_version_id),
+        "grade_basis_points": grade_basis_points,
+        "passed": passed,
+        "mastered_objective_ids": mastered_objective_ids or [],
+    }
+    previous_evidence = dict(activity_progress.evidence)
+    _transition_activity_progress(
+        activity_progress=activity_progress,
+        status=new_status,
+        actor=actor,
+        now=occurred_at,
+        evidence=evidence,
+        source=ActivityProgressSource.ASSESSMENT,
+    )
+    _refresh_activity_availability(progress=progress, actor=actor, now=occurred_at)
+    progress.started_at = progress.started_at or occurred_at
+    _recalculate_progress(progress, occurred_at)
+    progress.lock_version += 1
+    progress.full_clean()
+    progress.save()
+    return previous_evidence != evidence or activity_progress.status != new_status
+
+
+@transaction.atomic
+def complete_activity_from_attendance(
+    *,
+    actor: object,
+    group_activity_id: uuid.UUID,
+    completed_at: datetime,
+    evidence: dict[str, object],
+) -> bool:
+    from .contracts import effective_course_group_enrollment
+
+    group_activity = CourseGroupActivity.objects.select_related(
+        "course_group__organization"
+    ).get(pk=group_activity_id, activity_type="live_class")
+    enrollment = effective_course_group_enrollment(
+        actor=actor,
+        organization=group_activity.course_group.organization,
+        course_group=group_activity.course_group,
+        at=completed_at,
+    )
+    if enrollment is None or enrollment.current_release_assignment_id is None:
+        return False
+    progress = CourseProgress.objects.select_for_update().get(
+        release_assignment=enrollment.current_release_assignment
+    )
+    activity_progress = ActivityProgress.objects.select_for_update().get(
+        course_progress=progress, group_activity=group_activity
+    )
+    if activity_progress.status in {
+        ActivityProgressStatus.COMPLETED,
+        ActivityProgressStatus.PASSED,
+        ActivityProgressStatus.WAIVED,
+    }:
+        return False
+    _transition_activity_progress(
+        activity_progress=activity_progress,
+        status=ActivityProgressStatus.COMPLETED,
+        actor=actor,
+        now=completed_at,
+        evidence=evidence,
+        source=ActivityProgressSource.ATTENDANCE,
+    )
+    _refresh_activity_availability(progress=progress, actor=actor, now=completed_at)
+    progress.started_at = progress.started_at or completed_at
+    _recalculate_progress(progress, completed_at)
+    progress.lock_version += 1
+    progress.full_clean()
+    progress.save()
+    return True
+
+
+def completion_projection(
+    progress: CourseProgress,
+    *,
+    activity_rows: list[ActivityProgress] | None = None,
+) -> dict[str, object]:
+    rows = activity_rows
+    if rows is None:
+        cached = getattr(progress, "_prefetched_objects_cache", {}).get(
+            "activity_progress"
+        )
+        rows = (
+            list(cached)
+            if cached is not None
+            else list(
+                ActivityProgress.objects.filter(
+                    course_progress=progress
+                ).select_related("group_activity")
+            )
+        )
+    completed_statuses = {
+        ActivityProgressStatus.COMPLETED,
+        ActivityProgressStatus.PASSED,
+        ActivityProgressStatus.WAIVED,
+    }
+    required_rows = [row for row in rows if row.group_activity.required]
+    completed_required = sum(row.status in completed_statuses for row in required_rows)
+    snapshot = progress.release_assignment.release.snapshot
+    policy = snapshot.get("completion_policy", {}) if isinstance(snapshot, dict) else {}
+    require_activities = bool(policy.get("require_required_activities", True))
+    activities_satisfied = (
+        (
+            completed_required == len(required_rows)
+            if rows
+            else (
+                progress.completed_units + progress.completed_required_activities
+                == progress.total_units + progress.total_required_activities
+            )
+        )
+        if require_activities
+        else True
+    )
+
+    evidence_by_activity = {
+        str(row.group_activity.source_activity_id): row.evidence for row in rows
+    }
+    categories = (
+        snapshot.get("grading_scheme", {}).get("categories", [])
+        if isinstance(snapshot, dict)
+        else []
+    )
+    grade_basis_points: int | None = None
+    if categories:
+        weighted_grade = 0
+        complete_grade = True
+        for category in categories:
+            category_grade = 0
+            for item in category.get("activities", []):
+                evidence = evidence_by_activity.get(str(item.get("activity_id")))
+                item_grade = evidence.get("grade_basis_points") if evidence else None
+                if item_grade is None:
+                    complete_grade = False
+                    continue
+                category_grade += (
+                    int(item_grade) * int(item.get("weight_basis_points", 0)) // 10_000
+                )
+            weighted_grade += (
+                category_grade * int(category.get("weight_basis_points", 0)) // 10_000
+            )
+        if complete_grade:
+            grade_basis_points = weighted_grade
+    minimum_grade = policy.get("minimum_grade_basis_points")
+    grade_satisfied = (
+        True
+        if minimum_grade is None
+        else grade_basis_points is not None and grade_basis_points >= int(minimum_grade)
+    )
+
+    live_rows = [
+        row for row in required_rows if row.group_activity.activity_type == "live_class"
+    ]
+    attended = sum(row.status in completed_statuses for row in live_rows)
+    attendance_basis_points = (
+        attended * 10_000 // len(live_rows) if live_rows else 10_000
+    )
+    minimum_attendance = policy.get("minimum_attendance_basis_points")
+    attendance_satisfied = minimum_attendance is None or attendance_basis_points >= int(
+        minimum_attendance
+    )
+
+    evidenced_objectives = {
+        str(objective_id)
+        for row in rows
+        for objective_id in row.evidence.get("mastered_objective_ids", [])
+    }
+    total_objectives = (
+        len(snapshot.get("curriculum", {}).get("learning_objectives", []))
+        if isinstance(snapshot, dict)
+        else 0
+    )
+    blockers: list[dict[str, str]] = []
+    if not activities_satisfied:
+        blockers.append(
+            {
+                "code": "required_activities_pending",
+                "message": "Faltan actividades obligatorias por completar.",
+            }
+        )
+    if not grade_satisfied:
+        blockers.append(
+            {
+                "code": (
+                    "grade_pending"
+                    if grade_basis_points is None
+                    else "minimum_grade_not_met"
+                ),
+                "message": (
+                    "La calificación final todavía no está disponible."
+                    if grade_basis_points is None
+                    else "La calificación final no alcanza el mínimo."
+                ),
+            }
+        )
+    if not attendance_satisfied:
+        blockers.append(
+            {
+                "code": "minimum_attendance_not_met",
+                "message": "La asistencia no alcanza el mínimo requerido.",
+            }
+        )
+    return {
+        "completion": {
+            "completed_required": completed_required,
+            "total_required": len(required_rows),
+            "satisfied": activities_satisfied,
+        },
+        "mastery": {
+            "evidenced_objective_ids": sorted(evidenced_objectives),
+            "evidenced_count": len(evidenced_objectives),
+            "total_objectives": total_objectives,
+        },
+        "grade": {
+            "basis_points": grade_basis_points,
+            "minimum_basis_points": minimum_grade,
+            "satisfied": grade_satisfied,
+        },
+        "attendance": {
+            "basis_points": attendance_basis_points,
+            "minimum_basis_points": minimum_attendance,
+            "satisfied": attendance_satisfied,
+        },
+        "blockers": blockers,
+        "is_complete": not blockers,
+    }
+
+
 def _recalculate_progress(progress: CourseProgress, now: datetime) -> None:
+    activity_rows = list(
+        ActivityProgress.objects.filter(course_progress=progress).select_related(
+            "group_activity"
+        )
+    )
+    if activity_rows:
+        completed_statuses = {
+            ActivityProgressStatus.COMPLETED,
+            ActivityProgressStatus.PASSED,
+            ActivityProgressStatus.WAIVED,
+        }
+        required_rows = [row for row in activity_rows if row.group_activity.required]
+        completed_required = sum(
+            row.status in completed_statuses for row in required_rows
+        )
+        required_total = len(required_rows)
+        lesson_rows = [
+            row for row in activity_rows if row.group_activity.activity_type == "lesson"
+        ]
+        progress.total_units = len(lesson_rows)
+        progress.completed_units = sum(
+            row.status in completed_statuses for row in lesson_rows
+        )
+        progress.completed_required_activities = completed_required
+        progress.total_required_activities = required_total
+        progress.percent_basis_points = (
+            completed_required * 10_000 // required_total if required_total else 10_000
+        )
+        projection = completion_projection(progress, activity_rows=activity_rows)
+        if projection["is_complete"]:
+            progress.status = ProgressStatus.COMPLETED
+            progress.completed_at = progress.completed_at or now
+        elif completed_required == 0 and progress.started_at is None:
+            progress.status = ProgressStatus.NOT_STARTED
+            progress.completed_at = None
+        else:
+            progress.status = ProgressStatus.IN_PROGRESS
+            progress.completed_at = None
+        progress.last_activity_at = now
+        return
     completed = UnitProgress.objects.filter(
         course_progress=progress,
         status=UnitProgressStatus.COMPLETED,
@@ -1515,6 +2080,14 @@ def open_unit(
     )
     snapshot_unit(assignment.release, unit_id)
     now = timezone.now()
+    activity_progress = _lesson_activity_progress(progress=progress, unit_id=unit_id)
+    _transition_activity_progress(
+        activity_progress=activity_progress,
+        status=ActivityProgressStatus.IN_PROGRESS,
+        actor=actor,
+        now=now,
+        evidence={"unit_id": str(unit_id), "action": "opened"},
+    )
     unit_progress, created = UnitProgress.objects.get_or_create(
         course_progress=progress,
         unit_id=unit_id,
@@ -1613,6 +2186,7 @@ def complete_unit(
     _require_progress_version(progress, expected_progress_version)
     snapshot_unit(assignment.release, unit_id)
     now = timezone.now()
+    activity_progress = _lesson_activity_progress(progress=progress, unit_id=unit_id)
     unit_progress = (
         UnitProgress.objects.select_for_update()
         .filter(course_progress=progress, unit_id=unit_id)
@@ -1644,6 +2218,14 @@ def complete_unit(
         unit_progress.completed_at = now
         unit_progress.last_opened_at = now
         unit_progress.save()
+    _transition_activity_progress(
+        activity_progress=activity_progress,
+        status=ActivityProgressStatus.COMPLETED,
+        actor=actor,
+        now=now,
+        evidence={"unit_id": str(unit_id), "action": "completed"},
+    )
+    _refresh_activity_availability(progress=progress, actor=actor, now=now)
     was_completed = progress.status == ProgressStatus.COMPLETED
     progress.started_at = progress.started_at or now
     progress.last_unit_id = unit_id
@@ -1708,10 +2290,18 @@ def reopen_unit(
     if unit_progress is None:
         raise LearningUnitNotCompleted("La unidad no está completada.")
     now = timezone.now()
+    activity_progress = _lesson_activity_progress(progress=progress, unit_id=unit_id)
     course_was_completed = progress.status == ProgressStatus.COMPLETED
     unit_progress.status = UnitProgressStatus.IN_PROGRESS
     unit_progress.completed_at = None
     unit_progress.save()
+    _transition_activity_progress(
+        activity_progress=activity_progress,
+        status=ActivityProgressStatus.IN_PROGRESS,
+        actor=actor,
+        now=now,
+        evidence={"unit_id": str(unit_id), "action": "reopened"},
+    )
     progress.last_unit_id = unit_id
     _recalculate_progress(progress, now)
     progress.lock_version += 1

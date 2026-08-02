@@ -7,6 +7,10 @@ EVENT = BASE + "events/<uuid:occurrence_id>/"
 SESSION = BASE + "live-sessions/<uuid:session_id>/"
 
 urlpatterns = [
+    path(
+        BASE + "course-activities/<uuid:activity_id>/binding/",
+        views.LiveClassActivityBindingView.as_view(),
+    ),
     path(BASE + "calendar/events/", views.CalendarEventListCreateView.as_view()),
     path(BASE + "participant-options/", views.ParticipantOptionListView.as_view()),
     path(BASE + "live-sessions/", views.LiveSessionListView.as_view()),

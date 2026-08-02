@@ -20,7 +20,9 @@ from rest_framework.response import Response as ApiResponse
 from rest_framework.views import APIView
 
 from domain.catalog.models import LearningObjective
+from domain.courses.models import CourseActivity
 from domain.learning.models import (
+    CourseGroupActivity,
     EnrollmentCohortAssignment,
     EnrollmentReleaseAssignment,
     LearningCohort,
@@ -31,6 +33,7 @@ from domain.organizations.selectors import organization_visible_to
 from domain.publishing.models import CourseRelease
 
 from ..choices import AuthoringStatus, ResponseStatus
+from ..course_activities import bind_assessment_activity
 from ..exceptions import AssessmentDomainError
 from ..models import (
     Assessment,
@@ -107,6 +110,8 @@ from ..services import (
 )
 from .filters import AssessmentFilter, DeliveryFilter, QuestionBankFilter
 from .serializers import (
+    AssessmentActivityBindingInputSerializer,
+    AssessmentActivityBindingSerializer,
     AssessmentCreateSerializer,
     AssessmentExpectedVersionSerializer,
     AssessmentOutlineSerializer,
@@ -165,11 +170,64 @@ def _organization(request: Request, slug: str) -> Organization:
     return organization_visible_to(request.user, slug)
 
 
+def _delivery_visible_to(
+    *, actor: object, organization: Organization, delivery_id: str
+) -> AssessmentDelivery:
+    return get_object_or_404(deliveries_for(organization, actor=actor), pk=delivery_id)
+
+
 def _domain_error(error: AssessmentDomainError) -> ApiResponse:
     payload: dict[str, object] = {"code": error.code, "detail": error.message}
     if error.path:
         payload["path"] = error.path
     return ApiResponse(payload, status=error.status_code)
+
+
+class AssessmentActivityBindingView(APIView):
+    @extend_schema(
+        operation_id="assessment_course_activity_binding_create",
+        request=AssessmentActivityBindingInputSerializer,
+        responses={201: AssessmentActivityBindingSerializer},
+    )
+    def post(self, request: Request, slug: str, activity_id: UUID) -> ApiResponse:
+        organization = _organization(request, slug)
+        serializer = AssessmentActivityBindingInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        activity = get_object_or_404(
+            CourseActivity.objects.select_related("module__revision__course"),
+            pk=activity_id,
+            module__revision__course__organization=organization,
+        )
+        assessment_version = get_object_or_404(
+            AssessmentVersion.objects.select_related("assessment"),
+            pk=serializer.validated_data["assessment_version_id"],
+            assessment__organization=organization,
+        )
+        result = _call(
+            lambda: bind_assessment_activity(
+                actor=request.user,
+                organization=organization,
+                activity=activity,
+                assessment_version=assessment_version,
+                expected_revision_version=serializer.validated_data[
+                    "expected_revision_version"
+                ],
+            )
+        )
+        if isinstance(result, ApiResponse):
+            return result
+        binding, revision_lock_version = result
+        return ApiResponse(
+            AssessmentActivityBindingSerializer(
+                {
+                    "id": binding.id,
+                    "activity_id": binding.activity_id,
+                    "assessment_version_id": binding.assessment_version_id,
+                    "revision_lock_version": revision_lock_version,
+                }
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 def _call(operation: Callable[[], Any]) -> ApiResponse | Any:
@@ -1362,7 +1420,10 @@ class DeliveryListCreateView(APIView):
     def get(self, request: Request, slug: str) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_view_deliveries(request.user, organization))
-        queryset = DeliveryFilter(request.query_params, deliveries_for(organization)).qs
+        queryset = DeliveryFilter(
+            request.query_params,
+            deliveries_for(organization, actor=request.user),
+        ).qs
         return _paginate(request, queryset, DeliverySerializer, self)
 
     @extend_schema(
@@ -1388,6 +1449,19 @@ class DeliveryListCreateView(APIView):
                 pk=data["course_release_id"],
                 course__organization=organization,
             )
+        group_activity = None
+        if data.get("course_group_activity_id"):
+            group_activity = get_object_or_404(
+                CourseGroupActivity.objects.select_related(
+                    "course_group__organization", "course_release"
+                ),
+                pk=data["course_group_activity_id"],
+                course_group__organization=organization,
+                migration_review_required=False,
+            )
+            _require(can_manage_course_group(request.user, group_activity.course_group))
+            if release is None:
+                release = group_activity.course_release
         result = _call(
             lambda: create_delivery(
                 actor=request.user,
@@ -1395,7 +1469,7 @@ class DeliveryListCreateView(APIView):
                 assessment_version=version,
                 name=data["name"],
                 course_release=release,
-                unit_id=data.get("unit_id"),
+                course_group_activity=group_activity,
                 opens_at=data.get("opens_at"),
                 closes_at=data.get("closes_at"),
             )
@@ -1414,8 +1488,8 @@ class DeliveryDetailView(APIView):
     def get(self, request: Request, slug: str, delivery_id: str) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_view_deliveries(request.user, organization))
-        delivery = get_object_or_404(
-            AssessmentDelivery, pk=delivery_id, organization=organization
+        delivery = _delivery_visible_to(
+            actor=request.user, organization=organization, delivery_id=delivery_id
         )
         return ApiResponse(DeliverySerializer(delivery).data)
 
@@ -1431,8 +1505,8 @@ class DeliveryLifecycleView(APIView):
     def post(self, request: Request, slug: str, delivery_id: str) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_manage_deliveries(request.user, organization))
-        delivery = get_object_or_404(
-            AssessmentDelivery, pk=delivery_id, organization=organization
+        delivery = _delivery_visible_to(
+            actor=request.user, organization=organization, delivery_id=delivery_id
         )
         serializer_class = (
             WithdrawalSerializer
@@ -1493,8 +1567,8 @@ class DeliveryAssignmentListCreateView(APIView):
     def get(self, request: Request, slug: str, delivery_id: str) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_manage_deliveries(request.user, organization))
-        delivery = get_object_or_404(
-            AssessmentDelivery, pk=delivery_id, organization=organization
+        delivery = _delivery_visible_to(
+            actor=request.user, organization=organization, delivery_id=delivery_id
         )
         return ApiResponse(
             DeliveryAssignmentSerializer(
@@ -1514,8 +1588,8 @@ class DeliveryAssignmentListCreateView(APIView):
     def post(self, request: Request, slug: str, delivery_id: str) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_manage_deliveries(request.user, organization))
-        delivery = get_object_or_404(
-            AssessmentDelivery, pk=delivery_id, organization=organization
+        delivery = _delivery_visible_to(
+            actor=request.user, organization=organization, delivery_id=delivery_id
         )
         serializer = AssignmentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -1567,8 +1641,8 @@ class AssignDeliveryCohortView(APIView):
     def post(self, request: Request, slug: str, delivery_id: str) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_manage_deliveries(request.user, organization))
-        delivery = get_object_or_404(
-            AssessmentDelivery, pk=delivery_id, organization=organization
+        delivery = _delivery_visible_to(
+            actor=request.user, organization=organization, delivery_id=delivery_id
         )
         serializer = CohortAssignmentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -1616,11 +1690,13 @@ class RevokeDeliveryAssignmentView(APIView):
     ) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_manage_deliveries(request.user, organization))
+        delivery = _delivery_visible_to(
+            actor=request.user, organization=organization, delivery_id=delivery_id
+        )
         assignment = get_object_or_404(
             DeliveryAssignment,
             pk=assignment_id,
-            delivery_id=delivery_id,
-            delivery__organization=organization,
+            delivery=delivery,
         )
         result = _call(
             lambda: revoke_delivery_assignment(

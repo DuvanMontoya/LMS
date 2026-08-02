@@ -1461,6 +1461,8 @@ def create_delivery(
     assessment_version: AssessmentVersion,
     name: str,
     course_release: object | None = None,
+    course_group_activity: object | None = None,
+    migration_review_required: bool = False,
     unit_id: object | None = None,
     opens_at: object | None = None,
     closes_at: object | None = None,
@@ -1470,6 +1472,8 @@ def create_delivery(
         assessment_version=assessment_version,
         name=name,
         course_release=course_release,
+        course_group_activity=course_group_activity,
+        migration_review_required=migration_review_required,
         unit_id=unit_id,
         opens_at=opens_at,
         closes_at=closes_at,
@@ -1554,6 +1558,12 @@ def assign_delivery(
         raise AssessmentInvalid("La matrícula no tiene una asignación efectiva.")
     if not verify_release(locked_release_assignment.release).valid:
         raise AssessmentInvalid("El release asignado no supera integridad.")
+    if locked_delivery.course_group_activity_id and (
+        enrollment.effective_cohort is None
+        or enrollment.effective_cohort.id
+        != locked_delivery.course_group_activity.course_group_id
+    ):
+        raise AssessmentInvalid("La matrícula pertenece a otro grupo de curso.")
     assignment = DeliveryAssignment(
         delivery=locked_delivery,
         release_assignment=locked_release_assignment,
@@ -1728,6 +1738,19 @@ def start_attempt(*, actor: object, assignment: DeliveryAssignment) -> Attempt:
     )
     now = timezone.now()
     _require_learner_assignment(actor=actor, assignment=locked, at=now)
+    group_activity_id = locked.delivery.course_group_activity_id
+    if group_activity_id is not None:
+        from domain.learning.contracts import (
+            group_activity_available_for_release_assignment,
+        )
+
+        if not group_activity_available_for_release_assignment(
+            group_activity_id=group_activity_id,
+            release_assignment_id=locked.release_assignment_id,
+        ):
+            raise AttemptUnavailable(
+                "La actividad de evaluación todavía no está disponible."
+            )
     existing = Attempt.objects.select_for_update().filter(delivery_assignment=locked)
     in_progress = existing.filter(status=AttemptStatus.IN_PROGRESS).first()
     if in_progress:

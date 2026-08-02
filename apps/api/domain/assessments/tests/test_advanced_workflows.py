@@ -133,6 +133,7 @@ class AdvancedAssessmentWorkflowTests(AssessmentFixtureMixin, TestCase):
             assessment_version=assessment_version,
             name="Entrega matemática worker",
             course_release=context["release"],
+            migration_review_required=True,
         )
         delivery = activate_delivery(
             actor=context["owner"],
@@ -272,6 +273,7 @@ class AdvancedAssessmentWorkflowTests(AssessmentFixtureMixin, TestCase):
             assessment_version=context["assessment_version"],
             name="Entrega con gradebook",
             course_release=context["release"],
+            migration_review_required=True,
         )
         delivery = activate_delivery(
             actor=context["owner"],
@@ -387,6 +389,7 @@ class AdvancedAssessmentWorkflowTests(AssessmentFixtureMixin, TestCase):
                 assessment_version=context["assessment_version"],
                 name=f"Entrega {index}",
                 course_release=context["release"],
+                migration_review_required=True,
             )
             gradebook, column = add_gradebook_column(
                 actor=context["owner"],

@@ -27,6 +27,10 @@ class AccessWindowInvalid(LearningDomainError):
     code = "cohort_access_window_invalid"
 
 
+class AcademicPeriodRequired(LearningDomainError):
+    code = "academic_period_required"
+
+
 class EnrollmentNotFound(LearningDomainError):
     code = "enrollment_not_found"
     status_code = 404

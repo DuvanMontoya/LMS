@@ -8,6 +8,7 @@ from rest_framework import serializers
 from domain.learning.choices import (
     AcademicGroupLevel,
     AcademicGroupRole,
+    AcademicPeriodType,
     AccessState,
     CohortRosterMode,
     CohortStaffRole,
@@ -17,8 +18,10 @@ from domain.learning.choices import (
 from domain.learning.models import (
     AcademicGroup,
     AcademicGroupMember,
+    AcademicPeriod,
     CohortStaffAssignment,
     CourseEnrollment,
+    CourseGroupActivity,
     LearningCohort,
 )
 
@@ -121,12 +124,86 @@ class PaginatedAcademicGroupRosterSerializer(serializers.Serializer):
     results = AcademicGroupRosterReadSerializer(many=True)
 
 
+class AcademicPeriodReadSerializer(serializers.ModelSerializer):
+    parent_id = serializers.UUIDField(read_only=True, allow_null=True)
+
+    class Meta:
+        model = AcademicPeriod
+        fields = (
+            "id",
+            "parent_id",
+            "name",
+            "slug",
+            "period_type",
+            "starts_on",
+            "ends_on",
+            "status",
+            "lock_version",
+            "created_at",
+            "updated_at",
+        )
+
+
+class AcademicPeriodCreateSerializer(serializers.Serializer):
+    parent_id = serializers.UUIDField(required=False, allow_null=True)
+    name = serializers.CharField(max_length=160)
+    slug = serializers.SlugField(max_length=80)
+    period_type = serializers.ChoiceField(choices=AcademicPeriodType.choices)
+    starts_on = serializers.DateField()
+    ends_on = serializers.DateField()
+
+
+class PaginatedAcademicPeriodSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = AcademicPeriodReadSerializer(many=True)
+
+
+class CourseGroupActivityReadSerializer(serializers.ModelSerializer):
+    course_group_id = serializers.UUIDField(read_only=True)
+    course_group_name = serializers.CharField(
+        source="course_group.name", read_only=True
+    )
+    course_slug = serializers.CharField(
+        source="course_group.course.slug", read_only=True
+    )
+    course_title = serializers.CharField(source="course_release.title", read_only=True)
+    academic_period_name = serializers.CharField(
+        source="academic_period.name", read_only=True, allow_null=True
+    )
+
+    class Meta:
+        model = CourseGroupActivity
+        fields = (
+            "id",
+            "course_group_id",
+            "course_group_name",
+            "course_slug",
+            "course_title",
+            "academic_period_name",
+            "source_activity_id",
+            "activity_type",
+            "module_title",
+            "title",
+            "module_position",
+            "position",
+            "required",
+        )
+        read_only_fields = fields
+
+
 class CohortReadSerializer(serializers.ModelSerializer):
     course_slug = serializers.CharField(source="course.slug")
+    course_release_id = serializers.UUIDField(source="release.id", read_only=True)
     course_title = serializers.CharField(source="release.title")
     release_number = serializers.IntegerField(source="release.number")
     enrollment_count = serializers.IntegerField(read_only=True, required=False)
     academic_group_id = serializers.UUIDField(read_only=True, allow_null=True)
+    academic_period_id = serializers.UUIDField(read_only=True, allow_null=True)
+    academic_period_name = serializers.CharField(
+        source="academic_period.name", read_only=True, allow_null=True
+    )
     academic_group_name = serializers.CharField(
         source="academic_group.name", read_only=True, allow_null=True
     )
@@ -145,8 +222,12 @@ class CohortReadSerializer(serializers.ModelSerializer):
             "roster_mode",
             "course_group_version",
             "course_slug",
+            "course_release_id",
             "course_title",
             "release_number",
+            "academic_period_id",
+            "academic_period_name",
+            "migration_review_required",
             "academic_group_id",
             "academic_group_name",
             "access_starts_at",
@@ -168,6 +249,7 @@ class CohortCreateSerializer(serializers.Serializer):
     course_slug = serializers.SlugField()
     release_number = serializers.IntegerField(min_value=1)
     academic_group_id = serializers.UUIDField(required=False, allow_null=True)
+    academic_period_id = serializers.UUIDField()
     name = serializers.CharField(max_length=200)
     slug = serializers.SlugField(max_length=80, required=False)
     description = serializers.CharField(
@@ -241,6 +323,29 @@ class CohortSyncPreviewSerializer(serializers.Serializer):
     conflicts = serializers.ListField(child=serializers.UUIDField())
 
 
+class CompletionProjectionSerializer(serializers.Serializer):
+    completed_required = serializers.IntegerField()
+    total_required = serializers.IntegerField()
+    satisfied = serializers.BooleanField()
+
+
+class MasteryProjectionSerializer(serializers.Serializer):
+    evidenced_objective_ids = serializers.ListField(child=serializers.UUIDField())
+    evidenced_count = serializers.IntegerField()
+    total_objectives = serializers.IntegerField()
+
+
+class ThresholdProjectionSerializer(serializers.Serializer):
+    basis_points = serializers.IntegerField(allow_null=True)
+    minimum_basis_points = serializers.IntegerField(allow_null=True)
+    satisfied = serializers.BooleanField()
+
+
+class CompletionBlockerSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    message = serializers.CharField()
+
+
 class ProgressSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=ProgressStatus.choices)
     completed_units = serializers.IntegerField()
@@ -253,6 +358,12 @@ class ProgressSerializer(serializers.Serializer):
     started_at = serializers.DateTimeField(allow_null=True)
     last_activity_at = serializers.DateTimeField(allow_null=True)
     completed_at = serializers.DateTimeField(allow_null=True)
+    completion = CompletionProjectionSerializer()
+    mastery = MasteryProjectionSerializer()
+    grade = ThresholdProjectionSerializer()
+    attendance = ThresholdProjectionSerializer()
+    blockers = CompletionBlockerSerializer(many=True)
+    is_complete = serializers.BooleanField()
 
 
 class CourseSummarySerializer(serializers.Serializer):
@@ -269,6 +380,7 @@ class CohortSummarySerializer(serializers.Serializer):
 
 class ResumeSerializer(serializers.Serializer):
     unit_id = serializers.UUIDField(allow_null=True)
+    activity_instance_id = serializers.UUIDField(allow_null=True)
     node_id = serializers.UUIDField(allow_null=True)
     href = serializers.CharField(allow_null=True)
 
@@ -419,11 +531,30 @@ class UnitOutlineSerializer(serializers.Serializer):
     href = serializers.CharField()
 
 
+class ActivityOutlineSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    source_activity_id = serializers.UUIDField()
+    type = serializers.CharField()
+    title = serializers.CharField()
+    summary = serializers.CharField()
+    estimated_duration_minutes = serializers.IntegerField(allow_null=True)
+    position = serializers.IntegerField()
+    required = serializers.BooleanField()
+    completion_policy = serializers.DictField()
+    availability_rules = serializers.ListField(child=serializers.DictField())
+    binding = serializers.DictField()
+    status = serializers.CharField()
+    is_current = serializers.BooleanField()
+    blocked_reason = serializers.CharField(allow_null=True)
+    href = serializers.CharField()
+
+
 class ModuleOutlineSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     title = serializers.CharField()
     description = serializers.CharField()
     position = serializers.IntegerField()
+    activities = ActivityOutlineSerializer(many=True)
     units = UnitOutlineSerializer(many=True)
 
 
@@ -447,6 +578,16 @@ class LearningUnitSerializer(serializers.Serializer):
     progress = ProgressSerializer()
     navigation = serializers.DictField()
     assets = serializers.ListField(child=serializers.DictField(), required=False)
+
+
+class LearningActivitySerializer(serializers.Serializer):
+    course = serializers.DictField()
+    module = serializers.DictField()
+    activity = serializers.DictField()
+    lesson = serializers.DictField(required=False)
+    release_number = serializers.IntegerField()
+    progress = ProgressSerializer()
+    navigation = serializers.DictField()
 
 
 class LearningAssetAccessSerializer(serializers.Serializer):

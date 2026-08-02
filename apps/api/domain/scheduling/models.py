@@ -10,7 +10,9 @@ from django.db import models
 from django.db.models import F, Q
 from django.db.models.functions import Trim
 
-from domain.courses.models import Course
+from domain.courses.choices import ActivityType
+from domain.courses.models import Course, CourseActivity
+from domain.learning.models import CourseGroupActivity
 from domain.organizations.models import Membership, Organization
 
 from .choices import (
@@ -36,6 +38,44 @@ class NoPhysicalDeleteModel(models.Model):
         raise ValidationError("El historial de calendario no se elimina físicamente.")
 
 
+class LiveClassActivityBinding(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    activity = models.OneToOneField(
+        CourseActivity,
+        on_delete=models.PROTECT,
+        related_name="live_class_binding",
+    )
+    minimum_attended_occurrences = models.PositiveSmallIntegerField(default=1)
+    minimum_attendance_minutes = models.PositiveSmallIntegerField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="live_class_activity_bindings_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(minimum_attended_occurrences__gt=0),
+                name="sched_binding_occurrences_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(minimum_attendance_minutes__isnull=True)
+                | Q(minimum_attendance_minutes__gt=0),
+                name="sched_binding_minutes_positive",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.activity_id}:live-class"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.activity.activity_type != ActivityType.LIVE_CLASS:
+            raise ValidationError({"activity": "La actividad no es una clase en vivo."})
+
+
 class AcademicEventSeries(NoPhysicalDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
@@ -55,6 +95,14 @@ class AcademicEventSeries(NoPhysicalDeleteModel):
         on_delete=models.PROTECT,
         related_name="scheduled_event_series",
     )
+    course_group_activity = models.ForeignKey(
+        CourseGroupActivity,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="live_event_series_set",
+    )
+    migration_review_required = models.BooleanField(default=False)
     host_membership = models.ForeignKey(
         Membership, on_delete=models.PROTECT, related_name="hosted_event_series"
     )
@@ -70,6 +118,7 @@ class AcademicEventSeries(NoPhysicalDeleteModel):
     recurrence_count = models.PositiveSmallIntegerField(default=1)
     recurrence_until = models.DateTimeField(null=True, blank=True)
     counts_toward_progress = models.BooleanField(default=False)
+    activity_progress_contribution = models.BooleanField(default=False)
     attendance_threshold_minutes = models.PositiveSmallIntegerField(
         null=True, blank=True
     )
@@ -127,6 +176,13 @@ class AcademicEventSeries(NoPhysicalDeleteModel):
                 condition=Q(course_group__isnull=True) | Q(course__isnull=False),
                 name="sched_series_group_requires_course",
             ),
+            models.CheckConstraint(
+                condition=(
+                    Q(course_group_activity__isnull=False)
+                    | Q(activity_progress_contribution=False)
+                ),
+                name="sched_series_activity_contribution_scope",
+            ),
         ]
         indexes = [
             models.Index(
@@ -159,6 +215,31 @@ class AcademicEventSeries(NoPhysicalDeleteModel):
         ):
             raise ValidationError(
                 {"course_group": "El grupo de curso no corresponde al curso."}
+            )
+        if self.course_group_activity_id:
+            activity = self.course_group_activity
+            if (
+                self.course_group_id != activity.course_group_id
+                or activity.course_group.course_id != self.course_id
+                or activity.activity_type != "live_class"
+                or activity.migration_review_required
+                or activity.binding_snapshot.get("provider") != "scheduling"
+                or self.counts_toward_progress
+            ):
+                raise ValidationError(
+                    {
+                        "course_group_activity": (
+                            "La actividad en vivo no corresponde al grupo o usa el escritor legado."
+                        )
+                    }
+                )
+        elif self.activity_progress_contribution:
+            raise ValidationError(
+                {
+                    "activity_progress_contribution": (
+                        "Sólo una actividad curricular puede recibir evidencia."
+                    )
+                }
             )
         if (
             self.host_membership_id

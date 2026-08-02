@@ -73,15 +73,23 @@ export default async function LearningOutlinePage({
       gradebook.course_title === data.outline.course.title &&
       gradebook.release_number === data.outline.release_number,
   );
-  const units = data.outline.modules.flatMap((module) => module.units);
-  const duration = units.reduce(
-    (total, unit) => total + (unit.estimated_duration_minutes ?? 0),
+  const activities = data.outline.modules.flatMap(
+    (module) => module.activities,
+  );
+  const duration = activities.reduce(
+    (total, activity) => total + (activity.estimated_duration_minutes ?? 0),
     0,
   );
-  const nextUnit =
-    units.find((unit) => unit.id === data.outline.resume.unit_id) ??
-    units.find((unit) => unit.status !== 'completed') ??
-    units[0];
+  const nextActivity =
+    activities.find(
+      (activity) => activity.id === data.outline.resume.activity_instance_id,
+    ) ??
+    activities.find(
+      (activity) =>
+        !['completed', 'passed', 'waived'].includes(activity.status) &&
+        activity.status !== 'locked',
+    ) ??
+    activities[0];
   const baseHref = `/organizaciones/${slug}/aprender/${courseSlug}`;
 
   return (
@@ -120,8 +128,8 @@ export default async function LearningOutlinePage({
             />
             <CourseFact
               icon={<BookOpenCheck />}
-              label="Lecciones"
-              value={`${units.length} unidades`}
+              label="Actividades"
+              value={`${activities.length} en secuencia`}
             />
             <CourseFact
               icon={<Clock3 />}
@@ -152,11 +160,9 @@ export default async function LearningOutlinePage({
             </Button>
           ) : null}
           <small>
-            {data.outline.progress.completed_units} de{' '}
-            {data.outline.progress.total_units} lecciones completadas
-            {data.outline.progress.total_required_activities
-              ? ` · ${data.outline.progress.completed_required_activities} de ${data.outline.progress.total_required_activities} clases en vivo requeridas`
-              : ''}
+            {data.outline.progress.completion.completed_required} de{' '}
+            {data.outline.progress.completion.total_required} actividades
+            obligatorias completadas
           </small>
         </aside>
       </section>
@@ -181,7 +187,7 @@ export default async function LearningOutlinePage({
       <div className="course-tab-panel">
         {activeTab === 'resumen' ? (
           <CourseOverview
-            nextUnit={nextUnit}
+            nextActivity={nextActivity}
             outline={data.outline}
             tabHref={`${baseHref}?tab=contenido`}
           />
@@ -197,7 +203,7 @@ export default async function LearningOutlinePage({
                   tienes asignado.
                 </p>
               </div>
-              <span>{units.length} lecciones</span>
+              <span>{activities.length} actividades</span>
             </header>
             <CourseCurriculum modules={data.outline.modules} />
           </section>
@@ -256,14 +262,14 @@ export default async function LearningOutlinePage({
 }
 
 function CourseOverview({
-  nextUnit,
+  nextActivity,
   outline,
   tabHref,
 }: Readonly<{
-  nextUnit:
+  nextActivity:
     | Awaited<
         ReturnType<typeof getLearningOutline>
-      >['outline']['modules'][number]['units'][number]
+      >['outline']['modules'][number]['activities'][number]
     | undefined;
   outline: Awaited<ReturnType<typeof getLearningOutline>>['outline'];
   tabHref: string;
@@ -286,15 +292,15 @@ function CourseOverview({
                 ? 'Ruta completada'
                 : 'Continúa donde quedaste'}
           </p>
-          <h2>{nextUnit?.title ?? outline.course.title}</h2>
+          <h2>{nextActivity?.title ?? outline.course.title}</h2>
           <p>
-            {nextUnit?.summary ||
-              'Consulta el contenido completo y vuelve a cualquier lección.'}
+            {nextActivity?.summary ||
+              'Consulta la secuencia completa de lecciones, clases y evaluaciones.'}
           </p>
-          {nextUnit ? (
+          {nextActivity ? (
             <Button asChild className="mt-5">
-              <Link href={nextUnit.href}>
-                Abrir lección
+              <Link href={nextActivity.href}>
+                Abrir actividad
                 <ArrowRight data-icon="inline-end" />
               </Link>
             </Button>
@@ -313,8 +319,8 @@ function CourseOverview({
         </header>
         <ol>
           {outline.modules.map((module) => {
-            const completed = module.units.filter(
-              (unit) => unit.status === 'completed',
+            const completed = module.activities.filter((activity) =>
+              ['completed', 'passed', 'waived'].includes(activity.status),
             ).length;
             return (
               <li key={module.id}>
@@ -322,7 +328,8 @@ function CourseOverview({
                 <div>
                   <strong>{module.title}</strong>
                   <small>
-                    {completed}/{module.units.length} lecciones completadas
+                    {completed}/{module.activities.length} actividades
+                    completadas
                   </small>
                 </div>
                 <div
@@ -332,8 +339,8 @@ function CourseOverview({
                   <span
                     style={{
                       width: `${
-                        module.units.length
-                          ? (completed / module.units.length) * 100
+                        module.activities.length
+                          ? (completed / module.activities.length) * 100
                           : 0
                       }%`,
                     }}

@@ -69,6 +69,7 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
             organization=context["organization"],
             course=context["course"],
             release=context["enrollment"].current_release_assignment.release,
+            migration_review_required=True,
             academic_group=group,
             name="Álgebra grupo de agenda",
         )

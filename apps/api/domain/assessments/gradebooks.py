@@ -7,7 +7,11 @@ from typing import Any
 from django.db import transaction
 from django.utils import timezone
 
-from domain.learning.models import EnrollmentReleaseAssignment
+from domain.learning.models import (
+    AcademicPeriod,
+    EnrollmentReleaseAssignment,
+    LearningCohort,
+)
 from domain.organizations.models import Organization
 from domain.publishing.integrity import verify_release
 from domain.publishing.models import CourseRelease
@@ -63,19 +67,27 @@ def create_gradebook(
     actor: object,
     organization: Organization,
     course_release: CourseRelease,
+    course_group: LearningCohort | None = None,
+    academic_period: AcademicPeriod | None = None,
 ) -> CourseGradebook:
     _validate_release(organization=organization, course_release=course_release)
     existing = CourseGradebook.objects.select_for_update().filter(
-        course_release=course_release
+        course_release=course_release, course_group=course_group
     )
     if existing.exists():
         raise AssessmentConflict("El release ya tiene gradebook.")
-    return CourseGradebook.objects.create(
+    gradebook = CourseGradebook(
         organization=organization,
         course_release=course_release,
+        course_group=course_group,
+        academic_period=academic_period,
+        migration_review_required=course_group is None,
         created_by_id=_actor_id(actor),
         updated_by_id=_actor_id(actor),
     )
+    gradebook.full_clean()
+    gradebook.save()
+    return gradebook
 
 
 def _validate_delivery(
@@ -85,6 +97,11 @@ def _validate_delivery(
         raise AssessmentInvalid("La entrega pertenece a otra organización.")
     if delivery.course_release_id != gradebook.course_release_id:
         raise AssessmentInvalid("La entrega pertenece a otro release.")
+    if gradebook.course_group_id and (
+        delivery.course_group_activity_id is None
+        or delivery.course_group_activity.course_group_id != gradebook.course_group_id
+    ):
+        raise AssessmentInvalid("La entrega pertenece a otro grupo de curso.")
 
 
 @transaction.atomic

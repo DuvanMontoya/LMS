@@ -141,6 +141,18 @@ export function createLearningCohort(
   );
 }
 
+export function createAcademicPeriod(
+  slug: string,
+  body: components['schemas']['AcademicPeriodCreate'],
+) {
+  return requireMutationData(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/learning/academic-periods/',
+      { body, params: { path: { slug } } },
+    ),
+  );
+}
+
 export function createLearningEnrollment(
   slug: string,
   body: components['schemas']['EnrollmentCreate'],

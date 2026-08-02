@@ -7,8 +7,14 @@ COHORT = BASE + "cohorts/<uuid:cohort_id>/"
 ENROLLMENT = BASE + "enrollments/<uuid:enrollment_id>/"
 ME = BASE + "me/enrollments/<uuid:enrollment_id>/"
 UNIT = ME + "units/<uuid:unit_id>/"
+ACTIVITY = ME + "activities/<uuid:activity_instance_id>/"
 
 urlpatterns = [
+    path(BASE + "academic-periods/", views.AcademicPeriodListCreateView.as_view()),
+    path(
+        BASE + "course-group-activities/",
+        views.CourseGroupActivityListView.as_view(),
+    ),
     path(BASE + "academic-groups/", views.AcademicGroupListCreateView.as_view()),
     path(
         BASE + "academic-groups/<uuid:group_id>/roster/",
@@ -33,6 +39,7 @@ urlpatterns = [
     path(BASE + "me/", views.MyLearningView.as_view()),
     path(ME, views.MyEnrollmentView.as_view()),
     path(ME + "outline/", views.MyOutlineView.as_view()),
+    path(ACTIVITY, views.MyActivityView.as_view()),
     path(ME + "assets/access/", views.MyAssetAccessView.as_view()),
     path(UNIT, views.MyUnitView.as_view()),
     path(UNIT + "open/", views.OpenUnitView.as_view()),

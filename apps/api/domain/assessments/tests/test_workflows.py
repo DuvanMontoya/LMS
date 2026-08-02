@@ -5,11 +5,36 @@ from django.contrib.auth import get_user_model
 from django.db import DatabaseError, transaction
 from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
+from rest_framework.test import APIClient
 
-from domain.learning.services import enroll_member
+from domain.courses.choices import ActivityCompletionMethod, ActivityType
+from domain.courses.services import (
+    GradeCategoryInput,
+    GradedActivityInput,
+    approve_revision,
+    confirm_completion_policy,
+    create_activity,
+    replace_activity_learning_objectives,
+    replace_grading_scheme,
+    submit_revision_for_review,
+)
+from domain.learning.choices import AcademicPeriodType, ActivityProgressStatus
+from domain.learning.models import ActivityProgress
+from domain.learning.selectors import progress_payload
+from domain.learning.services import (
+    create_academic_period,
+    create_cohort,
+    enroll_member,
+)
+from domain.organizations.choices import RoleCode
 from domain.organizations.models import Membership
+from domain.publishing.services import (
+    create_draft_from_release,
+    publish_approved_revision,
+)
 
 from ..choices import AttemptStatus
+from ..course_activities import bind_assessment_activity
 from ..exceptions import AssessmentConflict, AssessmentInvalid, AttemptExpired
 from ..models import AssessmentVersion, Attempt, AttemptEvent, QuestionVersion
 from ..services import (
@@ -102,6 +127,205 @@ class AuthoringWorkflowTests(AssessmentFixtureMixin, TestCase):
 
 
 class AttemptWorkflowTests(AssessmentFixtureMixin, TestCase):
+    def test_mixed_release_assessment_updates_progress_and_calendar(self) -> None:
+        context = self.assessment_context(with_learning=True)
+        owner = context["owner"]
+        organization = context["organization"]
+        release = context["release"]
+        publication = release.course.publication
+        draft = create_draft_from_release(
+            actor=owner,
+            organization=organization,
+            course=release.course,
+            release_number=release.number,
+            expected_publication_version=publication.lock_version,
+        )
+        module = draft.modules.get(position=1)
+        activity, draft = create_activity(
+            actor=owner,
+            organization=organization,
+            module=module,
+            expected_version=draft.lock_version,
+            activity_type=ActivityType.ASSESSMENT,
+            title="Parcial de cierre",
+            completion_method=ActivityCompletionMethod.PASS,
+            minimum_grade_basis_points=6000,
+        )
+        draft = replace_activity_learning_objectives(
+            actor=owner,
+            organization=organization,
+            activity=activity,
+            expected_version=draft.lock_version,
+            learning_objectives=[context["objective"]],
+        )
+        _binding, next_lock = bind_assessment_activity(
+            actor=owner,
+            organization=organization,
+            activity=activity,
+            assessment_version=context["assessment_version"],
+            expected_revision_version=draft.lock_version,
+        )
+        draft.refresh_from_db()
+        self.assertEqual(draft.lock_version, next_lock)
+        _categories, draft = replace_grading_scheme(
+            actor=owner,
+            organization=organization,
+            revision=draft,
+            expected_version=draft.lock_version,
+            categories=[
+                GradeCategoryInput(
+                    code="parciales",
+                    title="Parciales",
+                    weight_basis_points=10000,
+                    activities=[
+                        GradedActivityInput(
+                            activity=activity,
+                            weight_basis_points=10000,
+                            required=True,
+                        )
+                    ],
+                )
+            ],
+        )
+        _, draft = confirm_completion_policy(
+            actor=owner,
+            organization=organization,
+            revision=draft,
+            expected_version=draft.lock_version,
+            require_required_activities=True,
+            minimum_grade_basis_points=6000,
+            minimum_attendance_basis_points=None,
+        )
+        draft = submit_revision_for_review(
+            actor=owner,
+            organization=organization,
+            revision=draft,
+            expected_version=draft.lock_version,
+        )
+        draft = approve_revision(
+            actor=owner,
+            organization=organization,
+            revision=draft,
+            expected_version=draft.lock_version,
+        )
+        result = publish_approved_revision(
+            actor=owner,
+            organization=organization,
+            course=release.course,
+            revision=draft,
+            expected_publication_version=publication.lock_version,
+        )
+        period = create_academic_period(
+            actor=owner,
+            organization=organization,
+            name="Periodo integrado",
+            slug="periodo-integrado",
+            period_type=AcademicPeriodType.TERM,
+            starts_on=timezone.localdate(),
+            ends_on=timezone.localdate() + timedelta(days=120),
+        )
+        cohort = create_cohort(
+            actor=owner,
+            organization=organization,
+            course=release.course,
+            release=result.release,
+            academic_period=period,
+            name="Grupo integrado",
+            slug="grupo-integrado",
+        )
+        learner = self.member(
+            owner,
+            organization,
+            RoleCode.LEARNER,
+            "mixed-release-learner@example.test",
+        )
+        membership = Membership.objects.get(organization=organization, user=learner)
+        enrollment = enroll_member(
+            actor=owner,
+            organization=organization,
+            course=release.course,
+            membership=membership,
+            cohort=cohort,
+            expected_cohort_version=cohort.lock_version,
+        )
+        group_activity = cohort.activity_instances.get(
+            source_activity_id=activity.id,
+            activity_type=ActivityType.ASSESSMENT,
+        )
+        now = timezone.now()
+        delivery = create_delivery(
+            actor=owner,
+            organization=organization,
+            assessment_version=context["assessment_version"],
+            name="Parcial de cierre",
+            course_release=result.release,
+            course_group_activity=group_activity,
+            opens_at=now - timedelta(minutes=1),
+            closes_at=now + timedelta(hours=1),
+        )
+        delivery = activate_delivery(
+            actor=owner,
+            delivery=delivery,
+            expected_version=delivery.lock_version,
+        )
+        assignment = assign_delivery(
+            actor=owner,
+            delivery=delivery,
+            release_assignment=enrollment.current_release_assignment,
+        )
+        attempt = start_attempt(actor=learner, assignment=assignment)
+        item = attempt.items.get()
+        attempt, _ = save_response(
+            actor=learner,
+            attempt=attempt,
+            attempt_item=item,
+            expected_version=attempt.lock_version,
+            payload={
+                "schema_version": 1,
+                "type": "single_choice",
+                "value": "b",
+            },
+        )
+        attempt = submit_attempt(
+            actor=learner,
+            attempt=attempt,
+            expected_version=attempt.lock_version,
+        )
+        self.assertEqual(attempt.status, AttemptStatus.GRADED)
+        activity_progress = ActivityProgress.objects.get(
+            course_progress=enrollment.current_release_assignment.progress,
+            group_activity=group_activity,
+        )
+        self.assertEqual(activity_progress.status, ActivityProgressStatus.PASSED)
+        self.assertEqual(activity_progress.evidence["grade_basis_points"], 10000)
+        progress = progress_payload(enrollment.current_release_assignment.progress)
+        self.assertEqual(progress["grade"]["basis_points"], 10000)
+        self.assertFalse(progress["is_complete"])
+        self.assertEqual(progress["blockers"][0]["code"], "required_activities_pending")
+
+        client = APIClient()
+        client.force_authenticate(user=learner)
+        calendar = client.get(
+            f"/api/v1/organizations/{organization.slug}/scheduling/calendar/events/",
+            {
+                "start": (now - timedelta(hours=1)).isoformat(),
+                "end": (now + timedelta(hours=2)).isoformat(),
+                "timeZone": "America/Bogota",
+                "course": str(release.course_id),
+            },
+        )
+        self.assertEqual(calendar.status_code, 200, calendar.data)
+        assessment_events = [
+            row
+            for row in calendar.data
+            if row["extendedProps"]["eventType"].startswith("assessment_")
+        ]
+        self.assertEqual(len(assessment_events), 2)
+        self.assertIn(str(assignment.id), assessment_events[0]["extendedProps"]["href"])
+        serialized_calendar = str(assessment_events).lower()
+        self.assertNotIn("grading", serialized_calendar)
+        self.assertNotIn("token", serialized_calendar)
+
     def test_batch_assignment_is_all_or_nothing(self) -> None:
         context = self.assessment_context(with_learning=True)
         owner = context["owner"]
@@ -136,6 +360,7 @@ class AttemptWorkflowTests(AssessmentFixtureMixin, TestCase):
             assessment_version=context["assessment_version"],
             name="Lote atómico",
             course_release=context["release"],
+            migration_review_required=True,
         )
         delivery = activate_delivery(
             actor=owner,
@@ -166,6 +391,7 @@ class AttemptWorkflowTests(AssessmentFixtureMixin, TestCase):
             assessment_version=context["assessment_version"],
             name="Diagnóstico asignado",
             course_release=context["release"],
+            migration_review_required=True,
         )
         delivery = activate_delivery(
             actor=owner,
@@ -210,6 +436,7 @@ class AttemptWorkflowTests(AssessmentFixtureMixin, TestCase):
             assessment_version=context["assessment_version"],
             name="Entrega temporizada",
             course_release=context["release"],
+            migration_review_required=True,
         )
         delivery = activate_delivery(
             actor=context["owner"],
@@ -269,6 +496,7 @@ class DatabaseImmutabilityTests(AssessmentFixtureMixin, TransactionTestCase):
             assessment_version=context["assessment_version"],
             name="Entrega",
             course_release=context["release"],
+            migration_review_required=True,
         )
         delivery = activate_delivery(
             actor=context["owner"],

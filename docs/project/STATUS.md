@@ -1,5 +1,33 @@
 # Project status
 
+## Coherencia curricular y operativa unificada — en curso 2026-08-01
+
+- **Decisiones:** ADR 0036 define `CourseActivity` como orden canónico de
+  lecciones, clases en vivo y evaluaciones, con `CourseUnit` como adaptador
+  compatible. ADR 0037 introduce `AcademicPeriod` y aprovisionamiento
+  institucional pendiente de activación mediante invitación inicial; el
+  operador global no recibe membresía ni acceso implícito al tenant.
+- **Implementación local actual:** cursos conserva objetivos, dependencias,
+  política de finalización confirmada y esquema de calificación en el snapshot
+  v3. Aprendizaje materializa actividades release-pinned por grupo y periodo;
+  scheduling y assessments aportan bindings por registros de extensión sin
+  invertir dependencias. Las migraciones heredadas marcan relaciones ambiguas
+  para revisión y no inventan periodos ni responsables.
+- **Evidencia vigente:** `api:check`, Ruff, Pyright y drift de migraciones pasan;
+  la cadena completa de migraciones pasó desde cero en PostgreSQL, incluidas
+  `identity.0001` intacta, `courses.0002`, `learning.0007`,
+  `assessments.0009/0010`, `scheduling.0005/0006` y `organizations.0007`. La
+  suite de cursos pasó **17/17** y el contrato de schema de publicación **3/3**.
+- **Correcciones abiertas detectadas por pruebas:** el primer pase de learning
+  descubrió que el verificador de integridad aún limitaba releases a v2; ya
+  acepta v3. El segundo pase encontró validación de lista JSON vacía y un
+  `select_for_update` con outer join nullable durante clonación; ambos están
+  corregidos y requieren revalidación. Aún no se declara cierre de learning,
+  assessments, scheduling, OpenAPI/web ni aceptación Chromium/axe/390 px.
+- **Límite operativo:** no se han creado ramas, commits, pushes ni cambios de
+  producción. El worktree partió limpio en `main` y todo el trabajo permanece
+  local y revisable.
+
 ## Refuerzo del borde de autenticación e invitaciones — 2026-08-01
 
 - **Sesión revocada en una ruta protegida:** el proxy de Next sólo puede

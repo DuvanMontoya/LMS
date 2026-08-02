@@ -1,9 +1,10 @@
+# pyright: reportUnknownMemberType=false
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from .capabilities import Capability, capabilities_for_roles
-from .choices import MembershipStatus, RoleCode
+from .choices import MembershipStatus, OrganizationStatus, RoleCode
 
 if TYPE_CHECKING:
     from domain.identity.models import User
@@ -19,6 +20,8 @@ def active_membership(
     actor: User | None, organization: Organization
 ) -> Membership | None:
     if not actor or not actor.is_authenticated or not actor.is_active:
+        return None
+    if organization.status != OrganizationStatus.ACTIVE:
         return None
     return Membership.objects.filter(
         organization=organization, user=actor, status=MembershipStatus.ACTIVE.value

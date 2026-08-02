@@ -22,6 +22,7 @@ from .choices import (
     MembershipEventType,
     MembershipStatus,
     MemberType,
+    OrganizationStatus,
     RegistrationReason,
     RoleCode,
     SocioeconomicStratum,
@@ -57,6 +58,12 @@ class Organization(models.Model):
     )
     name: models.CharField[str, str] = models.CharField(max_length=160)
     slug: models.SlugField[str, str] = models.SlugField(max_length=80, unique=True)
+    status = models.CharField(
+        max_length=24,
+        choices=OrganizationStatus.choices,
+        default=OrganizationStatus.ACTIVE,
+    )
+    activated_at = models.DateTimeField(default=timezone.now, null=True, blank=True)
     created_at: models.DateTimeField[datetime, datetime] = models.DateTimeField(
         auto_now_add=True
     )
@@ -73,6 +80,23 @@ class Organization(models.Model):
             models.CheckConstraint(
                 condition=Q(slug=Lower(F("slug"))),
                 name="organizations_slug_lowercase",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        status=OrganizationStatus.PENDING_ACTIVATION,
+                        activated_at__isnull=True,
+                    )
+                    | Q(
+                        status__in=(
+                            OrganizationStatus.ACTIVE,
+                            OrganizationStatus.SUSPENDED,
+                            OrganizationStatus.CLOSED,
+                        ),
+                        activated_at__isnull=False,
+                    )
+                ),
+                name="organizations_activation_lifecycle",
             ),
         ]
         indexes = [models.Index(fields=["slug"], name="org_slug_ix")]
@@ -272,8 +296,19 @@ class MembershipInvitation(models.Model):  # noqa: DJ012
             roles = {RoleCode(role) for role in self.invited_roles}
         except ValueError as error:
             raise ValidationError({"invited_roles": "Rol inválido."}) from error
-        if RoleCode.OWNER in roles:
-            raise ValidationError({"invited_roles": "Owner no puede ser invitado."})
+        if RoleCode.OWNER in roles and (
+            self.invitation_type != InvitationType.INITIAL_OWNER
+            or roles != {RoleCode.OWNER}
+        ):
+            raise ValidationError(
+                {"invited_roles": "Owner sólo se admite en el bootstrap inicial."}
+            )
+        if self.invitation_type == InvitationType.INITIAL_OWNER and roles != {
+            RoleCode.OWNER
+        }:
+            raise ValidationError(
+                {"invited_roles": "El bootstrap inicial exige únicamente owner."}
+            )
         self.invited_roles = sorted(role.value for role in roles)
         if self.date_of_birth and self.date_of_birth > timezone.localdate():
             raise ValidationError(

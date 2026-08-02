@@ -329,6 +329,9 @@ class PlatformOrganizationProvisionView(APIView):
                 actor=_actor(request),
                 name=serializer.validated_data["name"],
                 owner_email=serializer.validated_data["owner_email"],
+                administrator_emails=tuple(
+                    serializer.validated_data["administrator_emails"]
+                ),
             )
         except OrganizationDomainError as error:
             return _domain_error_response(error)

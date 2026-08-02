@@ -14,12 +14,15 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from domain.courses.models import Course
+from domain.courses.models import Course, CourseActivity
 from domain.learning.contracts import course_group_for_scheduling
+from domain.learning.models import CourseGroupActivity
 from domain.organizations.choices import MembershipStatus
 from domain.organizations.models import Membership, Organization
 from domain.organizations.policies import active_membership
 from domain.organizations.selectors import organization_visible_to
+from domain.scheduling.calendar_extensions import external_calendar_events
+from domain.scheduling.course_activities import bind_live_class_activity
 from domain.scheduling.exceptions import SchedulingDomainError
 from domain.scheduling.models import AcademicEventOccurrence, LiveSession
 from domain.scheduling.policies import can_create_schedule
@@ -50,6 +53,8 @@ from .serializers import (
     EventCancelSerializer,
     EventCreateSerializer,
     EventRescheduleSerializer,
+    LiveClassActivityBindingInputSerializer,
+    LiveClassActivityBindingSerializer,
     LiveConnectionSerializer,
     LiveSessionDetailSerializer,
     LiveSessionListQuerySerializer,
@@ -76,6 +81,54 @@ def _domain_call(operation: Callable[[], Any]) -> Response | Any:
         return operation()
     except SchedulingDomainError as error:
         return _error(error)
+
+
+class LiveClassActivityBindingView(APIView):
+    @extend_schema(
+        operation_id="scheduling_course_activity_binding_create",
+        request=LiveClassActivityBindingInputSerializer,
+        responses={201: LiveClassActivityBindingSerializer},
+    )
+    def post(self, request: Request, slug: str, activity_id: uuid.UUID) -> Response:
+        organization = _organization(request, slug)
+        serializer = LiveClassActivityBindingInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        activity = get_object_or_404(
+            CourseActivity.objects.select_related("module__revision__course"),
+            pk=activity_id,
+            module__revision__course__organization=organization,
+        )
+        result = _domain_call(
+            lambda: bind_live_class_activity(
+                actor=request.user,
+                organization=organization,
+                activity=activity,
+                expected_revision_version=serializer.validated_data[
+                    "expected_revision_version"
+                ],
+                minimum_attended_occurrences=serializer.validated_data[
+                    "minimum_attended_occurrences"
+                ],
+                minimum_attendance_minutes=serializer.validated_data.get(
+                    "minimum_attendance_minutes"
+                ),
+            )
+        )
+        if isinstance(result, Response):
+            return result
+        binding, revision_lock_version = result
+        return Response(
+            LiveClassActivityBindingSerializer(
+                {
+                    "id": binding.id,
+                    "activity_id": binding.activity_id,
+                    "minimum_attended_occurrences": binding.minimum_attended_occurrences,
+                    "minimum_attendance_minutes": binding.minimum_attendance_minutes,
+                    "revision_lock_version": revision_lock_version,
+                }
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class CalendarEventListCreateView(APIView):
@@ -113,6 +166,16 @@ class CalendarEventListCreateView(APIView):
         if course_id := data.get("course"):
             occurrences = occurrences.filter(series__course_id=course_id)
         payload = [occurrence_payload(item, request.user) for item in occurrences]
+        payload.extend(
+            external_calendar_events(
+                actor=request.user,
+                organization=organization,
+                starts_at=data["start"],
+                ends_at=data["end"],
+                course_id=data.get("course"),
+            )
+        )
+        payload.sort(key=lambda item: (item["start"], str(item["id"])))
         return Response(CalendarEventSerializer(payload, many=True).data)
 
     @extend_schema(
@@ -153,6 +216,24 @@ class CalendarEventListCreateView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        course_group_activity = None
+        if data.get("course_group_activity_id"):
+            if course_group is None:
+                return Response(
+                    {
+                        "code": "course_group_activity_invalid",
+                        "detail": "La actividad exige un grupo de curso.",
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            course_group_activity = get_object_or_404(
+                CourseGroupActivity,
+                pk=data["course_group_activity_id"],
+                course_group=course_group,
+                course_release=course_group.release,
+                activity_type="live_class",
+                migration_review_required=False,
+            )
         participant_ids = data.get("participant_membership_ids", [])
         participants = list(
             Membership.objects.select_related("organization", "user").filter(
@@ -187,6 +268,7 @@ class CalendarEventListCreateView(APIView):
                 organization=organization,
                 course=course,
                 course_group=course_group,
+                course_group_activity=course_group_activity,
                 host_membership=host,
                 participant_memberships=participants,
                 title=data["title"],
@@ -197,6 +279,9 @@ class CalendarEventListCreateView(APIView):
                 duration_minutes=data["duration_minutes"],
                 recurrence_rule=data.get("rrule", ""),
                 counts_toward_progress=data.get("counts_toward_progress", False),
+                contributes_to_activity_progress=data.get(
+                    "contributes_to_activity_progress"
+                ),
                 attendance_threshold_minutes=data.get("attendance_threshold_minutes"),
             )
         )

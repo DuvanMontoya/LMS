@@ -21,6 +21,7 @@ const outline: components['schemas']['Outline'] = {
   learning_objectives: [],
   modules: [
     {
+      activities: [],
       archived_at: null,
       created_at: '2026-07-29T00:00:00Z',
       description: '',
@@ -76,6 +77,7 @@ describe('StructureEditor', () => {
     render(
       <QueryProvider>
         <StructureEditor
+          assessmentVersions={[]}
           canManage={false}
           courseSlug="algebra"
           objectives={[]}

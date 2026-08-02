@@ -193,10 +193,14 @@ export function RetryRegradeButton({
 }
 
 export function CreateGradebookForm({
-  releaseOptions,
+  groupOptions,
   slug,
 }: Readonly<{
-  releaseOptions: readonly { id: string; label: string }[];
+  groupOptions: readonly {
+    courseGroupId: string;
+    courseReleaseId: string;
+    label: string;
+  }[];
   slug: string;
 }>) {
   const router = useRouter();
@@ -207,12 +211,19 @@ export function CreateGradebookForm({
       className="flex flex-col gap-3 sm:flex-row sm:items-end"
       onSubmit={(event) => {
         event.preventDefault();
-        const releaseId = String(
-          new FormData(event.currentTarget).get('course_release_id'),
+        const courseGroupId = String(
+          new FormData(event.currentTarget).get('course_group_id'),
         );
+        const option = groupOptions.find(
+          (candidate) => candidate.courseGroupId === courseGroupId,
+        );
+        if (!option) return;
         setPending(true);
         setError(null);
-        void createGradebook(slug, { course_release_id: releaseId })
+        void createGradebook(slug, {
+          course_group_id: option.courseGroupId,
+          course_release_id: option.courseReleaseId,
+        })
           .then((gradebook) =>
             router.push(
               `/organizaciones/${slug}/evaluaciones/gradebooks/${gradebook.id}`,
@@ -223,12 +234,12 @@ export function CreateGradebookForm({
       }}
     >
       <label className="min-w-0 flex-1 space-y-1.5">
-        <span className="text-sm font-medium">Release del curso</span>
-        <select className="academic-control" name="course_release_id" required>
-          <option value="">Selecciona un release</option>
-          {releaseOptions.map((release) => (
-            <option key={release.id} value={release.id}>
-              {release.label}
+        <span className="text-sm font-medium">Grupo de curso</span>
+        <select className="academic-control" name="course_group_id" required>
+          <option value="">Selecciona un grupo</option>
+          {groupOptions.map((group) => (
+            <option key={group.courseGroupId} value={group.courseGroupId}>
+              {group.label}
             </option>
           ))}
         </select>

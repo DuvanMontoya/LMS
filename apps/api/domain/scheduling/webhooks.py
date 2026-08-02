@@ -1,4 +1,4 @@
-# pyright: reportUnknownMemberType=false, reportUnknownArgumentType=false, reportAttributeAccessIssue=false
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportAttributeAccessIssue=false
 from __future__ import annotations
 
 import uuid
@@ -11,7 +11,10 @@ from django.db.models import Sum
 from django.utils import timezone
 from livekit import api
 
-from domain.learning.contracts import complete_live_session_requirement
+from domain.learning.contracts import (
+    complete_group_activity_attendance,
+    complete_live_session_requirement,
+)
 
 from .choices import (
     AttendanceRole,
@@ -124,6 +127,38 @@ def _complete_progress_requirement_if_eligible(
     segment: AttendanceSegment, completed_at: datetime
 ) -> None:
     series = cast(AcademicEventSeries, segment.session.occurrence.series)
+    if (
+        segment.user is not None
+        and segment.role == AttendanceRole.STUDENT
+        and series.course_group_activity_id is not None
+        and series.activity_progress_contribution
+    ):
+        binding = series.course_group_activity.binding_snapshot
+        minimum_occurrences = int(binding.get("minimum_attended_occurrences") or 1)
+        minimum_minutes = int(binding.get("minimum_attendance_minutes") or 0)
+        totals = list(
+            AttendanceSegment.objects.filter(
+                session__occurrence__series=series,
+                user=segment.user,
+                role=AttendanceRole.STUDENT,
+            )
+            .values("session_id")
+            .annotate(total=Sum("duration_seconds"))
+        )
+        qualifying = [
+            row for row in totals if int(row["total"] or 0) >= minimum_minutes * 60
+        ]
+        if len(qualifying) >= minimum_occurrences:
+            complete_group_activity_attendance(
+                actor=segment.user,
+                group_activity_id=series.course_group_activity_id,
+                completed_at=completed_at,
+                evidence={
+                    "attendance_seconds": sum(int(row["total"] or 0) for row in totals),
+                    "attended_occurrences": len(qualifying),
+                },
+            )
+        return
     threshold = cast(int | None, series.attendance_threshold_minutes)
     if (
         segment.user is None

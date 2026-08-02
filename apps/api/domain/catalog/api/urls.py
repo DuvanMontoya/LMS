@@ -3,6 +3,14 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path(
+        "organizations/<slug:slug>/catalog/teaching-responsibilities/",
+        views.SubjectTeachingResponsibilityListCreateView.as_view(),
+    ),
+    path(
+        "organizations/<slug:slug>/catalog/teaching-responsibilities/<uuid:responsibility_id>/close/",
+        views.CloseSubjectTeachingResponsibilityView.as_view(),
+    ),
     path("organizations/<slug:slug>/catalog/areas/", views.AreaListView.as_view()),
     path(
         "organizations/<slug:slug>/catalog/areas/<uuid:area_id>/",

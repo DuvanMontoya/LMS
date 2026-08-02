@@ -4,15 +4,28 @@ import base64
 import hashlib
 import json
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from livekit import api
 from rest_framework.test import APIClient
 
+from domain.courses.choices import ActivityCompletionMethod, ActivityType
+from domain.courses.services import create_activity, create_module
 from domain.learning.contracts import register_live_session_requirement
-from domain.learning.models import ExternalRequirementCompletion
+from domain.learning.models import (
+    ActivityProgress,
+    CourseGroupActivity,
+    ExternalRequirementCompletion,
+)
+from domain.learning.services import (
+    create_academic_period,
+    create_cohort,
+    enroll_member,
+)
+from domain.organizations.choices import RoleCode
+from domain.organizations.models import Membership
 from domain.scheduling.choices import EventType, LiveSessionStatus
 from domain.scheduling.livekit_gateway import LiveKitConfiguration, LiveKitGateway
 from domain.scheduling.models import AttendanceSegment, LiveKitWebhookEvent
@@ -45,6 +58,207 @@ def signed_webhook(payload: dict[str, object]) -> tuple[bytes, str]:
 
 @override_settings(**LIVEKIT_SETTINGS)
 class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
+    def test_live_activity_authoring_binds_immutable_attendance_policy(self) -> None:
+        owner, organization, _subject, _objective, _topic, revision = (
+            self.course_revision()
+        )
+        module, revision = create_module(
+            actor=owner,
+            organization=organization,
+            revision=revision,
+            expected_version=revision.lock_version,
+            title="Clases en vivo",
+        )
+        activity, revision = create_activity(
+            actor=owner,
+            organization=organization,
+            module=module,
+            expected_version=revision.lock_version,
+            activity_type=ActivityType.LIVE_CLASS,
+            title="Tutoría",
+            completion_method=ActivityCompletionMethod.ATTENDANCE,
+            minimum_attendance_basis_points=7500,
+        )
+        client = APIClient()
+        client.force_authenticate(user=owner)
+        url = (
+            f"/api/v1/organizations/{organization.slug}/scheduling/"
+            f"course-activities/{activity.id}/binding/"
+        )
+        payload = {
+            "expected_revision_version": revision.lock_version,
+            "minimum_attended_occurrences": 2,
+            "minimum_attendance_minutes": 45,
+        }
+        created = client.post(url, payload, format="json")
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(created.data["minimum_attended_occurrences"], 2)
+        self.assertEqual(created.data["minimum_attendance_minutes"], 45)
+        self.assertEqual(
+            created.data["revision_lock_version"], revision.lock_version + 1
+        )
+        duplicate = client.post(
+            url,
+            {**payload, "expected_revision_version": revision.lock_version + 1},
+            format="json",
+        )
+        self.assertEqual(duplicate.status_code, 409)
+
+    def test_attendance_completes_release_pinned_live_activity_without_global_requirement(
+        self,
+    ) -> None:
+        (
+            owner,
+            organization,
+            revision,
+            module,
+            _unit,
+            _objective,
+            _topic,
+            _publication,
+            release,
+        ) = self.published_context()
+        learner = self.member(
+            owner, organization, RoleCode.LEARNER, "live-activity@example.test"
+        )
+        learner_membership = Membership.objects.get(
+            organization=organization, user=learner
+        )
+        owner_membership = Membership.objects.get(organization=organization, user=owner)
+        period = create_academic_period(
+            actor=owner,
+            organization=organization,
+            name="Periodo en vivo",
+            slug="periodo-en-vivo",
+            period_type="term",
+            starts_on=date(2026, 1, 1),
+            ends_on=date(2026, 12, 31),
+        )
+        cohort = create_cohort(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            release=release,
+            academic_period=period,
+            name="Grupo en vivo",
+        )
+        activity = CourseGroupActivity(
+            course_group=cohort,
+            academic_period=period,
+            course_release=release,
+            source_activity_id=uuid.uuid4(),
+            source_module_id=module.id,
+            activity_type="live_class",
+            module_title=module.title,
+            title="Clase sincrónica curricular",
+            module_position=1,
+            position=2,
+            required=True,
+            completion_policy={"method": "attendance"},
+            availability_rules=[],
+            binding_snapshot={
+                "provider": "scheduling",
+                "minimum_attended_occurrences": 1,
+                "minimum_attendance_minutes": 1,
+            },
+            release_snapshot_digest=release.snapshot_digest,
+        )
+        activity.full_clean()
+        activity.save()
+        enrollment = enroll_member(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            membership=learner_membership,
+            release=release,
+            cohort=cohort,
+        )
+        gateway = LiveKitGateway(
+            LiveKitConfiguration(
+                server_url=LIVEKIT_SETTINGS["LIVEKIT_URL"],
+                api_key=LIVEKIT_SETTINGS["LIVEKIT_API_KEY"],
+                api_secret=LIVEKIT_SETTINGS["LIVEKIT_API_SECRET"],
+                token_ttl_seconds=300,
+                room_empty_timeout_seconds=600,
+                max_participants=250,
+            )
+        )
+
+        def record_attendance(series, *, suffix: str) -> None:
+            session = (
+                series.occurrences.select_related("live_session").get().live_session
+            )
+            session.status = LiveSessionStatus.LIVE
+            session.actual_started_at = timezone.now()
+            session.save(update_fields=("status", "actual_started_at", "updated_at"))
+            created_at = int(timezone.now().timestamp())
+            joined = {
+                "id": str(uuid.uuid4()),
+                "event": "participant_joined",
+                "createdAt": str(created_at),
+                "room": {"name": session.room_name, "sid": f"RM_{suffix}"},
+                "participant": {
+                    "identity": f"user:{learner.id}",
+                    "sid": f"PA_{suffix}",
+                    "attributes": {"lms.role": "student"},
+                },
+            }
+            for payload in (
+                joined,
+                {
+                    **joined,
+                    "id": str(uuid.uuid4()),
+                    "event": "participant_left",
+                    "createdAt": str(created_at + 75),
+                },
+            ):
+                body, token = signed_webhook(payload)
+                receive_and_process_webhook(
+                    body=body, authorization=token, gateway=gateway
+                )
+
+        supplemental = create_event_series(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            course_group=cohort,
+            course_group_activity=activity,
+            host_membership=owner_membership,
+            title=f"{activity.title} · apoyo",
+            description="",
+            event_type=EventType.LIVE_CLASS,
+            timezone_name="America/Bogota",
+            first_starts_at=timezone.now() + timedelta(minutes=2),
+            duration_minutes=60,
+            contributes_to_activity_progress=False,
+        )
+        record_attendance(supplemental, suffix="supplemental")
+        progress = ActivityProgress.objects.get(
+            course_progress=enrollment.current_release_assignment.progress,
+            group_activity=activity,
+        )
+        self.assertNotEqual(progress.status, "completed")
+
+        primary = create_event_series(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            course_group=cohort,
+            course_group_activity=activity,
+            host_membership=owner_membership,
+            title=activity.title,
+            description="",
+            event_type=EventType.LIVE_CLASS,
+            timezone_name="America/Bogota",
+            first_starts_at=timezone.now() + timedelta(minutes=3),
+            duration_minutes=60,
+        )
+        record_attendance(primary, suffix="primary")
+        progress.refresh_from_db()
+        self.assertEqual(progress.status, "completed")
+        self.assertEqual(progress.evidence["attendance_seconds"], 75)
+        self.assertFalse(ExternalRequirementCompletion.objects.exists())
+
     def test_live_session_directory_includes_standalone_and_filters_course(
         self,
     ) -> None:

@@ -54,7 +54,7 @@ from .policies import (
 from .recurrence import materialized_windows, rule_until
 
 if TYPE_CHECKING:
-    from domain.learning.models import LearningCohort
+    from domain.learning.models import CourseGroupActivity, LearningCohort
 
 HOST_ROLES = frozenset({RoleCode.OWNER, RoleCode.ADMINISTRATOR, RoleCode.INSTRUCTOR})
 
@@ -96,6 +96,7 @@ def create_event_series(
     organization: Organization,
     course: Course | None,
     course_group: LearningCohort | None = None,
+    course_group_activity: CourseGroupActivity | None = None,
     host_membership: Membership,
     participant_memberships: list[Membership] | None = None,
     title: str,
@@ -106,6 +107,7 @@ def create_event_series(
     duration_minutes: int,
     recurrence_rule: str = "",
     counts_toward_progress: bool = False,
+    contributes_to_activity_progress: bool | None = None,
     attendance_threshold_minutes: int | None = None,
 ) -> AcademicEventSeries:
     if not can_create_schedule(actor, organization):
@@ -121,6 +123,14 @@ def create_event_series(
         or course_group.course_id != course.id
     ):
         raise SchedulingInvalid("El grupo de curso no corresponde al curso activo.")
+    if course_group_activity is not None and (
+        course_group is None
+        or course_group_activity.course_group_id != course_group.id
+        or course_group_activity.course_release_id != course_group.release_id
+        or course_group_activity.activity_type != "live_class"
+        or course_group_activity.migration_review_required
+    ):
+        raise SchedulingInvalid("La actividad en vivo no corresponde al grupo activo.")
     if (
         course is not None
         and course_group is None
@@ -137,6 +147,15 @@ def create_event_series(
     if course is not None and participants:
         raise SchedulingInvalid(
             "Las sesiones de curso usan las matrículas; no mezcles invitados explícitos."
+        )
+    contributes_to_activity = (
+        course_group_activity is not None
+        if contributes_to_activity_progress is None
+        else contributes_to_activity_progress
+    )
+    if contributes_to_activity and course_group_activity is None:
+        raise SchedulingInvalid(
+            "Sólo una actividad curricular puede recibir evidencia de asistencia."
         )
     if counts_toward_progress and course is None:
         raise SchedulingInvalid(
@@ -183,6 +202,7 @@ def create_event_series(
         organization=organization,
         course=course,
         course_group=course_group,
+        course_group_activity=course_group_activity,
         host_membership=host_membership,
         title=title,
         description=description,
@@ -194,6 +214,7 @@ def create_event_series(
         recurrence_count=len(windows),
         recurrence_until=rule_until(normalized_rule, windows),
         counts_toward_progress=counts_toward_progress,
+        activity_progress_contribution=contributes_to_activity,
         attendance_threshold_minutes=(
             attendance_threshold_minutes if counts_toward_progress else None
         ),
@@ -226,7 +247,11 @@ def create_event_series(
                 egress_status=egress_status,
                 created_by=actor,
             )
-            if counts_toward_progress and course is not None:
+            if (
+                counts_toward_progress
+                and course is not None
+                and course_group_activity is None
+            ):
                 register_live_session_requirement(
                     actor=actor,
                     organization=organization,

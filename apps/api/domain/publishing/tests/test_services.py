@@ -8,7 +8,11 @@ from django.test import TestCase
 
 from domain.content.models import UnitContentDocument
 from domain.courses.choices import AuthoringStatus
-from domain.courses.services import approve_revision, submit_revision_for_review
+from domain.courses.services import (
+    approve_revision,
+    confirm_completion_policy,
+    submit_revision_for_review,
+)
 from domain.publishing.choices import PublicationEventType, PublicationStatus
 from domain.publishing.exceptions import (
     PublicationConflict,
@@ -167,6 +171,15 @@ class PublicationServiceTests(PublishingFixtureMixin, TestCase):
         ).select_related("current_version")
         self.assertEqual(documents.count(), first.unit_count)
         self.assertTrue(all(document.versions.count() == 1 for document in documents))
+        _, draft = confirm_completion_policy(
+            actor=owner,
+            organization=organization,
+            revision=draft,
+            expected_version=draft.lock_version,
+            require_required_activities=True,
+            minimum_grade_basis_points=None,
+            minimum_attendance_basis_points=None,
+        )
         draft = submit_revision_for_review(
             actor=owner,
             organization=organization,

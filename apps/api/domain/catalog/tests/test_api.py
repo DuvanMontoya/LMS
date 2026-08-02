@@ -1,13 +1,25 @@
 from __future__ import annotations
 
+from datetime import date
+
 from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
 from domain.catalog.models import CatalogStatus
-from domain.catalog.services import create_area, create_concept
-from domain.organizations.services import create_organization_with_owner
+from domain.catalog.services import (
+    create_area,
+    create_concept,
+    create_discipline,
+    create_subject,
+)
+from domain.organizations.choices import RoleCode
+from domain.organizations.models import Membership
+from domain.organizations.services import (
+    add_existing_member_with_roles,
+    create_organization_with_owner,
+)
 
 
 class CatalogApiTests(TestCase):
@@ -22,6 +34,88 @@ class CatalogApiTests(TestCase):
         client = APIClient()
         client.force_authenticate(user=user)
         return client
+
+    def test_teaching_responsibilities_are_administered_and_self_scoped(self) -> None:
+        owner = self.user("owner-responsibilities@example.test")
+        instructor = self.user("instructor-responsibilities@example.test")
+        other_instructor = self.user("other-instructor@example.test")
+        organization = create_organization_with_owner(
+            actor=owner, name="Institución", slug="responsabilidades"
+        )
+        for user in (instructor, other_instructor):
+            add_existing_member_with_roles(
+                actor=owner,
+                organization=organization,
+                user=user,
+                roles={RoleCode.INSTRUCTOR},
+            )
+        area = create_area(
+            actor=owner,
+            organization=organization,
+            name="Matemáticas",
+            slug="matematicas",
+            description="",
+        )
+        discipline = create_discipline(
+            actor=owner,
+            organization=organization,
+            area=area,
+            name="General",
+            slug="general",
+            description="",
+        )
+        subject = create_subject(
+            actor=owner,
+            organization=organization,
+            discipline=discipline,
+            name="Álgebra",
+            slug="algebra",
+            description="",
+        )
+        membership = Membership.objects.get(organization=organization, user=instructor)
+        prefix = (
+            f"/api/v1/organizations/{organization.slug}/catalog/"
+            "teaching-responsibilities/"
+        )
+        created = self.client_for(owner).post(
+            prefix,
+            {
+                "subject_id": str(subject.id),
+                "membership_id": str(membership.id),
+                "starts_on": date.today().isoformat(),
+                "rationale": "Asignación del periodo académico.",
+            },
+            format="json",
+        )
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(created.data["member_email"], instructor.email)
+        self.assertEqual(len(self.client_for(owner).get(prefix).data), 1)
+        self.assertEqual(len(self.client_for(instructor).get(prefix).data), 1)
+        self.assertEqual(len(self.client_for(other_instructor).get(prefix).data), 0)
+
+        forbidden = self.client_for(instructor).post(
+            prefix,
+            {
+                "subject_id": str(subject.id),
+                "membership_id": str(membership.id),
+                "starts_on": date.today().isoformat(),
+                "rationale": "Autoconcesión no permitida.",
+            },
+            format="json",
+        )
+        self.assertEqual(forbidden.status_code, 403)
+        close_url = f"{prefix}{created.data['id']}/close/"
+        self.assertEqual(
+            self.client_for(instructor)
+            .post(close_url, {"ended_on": date.today().isoformat()}, format="json")
+            .status_code,
+            403,
+        )
+        closed = self.client_for(owner).post(
+            close_url, {"ended_on": date.today().isoformat()}, format="json"
+        )
+        self.assertEqual(closed.status_code, 200)
+        self.assertIsNotNone(closed.data["ended_at"])
 
     def test_owner_creates_and_lists_curriculum_structure(self) -> None:
         owner = self.user("owner@example.test")

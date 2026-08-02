@@ -1,3 +1,4 @@
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownParameterType=false, reportMissingParameterType=false
 from rest_framework import serializers
 
 from domain.scheduling.choices import EventType, RecurrenceScope
@@ -6,6 +7,22 @@ from domain.scheduling.choices import EventType, RecurrenceScope
 class SchedulingErrorSerializer(serializers.Serializer):
     code = serializers.CharField()
     detail = serializers.CharField()
+
+
+class LiveClassActivityBindingInputSerializer(serializers.Serializer):
+    expected_revision_version = serializers.IntegerField(min_value=1)
+    minimum_attended_occurrences = serializers.IntegerField(min_value=1, max_value=100)
+    minimum_attendance_minutes = serializers.IntegerField(
+        min_value=1, max_value=720, required=False, allow_null=True
+    )
+
+
+class LiveClassActivityBindingSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    activity_id = serializers.UUIDField()
+    minimum_attended_occurrences = serializers.IntegerField()
+    minimum_attendance_minutes = serializers.IntegerField(allow_null=True)
+    revision_lock_version = serializers.IntegerField()
 
 
 class ParticipantOptionSerializer(serializers.Serializer):
@@ -25,6 +42,7 @@ class EventCreateSerializer(serializers.Serializer):
         required=False, allow_null=True, allow_blank=True
     )
     course_group_id = serializers.UUIDField(required=False, allow_null=True)
+    course_group_activity_id = serializers.UUIDField(required=False, allow_null=True)
     host_membership_id = serializers.UUIDField(required=False)
     participant_membership_ids = serializers.ListField(
         child=serializers.UUIDField(),
@@ -43,9 +61,19 @@ class EventCreateSerializer(serializers.Serializer):
     duration_minutes = serializers.IntegerField(min_value=5, max_value=720)
     rrule = serializers.CharField(max_length=1_000, required=False, allow_blank=True)
     counts_toward_progress = serializers.BooleanField(default=False)
+    contributes_to_activity_progress = serializers.BooleanField(
+        required=False, allow_null=True
+    )
     attendance_threshold_minutes = serializers.IntegerField(
         min_value=1, max_value=720, required=False, allow_null=True
     )
+
+    def validate(self, attrs: dict[str, object]) -> dict[str, object]:
+        if attrs.get("counts_toward_progress"):
+            raise serializers.ValidationError(
+                "Selecciona una actividad curricular en vivo; el escritor global está cerrado."
+            )
+        return attrs
 
 
 class RecurrenceMutationSerializer(serializers.Serializer):
@@ -68,6 +96,8 @@ class CalendarExtendedPropsSerializer(serializers.Serializer):
     courseName = serializers.CharField()
     courseGroupId = serializers.UUIDField(allow_null=True)
     courseGroupName = serializers.CharField(allow_null=True)
+    courseGroupActivityId = serializers.UUIDField(allow_null=True)
+    activityRequired = serializers.BooleanField()
     countsTowardProgress = serializers.BooleanField()
     attendanceThresholdMinutes = serializers.IntegerField(allow_null=True)
     eventType = serializers.CharField()
@@ -84,6 +114,7 @@ class CalendarExtendedPropsSerializer(serializers.Serializer):
     canShareScreen = serializers.BooleanField()
     canEdit = serializers.BooleanField()
     canDelete = serializers.BooleanField()
+    href = serializers.CharField(required=False, allow_null=True)
 
 
 class CalendarEventSerializer(serializers.Serializer):
@@ -123,6 +154,8 @@ class LiveSessionDetailSerializer(serializers.Serializer):
     course = serializers.DictField(allow_null=True)
     course_group_id = serializers.UUIDField(allow_null=True)
     course_group_name = serializers.CharField(allow_null=True)
+    course_group_activity_id = serializers.UUIDField(allow_null=True)
+    activity_required = serializers.BooleanField()
     countsTowardProgress = serializers.BooleanField()
     attendanceThresholdMinutes = serializers.IntegerField(allow_null=True)
     hostName = serializers.CharField()

@@ -145,6 +145,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/submit/': {
     post: operations['assessment_attempts_submit'];
   };
+  '/api/v1/organizations/{slug}/assessments/course-activities/{activity_id}/binding/': {
+    post: operations['assessment_course_activity_binding_create'];
+  };
   '/api/v1/organizations/{slug}/assessments/deliveries/': {
     get: operations['assessment_deliveries_list'];
     post: operations['assessment_deliveries_create'];
@@ -478,6 +481,13 @@ export interface paths {
     get: operations['organizations_catalog_subjects_topics_list'];
     post: operations['organizations_catalog_subjects_topics_create'];
   };
+  '/api/v1/organizations/{slug}/catalog/teaching-responsibilities/': {
+    get: operations['organizations_catalog_teaching_responsibilities_list'];
+    post: operations['organizations_catalog_teaching_responsibilities_create'];
+  };
+  '/api/v1/organizations/{slug}/catalog/teaching-responsibilities/{responsibility_id}/close/': {
+    post: operations['organizations_catalog_teaching_responsibilities_close_create'];
+  };
   '/api/v1/organizations/{slug}/catalog/topic-concepts/': {
     /** @description Return visible topic-to-concept associations in one organization-scoped query. */
     get: operations['organizations_catalog_topic_concepts_list'];
@@ -502,6 +512,13 @@ export interface paths {
   '/api/v1/organizations/{slug}/courses/': {
     get: operations['organizations_courses_list'];
     post: operations['organizations_courses_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/teaching-exceptions/': {
+    get: operations['organizations_courses_teaching_exceptions_list'];
+    post: operations['organizations_courses_teaching_exceptions_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/teaching-exceptions/{exception_id}/close/': {
+    post: operations['organizations_courses_teaching_exceptions_close_create'];
   };
   '/api/v1/organizations/{slug}/courses/{course_slug}/': {
     get: operations['organizations_courses_retrieve'];
@@ -543,8 +560,25 @@ export interface paths {
     get: operations['organizations_courses_revisions_retrieve'];
     patch: operations['organizations_courses_revisions_partial_update'];
   };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/activities/{activity_id}/': {
+    get: operations['organizations_courses_revisions_activities_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/activities/{activity_id}/availability-rules/': {
+    put: operations['organizations_courses_revisions_activities_availability_rules_update'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/activities/{activity_id}/learning-objectives/': {
+    put: operations['organizations_courses_revisions_activities_learning_objectives_update'];
+  };
   '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/approve/': {
     post: operations['organizations_courses_revisions_approve_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/completion-policy/': {
+    get: operations['organizations_courses_revisions_completion_policy_retrieve'];
+    put: operations['organizations_courses_revisions_completion_policy_update'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/grading-scheme/': {
+    get: operations['organizations_courses_revisions_grading_scheme_list'];
+    put: operations['organizations_courses_revisions_grading_scheme_update'];
   };
   '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/learning-objectives/': {
     get: operations['organizations_courses_revisions_learning_objectives_list'];
@@ -560,6 +594,13 @@ export interface paths {
   '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/': {
     get: operations['organizations_courses_revisions_modules_retrieve'];
     patch: operations['organizations_courses_revisions_modules_partial_update'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/activities/': {
+    get: operations['organizations_courses_revisions_modules_activities_list'];
+    post: operations['organizations_courses_revisions_modules_activities_create'];
+  };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/activities/order/': {
+    put: operations['organizations_courses_revisions_modules_activities_order_update'];
   };
   '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/archive/': {
     post: operations['organizations_courses_revisions_modules_archive_create'];
@@ -675,6 +716,10 @@ export interface paths {
     get: operations['organizations_learning_academic_groups_roster_retrieve'];
     put: operations['learning_academic_group_roster_update'];
   };
+  '/api/v1/organizations/{slug}/learning/academic-periods/': {
+    get: operations['learning_academic_periods_list'];
+    post: operations['learning_academic_periods_create'];
+  };
   '/api/v1/organizations/{slug}/learning/cohorts/': {
     get: operations['learning_cohorts_list'];
     post: operations['learning_cohorts_create'];
@@ -702,6 +747,9 @@ export interface paths {
   };
   '/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/sync-preview/': {
     post: operations['organizations_learning_cohorts_sync_preview_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/course-group-activities/': {
+    get: operations['organizations_learning_course_group_activities_list'];
   };
   '/api/v1/organizations/{slug}/learning/enrollments/': {
     get: operations['learning_enrollments_list'];
@@ -733,6 +781,9 @@ export interface paths {
   };
   '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/': {
     get: operations['organizations_learning_me_enrollments_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/activities/{activity_instance_id}/': {
+    get: operations['organizations_learning_me_enrollments_activities_retrieve'];
   };
   '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/assets/access/': {
     post: operations['organizations_learning_me_enrollments_assets_access_create'];
@@ -812,6 +863,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/scheduling/calendar/events/': {
     get: operations['scheduling_calendar_events_list'];
     post: operations['scheduling_calendar_events_create'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/course-activities/{activity_id}/binding/': {
+    post: operations['scheduling_course_activity_binding_create'];
   };
   '/api/v1/organizations/{slug}/scheduling/events/{occurrence_id}/': {
     get: operations['scheduling_calendar_event_retrieve'];
@@ -1013,6 +1067,36 @@ export interface components {
       role: components['schemas']['AcademicGroupRole'];
       status?: components['schemas']['AcademicGroupMemberStatus'];
     };
+    AcademicPeriodCreate: {
+      /** Format: date */
+      ends_on: string;
+      name: string;
+      /** Format: uuid */
+      parent_id?: string | null;
+      period_type: components['schemas']['PeriodTypeEnum'];
+      slug: string;
+      /** Format: date */
+      starts_on: string;
+    };
+    AcademicPeriodRead: {
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date */
+      ends_on: string;
+      /** Format: uuid */
+      id: string;
+      lock_version?: number;
+      name: string;
+      /** Format: uuid */
+      parent_id: string | null;
+      period_type: components['schemas']['PeriodTypeEnum'];
+      slug: string;
+      /** Format: date */
+      starts_on: string;
+      status?: components['schemas']['AssessmentGradebookColumnStatus'];
+      /** Format: date-time */
+      updated_at: string;
+    };
     AccessContext: {
       is_platform_operator: boolean;
       organizations: readonly components['schemas']['AccessOrganization'][];
@@ -1036,6 +1120,61 @@ export interface components {
      * @enum {string}
      */
     ActionEnum: 'suspend' | 'reactivate' | 'revoke';
+    ActivityAvailabilityRule: {
+      /** Format: date-time */
+      available_at: string | null;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      learning_objective_id: string | null;
+      position: number;
+      /** Format: uuid */
+      prerequisite_activity_id: string | null;
+      rule_type: components['schemas']['RuleTypeEnum'];
+      threshold_basis_points: number | null;
+    };
+    ActivityAvailabilityRuleInput: {
+      /** Format: date-time */
+      available_at?: string | null;
+      /** Format: uuid */
+      learning_objective_id?: string | null;
+      /** Format: uuid */
+      prerequisite_activity_id?: string | null;
+      rule_type: components['schemas']['RuleTypeEnum'];
+      threshold_basis_points?: number | null;
+    };
+    ActivityOutline: {
+      availability_rules: {
+        [key: string]: unknown;
+      }[];
+      binding: {
+        [key: string]: unknown;
+      };
+      blocked_reason: string | null;
+      completion_policy: {
+        [key: string]: unknown;
+      };
+      estimated_duration_minutes: number | null;
+      href: string;
+      /** Format: uuid */
+      id: string;
+      is_current: boolean;
+      position: number;
+      required: boolean;
+      /** Format: uuid */
+      source_activity_id: string;
+      status: string;
+      summary: string;
+      title: string;
+      type: string;
+    };
+    /**
+     * @description * `lesson` - Lección
+     * * `live_class` - Clase en vivo
+     * * `assessment` - Evaluación
+     * @enum {string}
+     */
+    ActivityTypeEnum: 'lesson' | 'live_class' | 'assessment';
     AddMember: {
       /** Format: email */
       email: string;
@@ -1125,6 +1264,20 @@ export interface components {
       slug: string;
       status: components['schemas']['CourseLifecycleStatus'];
       title: string;
+    };
+    AssessmentActivityBinding: {
+      /** Format: uuid */
+      activity_id: string;
+      /** Format: uuid */
+      assessment_version_id: string;
+      /** Format: uuid */
+      id: string;
+      revision_lock_version: number;
+    };
+    AssessmentActivityBindingInput: {
+      /** Format: uuid */
+      assessment_version_id: string;
+      expected_revision_version: number;
     };
     /**
      * @description * `active` - Activa
@@ -1593,6 +1746,28 @@ export interface components {
       | 'ready'
       | 'rejected'
       | 'failed';
+    AssignCourseTeachingException: {
+      /** Format: uuid */
+      course_id: string;
+      /** Format: date */
+      ends_on?: string | null;
+      /** Format: uuid */
+      membership_id: string;
+      rationale: string;
+      /** Format: date */
+      starts_on: string;
+    };
+    AssignSubjectTeachingResponsibility: {
+      /** Format: date */
+      ends_on?: string | null;
+      /** Format: uuid */
+      membership_id: string;
+      rationale: string;
+      /** Format: date */
+      starts_on: string;
+      /** Format: uuid */
+      subject_id: string;
+    };
     AssignmentCreate: {
       /** Format: uuid */
       release_assignment_id?: string;
@@ -1716,6 +1891,7 @@ export interface components {
       title: string;
     };
     CalendarExtendedProps: {
+      activityRequired: boolean;
       attendanceThresholdMinutes: number | null;
       canDelete: boolean;
       canEdit: boolean;
@@ -1724,6 +1900,8 @@ export interface components {
       canShareScreen: boolean;
       canStart: boolean;
       countsTowardProgress: boolean;
+      /** Format: uuid */
+      courseGroupActivityId: string | null;
       /** Format: uuid */
       courseGroupId: string | null;
       courseGroupName: string | null;
@@ -1734,6 +1912,7 @@ export interface components {
       description: string;
       eventType: string;
       hostName: string;
+      href?: string | null;
       liveStatus: string | null;
       occurrenceStatus: string;
       occurrenceVersion: number;
@@ -1771,6 +1950,14 @@ export interface components {
       | 'asset'
       | 'publication'
       | 'system';
+    CloseCourseTeachingException: {
+      /** Format: date */
+      ended_on: string;
+    };
+    CloseTeachingResponsibility: {
+      /** Format: date */
+      ended_on: string;
+    };
     /**
      * @description * `remember` - Recordar
      * * `understand` - Comprender
@@ -1789,6 +1976,8 @@ export interface components {
     CohortCreate: {
       /** Format: uuid */
       academic_group_id?: string | null;
+      /** Format: uuid */
+      academic_period_id: string;
       /** Format: date-time */
       access_ends_at?: string | null;
       /** Format: date-time */
@@ -1820,11 +2009,16 @@ export interface components {
       /** Format: uuid */
       academic_group_id: string | null;
       academic_group_name: string | null;
+      /** Format: uuid */
+      academic_period_id: string | null;
+      academic_period_name: string | null;
       /** Format: date-time */
       access_ends_at?: string | null;
       /** Format: date-time */
       access_starts_at?: string | null;
       course_group_version: number;
+      /** Format: uuid */
+      course_release_id: string;
       course_slug: string;
       course_title: string;
       /** Format: date-time */
@@ -1833,6 +2027,7 @@ export interface components {
       enrollment_count: number;
       /** Format: uuid */
       id: string;
+      migration_review_required?: boolean;
       name: string;
       release_number: number;
       roster_mode?: components['schemas']['LearningCohortRosterMode'];
@@ -1913,6 +2108,26 @@ export interface components {
     CompleteUnit: {
       expected_progress_version: number;
     };
+    CompletionBlocker: {
+      code: string;
+      message: string;
+    };
+    /**
+     * @description * `view` - Ver la actividad
+     * * `manual` - Marcación explícita
+     * * `attendance` - Cumplir asistencia
+     * * `submission` - Enviar intento
+     * * `grade` - Recibir calificación
+     * * `pass` - Aprobar
+     * @enum {string}
+     */
+    CompletionMethodEnum:
+      'view' | 'manual' | 'attendance' | 'submission' | 'grade' | 'pass';
+    CompletionProjection: {
+      completed_required: number;
+      satisfied: boolean;
+      total_required: number;
+    };
     CompletionResult: {
       already_completed: boolean;
       progress: components['schemas']['Progress'];
@@ -1929,6 +2144,12 @@ export interface components {
       concept_ids: string[];
       /** Format: uuid */
       entity_id: string;
+    };
+    ConfirmCompletionPolicy: {
+      expected_version: number;
+      minimum_attendance_basis_points?: number | null;
+      minimum_grade_basis_points?: number | null;
+      require_required_activities: boolean;
     };
     ContentCurrent: {
       character_count: number;
@@ -2007,6 +2228,67 @@ export interface components {
       slug: string;
       status: string;
     };
+    CourseActivity: {
+      activity_type: components['schemas']['ActivityTypeEnum'];
+      availability_rules: readonly components['schemas']['ActivityAvailabilityRule'][];
+      completion_method: components['schemas']['CompletionMethodEnum'];
+      /** Format: date-time */
+      created_at: string;
+      estimated_duration_minutes: number | null;
+      /** Format: uuid */
+      id: string;
+      learning_objective_ids: readonly string[];
+      /** Format: uuid */
+      lesson_unit_id: string | null;
+      minimum_attendance_basis_points: number | null;
+      minimum_grade_basis_points: number | null;
+      /** Format: uuid */
+      module_id: string;
+      position: number | null;
+      required: boolean;
+      status: string;
+      summary: string;
+      title: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    CourseActivityCreate: {
+      activity_type: components['schemas']['ActivityTypeEnum'];
+      completion_method: components['schemas']['CompletionMethodEnum'];
+      estimated_duration_minutes?: number | null;
+      expected_version: number;
+      minimum_attendance_basis_points?: number | null;
+      minimum_grade_basis_points?: number | null;
+      /** @default true */
+      required?: boolean;
+      summary?: string;
+      title: string;
+    };
+    CourseActivityMutation: {
+      activity_type: components['schemas']['ActivityTypeEnum'];
+      availability_rules: readonly components['schemas']['ActivityAvailabilityRule'][];
+      completion_method: components['schemas']['CompletionMethodEnum'];
+      /** Format: date-time */
+      created_at: string;
+      estimated_duration_minutes: number | null;
+      /** Format: uuid */
+      id: string;
+      learning_objective_ids: readonly string[];
+      /** Format: uuid */
+      lesson_unit_id: string | null;
+      lock_version: number;
+      minimum_attendance_basis_points: number | null;
+      minimum_grade_basis_points: number | null;
+      /** Format: uuid */
+      module_id: string;
+      position: number | null;
+      required: boolean;
+      status: string;
+      summary: string;
+      title: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
     /**
      * @description * `draft` - Borrador
      * * `in_review` - En revisión
@@ -2016,6 +2298,18 @@ export interface components {
      */
     CourseAuthoringStatus:
       'draft' | 'in_review' | 'changes_requested' | 'approved';
+    CourseCompletionPolicy: {
+      /** Format: date-time */
+      confirmed_at: string | null;
+      /** Format: uuid */
+      confirmed_by_id: string | null;
+      lock_version: number;
+      minimum_attendance_basis_points: number | null;
+      minimum_grade_basis_points: number | null;
+      require_required_activities: boolean;
+      /** Format: date-time */
+      updated_at: string;
+    };
     CourseCreate: {
       description?: string;
       estimated_duration_minutes?: number | null;
@@ -2028,6 +2322,24 @@ export interface components {
       subtitle?: string;
       summary: string;
       supporting_subject_ids?: string[];
+      title: string;
+    };
+    CourseGroupActivityRead: {
+      academic_period_name: string | null;
+      activity_type: components['schemas']['ActivityTypeEnum'];
+      /** Format: uuid */
+      course_group_id: string;
+      course_group_name: string;
+      course_slug: string;
+      course_title: string;
+      /** Format: uuid */
+      id: string;
+      module_position: number;
+      module_title: string;
+      position: number;
+      required: boolean;
+      /** Format: uuid */
+      source_activity_id: string;
       title: string;
     };
     /**
@@ -2071,6 +2383,30 @@ export interface components {
       slug: string;
       summary?: string;
       title: string;
+    };
+    CourseTeachingException: {
+      /** Format: uuid */
+      course_id: string;
+      course_slug: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      created_by_id: string;
+      /** Format: date-time */
+      ended_at: string | null;
+      /** Format: uuid */
+      ended_by_id: string | null;
+      /** Format: date */
+      ends_on: string | null;
+      /** Format: uuid */
+      id: string;
+      /** Format: email */
+      member_email: string;
+      /** Format: uuid */
+      membership_id: string;
+      rationale: string;
+      /** Format: date */
+      starts_on: string;
     };
     CreateArea: {
       description?: string;
@@ -2156,6 +2492,8 @@ export interface components {
       /** Format: date-time */
       closes_at: string | null;
       /** Format: uuid */
+      course_group_activity_id: string | null;
+      /** Format: uuid */
       course_release_id: string | null;
       course_release_number: number | null;
       course_release_title: string | null;
@@ -2164,6 +2502,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       lock_version: number;
+      migration_review_required: boolean;
       name: string;
       /** Format: date-time */
       opens_at: string | null;
@@ -2199,12 +2538,12 @@ export interface components {
       /** Format: date-time */
       closes_at?: string | null;
       /** Format: uuid */
+      course_group_activity_id?: string | null;
+      /** Format: uuid */
       course_release_id?: string | null;
       name: string;
       /** Format: date-time */
       opens_at?: string | null;
-      /** Format: uuid */
-      unit_id?: string | null;
     };
     DeliveryPage: {
       count: number;
@@ -2466,8 +2805,11 @@ export interface components {
       'pending' | 'processing' | 'completed' | 'failed' | 'dead';
     EventCreate: {
       attendance_threshold_minutes?: number | null;
+      contributes_to_activity_progress?: boolean | null;
       /** @default false */
       counts_toward_progress?: boolean;
+      /** Format: uuid */
+      course_group_activity_id?: string | null;
       /** Format: uuid */
       course_group_id?: string | null;
       course_slug?: string | null;
@@ -2562,10 +2904,29 @@ export interface components {
       /** Format: uri */
       authorization_url: string;
     };
+    GradeCategory: {
+      activities: readonly components['schemas']['GradedActivity'][];
+      code: string;
+      /** Format: uuid */
+      id: string;
+      position: number;
+      title: string;
+      weight_basis_points: number;
+    };
+    GradeCategoryInput: {
+      activities: components['schemas']['GradedActivityInput'][];
+      code: string;
+      title: string;
+      weight_basis_points: number;
+    };
     Gradebook: {
+      /** Format: uuid */
+      academic_period_id: string | null;
       /** Format: date-time */
       activated_at: string | null;
       columns: readonly components['schemas']['GradebookColumn'][];
+      /** Format: uuid */
+      course_group_id: string | null;
       /** Format: uuid */
       course_release_id: string;
       course_title: string;
@@ -2574,6 +2935,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       lock_version: number;
+      migration_review_required: boolean;
       release_number: number;
       status: components['schemas']['AssessmentGradebookStatus'];
       /** Format: date-time */
@@ -2618,6 +2980,8 @@ export interface components {
       weight_basis_points: number;
     };
     GradebookCreate: {
+      /** Format: uuid */
+      course_group_id: string;
       /** Format: uuid */
       course_release_id: string;
     };
@@ -2667,6 +3031,21 @@ export interface components {
       updated_at: string;
       weighted_percent_basis_points: number;
     };
+    GradedActivity: {
+      /** Format: uuid */
+      activity_id: string;
+      /** Format: uuid */
+      id: string;
+      required: boolean;
+      weight_basis_points: number;
+    };
+    GradedActivityInput: {
+      /** Format: uuid */
+      activity_id: string;
+      /** @default true */
+      required?: boolean;
+      weight_basis_points: number;
+    };
     GradingPolicy: {
       /** Format: uuid */
       assessment_version_id: string;
@@ -2695,6 +3074,12 @@ export interface components {
       reason: string;
       snapshot_digest: string;
       source: components['schemas']['AssessmentGradingRevisionSource'];
+    };
+    GradingSchemeResponse: {
+      categories: components['schemas']['GradeCategory'][];
+      /** Format: uuid */
+      revision_id: string;
+      revision_lock_version: number;
     };
     HealthCheck: {
       capabilities: unknown;
@@ -2869,9 +3254,11 @@ export interface components {
      * @description * `existing_user` - Usuario existente
      * * `new_user` - Usuario nuevo
      * * `managed_account` - Cuenta administrada
+     * * `initial_owner` - Propietario inicial
      * @enum {string}
      */
-    InvitationTypeEnum: 'existing_user' | 'new_user' | 'managed_account';
+    InvitationTypeEnum:
+      'existing_user' | 'new_user' | 'managed_account' | 'initial_owner';
     Item: {
       /** Format: date-time */
       created_at: string;
@@ -2991,6 +3378,25 @@ export interface components {
       | 'publication_withdrawn'
       | 'membership_inactive'
       | 'release_invalid';
+    LearningActivity: {
+      activity: {
+        [key: string]: unknown;
+      };
+      course: {
+        [key: string]: unknown;
+      };
+      lesson?: {
+        [key: string]: unknown;
+      };
+      module: {
+        [key: string]: unknown;
+      };
+      navigation: {
+        [key: string]: unknown;
+      };
+      progress: components['schemas']['Progress'];
+      release_number: number;
+    };
     LearningAssetAccess: {
       asset_version_ids: string[];
       /** Format: uuid */
@@ -3096,12 +3502,27 @@ export interface components {
       unit_count: number;
       word_count: number;
     };
+    LiveClassActivityBinding: {
+      /** Format: uuid */
+      activity_id: string;
+      /** Format: uuid */
+      id: string;
+      minimum_attendance_minutes: number | null;
+      minimum_attended_occurrences: number;
+      revision_lock_version: number;
+    };
+    LiveClassActivityBindingInput: {
+      expected_revision_version: number;
+      minimum_attendance_minutes?: number | null;
+      minimum_attended_occurrences: number;
+    };
     LiveConnection: {
       serverUrl: string;
       session: components['schemas']['LiveSessionSummary'];
       token: string;
     };
     LiveSessionDetail: {
+      activity_required: boolean;
       attendanceThresholdMinutes: number | null;
       canDelete: boolean;
       canEdit: boolean;
@@ -3113,6 +3534,8 @@ export interface components {
       course: {
         [key: string]: unknown;
       } | null;
+      /** Format: uuid */
+      course_group_activity_id: string | null;
       /** Format: uuid */
       course_group_id: string | null;
       course_group_name: string | null;
@@ -3214,6 +3637,11 @@ export interface components {
       /** Format: decimal */
       score: string;
       sequence: number;
+    };
+    MasteryProjection: {
+      evidenced_count: number;
+      evidenced_objective_ids: string[];
+      total_objectives: number;
     };
     MemberProfile: {
       address?: string;
@@ -3423,6 +3851,7 @@ export interface components {
       updated_at: string;
     };
     ModuleOutline: {
+      activities: components['schemas']['ActivityOutline'][];
       description: string;
       /** Format: uuid */
       id: string;
@@ -3531,10 +3960,13 @@ export interface components {
       ids: string[];
     };
     Organization: {
+      /** Format: date-time */
+      activated_at?: string | null;
       /** Format: uuid */
       id: string;
       name: string;
       slug: string;
+      status?: components['schemas']['OrganizationStatusEnum'];
     };
     OrganizationMembershipSettings: {
       allow_admin_managed_accounts?: boolean;
@@ -3581,6 +4013,15 @@ export interface components {
       | 'reviewer'
       | 'instructor'
       | 'learner';
+    /**
+     * @description * `pending_activation` - Pendiente de activación
+     * * `active` - Activa
+     * * `suspended` - Suspendida
+     * * `closed` - Cerrada
+     * @enum {string}
+     */
+    OrganizationStatusEnum:
+      'pending_activation' | 'active' | 'suspended' | 'closed';
     OrganizationUpdate: {
       name: string;
     };
@@ -3592,6 +4033,7 @@ export interface components {
       subjects: readonly components['schemas']['RevisionSubject'][];
     };
     OutlineModule: {
+      activities: readonly components['schemas']['CourseActivity'][];
       /** Format: date-time */
       archived_at: string | null;
       /** Format: date-time */
@@ -3647,6 +4089,14 @@ export interface components {
       /** Format: uri */
       previous: string | null;
       results: components['schemas']['AcademicGroupRosterRead'][];
+    };
+    PaginatedAcademicPeriod: {
+      count: number;
+      /** Format: uri */
+      next: string | null;
+      /** Format: uri */
+      previous: string | null;
+      results: components['schemas']['AcademicPeriodRead'][];
     };
     PaginatedCohort: {
       count: number;
@@ -3767,8 +4217,25 @@ export interface components {
       response_id: string;
       response_status: components['schemas']['AssessmentResponseStatus'];
     };
-    /** @description The operator supplies an institution and its initial verified owner. */
+    /**
+     * @description * `school_year` - Año escolar
+     * * `term` - Periodo
+     * * `semester` - Semestre
+     * * `trimester` - Trimestre
+     * * `quarter` - Cuatrimestre
+     * * `grading_period` - Periodo de calificación
+     * @enum {string}
+     */
+    PeriodTypeEnum:
+      | 'school_year'
+      | 'term'
+      | 'semester'
+      | 'trimester'
+      | 'quarter'
+      | 'grading_period';
+    /** @description The operator supplies an institution and bootstrap invitations. */
     PlatformOrganizationProvision: {
+      administrator_emails?: string[];
       name: string;
       /** Format: email */
       owner_email: string;
@@ -3866,12 +4333,18 @@ export interface components {
       updated_at: string;
     };
     Progress: {
+      attendance: components['schemas']['ThresholdProjection'];
+      blockers: components['schemas']['CompletionBlocker'][];
       /** Format: date-time */
       completed_at: string | null;
       completed_required_activities: number;
       completed_units: number;
+      completion: components['schemas']['CompletionProjection'];
+      grade: components['schemas']['ThresholdProjection'];
+      is_complete: boolean;
       /** Format: date-time */
       last_activity_at: string | null;
+      mastery: components['schemas']['MasteryProjection'];
       /** Format: decimal */
       percent: string;
       percent_basis_points: number;
@@ -4232,8 +4705,16 @@ export interface components {
       expected_enrollment_version: number;
       target_release_number: number;
     };
+    ReplaceActivityRules: {
+      expected_version: number;
+      rules: components['schemas']['ActivityAvailabilityRuleInput'][];
+    };
     ReplaceConceptAssociations: {
       concept_ids: string[];
+    };
+    ReplaceGradingScheme: {
+      categories: components['schemas']['GradeCategoryInput'][];
+      expected_version: number;
     };
     ReplaceObjectives: {
       expected_version: number;
@@ -4267,6 +4748,8 @@ export interface components {
       expected_document_version: number;
     };
     Resume: {
+      /** Format: uuid */
+      activity_instance_id: string | null;
       href: string | null;
       /** Format: uuid */
       node_id: string | null;
@@ -4317,6 +4800,22 @@ export interface components {
       position: number;
       subject: components['schemas']['SubjectSummary'];
     };
+    /**
+     * @description * `activity_completed` - Actividad completada
+     * * `activity_passed` - Actividad aprobada
+     * * `minimum_grade` - Calificación mínima
+     * * `objective_mastered` - Objetivo dominado
+     * * `available_from` - Disponible desde
+     * * `available_until` - Disponible hasta
+     * @enum {string}
+     */
+    RuleTypeEnum:
+      | 'activity_completed'
+      | 'activity_passed'
+      | 'minimum_grade'
+      | 'objective_mastered'
+      | 'available_from'
+      | 'available_until';
     SchedulingError: {
       code: string;
       detail: string;
@@ -4545,6 +5044,35 @@ export interface components {
       name: string;
       slug: string;
       status: string;
+    };
+    SubjectTeachingResponsibility: {
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      created_by_id: string;
+      /** Format: date-time */
+      ended_at: string | null;
+      /** Format: uuid */
+      ended_by_id: string | null;
+      /** Format: date */
+      ends_on: string | null;
+      /** Format: uuid */
+      id: string;
+      /** Format: email */
+      member_email: string;
+      /** Format: uuid */
+      membership_id: string;
+      rationale: string;
+      /** Format: date */
+      starts_on: string;
+      /** Format: uuid */
+      subject_id: string;
+      subject_name: string;
+    };
+    ThresholdProjection: {
+      basis_points: number | null;
+      minimum_basis_points: number | null;
+      satisfied: boolean;
     };
     Topic: {
       children: readonly {
@@ -6460,6 +6988,28 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['AttemptResult'];
+        };
+      };
+    };
+  };
+  assessment_course_activity_binding_create: {
+    parameters: {
+      path: {
+        activity_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentActivityBindingInput'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentActivityBindingInput'];
+        'multipart/form-data': components['schemas']['AssessmentActivityBindingInput'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['AssessmentActivityBinding'];
         };
       };
     };
@@ -8853,6 +9403,63 @@ export interface operations {
       };
     };
   };
+  organizations_catalog_teaching_responsibilities_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['SubjectTeachingResponsibility'][];
+        };
+      };
+    };
+  };
+  organizations_catalog_teaching_responsibilities_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssignSubjectTeachingResponsibility'];
+        'application/x-www-form-urlencoded': components['schemas']['AssignSubjectTeachingResponsibility'];
+        'multipart/form-data': components['schemas']['AssignSubjectTeachingResponsibility'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['SubjectTeachingResponsibility'];
+        };
+      };
+    };
+  };
+  organizations_catalog_teaching_responsibilities_close_create: {
+    parameters: {
+      path: {
+        responsibility_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CloseTeachingResponsibility'];
+        'application/x-www-form-urlencoded': components['schemas']['CloseTeachingResponsibility'];
+        'multipart/form-data': components['schemas']['CloseTeachingResponsibility'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['SubjectTeachingResponsibility'];
+        };
+      };
+    };
+  };
   /** @description Return visible topic-to-concept associations in one organization-scoped query. */
   organizations_catalog_topic_concepts_list: {
     parameters: {
@@ -9034,6 +9641,63 @@ export interface operations {
       201: {
         content: {
           'application/json': components['schemas']['Revision'];
+        };
+      };
+    };
+  };
+  organizations_courses_teaching_exceptions_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CourseTeachingException'][];
+        };
+      };
+    };
+  };
+  organizations_courses_teaching_exceptions_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssignCourseTeachingException'];
+        'application/x-www-form-urlencoded': components['schemas']['AssignCourseTeachingException'];
+        'multipart/form-data': components['schemas']['AssignCourseTeachingException'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['CourseTeachingException'];
+        };
+      };
+    };
+  };
+  organizations_courses_teaching_exceptions_close_create: {
+    parameters: {
+      path: {
+        exception_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CloseCourseTeachingException'];
+        'application/x-www-form-urlencoded': components['schemas']['CloseCourseTeachingException'];
+        'multipart/form-data': components['schemas']['CloseCourseTeachingException'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CourseTeachingException'];
         };
       };
     };
@@ -9307,6 +9971,71 @@ export interface operations {
       };
     };
   };
+  organizations_courses_revisions_activities_retrieve: {
+    parameters: {
+      path: {
+        activity_id: string;
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CourseActivity'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_activities_availability_rules_update: {
+    parameters: {
+      path: {
+        activity_id: string;
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceActivityRules'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceActivityRules'];
+        'multipart/form-data': components['schemas']['ReplaceActivityRules'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MutationResult'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_activities_learning_objectives_update: {
+    parameters: {
+      path: {
+        activity_id: string;
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceObjectives'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceObjectives'];
+        'multipart/form-data': components['schemas']['ReplaceObjectives'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MutationResult'];
+        };
+      };
+    };
+  };
   organizations_courses_revisions_approve_create: {
     parameters: {
       path: {
@@ -9326,6 +10055,84 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['Revision'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_completion_policy_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CourseCompletionPolicy'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_completion_policy_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConfirmCompletionPolicy'];
+        'application/x-www-form-urlencoded': components['schemas']['ConfirmCompletionPolicy'];
+        'multipart/form-data': components['schemas']['ConfirmCompletionPolicy'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CourseCompletionPolicy'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_grading_scheme_list: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GradeCategory'][];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_grading_scheme_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceGradingScheme'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceGradingScheme'];
+        'multipart/form-data': components['schemas']['ReplaceGradingScheme'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['GradingSchemeResponse'];
         };
       };
     };
@@ -9468,6 +10275,71 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['ModuleMutation'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_modules_activities_list: {
+    parameters: {
+      path: {
+        course_slug: string;
+        module_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CourseActivity'][];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_modules_activities_create: {
+    parameters: {
+      path: {
+        course_slug: string;
+        module_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CourseActivityCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['CourseActivityCreate'];
+        'multipart/form-data': components['schemas']['CourseActivityCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['CourseActivityMutation'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_modules_activities_order_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        module_id: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceOrder'];
+        'application/x-www-form-urlencoded': components['schemas']['ReplaceOrder'];
+        'multipart/form-data': components['schemas']['ReplaceOrder'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MutationResult'];
         };
       };
     };
@@ -10371,6 +11243,51 @@ export interface operations {
       };
     };
   };
+  learning_academic_periods_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PaginatedAcademicPeriod'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  learning_academic_periods_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcademicPeriodCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['AcademicPeriodCreate'];
+        'multipart/form-data': components['schemas']['AcademicPeriodCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['AcademicPeriodRead'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
   learning_cohorts_list: {
     parameters: {
       query?: {
@@ -10669,6 +11586,24 @@ export interface operations {
       };
     };
   };
+  organizations_learning_course_group_activities_list: {
+    parameters: {
+      query?: {
+        /** @description Filtra lesson, live_class o assessment. */
+        activity_type?: string;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CourseGroupActivityRead'][];
+        };
+      };
+    };
+  };
   learning_enrollments_list: {
     parameters: {
       query?: {
@@ -10921,6 +11856,27 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['MyLearning'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_me_enrollments_activities_retrieve: {
+    parameters: {
+      path: {
+        activity_instance_id: string;
+        enrollment_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LearningActivity'];
         };
       };
       404: {
@@ -11526,6 +12482,28 @@ export interface operations {
       400: {
         content: {
           'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_course_activity_binding_create: {
+    parameters: {
+      path: {
+        activity_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LiveClassActivityBindingInput'];
+        'application/x-www-form-urlencoded': components['schemas']['LiveClassActivityBindingInput'];
+        'multipart/form-data': components['schemas']['LiveClassActivityBindingInput'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['LiveClassActivityBinding'];
         };
       };
     };

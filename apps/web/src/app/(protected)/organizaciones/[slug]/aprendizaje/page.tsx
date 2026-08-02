@@ -142,8 +142,8 @@ export default async function MyLearningPage({
             <p className="academic-kicker">Próximas acciones</p>
             <h2>Evaluaciones pendientes</h2>
             <p>
-              Instrumentos vinculados a tu release vigente; no alteran el
-              porcentaje de progreso del curso.
+              Instrumentos vinculados a tu grupo y release; su resultado
+              alimenta el progreso y la calificación compuesta del curso.
             </p>
           </div>
           <span>{pendingAssessments.length}</span>

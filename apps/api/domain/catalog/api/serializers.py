@@ -9,6 +9,7 @@ from domain.catalog.models import (
     LearningObjective,
     PrerequisiteKind,
     Subject,
+    SubjectTeachingResponsibility,
     Topic,
 )
 
@@ -36,6 +37,47 @@ class SubjectSerializer(serializers.ModelSerializer):
         model = Subject
         fields = ("id", "discipline_id", "name", "slug", "description", "status")
         read_only_fields = ("id", "discipline_id", "status")
+
+
+class SubjectTeachingResponsibilitySerializer(serializers.ModelSerializer):
+    subject_id = serializers.UUIDField(read_only=True)
+    subject_name = serializers.CharField(source="subject.name", read_only=True)
+    membership_id = serializers.UUIDField(read_only=True)
+    member_email = serializers.EmailField(
+        source="membership.user.email", read_only=True
+    )
+    created_by_id = serializers.UUIDField(read_only=True)
+    ended_by_id = serializers.UUIDField(read_only=True, allow_null=True)
+
+    class Meta:
+        model = SubjectTeachingResponsibility
+        fields = (
+            "id",
+            "subject_id",
+            "subject_name",
+            "membership_id",
+            "member_email",
+            "starts_on",
+            "ends_on",
+            "rationale",
+            "created_by_id",
+            "created_at",
+            "ended_by_id",
+            "ended_at",
+        )
+        read_only_fields = fields
+
+
+class AssignSubjectTeachingResponsibilitySerializer(serializers.Serializer):
+    subject_id = serializers.UUIDField()
+    membership_id = serializers.UUIDField()
+    starts_on = serializers.DateField()
+    ends_on = serializers.DateField(required=False, allow_null=True)
+    rationale = serializers.CharField(max_length=1000)
+
+
+class CloseTeachingResponsibilitySerializer(serializers.Serializer):
+    ended_on = serializers.DateField()
 
 
 class TopicSerializer(serializers.ModelSerializer):

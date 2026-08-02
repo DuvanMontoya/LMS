@@ -33,3 +33,27 @@ class StructureStatus(models.TextChoices):
 class SubjectAlignmentType(models.TextChoices):
     PRIMARY = "primary", "Principal"
     SUPPORTING = "supporting", "Complementaria"
+
+
+class ActivityType(models.TextChoices):
+    LESSON = "lesson", "Lección"
+    LIVE_CLASS = "live_class", "Clase en vivo"
+    ASSESSMENT = "assessment", "Evaluación"
+
+
+class ActivityCompletionMethod(models.TextChoices):
+    VIEW = "view", "Ver la actividad"
+    MANUAL = "manual", "Marcación explícita"
+    ATTENDANCE = "attendance", "Cumplir asistencia"
+    SUBMISSION = "submission", "Enviar intento"
+    GRADE = "grade", "Recibir calificación"
+    PASS = "pass", "Aprobar"
+
+
+class AvailabilityRuleType(models.TextChoices):
+    ACTIVITY_COMPLETED = "activity_completed", "Actividad completada"
+    ACTIVITY_PASSED = "activity_passed", "Actividad aprobada"
+    MINIMUM_GRADE = "minimum_grade", "Calificación mínima"
+    OBJECTIVE_MASTERED = "objective_mastered", "Objetivo dominado"
+    AVAILABLE_FROM = "available_from", "Disponible desde"
+    AVAILABLE_UNTIL = "available_until", "Disponible hasta"

@@ -10,6 +10,10 @@ ASSESSMENT = BASE + "<slug:assessment_slug>/"
 AREV = ASSESSMENT + "revisions/<uuid:revision_id>/"
 
 urlpatterns = [
+    path(
+        BASE + "course-activities/<uuid:activity_id>/binding/",
+        views.AssessmentActivityBindingView.as_view(),
+    ),
     path(BASE + "question-banks/", views.QuestionBankListCreateView.as_view()),
     path(BANK, views.QuestionBankDetailView.as_view()),
     path(BANK + "archive/", views.QuestionBankArchiveView.as_view()),

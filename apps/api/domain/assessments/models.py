@@ -12,7 +12,14 @@ from django.db.models import F, Q
 from django.db.models.functions import Lower, Trim
 
 from domain.catalog.models import LearningObjective
-from domain.learning.models import EnrollmentReleaseAssignment, LearningCohort
+from domain.courses.choices import ActivityType
+from domain.courses.models import CourseActivity
+from domain.learning.models import (
+    AcademicPeriod,
+    CourseGroupActivity,
+    EnrollmentReleaseAssignment,
+    LearningCohort,
+)
 from domain.organizations.models import Organization
 from domain.publishing.models import CourseRelease
 
@@ -965,6 +972,41 @@ class AssessmentVersion(ImmutableModel):
         return f"{self.assessment}:version-{self.number}"
 
 
+class AssessmentActivityBinding(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    activity = models.OneToOneField(
+        CourseActivity,
+        on_delete=models.PROTECT,
+        related_name="assessment_binding",
+    )
+    assessment_version = models.ForeignKey(
+        AssessmentVersion,
+        on_delete=models.PROTECT,
+        related_name="course_activity_bindings",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="assessment_activity_bindings_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"{self.activity_id}:{self.assessment_version_id}"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.activity.activity_type != ActivityType.ASSESSMENT:
+            raise ValidationError({"activity": "La actividad no es una evaluación."})
+        if (
+            self.activity.module.revision.course.organization_id
+            != self.assessment_version.assessment.organization_id
+        ):
+            raise ValidationError(
+                {"assessment_version": "La evaluación pertenece a otra organización."}
+            )
+
+
 class AssessmentDelivery(NoPhysicalDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
@@ -980,6 +1022,14 @@ class AssessmentDelivery(NoPhysicalDeleteModel):
         on_delete=models.PROTECT,
         related_name="assessment_deliveries",
     )
+    course_group_activity = models.ForeignKey(
+        CourseGroupActivity,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="assessment_deliveries",
+    )
+    migration_review_required = models.BooleanField(default=False)
     unit_id = models.UUIDField(null=True, blank=True)
     name = models.CharField(max_length=200)
     status = models.CharField(
@@ -1053,6 +1103,10 @@ class AssessmentDelivery(NoPhysicalDeleteModel):
             models.Index(
                 fields=["course_release", "status"], name="assess_del_rel_state_ix"
             ),
+            models.Index(
+                fields=["course_group_activity", "status"],
+                name="assess_del_activity_state_ix",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -1076,6 +1130,41 @@ class AssessmentDelivery(NoPhysicalDeleteModel):
         ):
             raise ValidationError(
                 {"course_release": "El release pertenece a otra organización."}
+            )
+        if self.course_group_activity_id:
+            activity = self.course_group_activity
+            if (
+                activity.course_release_id != self.course_release_id
+                or activity.course_group.organization_id != self.organization_id
+                or activity.activity_type != "assessment"
+            ):
+                raise ValidationError(
+                    {
+                        "course_group_activity": (
+                            "La actividad no corresponde a la evaluación y release."
+                        )
+                    }
+                )
+            binding_version_id = activity.binding_snapshot.get("assessment_version_id")
+            if binding_version_id != str(self.assessment_version_id):
+                raise ValidationError(
+                    {
+                        "assessment_version": (
+                            "La versión no coincide con el binding del release."
+                        )
+                    }
+                )
+        elif (
+            self._state.adding
+            and (self.course_release_id or self.unit_id)
+            and not self.migration_review_required
+        ):
+            raise ValidationError(
+                {
+                    "course_group_activity": (
+                        "Una entrega curricular nueva exige actividad de grupo."
+                    )
+                }
             )
 
 
@@ -1953,9 +2042,24 @@ class CourseGradebook(NoPhysicalDeleteModel):
     organization = models.ForeignKey(
         Organization, on_delete=models.PROTECT, related_name="course_gradebooks"
     )
-    course_release = models.OneToOneField(
-        CourseRelease, on_delete=models.PROTECT, related_name="gradebook"
+    course_release = models.ForeignKey(
+        CourseRelease, on_delete=models.PROTECT, related_name="gradebooks"
     )
+    course_group = models.ForeignKey(
+        LearningCohort,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="gradebooks",
+    )
+    academic_period = models.ForeignKey(
+        AcademicPeriod,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="gradebooks",
+    )
+    migration_review_required = models.BooleanField(default=False)
     status = models.CharField(
         max_length=16,
         choices=GradebookStatus.choices,
@@ -1985,6 +2089,11 @@ class CourseGradebook(NoPhysicalDeleteModel):
 
     class Meta:
         constraints = [
+            models.UniqueConstraint(
+                fields=["course_group", "course_release", "academic_period"],
+                condition=Q(course_group__isnull=False),
+                name="assess_gradebook_execution_unique",
+            ),
             models.CheckConstraint(
                 condition=Q(lock_version__gt=0),
                 name="assess_gradebook_lock_positive",
@@ -2008,6 +2117,22 @@ class CourseGradebook(NoPhysicalDeleteModel):
 
     def __str__(self) -> str:
         return f"{self.course_release}:gradebook"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.course_release.course.organization_id != self.organization_id:
+            raise ValidationError(
+                {"course_release": "El release pertenece a otra organización."}
+            )
+        if self.course_group_id:
+            if (
+                self.course_group.organization_id != self.organization_id
+                or self.course_group.release_id != self.course_release_id
+                or self.course_group.academic_period_id != self.academic_period_id
+            ):
+                raise ValidationError(
+                    {"course_group": "El gradebook usa otra ejecución académica."}
+                )
 
 
 class GradebookColumn(NoPhysicalDeleteModel):

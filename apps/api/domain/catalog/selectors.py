@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
+from django.utils import timezone
 
 from domain.organizations.models import Organization
 
@@ -12,6 +13,7 @@ from .models import (
     Discipline,
     LearningObjective,
     Subject,
+    SubjectTeachingResponsibility,
     Topic,
 )
 
@@ -44,6 +46,23 @@ def subjects_visible_to(
         .select_related("discipline__area")
         .order_by("name")
     )
+
+
+def responsible_subjects_for_actor(
+    *, actor: object, organization: Organization
+) -> QuerySet[Subject]:
+    today = timezone.localdate()
+    responsibility_ids = SubjectTeachingResponsibility.objects.filter(
+        subject__discipline__area__organization=organization,
+        membership__user=actor,
+        membership__status="active",
+        starts_on__lte=today,
+        ended_at__isnull=True,
+    ).filter(Q(ends_on__isnull=True) | Q(ends_on__gte=today))
+    return Subject.objects.filter(
+        teaching_responsibilities__in=responsibility_ids,
+        status="active",
+    ).distinct()
 
 
 def topics_visible_to(subject: Subject, statuses: Iterable[str]) -> QuerySet[Topic]:

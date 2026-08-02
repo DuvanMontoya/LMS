@@ -270,6 +270,11 @@ function PlatformSidebar({
         {
           children: [
             {
+              href: `${organizationBase}/aprendizaje/mis-asignaturas`,
+              label: 'Mis asignaturas',
+              exact: true,
+            },
+            {
               activePrefixes: [`${organizationBase}/curriculo/asignaturas/`],
               href: `${organizationBase}/curriculo`,
               label: 'Estructura curricular',
@@ -478,8 +483,14 @@ function PlatformSidebar({
           activePrefixes: [
             `${organizationBase}/aprendizaje/matriculas`,
             `${organizationBase}/aprendizaje/grupos`,
+            `${organizationBase}/aprendizaje/periodos`,
           ],
           children: [
+            {
+              href: `${organizationBase}/aprendizaje/periodos`,
+              label: 'Periodos académicos',
+              visible: capabilities.has('learning.cohort.view'),
+            },
             {
               href: `${organizationBase}/aprendizaje/grupos`,
               label: 'Grupos académicos',
@@ -487,7 +498,7 @@ function PlatformSidebar({
             },
             {
               href: `${organizationBase}/aprendizaje/cohortes`,
-              label: 'Grupos de curso',
+              label: 'Mis grupos',
               visible: capabilities.has('learning.cohort.view'),
             },
             {

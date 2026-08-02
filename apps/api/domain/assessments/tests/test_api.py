@@ -1,11 +1,21 @@
+import uuid
+from datetime import date
+
 from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
+from domain.courses.choices import ActivityCompletionMethod, ActivityType
+from domain.courses.services import create_activity, create_module
+from domain.learning.models import CourseGroupActivity
+from domain.learning.services import create_academic_period, create_cohort
+from domain.organizations.choices import RoleCode
+from domain.organizations.models import Membership
 from domain.organizations.services import create_organization_with_owner
 
 from ..api.serializers import AttemptResultSerializer
+from ..gradebooks import create_gradebook
 from ..services import (
     activate_delivery,
     assign_delivery,
@@ -18,6 +28,177 @@ from .support import AssessmentFixtureMixin
 
 
 class AssessmentApiSecurityTests(AssessmentFixtureMixin, TestCase):
+    def test_approved_assessment_version_binds_once_to_curricular_activity(
+        self,
+    ) -> None:
+        context = self.assessment_context()
+        revision = context["course_revision"]
+        module, revision = create_module(
+            actor=context["owner"],
+            organization=context["organization"],
+            revision=revision,
+            expected_version=revision.lock_version,
+            title="Evaluaciones",
+        )
+        activity, revision = create_activity(
+            actor=context["owner"],
+            organization=context["organization"],
+            module=module,
+            expected_version=revision.lock_version,
+            activity_type=ActivityType.ASSESSMENT,
+            title="Diagnóstico",
+            completion_method=ActivityCompletionMethod.PASS,
+            minimum_grade_basis_points=6000,
+        )
+        client = APIClient()
+        client.force_authenticate(user=context["owner"])
+        url = (
+            f"/api/v1/organizations/{context['organization'].slug}/assessments/"
+            f"course-activities/{activity.id}/binding/"
+        )
+        payload = {
+            "assessment_version_id": str(context["assessment_version"].id),
+            "expected_revision_version": revision.lock_version,
+        }
+        created = client.post(url, payload, format="json")
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(created.data["activity_id"], str(activity.id))
+        self.assertEqual(
+            created.data["revision_lock_version"], revision.lock_version + 1
+        )
+        duplicate = client.post(
+            url,
+            {**payload, "expected_revision_version": revision.lock_version + 1},
+            format="json",
+        )
+        self.assertEqual(duplicate.status_code, 409)
+
+    def test_instructor_delivery_and_gradebook_scope_is_limited_to_assigned_group(
+        self,
+    ) -> None:
+        context = self.assessment_context(with_learning=True)
+        instructor = self.member(
+            context["owner"],
+            context["organization"],
+            RoleCode.INSTRUCTOR,
+            "scoped-instructor@example.test",
+        )
+        instructor_membership = Membership.objects.get(
+            organization=context["organization"], user=instructor
+        )
+        period = create_academic_period(
+            actor=context["owner"],
+            organization=context["organization"],
+            name="Periodo 1",
+            slug="periodo-1",
+            period_type="term",
+            starts_on=date(2026, 1, 1),
+            ends_on=date(2026, 6, 30),
+        )
+        assigned_group = create_cohort(
+            actor=context["owner"],
+            organization=context["organization"],
+            course=context["release"].course,
+            release=context["release"],
+            academic_period=period,
+            name="Grupo asignado",
+            slug="grupo-asignado",
+            staff=[
+                {
+                    "membership_id": instructor_membership.id,
+                    "role": "instructor",
+                }
+            ],
+        )
+        foreign_group = create_cohort(
+            actor=context["owner"],
+            organization=context["organization"],
+            course=context["release"].course,
+            release=context["release"],
+            academic_period=period,
+            name="Grupo ajeno",
+            slug="grupo-ajeno",
+        )
+
+        def assessment_activity(group, position: int) -> CourseGroupActivity:
+            row = CourseGroupActivity(
+                course_group=group,
+                academic_period=period,
+                course_release=context["release"],
+                source_activity_id=uuid.uuid4(),
+                source_module_id=uuid.uuid4(),
+                activity_type="assessment",
+                module_title="Evaluaciones",
+                title="Diagnóstico",
+                module_position=2,
+                position=position,
+                required=True,
+                completion_policy={"method": "pass"},
+                availability_rules=[],
+                binding_snapshot={
+                    "provider": "assessments",
+                    "assessment_version_id": str(context["assessment_version"].id),
+                },
+                release_snapshot_digest=context["release"].snapshot_digest,
+            )
+            row.full_clean()
+            row.save()
+            return row
+
+        assigned_activity = assessment_activity(assigned_group, 1)
+        foreign_activity = assessment_activity(foreign_group, 1)
+        assigned_delivery = create_delivery(
+            actor=context["owner"],
+            organization=context["organization"],
+            assessment_version=context["assessment_version"],
+            name="Entrega asignada",
+            course_release=context["release"],
+            course_group_activity=assigned_activity,
+        )
+        foreign_delivery = create_delivery(
+            actor=context["owner"],
+            organization=context["organization"],
+            assessment_version=context["assessment_version"],
+            name="Entrega ajena",
+            course_release=context["release"],
+            course_group_activity=foreign_activity,
+        )
+        assigned_gradebook = create_gradebook(
+            actor=context["owner"],
+            organization=context["organization"],
+            course_release=context["release"],
+            course_group=assigned_group,
+            academic_period=period,
+        )
+        foreign_gradebook = create_gradebook(
+            actor=context["owner"],
+            organization=context["organization"],
+            course_release=context["release"],
+            course_group=foreign_group,
+            academic_period=period,
+        )
+        client = APIClient()
+        client.force_authenticate(instructor)
+        base = f"/api/v1/organizations/{context['organization'].slug}/assessments"
+        deliveries = client.get(f"{base}/deliveries/")
+        self.assertEqual(deliveries.status_code, 200)
+        payload = deliveries.json()
+        rows = payload["results"] if isinstance(payload, dict) else payload
+        self.assertEqual({row["id"] for row in rows}, {str(assigned_delivery.id)})
+        self.assertEqual(
+            client.get(f"{base}/deliveries/{foreign_delivery.id}/").status_code,
+            404,
+        )
+        gradebooks = client.get(f"{base}/gradebooks/")
+        self.assertEqual(gradebooks.status_code, 200)
+        self.assertEqual(
+            {row["id"] for row in gradebooks.json()}, {str(assigned_gradebook.id)}
+        )
+        self.assertEqual(
+            client.get(f"{base}/gradebooks/{foreign_gradebook.id}/").status_code,
+            404,
+        )
+
     def test_learner_attempt_payload_never_contains_grading_material(self) -> None:
         context = self.assessment_context(with_learning=True)
         delivery = create_delivery(
@@ -26,6 +207,7 @@ class AssessmentApiSecurityTests(AssessmentFixtureMixin, TestCase):
             assessment_version=context["assessment_version"],
             name="Diagnóstico seguro",
             course_release=context["release"],
+            migration_review_required=True,
         )
         delivery = activate_delivery(
             actor=context["owner"],
@@ -76,6 +258,7 @@ class AssessmentApiSecurityTests(AssessmentFixtureMixin, TestCase):
             assessment_version=context["assessment_version"],
             name="Feedback determinista",
             course_release=context["release"],
+            migration_review_required=True,
         )
         delivery = activate_delivery(
             actor=context["owner"],
@@ -129,6 +312,7 @@ class AssessmentApiSecurityTests(AssessmentFixtureMixin, TestCase):
             assessment_version=context["assessment_version"],
             name="Entrega protegida",
             course_release=context["release"],
+            migration_review_required=True,
         )
         delivery = activate_delivery(
             actor=context["owner"],

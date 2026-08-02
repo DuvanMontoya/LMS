@@ -10,7 +10,9 @@ from django.utils import timezone
 from domain.learning.access import access_state, require_learning_access
 from domain.learning.choices import (
     AcademicGroupRole,
+    AcademicPeriodType,
     AccessState,
+    ActivityProgressStatus,
     CohortRosterMode,
     EnrollmentCohortSource,
     EnrollmentStatus,
@@ -26,7 +28,9 @@ from domain.learning.exceptions import (
     LearningProgressConflict,
 )
 from domain.learning.models import (
+    ActivityProgress,
     CourseEnrollment,
+    CourseGroupActivity,
     EnrollmentCohortAssignment,
     EnrollmentReleaseAssignment,
     LearningEvent,
@@ -36,12 +40,14 @@ from domain.learning.services import (
     complete_unit,
     confirm_cohort_roster_sync,
     create_academic_group,
+    create_academic_period,
     create_cohort,
     enroll_cohort_members,
     enroll_member,
     open_unit,
     preview_cohort_roster_sync,
     reactivate_enrollment,
+    record_activity_from_assessment,
     reopen_unit,
     replace_academic_group_roster,
     revoke_enrollment,
@@ -56,6 +62,104 @@ from .support import LearningFixtureMixin
 
 
 class LearningServiceTests(LearningFixtureMixin, TestCase):
+    def test_assessment_grade_updates_activity_but_not_composite_completion(
+        self,
+    ) -> None:
+        (
+            owner,
+            _learner,
+            organization,
+            _membership,
+            revision,
+            _module,
+            unit,
+            _publication,
+            release,
+            _existing_enrollment,
+        ) = self.learning_context()
+        period = create_academic_period(
+            actor=owner,
+            organization=organization,
+            name="Periodo de prueba",
+            slug="periodo-prueba",
+            period_type=AcademicPeriodType.TERM,
+            starts_on=timezone.localdate(),
+            ends_on=timezone.localdate() + timedelta(days=90),
+        )
+        cohort = create_cohort(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            release=release,
+            academic_period=period,
+            name="Grupo de política compuesta",
+        )
+        assessment_activity = CourseGroupActivity(
+            course_group=cohort,
+            academic_period=period,
+            course_release=release,
+            source_activity_id=uuid.uuid4(),
+            source_module_id=uuid.uuid4(),
+            activity_type="assessment",
+            module_title="Evaluación",
+            title="Evaluación final",
+            module_position=2,
+            position=1,
+            required=True,
+            completion_policy={"method": "pass"},
+            availability_rules=[],
+            binding_snapshot={"provider": "assessments"},
+            release_snapshot_digest=release.snapshot_digest,
+        )
+        assessment_activity.full_clean()
+        assessment_activity.save()
+        learner = get_user_model().objects.create_user(
+            email="composite-learner@example.test",
+            password="StrongLearningPassword!42",
+        )
+        membership = Membership.objects.create(
+            organization=organization,
+            user=learner,
+            status_changed_by=owner,
+            status_changed_at=timezone.now(),
+        )
+        enrollment = enroll_member(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            membership=membership,
+            cohort=cohort,
+        )
+        assignment = enrollment.current_release_assignment
+        assert assignment is not None
+        record_activity_from_assessment(
+            actor=owner,
+            group_activity_id=assessment_activity.id,
+            release_assignment_id=assignment.id,
+            grade_version_id=uuid.uuid4(),
+            occurred_at=timezone.now(),
+            grade_basis_points=10_000,
+            passed=True,
+            mastered_objective_ids=[],
+        )
+        assessment_progress = ActivityProgress.objects.get(
+            course_progress=assignment.progress,
+            group_activity=assessment_activity,
+        )
+        self.assertEqual(assessment_progress.status, ActivityProgressStatus.PASSED)
+        assignment.progress.refresh_from_db()
+        self.assertEqual(assignment.progress.status, ProgressStatus.IN_PROGRESS)
+        self.assertEqual(assignment.progress.completed_required_activities, 1)
+        self.assertEqual(assignment.progress.total_required_activities, 2)
+
+        completed, _ = complete_unit(
+            actor=learner,
+            enrollment=enrollment,
+            unit_id=unit.id,
+            expected_progress_version=assignment.progress.lock_version,
+        )
+        self.assertEqual(completed.status, ProgressStatus.COMPLETED)
+
     def test_roster_sync_preserves_manual_access_and_suspends_sync_access(self) -> None:
         (
             owner,
@@ -105,6 +209,7 @@ class LearningServiceTests(LearningFixtureMixin, TestCase):
             organization=organization,
             course=revision.course,
             release=release,
+            migration_review_required=True,
             academic_group=group,
             name="Álgebra 11-A",
         )
@@ -127,6 +232,26 @@ class LearningServiceTests(LearningFixtureMixin, TestCase):
         )
         manual_enrollment.refresh_from_db()
         synced_enrollment = CourseEnrollment.objects.get(membership=synced_membership)
+        self.assertEqual(
+            CourseGroupActivity.objects.filter(course_group=cohort).count(), 1
+        )
+        activity_progress = ActivityProgress.objects.get(
+            course_progress=synced_enrollment.current_release_assignment.progress
+        )
+        self.assertEqual(activity_progress.status, ActivityProgressStatus.AVAILABLE)
+        synced_progress = open_unit(
+            actor=synced_user,
+            enrollment=synced_enrollment,
+            unit_id=_unit.id,
+        )
+        complete_unit(
+            actor=synced_user,
+            enrollment=synced_enrollment,
+            unit_id=_unit.id,
+            expected_progress_version=synced_progress.lock_version,
+        )
+        activity_progress.refresh_from_db()
+        self.assertEqual(activity_progress.status, ActivityProgressStatus.COMPLETED)
         self.assertIsNotNone(manual_enrollment.effective_cohort)
         self.assertEqual(manual_enrollment.effective_cohort.id, cohort.id)
         self.assertEqual(
@@ -381,6 +506,7 @@ class LearningServiceTests(LearningFixtureMixin, TestCase):
             organization=organization,
             course=revision.course,
             release=release,
+            migration_review_required=True,
             name="Cohorte atómica",
         )
         newcomer = get_user_model().objects.create_user(

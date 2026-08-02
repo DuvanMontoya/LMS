@@ -12,7 +12,10 @@ from domain.courses.readiness import (
     register_readiness_provider,
     revision_readiness_issues,
 )
-from domain.courses.services import submit_revision_for_review
+from domain.courses.services import (
+    confirm_completion_policy,
+    submit_revision_for_review,
+)
 
 from .support import ContentFixtureMixin, empty_document, full_document
 
@@ -52,6 +55,15 @@ class ContentReadinessTests(ContentFixtureMixin, TestCase):
         self.assertNotIn(
             "unit_content_empty",
             {item["code"] for item in revision_readiness_issues(revision)},
+        )
+        _, revision = confirm_completion_policy(
+            actor=owner,
+            organization=organization,
+            revision=revision,
+            expected_version=revision.lock_version,
+            require_required_activities=True,
+            minimum_grade_basis_points=None,
+            minimum_attendance_basis_points=None,
         )
         submitted = submit_revision_for_review(
             actor=owner,

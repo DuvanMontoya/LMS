@@ -21,6 +21,7 @@ import {
 } from '@/lib/learning/hooks';
 import type {
   LearningAcademicGroupOption,
+  LearningAcademicPeriodOption,
   LearningCourseOption,
 } from '@/lib/learning/server';
 
@@ -31,6 +32,7 @@ const cohortSchema = z
     access_ends_at: optionalDate,
     access_starts_at: optionalDate,
     academic_group_id: z.string().uuid().or(z.literal('')),
+    academic_period_id: z.string().uuid('Selecciona un periodo académico.'),
     course_slug: z.string().trim().min(1, 'Selecciona un curso.'),
     description: z.string().trim().max(2000),
     name: z.string().trim().min(1, 'Escribe el nombre.').max(200),
@@ -56,10 +58,12 @@ type CohortValues = z.infer<typeof cohortSchema>;
 
 export function CohortCreateForm({
   academicGroups,
+  academicPeriods,
   courses,
   slug,
 }: Readonly<{
   academicGroups: LearningAcademicGroupOption[];
+  academicPeriods: LearningAcademicPeriodOption[];
   courses: LearningCourseOption[];
   slug: string;
 }>) {
@@ -80,6 +84,7 @@ export function CohortCreateForm({
       access_ends_at: '',
       access_starts_at: '',
       academic_group_id: '',
+      academic_period_id: academicPeriods[0]?.id ?? '',
       course_slug: initialCourse?.slug ?? '',
       description: '',
       name: '',
@@ -106,6 +111,7 @@ export function CohortCreateForm({
         ? new Date(parsed.access_starts_at).toISOString()
         : null,
       academic_group_id: parsed.academic_group_id || null,
+      academic_period_id: parsed.academic_period_id,
       course_slug: parsed.course_slug,
       description: parsed.description,
       name: parsed.name,
@@ -131,6 +137,27 @@ export function CohortCreateForm({
       noValidate
       onSubmit={form.handleSubmit(submit)}
     >
+      <Field
+        error={form.formState.errors.academic_period_id?.message}
+        hint="Obligatorio. Define el calendario institucional que gobierna el grupo."
+        label="Periodo académico"
+        name="cohort-academic-period"
+      >
+        <select
+          className="academic-control"
+          id="cohort-academic-period"
+          {...form.register('academic_period_id')}
+        >
+          {!academicPeriods.length ? (
+            <option value="">No hay periodos académicos activos</option>
+          ) : null}
+          {academicPeriods.map((period) => (
+            <option key={period.id} value={period.id}>
+              {period.name} · {period.startsOn} a {period.endsOn}
+            </option>
+          ))}
+        </select>
+      </Field>
       <Field
         error={form.formState.errors.name?.message}
         label="Nombre"
@@ -312,7 +339,7 @@ export function CohortCreateForm({
         </p>
       </div>
       <SubmitState
-        disabled={!courses.length}
+        disabled={!courses.length || !academicPeriods.length}
         error={mutation.error}
         label="Crear cohorte"
         pending={mutation.isPending}

@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from datetime import date
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
-from domain.organizations.models import Organization
+from domain.organizations.choices import MembershipStatus, RoleCode
+from domain.organizations.models import Membership, Organization
+from domain.organizations.policies import active_membership, active_roles
 
 from .exceptions import (
     ActiveChildrenExist,
@@ -33,6 +36,7 @@ from .models import (
     LearningObjectiveConcept,
     Subject,
     SubjectPrerequisite,
+    SubjectTeachingResponsibility,
     Topic,
     TopicConcept,
 )
@@ -42,6 +46,67 @@ from .policies import can_manage_catalog, can_manage_prerequisites
 def _manage(actor: object, organization: Organization) -> None:
     if not can_manage_catalog(actor, organization):
         raise CatalogAccessDenied()
+
+
+def _manage_responsibilities(actor: object, organization: Organization) -> None:
+    membership = active_membership(actor, organization)  # type: ignore[arg-type]
+    if not ({RoleCode.OWNER, RoleCode.ADMINISTRATOR} & active_roles(membership)):
+        raise CatalogAccessDenied()
+
+
+@transaction.atomic
+def assign_subject_teaching_responsibility(
+    *,
+    actor: object,
+    organization: Organization,
+    subject: Subject,
+    membership: Membership,
+    starts_on: date,
+    ends_on: date | None,
+    rationale: str,
+) -> SubjectTeachingResponsibility:
+    _manage_responsibilities(actor, organization)
+    if (
+        subject.organization.id != organization.id
+        or membership.organization_id != organization.id
+        or membership.status != MembershipStatus.ACTIVE.value
+        or not (
+            active_roles(membership)
+            & {RoleCode.AUTHOR, RoleCode.REVIEWER, RoleCode.INSTRUCTOR}
+        )
+    ):
+        raise CrossOrganizationRelation()
+    responsibility = SubjectTeachingResponsibility(
+        subject=subject,
+        membership=membership,
+        starts_on=starts_on,
+        ends_on=ends_on,
+        rationale=rationale,
+        created_by=actor,
+    )
+    responsibility.full_clean()
+    responsibility.save()
+    return responsibility
+
+
+@transaction.atomic
+def close_subject_teaching_responsibility(
+    *, actor: object, responsibility: SubjectTeachingResponsibility, ended_on: date
+) -> SubjectTeachingResponsibility:
+    _manage_responsibilities(actor, responsibility.subject.organization)
+    locked = SubjectTeachingResponsibility.objects.select_for_update().get(
+        pk=responsibility.pk
+    )
+    if locked.ended_at is not None:
+        return locked
+    if ended_on < locked.starts_on:
+        raise ValueError("La fecha de cierre precede el inicio.")
+    locked.ends_on = ended_on
+    locked.ended_by = actor
+    locked.ended_at = timezone.now()
+    locked.full_clean()
+    locked.save(update_fields=["ends_on", "ended_by", "ended_at"])
+    return locked
 
 
 def _save(instance: object, actor: object) -> object:

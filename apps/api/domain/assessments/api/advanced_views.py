@@ -12,6 +12,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response as ApiResponse
 from rest_framework.views import APIView
 
+from domain.learning.models import LearningCohort
+from domain.learning.policies import can_manage_course_group
 from domain.organizations.models import Organization
 from domain.organizations.selectors import organization_visible_to
 from domain.publishing.models import CourseRelease
@@ -53,6 +55,7 @@ from ..policies import (
     can_view_regrading,
 )
 from ..regrading import create_regrade_job, retry_failed_regrade_job
+from ..selectors import deliveries_for, gradebooks_for
 from ..services import (
     create_assessment_pool,
     reorder_assessment_structure,
@@ -464,13 +467,12 @@ class RegradeJobRetryView(APIView):
         return ApiResponse(RegradeJobSerializer(result).data)
 
 
-def _gradebook(organization: Organization, gradebook_id: str) -> CourseGradebook:
+def _gradebook(
+    organization: Organization, gradebook_id: str, *, actor: object
+) -> CourseGradebook:
     return get_object_or_404(
-        CourseGradebook.objects.select_related("course_release").prefetch_related(
-            "columns"
-        ),
+        gradebooks_for(organization, actor=actor).prefetch_related("columns"),
         pk=gradebook_id,
-        organization=organization,
     )
 
 
@@ -479,10 +481,8 @@ class GradebookListCreateView(APIView):
     def get(self, request: Request, slug: str) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_view_gradebook(request.user, organization))
-        rows = (
-            CourseGradebook.objects.filter(organization=organization)
-            .select_related("course_release")
-            .prefetch_related("columns")
+        rows = gradebooks_for(organization, actor=request.user).prefetch_related(
+            "columns"
         )
         return ApiResponse(GradebookSerializer(rows, many=True).data)
 
@@ -497,11 +497,21 @@ class GradebookListCreateView(APIView):
             pk=serializer.validated_data["course_release_id"],
             course__organization=organization,
         )
+        course_group = get_object_or_404(
+            LearningCohort.objects.select_related("academic_period"),
+            pk=serializer.validated_data["course_group_id"],
+            organization=organization,
+            release=release,
+            migration_review_required=False,
+        )
+        _require(can_manage_course_group(request.user, course_group))
         result = _domain_call(
             lambda: create_gradebook(
                 actor=request.user,
                 organization=organization,
                 course_release=release,
+                course_group=course_group,
+                academic_period=course_group.academic_period,
             )
         )
         if isinstance(result, ApiResponse):
@@ -521,7 +531,9 @@ class GradebookDetailView(APIView):
         organization = _organization(request, slug)
         _require(can_view_gradebook(request.user, organization))
         return ApiResponse(
-            GradebookSerializer(_gradebook(organization, gradebook_id)).data
+            GradebookSerializer(
+                _gradebook(organization, gradebook_id, actor=request.user)
+            ).data
         )
 
 
@@ -538,7 +550,7 @@ class GradebookActivateView(APIView):
         result = _domain_call(
             lambda: activate_gradebook(
                 actor=request.user,
-                gradebook=_gradebook(organization, gradebook_id),
+                gradebook=_gradebook(organization, gradebook_id, actor=request.user),
                 **serializer.validated_data,
             )
         )
@@ -555,7 +567,9 @@ class GradebookColumnListCreateView(APIView):
     def get(self, request: Request, slug: str, gradebook_id: str) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_view_gradebook(request.user, organization))
-        rows = _gradebook(organization, gradebook_id).columns.order_by("position", "id")
+        rows = _gradebook(
+            organization, gradebook_id, actor=request.user
+        ).columns.order_by("position", "id")
         return ApiResponse(GradebookColumnSerializer(rows, many=True).data)
 
     @extend_schema(
@@ -569,11 +583,10 @@ class GradebookColumnListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         values = dict(serializer.validated_data)
         delivery = get_object_or_404(
-            AssessmentDelivery,
+            deliveries_for(organization, actor=request.user),
             pk=values.pop("delivery_id"),
-            organization=organization,
         )
-        gradebook = _gradebook(organization, gradebook_id)
+        gradebook = _gradebook(organization, gradebook_id, actor=request.user)
         result = _domain_call(
             lambda: add_gradebook_column(
                 actor=request.user,
@@ -606,7 +619,7 @@ class GradebookColumnDetailView(APIView):
         _require(can_manage_gradebook(request.user, organization))
         serializer = GradebookColumnUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        gradebook = _gradebook(organization, gradebook_id)
+        gradebook = _gradebook(organization, gradebook_id, actor=request.user)
         result = _domain_call(
             lambda: update_gradebook_column(
                 actor=request.user,
@@ -633,7 +646,7 @@ class GradebookColumnOrderView(APIView):
         result = _domain_call(
             lambda: reorder_gradebook_columns(
                 actor=request.user,
-                gradebook=_gradebook(organization, gradebook_id),
+                gradebook=_gradebook(organization, gradebook_id, actor=request.user),
                 **serializer.validated_data,
             )
         )
@@ -654,7 +667,7 @@ class GradebookColumnArchiveView(APIView):
         _require(can_manage_gradebook(request.user, organization))
         serializer = AssessmentExpectedVersionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        gradebook = _gradebook(organization, gradebook_id)
+        gradebook = _gradebook(organization, gradebook_id, actor=request.user)
         result = _domain_call(
             lambda: archive_gradebook_column(
                 actor=request.user,
@@ -677,7 +690,7 @@ class GradebookEntryListView(APIView):
         organization = _organization(request, slug)
         _require(can_view_gradebook(request.user, organization))
         rows = (
-            _gradebook(organization, gradebook_id)
+            _gradebook(organization, gradebook_id, actor=request.user)
             .columns.filter(entries__isnull=False)
             .values_list("entries", flat=True)
         )
@@ -703,7 +716,7 @@ class GradebookSummaryListView(APIView):
         organization = _organization(request, slug)
         _require(can_view_gradebook(request.user, organization))
         rows = (
-            _gradebook(organization, gradebook_id)
+            _gradebook(organization, gradebook_id, actor=request.user)
             .summaries.select_related(
                 "release_assignment__enrollment__membership__user",
                 "release_assignment__enrollment__cohort",
@@ -727,7 +740,7 @@ class GradebookStudentView(APIView):
     ) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_view_gradebook(request.user, organization))
-        gradebook = _gradebook(organization, gradebook_id)
+        gradebook = _gradebook(organization, gradebook_id, actor=request.user)
         entries = gradebook.columns.filter(
             entries__release_assignment_id=release_assignment_id
         ).values_list("entries", flat=True)

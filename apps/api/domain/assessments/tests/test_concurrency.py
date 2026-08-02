@@ -28,6 +28,7 @@ class AssessmentConcurrencyTests(AssessmentFixtureMixin, TransactionTestCase):
             assessment_version=context["assessment_version"],
             name="Entrega concurrente",
             course_release=context["release"],
+            migration_review_required=True,
         )
         delivery = activate_delivery(
             actor=context["owner"],

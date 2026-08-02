@@ -11,26 +11,24 @@ export default async function GradebooksPage({
 }: Readonly<{ params: Promise<{ slug: string }> }>) {
   const { slug } = await params;
   const data = await getGradebooks(slug);
-  const releases = [
-    ...new Map(
-      data.deliveries
-        .filter((delivery) => delivery.course_release_id)
-        .filter(
-          (delivery) =>
-            !data.gradebooks.some(
-              (gradebook) =>
-                gradebook.course_release_id === delivery.course_release_id,
-            ),
-        )
-        .map((delivery) => [
-          delivery.course_release_id!,
-          {
-            id: delivery.course_release_id!,
-            label: `${delivery.course_release_title ?? 'Curso'} · release ${delivery.course_release_number ?? '—'}`,
-          },
-        ]),
-    ).values(),
-  ];
+  const deliveredReleaseIds = new Set(
+    data.deliveries.flatMap((delivery) =>
+      delivery.course_release_id ? [delivery.course_release_id] : [],
+    ),
+  );
+  const groups = data.cohorts
+    .filter((cohort) => deliveredReleaseIds.has(cohort.course_release_id))
+    .filter(
+      (cohort) =>
+        !data.gradebooks.some(
+          (gradebook) => gradebook.course_group_id === cohort.id,
+        ),
+    )
+    .map((cohort) => ({
+      courseGroupId: cohort.id,
+      courseReleaseId: cohort.course_release_id,
+      label: `${cohort.name} · ${cohort.course_title} · release ${cohort.release_number}${cohort.academic_period_name ? ` · ${cohort.academic_period_name}` : ''}`,
+    }));
   return (
     <main className="academic-page" id="contenido-principal">
       <PageHeader
@@ -46,7 +44,7 @@ export default async function GradebooksPage({
         eyebrow="Consolidación institucional"
         title="Libros de calificaciones"
       />
-      {data.canManage && releases.length ? (
+      {data.canManage && groups.length ? (
         <section className="assessment-builder-section">
           <header className="assessment-builder-section__header">
             <div>
@@ -57,7 +55,7 @@ export default async function GradebooksPage({
               </p>
             </div>
           </header>
-          <CreateGradebookForm releaseOptions={releases} slug={slug} />
+          <CreateGradebookForm groupOptions={groups} slug={slug} />
         </section>
       ) : data.canManage ? (
         <section className="assessment-builder-section">

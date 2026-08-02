@@ -20,9 +20,13 @@ export default async function CalendarPage({
       />
       <AcademicCalendar
         canCreate={data.canCreate}
-        courses={data.courses.map(({ slug: courseSlug, title }) => ({
-          slug: courseSlug,
-          title,
+        courseActivities={data.courseActivities.map((activity) => ({
+          courseGroupId: activity.course_group_id,
+          courseGroupName: activity.course_group_name,
+          courseSlug: activity.course_slug,
+          id: activity.id,
+          label: `${activity.course_group_name} · ${activity.course_title} · ${activity.module_title} / ${activity.title}${activity.academic_period_name ? ` · ${activity.academic_period_name}` : ''}`,
+          required: activity.required,
         }))}
         participantOptions={data.participantOptions.map(
           ({ membership_id: membershipId, display }) => ({

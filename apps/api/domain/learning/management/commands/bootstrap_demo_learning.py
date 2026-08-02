@@ -1,12 +1,18 @@
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportAttributeAccessIssue=false
+from datetime import date
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
 from domain.courses.models import Course
-from domain.learning.choices import CohortStatus, EnrollmentStatus
-from domain.learning.models import CourseEnrollment, LearningCohort
-from domain.learning.services import create_cohort, enroll_member
+from domain.learning.choices import AcademicPeriodType, CohortStatus, EnrollmentStatus
+from domain.learning.models import AcademicPeriod, CourseEnrollment, LearningCohort
+from domain.learning.services import (
+    create_academic_period,
+    create_cohort,
+    enroll_member,
+)
 from domain.organizations.choices import MembershipStatus
 from domain.organizations.models import Membership, Organization
 from domain.publishing.choices import PublicationStatus
@@ -47,6 +53,19 @@ class Command(BaseCommand):
         ).first()
         if publication is None or membership is None:
             raise CommandError("Falta la publicación o membresía Learner demo activa.")
+        academic_period = AcademicPeriod.objects.filter(
+            organization=organization, slug="ano-2026"
+        ).first()
+        if academic_period is None:
+            academic_period = create_academic_period(
+                actor=owner,
+                organization=organization,
+                name="Año académico 2026",
+                slug="ano-2026",
+                period_type=AcademicPeriodType.SCHOOL_YEAR,
+                starts_on=date(2026, 1, 1),
+                ends_on=date(2026, 12, 31),
+            )
         cohort = LearningCohort.objects.filter(
             organization=organization, course=course, slug=DEMO_COHORT
         ).first()
@@ -56,6 +75,7 @@ class Command(BaseCommand):
                 organization=organization,
                 course=course,
                 release=publication.current_release,
+                academic_period=academic_period,
                 name="Cohorte inicial de cálculo",
                 slug=DEMO_COHORT,
             )

@@ -38,6 +38,7 @@ def occurrences_visible_to_actor(
     ).select_related(
         "series__course",
         "series__course_group",
+        "series__course_group_activity",
         "series__host_membership__user",
         "live_session",
     )
@@ -151,9 +152,32 @@ def occurrence_payload(
                 if occurrence.series.course_group_id
                 else None
             ),
-            "countsTowardProgress": occurrence.series.counts_toward_progress,
+            "courseGroupActivityId": (
+                str(occurrence.series.course_group_activity_id)
+                if occurrence.series.course_group_activity_id
+                else None
+            ),
+            "activityRequired": bool(
+                occurrence.series.course_group_activity_id
+                and occurrence.series.course_group_activity.required
+            ),
+            "countsTowardProgress": bool(
+                (
+                    occurrence.series.activity_progress_contribution
+                    and occurrence.series.course_group_activity_id
+                    and occurrence.series.course_group_activity.required
+                )
+                or (
+                    occurrence.series.course_group_activity_id is None
+                    and occurrence.series.counts_toward_progress
+                )
+            ),
             "attendanceThresholdMinutes": (
-                occurrence.series.attendance_threshold_minutes
+                occurrence.series.course_group_activity.binding_snapshot.get(
+                    "minimum_attendance_minutes"
+                )
+                if occurrence.series.course_group_activity_id
+                else occurrence.series.attendance_threshold_minutes
             ),
             "eventType": occurrence.series.event_type,
             "occurrenceStatus": occurrence.status,
@@ -227,8 +251,33 @@ def _live_session_payload(*, session: LiveSession, actor: object) -> dict[str, A
             if occurrence.series.course_group_id
             else None
         ),
-        "countsTowardProgress": occurrence.series.counts_toward_progress,
-        "attendanceThresholdMinutes": occurrence.series.attendance_threshold_minutes,
+        "course_group_activity_id": (
+            str(occurrence.series.course_group_activity_id)
+            if occurrence.series.course_group_activity_id
+            else None
+        ),
+        "activity_required": bool(
+            occurrence.series.course_group_activity_id
+            and occurrence.series.course_group_activity.required
+        ),
+        "countsTowardProgress": bool(
+            (
+                occurrence.series.activity_progress_contribution
+                and occurrence.series.course_group_activity_id
+                and occurrence.series.course_group_activity.required
+            )
+            or (
+                occurrence.series.course_group_activity_id is None
+                and occurrence.series.counts_toward_progress
+            )
+        ),
+        "attendanceThresholdMinutes": (
+            occurrence.series.course_group_activity.binding_snapshot.get(
+                "minimum_attendance_minutes"
+            )
+            if occurrence.series.course_group_activity_id
+            else occurrence.series.attendance_threshold_minutes
+        ),
         "hostName": f"Participante {str(occurrence.series.host_membership.user_id)[:8]}",
         "scheduledStart": occurrence.starts_at,
         "scheduledEnd": occurrence.ends_at,
@@ -260,6 +309,7 @@ def live_sessions_visible_to_actor(
         "occurrence__series__organization",
         "occurrence__series__course",
         "occurrence__series__course_group",
+        "occurrence__series__course_group_activity",
         "occurrence__series__host_membership__user",
     )
     sessions = sessions.order_by(

@@ -10,6 +10,13 @@ class RoleCode(models.TextChoices):
     LEARNER = "learner", "Estudiante"
 
 
+class OrganizationStatus(models.TextChoices):
+    PENDING_ACTIVATION = "pending_activation", "Pendiente de activación"
+    ACTIVE = "active", "Activa"
+    SUSPENDED = "suspended", "Suspendida"
+    CLOSED = "closed", "Cerrada"
+
+
 class MembershipStatus(models.TextChoices):
     ACTIVE = "active", "Activa"
     SUSPENDED = "suspended", "Suspendida"
@@ -53,6 +60,7 @@ class InvitationType(models.TextChoices):
     EXISTING_USER = "existing_user", "Usuario existente"
     NEW_USER = "new_user", "Usuario nuevo"
     MANAGED_ACCOUNT = "managed_account", "Cuenta administrada"
+    INITIAL_OWNER = "initial_owner", "Propietario inicial"
 
 
 class InvitationStatus(models.TextChoices):

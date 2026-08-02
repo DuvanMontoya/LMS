@@ -26,6 +26,7 @@ export default async function NewCohortPage({
       />
       <CohortCreateForm
         academicGroups={data.options.academicGroups}
+        academicPeriods={data.options.academicPeriods}
         courses={data.options.courses}
         slug={slug}
       />

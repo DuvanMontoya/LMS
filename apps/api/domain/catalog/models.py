@@ -10,7 +10,7 @@ from django.db.models import F, Q
 from django.db.models.functions import Lower, Trim
 from treebeard.mp_tree import MP_Node
 
-from domain.organizations.models import Organization
+from domain.organizations.models import Membership, Organization
 
 RESERVED_CATALOG_SLUGS = frozenset(
     {
@@ -461,3 +461,70 @@ class ConceptPrerequisite(models.Model):
 
     def __str__(self) -> str:
         return f"{self.concept} <- {self.prerequisite}"
+
+
+class SubjectTeachingResponsibility(models.Model):
+    """Fecha el alcance académico; nunca concede acceso a datos de estudiantes."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    subject = models.ForeignKey(
+        Subject, on_delete=models.PROTECT, related_name="teaching_responsibilities"
+    )
+    membership = models.ForeignKey(
+        Membership,
+        on_delete=models.PROTECT,
+        related_name="subject_teaching_responsibilities",
+    )
+    starts_on = models.DateField()
+    ends_on = models.DateField(null=True, blank=True)
+    rationale = models.TextField(max_length=1000)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="subject_teaching_responsibilities_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    ended_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="subject_teaching_responsibilities_ended",
+    )
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["subject", "membership"],
+                condition=Q(ended_at__isnull=True),
+                name="catalog_subject_teacher_active_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(ends_on__isnull=True) | Q(starts_on__lte=F("ends_on")),
+                name="catalog_subject_teacher_date_window",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(ended_at__isnull=True, ended_by__isnull=True)
+                    | Q(ended_at__isnull=False, ended_by__isnull=False)
+                ),
+                name="catalog_subject_teacher_end_state",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.subject_id}:{self.membership_id}"
+
+    def clean(self) -> None:
+        super().clean()
+        self.rationale = self.rationale.strip()
+        if self.subject.organization.id != self.membership.organization_id:
+            raise ValidationError(
+                {"membership": "La persona pertenece a otra organización."}
+            )
+        if not self.rationale:
+            raise ValidationError({"rationale": "La responsabilidad exige motivo."})
+
+    def delete(self, *args: object, **kwargs: object) -> tuple[int, dict[str, int]]:
+        raise ValidationError("La responsabilidad académica no se elimina físicamente.")

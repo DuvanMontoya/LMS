@@ -51,7 +51,7 @@ class UserSummarySerializer(serializers.Serializer[object]):
 class OrganizationSerializer(serializers.ModelSerializer[Organization]):
     class Meta:
         model = Organization
-        fields = ("id", "name", "slug")
+        fields = ("id", "name", "slug", "status", "activated_at")
         read_only_fields = ("id", "slug")
 
 
@@ -66,10 +66,28 @@ class OrganizationUpdateSerializer(serializers.Serializer[object]):
 
 
 class PlatformOrganizationProvisionSerializer(serializers.Serializer[object]):
-    """The operator supplies an institution and its initial verified owner."""
+    """The operator supplies an institution and bootstrap invitations."""
 
     name = serializers.CharField(max_length=160)
     owner_email = serializers.EmailField()
+    administrator_emails = serializers.ListField(
+        child=serializers.EmailField(), required=False, default=list, max_length=20
+    )
+
+    def validate(self, attrs: dict[str, object]) -> dict[str, object]:
+        owner_email = str(attrs["owner_email"]).strip().lower()
+        raw_administrators = attrs.get("administrator_emails", [])
+        administrators = [
+            str(email).strip().lower()
+            for email in raw_administrators  # type: ignore[union-attr]
+        ]
+        if owner_email in administrators or len(set(administrators)) != len(
+            administrators
+        ):
+            raise serializers.ValidationError("No repitas correos de invitación.")
+        attrs["owner_email"] = owner_email
+        attrs["administrator_emails"] = administrators
+        return attrs
 
     def validate_name(self, value: str) -> str:
         normalized = value.strip()
