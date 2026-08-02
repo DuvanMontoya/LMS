@@ -50,7 +50,7 @@ export default async function CohortDetailPage({
           { href: `/organizaciones/${slug}`, label: data.organization.name },
           {
             href: `/organizaciones/${slug}/aprendizaje/cohortes`,
-            label: 'Grupos de curso',
+            label: 'Secciones',
           },
           { label: data.cohort.name },
         ]}
@@ -120,7 +120,7 @@ export default async function CohortDetailPage({
       </div>
       {!data.progress.results.length ? (
         <p className="academic-panel mt-6 border-dashed p-6 text-center text-sm text-muted-foreground">
-          El grupo de curso todavía no tiene matrículas.
+          Esta sección todavía no tiene matrículas.
         </p>
       ) : null}
     </main>

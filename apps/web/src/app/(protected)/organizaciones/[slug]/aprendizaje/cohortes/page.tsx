@@ -45,18 +45,18 @@ export default async function CohortsPage({
           canManage ? (
             <Button asChild>
               <Link href={`/organizaciones/${slug}/aprendizaje/cohortes/nueva`}>
-                Nuevo grupo de curso
+                Nueva sección
               </Link>
             </Button>
           ) : undefined
         }
         breadcrumbs={[
           { href: `/organizaciones/${slug}`, label: data.organization.name },
-          { label: 'Grupos de curso' },
+          { label: 'Secciones' },
         ]}
-        description="Grupos de curso vinculados a un release inmutable."
+        description="Secciones vinculadas a un curso, su release inmutable y un período académico."
         eyebrow="Aprendizaje"
-        title="Grupos de curso"
+        title="Secciones"
       />
       <form
         className="academic-panel mt-6 grid gap-3 p-4 sm:grid-cols-[minmax(14rem,1fr)_12rem_auto_auto] sm:items-end"
@@ -97,7 +97,7 @@ export default async function CohortsPage({
       <div className="academic-panel mt-5 overflow-x-auto">
         <table className="w-full min-w-3xl text-left text-sm">
           <caption className="sr-only">
-            Grupos de curso de {data.organization.name}
+            Secciones de {data.organization.name}
           </caption>
           <thead className="border-b bg-muted/30">
             <tr>
@@ -149,11 +149,11 @@ export default async function CohortsPage({
       {!data.cohorts.results.length ? (
         <section className="academic-panel mt-5 border-dashed px-6 py-12 text-center">
           <UsersRound className="mx-auto size-7 text-muted-foreground" />
-          <h2 className="mt-3 font-semibold">No encontramos grupos de curso</h2>
+          <h2 className="mt-3 font-semibold">No encontramos secciones</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {search || status
               ? 'Ajusta los filtros para ampliar los resultados.'
-              : 'Crea el primer grupo de curso para organizar una entrega.'}
+              : 'Crea la primera sección para organizar una entrega.'}
           </p>
         </section>
       ) : null}

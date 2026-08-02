@@ -159,7 +159,7 @@ export function AcademicGroupsPanel({
             <h2 className="text-lg font-semibold">Crear grupo académico</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Un mismo grupo puede organizar docentes y estudiantes y vincularse
-              a grupos de curso de varios cursos.
+              a secciones de varios cursos.
             </p>
           </div>
           <label className="grid gap-1.5 text-sm font-medium">
@@ -260,9 +260,7 @@ export function AcademicGroupsPanel({
                 docentes
               </span>
               <span>·</span>
-              <span>
-                {group.linked_cohort_count ?? 0} grupos de curso vinculados
-              </span>
+              <span>{group.linked_cohort_count ?? 0} secciones vinculadas</span>
             </div>
             {canManage ? (
               <details className="mt-4 border-t pt-4">

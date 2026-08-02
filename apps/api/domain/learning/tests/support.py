@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from datetime import date
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
+from domain.catalog.services import assign_subject_teaching_responsibility
 from domain.courses.services import (
     approve_revision,
     confirm_completion_policy,
@@ -89,6 +92,15 @@ class LearningFixtureMixin(PublishingFixtureMixin):
             organization,
             RoleCode.REVIEWER,
             f"release-reviewer-{revision.id}@example.test",
+        )
+        assign_subject_teaching_responsibility(
+            actor=owner,
+            organization=organization,
+            subject=draft.subject_alignments.get(position=1).subject,
+            membership=Membership.objects.get(organization=organization, user=reviewer),
+            starts_on=date(2020, 1, 1),
+            ends_on=None,
+            rationale="Revisión académica explícita del segundo release.",
         )
         draft = approve_revision(
             actor=reviewer,

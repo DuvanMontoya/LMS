@@ -14,7 +14,7 @@ export default async function AcademicPeriodsPage({
           { href: `/organizaciones/${slug}`, label: data.organization.name },
           { label: 'Periodos académicos' },
         ]}
-        description="Define ventanas institucionales explícitas antes de crear grupos de curso, calendarizar actividades o consolidar calificaciones."
+        description="Define ventanas institucionales explícitas antes de crear secciones, calendarizar actividades o consolidar calificaciones."
         eyebrow="Gobierno académico"
         title="Periodos académicos"
       />

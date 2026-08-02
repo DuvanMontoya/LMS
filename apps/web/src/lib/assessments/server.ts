@@ -682,7 +682,7 @@ export async function getGradebooks(slug: string) {
             },
             cache: 'no-store',
           }),
-          'No fue posible consultar los grupos de curso disponibles.',
+          'No fue posible consultar las secciones disponibles.',
         ) as Promise<CohortPage>)
       : Promise.resolve(null),
   ]);

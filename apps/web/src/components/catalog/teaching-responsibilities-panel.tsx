@@ -118,7 +118,7 @@ export function TeachingResponsibilitiesPanel({
               Asignar responsabilidad
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              No concede acceso automático a grupos de curso.
+              No concede acceso automático a secciones.
             </p>
           </div>
           <div className="space-y-2">

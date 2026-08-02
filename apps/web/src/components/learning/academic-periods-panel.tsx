@@ -76,7 +76,7 @@ export function AcademicPeriodsPanel({
             </p>
             <h2 className="mt-1 text-lg font-semibold">Nuevo periodo</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Los grupos de curso nuevos deben quedar fijados a uno.
+              Las secciones nuevas deben quedar fijadas a uno.
             </p>
           </div>
           <PeriodField label="Nombre" name="name" />

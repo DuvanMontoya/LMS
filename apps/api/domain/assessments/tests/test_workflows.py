@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -7,6 +7,7 @@ from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from domain.catalog.services import assign_subject_teaching_responsibility
 from domain.courses.choices import ActivityCompletionMethod, ActivityType
 from domain.courses.services import (
     GradeCategoryInput,
@@ -202,8 +203,23 @@ class AttemptWorkflowTests(AssessmentFixtureMixin, TestCase):
             revision=draft,
             expected_version=draft.lock_version,
         )
-        draft = approve_revision(
+        reviewer = self.member(
+            owner,
+            organization,
+            RoleCode.REVIEWER,
+            "mixed-release-reviewer@example.test",
+        )
+        assign_subject_teaching_responsibility(
             actor=owner,
+            organization=organization,
+            subject=draft.subject_alignments.get(position=1).subject,
+            membership=Membership.objects.get(organization=organization, user=reviewer),
+            starts_on=date(2020, 1, 1),
+            ends_on=None,
+            rationale="Revisión académica explícita del flujo mixto.",
+        )
+        draft = approve_revision(
+            actor=reviewer,
             organization=organization,
             revision=draft,
             expected_version=draft.lock_version,

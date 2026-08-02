@@ -198,7 +198,7 @@ export default async function GradebookDetailPage({
                   >
                     {summary.learner_name}
                     <span className="block text-xs text-muted-foreground">
-                      {summary.cohort_name ?? 'Sin grupo de curso'}
+                      {summary.cohort_name ?? 'Sin sección'}
                     </span>
                   </th>
                   {activeColumns.map((column) => {

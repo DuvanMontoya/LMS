@@ -37,7 +37,8 @@ class Command(BaseCommand):
     @transaction.atomic
     def _bootstrap(self) -> None:
         organization = Organization.objects.get(slug="organizacion-a")
-        owner = User.objects.get(email="owner@organizations.e2e.test")
+        author = User.objects.get(email="author@organizations.e2e.test")
+        reviewer = User.objects.get(email="reviewer@organizations.e2e.test")
         if Course.objects.filter(organization=organization, slug=COURSE_SLUG).exists():
             self.stdout.write("Fuente E2E de publicación ya existente.")
             return
@@ -49,7 +50,7 @@ class Command(BaseCommand):
         )
         topic = Topic.objects.get(subject=subject, slug="funciones")
         revision = create_course(
-            actor=owner,
+            actor=author,
             organization=organization,
             slug=COURSE_SLUG,
             title="Funciones para lectura institucional",
@@ -63,7 +64,7 @@ class Command(BaseCommand):
             estimated_duration_minutes=90,
         )
         module, revision = create_module(
-            actor=owner,
+            actor=author,
             organization=organization,
             revision=revision,
             expected_version=revision.lock_version,
@@ -71,7 +72,7 @@ class Command(BaseCommand):
         )
         for index, title in enumerate(("Concepto de función", "Dominio y rango"), 1):
             unit, revision = create_unit(
-                actor=owner,
+                actor=author,
                 organization=organization,
                 module=module,
                 expected_version=revision.lock_version,
@@ -79,21 +80,21 @@ class Command(BaseCommand):
                 summary=f"Unidad {index} del recorrido publicado.",
             )
             revision = replace_unit_topics(
-                actor=owner,
+                actor=author,
                 organization=organization,
                 unit=unit,
                 expected_version=revision.lock_version,
                 topics=[topic],
             )
             revision = replace_unit_learning_objectives(
-                actor=owner,
+                actor=author,
                 organization=organization,
                 unit=unit,
                 expected_version=revision.lock_version,
                 learning_objectives=[objective],
             )
             save_unit_content(
-                actor=owner,
+                actor=author,
                 organization=organization,
                 revision=revision,
                 unit=unit,
@@ -137,7 +138,7 @@ class Command(BaseCommand):
                 },
             )
         _, revision = confirm_completion_policy(
-            actor=owner,
+            actor=author,
             organization=organization,
             revision=revision,
             expected_version=revision.lock_version,
@@ -146,13 +147,13 @@ class Command(BaseCommand):
             minimum_attendance_basis_points=None,
         )
         revision = submit_revision_for_review(
-            actor=owner,
+            actor=author,
             organization=organization,
             revision=revision,
             expected_version=revision.lock_version,
         )
         approve_revision(
-            actor=owner,
+            actor=reviewer,
             organization=organization,
             revision=revision,
             expected_version=revision.lock_version,

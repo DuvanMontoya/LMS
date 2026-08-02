@@ -182,6 +182,15 @@ class LearningServiceTests(LearningFixtureMixin, TestCase):
             status_changed_by=owner,
             status_changed_at=timezone.now(),
         )
+        inactive_user = get_user_model().objects.create_user(
+            email="inactive-roster@example.test", password="StrongLearningPassword!42"
+        )
+        inactive_membership = Membership.objects.create(
+            organization=organization,
+            user=inactive_user,
+            status_changed_by=owner,
+            status_changed_at=timezone.now(),
+        )
         group = create_academic_group(
             actor=owner,
             organization=organization,
@@ -202,7 +211,21 @@ class LearningServiceTests(LearningFixtureMixin, TestCase):
                     "membership_id": synced_membership.id,
                     "role": AcademicGroupRole.LEARNER,
                 },
+                {
+                    "membership_id": inactive_membership.id,
+                    "role": AcademicGroupRole.LEARNER,
+                },
             ],
+        )
+        inactive_membership.status = "suspended"
+        inactive_membership.suspended_at = timezone.now()
+        inactive_membership.status_changed_at = inactive_membership.suspended_at
+        inactive_membership.save(
+            update_fields=(
+                "status",
+                "suspended_at",
+                "status_changed_at",
+            )
         )
         cohort = create_cohort(
             actor=owner,
@@ -214,14 +237,28 @@ class LearningServiceTests(LearningFixtureMixin, TestCase):
             name="Álgebra 11-A",
         )
         self.assertEqual(cohort.roster_mode, CohortRosterMode.SYNCED)
+        counts_before_preview = (
+            CourseEnrollment.objects.count(),
+            EnrollmentCohortAssignment.objects.count(),
+            LearningEvent.objects.count(),
+        )
         preview = preview_cohort_roster_sync(
             actor=owner,
             cohort=cohort,
             expected_cohort_version=cohort.lock_version,
             expected_academic_group_version=group.lock_version,
         )
+        self.assertEqual(
+            (
+                CourseEnrollment.objects.count(),
+                EnrollmentCohortAssignment.objects.count(),
+                LearningEvent.objects.count(),
+            ),
+            counts_before_preview,
+        )
         self.assertEqual(set(preview["assigns"]), {str(manual_membership.id)})
         self.assertEqual(set(preview["creates"]), {str(synced_membership.id)})
+        self.assertNotIn(str(inactive_membership.id), preview["creates"])
         self.assertFalse(preview["conflicts"])
         confirm_cohort_roster_sync(
             actor=owner,
@@ -293,6 +330,101 @@ class LearningServiceTests(LearningFixtureMixin, TestCase):
             ).count(),
             2,
         )
+
+    def test_same_release_roster_transfer_preserves_assignment_and_progress(
+        self,
+    ) -> None:
+        (
+            owner,
+            learner,
+            organization,
+            membership,
+            revision,
+            _module,
+            unit,
+            _publication,
+            release,
+            enrollment,
+        ) = self.learning_context()
+
+        def synced_group(name: str):
+            group = create_academic_group(
+                actor=owner,
+                organization=organization,
+                name=name,
+                academic_year=2026,
+                level="secondary_11",
+            )
+            group = replace_academic_group_roster(
+                actor=owner,
+                group=group,
+                expected_group_version=group.lock_version,
+                members=[
+                    {
+                        "membership_id": membership.id,
+                        "role": AcademicGroupRole.LEARNER,
+                    }
+                ],
+            )
+            cohort = create_cohort(
+                actor=owner,
+                organization=organization,
+                course=revision.course,
+                release=release,
+                migration_review_required=True,
+                academic_group=group,
+                name=f"Curso {name}",
+            )
+            return group, cohort
+
+        first_group, first_cohort = synced_group("11-A traslado")
+        confirm_cohort_roster_sync(
+            actor=owner,
+            cohort=first_cohort,
+            expected_cohort_version=first_cohort.lock_version,
+            expected_academic_group_version=first_group.lock_version,
+            reason="Asignación inicial",
+        )
+        enrollment.refresh_from_db()
+        release_assignment_id = enrollment.current_release_assignment_id
+        progress_id = enrollment.current_release_assignment.progress.id
+        progress = open_unit(actor=learner, enrollment=enrollment, unit_id=unit.id)
+        complete_unit(
+            actor=learner,
+            enrollment=enrollment,
+            unit_id=unit.id,
+            expected_progress_version=progress.lock_version,
+        )
+
+        second_group, second_cohort = synced_group("11-B traslado")
+        plan = preview_cohort_roster_sync(
+            actor=owner,
+            cohort=second_cohort,
+            expected_cohort_version=second_cohort.lock_version,
+            expected_academic_group_version=second_group.lock_version,
+        )
+        self.assertEqual(plan["transfers"], [str(membership.id)])
+        confirm_cohort_roster_sync(
+            actor=owner,
+            cohort=second_cohort,
+            expected_cohort_version=second_cohort.lock_version,
+            expected_academic_group_version=second_group.lock_version,
+            reason="Traslado al nuevo grupo",
+        )
+        enrollment.refresh_from_db()
+        self.assertEqual(
+            enrollment.current_release_assignment_id, release_assignment_id
+        )
+        self.assertEqual(enrollment.current_release_assignment.progress.id, progress_id)
+        self.assertEqual(
+            enrollment.current_release_assignment.progress.status,
+            ProgressStatus.COMPLETED,
+        )
+        assignments = list(enrollment.cohort_assignments.order_by("started_at"))
+        self.assertEqual(len(assignments), 2)
+        self.assertIsNotNone(assignments[0].ended_at)
+        self.assertEqual(assignments[1].cohort_id, second_cohort.id)
+        self.assertEqual(assignments[1].source, EnrollmentCohortSource.TRANSFER)
 
     def test_enrollment_is_release_pinned_and_duplicate_is_rejected(self) -> None:
         (

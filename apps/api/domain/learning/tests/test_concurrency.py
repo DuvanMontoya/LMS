@@ -9,16 +9,27 @@ from django.test import TransactionTestCase
 from django.utils import timezone
 
 from domain.courses.models import Course
+from domain.learning.choices import AcademicGroupRole
 from domain.learning.exceptions import (
     EnrollmentAlreadyExists,
     EnrollmentConflict,
     LearningProgressConflict,
 )
-from domain.learning.models import CourseEnrollment, LearningEvent
+from domain.learning.models import (
+    CourseEnrollment,
+    EnrollmentCohortAssignment,
+    LearningCohort,
+    LearningEvent,
+    RosterEvent,
+)
 from domain.learning.services import (
     complete_unit,
+    confirm_cohort_roster_sync,
+    create_academic_group,
+    create_cohort,
     enroll_member,
     open_unit,
+    replace_academic_group_roster,
     upgrade_enrollment_release,
 )
 from domain.organizations.models import Membership, Organization
@@ -125,6 +136,83 @@ class LearningConcurrencyTests(LearningFixtureMixin, TransactionTestCase):
         self.assertCountEqual(results, ["enrolled", "duplicate"])
         self.assertEqual(
             CourseEnrollment.objects.filter(membership=membership).count(), 1
+        )
+
+    def test_same_roster_confirmation_writes_once_and_conflicts_once(self) -> None:
+        (
+            owner,
+            _learner,
+            organization,
+            membership,
+            revision,
+            _module,
+            _unit,
+            _publication,
+            release,
+            _enrollment,
+        ) = self.learning_context()
+        group = create_academic_group(
+            actor=owner,
+            organization=organization,
+            name="Grupo concurrente",
+            academic_year=2026,
+            level="secondary_11",
+        )
+        group = replace_academic_group_roster(
+            actor=owner,
+            group=group,
+            expected_group_version=group.lock_version,
+            members=[
+                {
+                    "membership_id": membership.id,
+                    "role": AcademicGroupRole.LEARNER,
+                }
+            ],
+        )
+        cohort = create_cohort(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            release=release,
+            migration_review_required=True,
+            academic_group=group,
+            name="Curso concurrente",
+        )
+        expected_cohort_version = cohort.lock_version
+        expected_group_version = group.lock_version
+        barrier = threading.Barrier(2)
+
+        def worker() -> str:
+            close_old_connections()
+            try:
+                barrier.wait(timeout=10)
+                confirm_cohort_roster_sync(
+                    actor=get_user_model().objects.get(pk=owner.pk),
+                    cohort=LearningCohort.objects.get(pk=cohort.pk),
+                    expected_cohort_version=expected_cohort_version,
+                    expected_academic_group_version=expected_group_version,
+                    reason="Confirmación concurrente",
+                )
+                return "synced"
+            except EnrollmentConflict:
+                return "conflict"
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(lambda _: worker(), range(2)))
+        self.assertCountEqual(results, ["synced", "conflict"])
+        self.assertEqual(
+            EnrollmentCohortAssignment.objects.filter(
+                enrollment__membership=membership, ended_at__isnull=True
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            RosterEvent.objects.filter(
+                cohort=cohort, event_type="course_group_synced"
+            ).count(),
+            1,
         )
 
     def test_concurrent_upgrade_uses_enrollment_version(self) -> None:

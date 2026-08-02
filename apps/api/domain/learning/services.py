@@ -11,8 +11,9 @@ from django.utils.text import slugify
 
 from domain.courses.models import Course
 from domain.events.services import record_domain_event
-from domain.organizations.choices import MembershipStatus
+from domain.organizations.choices import MembershipStatus, RoleCode
 from domain.organizations.models import Membership, Organization
+from domain.organizations.policies import active_roles
 from domain.publishing.choices import PublicationStatus
 from domain.publishing.integrity import verify_release
 from domain.publishing.models import CoursePublication, CourseRelease
@@ -575,6 +576,13 @@ def replace_cohort_staff(
     ):
         raise LearningPermissionDenied(
             "Cada docente debe ser una membresía activa de la organización."
+        )
+    if any(
+        RoleCode.INSTRUCTOR not in active_roles(membership)
+        for membership in memberships
+    ):
+        raise LearningPermissionDenied(
+            "Cada integrante del equipo docente debe tener el rol institucional docente."
         )
     now = timezone.now()
     existing = {

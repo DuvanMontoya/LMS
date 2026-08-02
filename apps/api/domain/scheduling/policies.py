@@ -60,10 +60,19 @@ def actor_membership(actor: object, organization: Organization) -> Membership | 
 
 def can_edit_series(actor: object, series: AcademicEventSeries) -> bool:
     membership = actor_membership(actor, series.organization)
-    return can_manage_schedule(actor, series.organization) or bool(
+    if can_manage_schedule(actor, series.organization):
+        return True
+    if not (
         membership
         and membership.id == series.host_membership_id
         and can_create_schedule(actor, series.organization)
+    ):
+        return False
+    return bool(
+        series.course_group_id is None
+        or actor_has_course_group_staff_scope(
+            actor=actor, course_group=series.course_group
+        )
     )
 
 

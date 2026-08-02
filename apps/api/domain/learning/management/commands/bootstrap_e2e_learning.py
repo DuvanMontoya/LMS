@@ -27,13 +27,13 @@ class Command(BaseCommand):
     @transaction.atomic
     def _bootstrap(self) -> None:
         organization = Organization.objects.get(slug="organizacion-a")
-        owner = User.objects.get(email="owner@organizations.e2e.test")
+        administrator = User.objects.get(email="administrator@organizations.e2e.test")
         if not AcademicPeriod.objects.filter(
             organization=organization,
             slug="periodo-e2e-2026",
         ).exists():
             create_academic_period(
-                actor=owner,
+                actor=administrator,
                 organization=organization,
                 name="Periodo E2E 2026",
                 slug="periodo-e2e-2026",
@@ -46,7 +46,7 @@ class Command(BaseCommand):
         publication = CoursePublication.objects.filter(course=course).first()
         if publication is None:
             publish_approved_revision(
-                actor=owner,
+                actor=administrator,
                 organization=organization,
                 course=course,
                 revision=revision,

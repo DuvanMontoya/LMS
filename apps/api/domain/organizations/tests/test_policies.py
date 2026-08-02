@@ -128,6 +128,7 @@ class OrganizationPolicyTests(TestCase):
                 Capability.ASSESSMENT_RESULTS_VIEW,
                 Capability.ASSESSMENT_GRADEBOOK_VIEW,
                 Capability.ASSESSMENT_ANALYTICS_VIEW,
+                Capability.ASSESSMENT_ANALYTICS_REFRESH,
             },
         )
 

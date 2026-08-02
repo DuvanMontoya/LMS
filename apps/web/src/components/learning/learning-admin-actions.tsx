@@ -47,14 +47,14 @@ export function CohortActions({
   if (status === 'archived') return null;
   return (
     <ConfirmAction
-      description="El grupo de curso dejará de aceptar matrículas nuevas. Su historial, matrículas y progreso permanecerán disponibles."
+      description="La sección dejará de aceptar matrículas nuevas. Su historial, matrículas y progreso permanecerán disponibles."
       label="Archivar"
       onConfirm={async () => {
         await mutation.mutateAsync(version);
         router.refresh();
       }}
       pending={mutation.isPending}
-      title="Archivar grupo de curso"
+      title="Archivar sección"
       variant="outline"
     >
       <Archive />
@@ -141,7 +141,7 @@ export function EnrollmentActions({
         ) : null}
         {cohortId && status !== 'revoked' ? (
           <ConfirmAction
-            description="La matrícula dejará el grupo de curso, conservará su release y progreso, y quedará con una política de acceso individual."
+            description="La matrícula dejará la sección, conservará su release y progreso, y quedará con una política de acceso individual."
             label="Convertir a individual"
             onConfirm={async () => {
               await individualize.mutateAsync({

@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from django.utils import timezone
 
 from domain.learning.tests.support import LearningFixtureMixin
+from domain.organizations.choices import RoleCode
 from domain.organizations.models import Membership
 from domain.scheduling.choices import EventType
 from domain.scheduling.livekit_gateway import LiveKitConfiguration
@@ -60,13 +61,19 @@ class SchedulingFixtureMixin(LearningFixtureMixin):
             _release,
             enrollment,
         ) = self.learning_context()
-        owner_membership = Membership.objects.get(organization=organization, user=owner)
+        host = self.member(
+            owner,
+            organization,
+            RoleCode.INSTRUCTOR,
+            "scheduling-host@example.test",
+        )
+        host_membership = Membership.objects.get(organization=organization, user=host)
         starts_at = timezone.now() + timedelta(minutes=2)
         series = create_event_series(
             actor=owner,
             organization=organization,
             course=revision.course,
-            host_membership=owner_membership,
+            host_membership=host_membership,
             title="Álgebra en vivo",
             description="Sesión sincrónica",
             event_type=EventType.LIVE_CLASS,
@@ -77,6 +84,7 @@ class SchedulingFixtureMixin(LearningFixtureMixin):
         occurrence = series.occurrences.select_related("live_session").get()
         return {
             "owner": owner,
+            "host": host,
             "learner": learner,
             "organization": organization,
             "learner_membership": learner_membership,

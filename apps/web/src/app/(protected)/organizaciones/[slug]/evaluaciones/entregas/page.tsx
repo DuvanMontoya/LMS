@@ -20,6 +20,9 @@ export default async function AssessmentDeliveriesPage({
       />
       <DeliveryManager
         canManage={data.canManage}
+        canViewResults={data.access.capabilities.includes(
+          'assessment.results.view',
+        )}
         deliveries={data.deliveries}
         enrollments={data.enrollments}
         releaseOptions={data.releaseOptions}

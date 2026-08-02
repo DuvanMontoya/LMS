@@ -76,6 +76,25 @@ export default async function CoursesPage({
         eyebrow="Autoría académica"
         title="Cursos"
       />
+      {!canManage ? (
+        <section
+          aria-label="Acceso a la creación de cursos"
+          className="mt-5 flex flex-col gap-3 rounded-lg border border-dashed bg-muted/20 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="text-muted-foreground">
+            Crear y editar cursos corresponde al rol <strong>Autor</strong>. Tu
+            acceso permite consultar las estructuras y gestionar su operación
+            posterior.
+          </p>
+          {access.capabilities.includes('role.assign') ? (
+            <Button asChild className="shrink-0" size="sm" variant="outline">
+              <Link href={`/organizaciones/${slug}/miembros`}>
+                Gestionar roles
+              </Link>
+            </Button>
+          ) : null}
+        </section>
+      ) : null}
       {courses.results.length || hasActiveFilters ? (
         <form
           className="mt-5 grid gap-3 border-b pb-4 md:grid-cols-2 xl:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr_auto]"

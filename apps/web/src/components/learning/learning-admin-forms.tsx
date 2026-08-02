@@ -168,8 +168,8 @@ export function CohortCreateForm({
       <fieldset className="space-y-2 sm:col-span-2">
         <legend className="text-sm font-medium">Equipo docente</legend>
         <p className="text-xs leading-5 text-muted-foreground">
-          Asigna las personas que podrán gestionar este grupo de curso. Los
-          roles institucionales permanecen en la membresía.
+          Asigna las personas que podrán gestionar esta sección. Los roles
+          institucionales permanecen en la membresía.
         </p>
         <MembershipSearchPicker
           ariaLabel="Buscar persona para el equipo docente"
@@ -268,7 +268,7 @@ export function CohortCreateForm({
       </Field>
       <Field
         error={form.formState.errors.release_number?.message}
-        hint="El grupo de curso permanecerá fijado a esta versión."
+        hint="La sección permanecerá fijada a esta versión."
         label="Release asignado"
         name="cohort-release"
       >
@@ -289,7 +289,7 @@ export function CohortCreateForm({
       </Field>
       <Field
         error={form.formState.errors.academic_group_id?.message}
-        hint="Opcional. Organiza el grupo de curso institucionalmente; no matricula integrantes por sí solo."
+        hint="Opcional. Organiza la sección institucionalmente; no matricula integrantes por sí solo."
         label="Grupo académico"
         name="cohort-academic-group"
       >
@@ -341,7 +341,7 @@ export function CohortCreateForm({
       <SubmitState
         disabled={!courses.length || !academicPeriods.length}
         error={mutation.error}
-        label="Crear grupo de curso"
+        label="Crear sección"
         pending={mutation.isPending}
       />
     </form>
@@ -585,7 +585,7 @@ export function CohortBatchEnrollForm({
           atómica.
         </p>
         <MembershipSearchPicker
-          ariaLabel="Buscar estudiante para el grupo de curso"
+          ariaLabel="Buscar estudiante para la sección"
           excludeIds={Object.keys(students)}
           onSelect={(member) => {
             if (enrolledEmails.includes(member.email)) {

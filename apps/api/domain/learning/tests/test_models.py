@@ -1,10 +1,20 @@
+import importlib
+
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import DatabaseError, connection, transaction
 from django.test import TestCase
 from django.utils import timezone
 
-from domain.learning.models import EnrollmentCohortAssignment, LearningEvent
+from domain.learning.models import (
+    CourseEnrollment,
+    CourseGroupActivity,
+    EnrollmentCohortAssignment,
+    LearningCohort,
+    LearningEvent,
+    RosterEvent,
+)
 from domain.learning.services import (
     create_cohort,
     enroll_member,
@@ -16,6 +26,65 @@ from .support import LearningFixtureMixin
 
 
 class LearningModelTests(LearningFixtureMixin, TestCase):
+    def test_legacy_backfill_preserves_access_without_automatic_roster_sync(
+        self,
+    ) -> None:
+        (
+            owner,
+            _learner,
+            organization,
+            _membership,
+            revision,
+            _module,
+            _unit,
+            _publication,
+            release,
+            enrollment,
+        ) = self.learning_context()
+        cohort = LearningCohort.objects.create(
+            organization=organization,
+            course=revision.course,
+            release=release,
+            name="Grupo heredado",
+            slug="grupo-heredado",
+            roster_mode="manual",
+            created_by=owner,
+            updated_by=owner,
+        )
+        CourseEnrollment.objects.filter(pk=enrollment.pk).update(cohort=cohort)
+        before = CourseEnrollment.objects.count()
+
+        migration_0006 = importlib.import_module(
+            "domain.learning.migrations.0006_cohortstaffassignment_enrollmentcohortassignment_and_more"
+        )
+        migration_0006.backfill_historical_course_group_assignments(apps, None)
+        enrollment.refresh_from_db()
+        assignment = EnrollmentCohortAssignment.objects.get(enrollment=enrollment)
+        self.assertEqual(enrollment.access_provenance, "legacy_migration")
+        self.assertEqual(assignment.source, "legacy_migration")
+        self.assertEqual(assignment.cohort_id, cohort.id)
+        self.assertTrue(
+            RosterEvent.objects.filter(
+                cohort=cohort,
+                event_type="legacy_backfilled",
+                details__enrollment_id=str(enrollment.id),
+            ).exists()
+        )
+
+        migration_0007 = importlib.import_module(
+            "domain.learning.migrations.0007_activityprogress_activityprogressevent_and_more"
+        )
+        migration_0007.materialize_legacy_course_group_activities(apps, None)
+        cohort.refresh_from_db()
+        self.assertTrue(cohort.migration_review_required)
+        self.assertEqual(cohort.roster_mode, "manual")
+        self.assertEqual(CourseEnrollment.objects.count(), before)
+        self.assertTrue(
+            CourseGroupActivity.objects.filter(
+                course_group=cohort, migration_review_required=True
+            ).exists()
+        )
+
     def test_course_group_history_allows_only_closure_and_never_deletion(self) -> None:
         (
             owner,

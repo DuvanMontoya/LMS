@@ -14,6 +14,7 @@ from domain.learning.choices import (
     AcademicPeriodType,
     CohortStaffRole,
 )
+from domain.learning.exceptions import LearningPermissionDenied
 from domain.learning.models import CourseGroupActivity
 from domain.learning.services import (
     create_academic_group,
@@ -109,6 +110,40 @@ class LearningApiTests(LearningFixtureMixin, TestCase):
         other_client = APIClient()
         other_client.force_authenticate(other)
         self.assertEqual(other_client.get(url).data, [])
+
+    def test_course_group_staff_rejects_non_instructor_memberships(self) -> None:
+        (
+            owner,
+            _learner,
+            organization,
+            learner_membership,
+            revision,
+            _module,
+            _unit,
+            _publication,
+            release,
+            _enrollment,
+        ) = self.learning_context()
+        cohort = create_cohort(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            release=release,
+            migration_review_required=True,
+            name="Grupo con equipo validado",
+        )
+        with self.assertRaises(LearningPermissionDenied):
+            replace_cohort_staff(
+                actor=owner,
+                cohort=cohort,
+                expected_cohort_version=cohort.lock_version,
+                staff=[
+                    {
+                        "membership_id": learner_membership.id,
+                        "role": CohortStaffRole.ASSISTANT,
+                    }
+                ],
+            )
 
     def test_group_learner_uses_unified_activity_outline_and_detail(self) -> None:
         (

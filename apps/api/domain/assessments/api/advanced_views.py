@@ -13,7 +13,10 @@ from rest_framework.response import Response as ApiResponse
 from rest_framework.views import APIView
 
 from domain.learning.models import LearningCohort
-from domain.learning.policies import can_manage_course_group
+from domain.learning.policies import (
+    can_manage_course_group,
+    has_institutional_learning_scope,
+)
 from domain.organizations.models import Organization
 from domain.organizations.selectors import organization_visible_to
 from domain.publishing.models import CourseRelease
@@ -31,9 +34,7 @@ from ..gradebooks import (
 )
 from ..grading import create_scoring_correction
 from ..models import (
-    AnalyticsRefreshJob,
     AssessmentAnalyticsSnapshot,
-    AssessmentDelivery,
     AssessmentGradingPolicy,
     AssessmentGradingRevision,
     AssessmentItemPool,
@@ -45,6 +46,7 @@ from ..models import (
     RegradeJob,
 )
 from ..policies import (
+    can_approve_authoring,
     can_manage_authoring,
     can_manage_gradebook,
     can_manage_regrading,
@@ -55,7 +57,13 @@ from ..policies import (
     can_view_regrading,
 )
 from ..regrading import create_regrade_job, retry_failed_regrade_job
-from ..selectors import deliveries_for, gradebooks_for
+from ..selectors import (
+    analytics_refresh_jobs_for,
+    analytics_snapshots_for,
+    deliveries_for,
+    gradebooks_for,
+    regrade_jobs_for,
+)
 from ..services import (
     create_assessment_pool,
     reorder_assessment_structure,
@@ -317,6 +325,7 @@ class ScoringPolicyRevisionListView(APIView):
         _require(
             can_view_regrading(request.user, organization)
             or can_view_authoring(request.user, organization)
+            or can_view_analytics(request.user, organization)
         )
         policy = get_object_or_404(
             AssessmentGradingPolicy,
@@ -338,7 +347,7 @@ class ScoringCorrectionView(APIView):
     )
     def post(self, request: Request, slug: str, version_id: str) -> ApiResponse:
         organization = _organization(request, slug)
-        _require(can_manage_regrading(request.user, organization))
+        _require(can_approve_authoring(request.user, organization))
         serializer = ScoringCorrectionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         values = dict(serializer.validated_data)
@@ -364,10 +373,8 @@ class RegradeJobListCreateView(APIView):
     def get(self, request: Request, slug: str) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_view_regrading(request.user, organization))
-        rows = (
-            RegradeJob.objects.filter(organization=organization)
-            .select_related("assessment_version", "grading_revision", "delivery")
-            .order_by("-created_at", "-id")
+        rows = regrade_jobs_for(organization, actor=request.user).order_by(
+            "-created_at", "-id"
         )
         return ApiResponse(RegradeJobSerializer(rows, many=True).data)
 
@@ -388,13 +395,14 @@ class RegradeJobListCreateView(APIView):
         delivery_id = values.pop("delivery_id", None)
         delivery = (
             get_object_or_404(
-                AssessmentDelivery,
+                deliveries_for(organization, actor=request.user),
                 pk=delivery_id,
-                organization=organization,
             )
             if delivery_id
             else None
         )
+        if delivery is None:
+            _require(has_institutional_learning_scope(request.user, organization))
         result = _domain_call(
             lambda: create_regrade_job(
                 actor=request.user,
@@ -413,13 +421,12 @@ class RegradeJobListCreateView(APIView):
         )
 
 
-def _regrade_job(organization: Organization, job_id: str) -> RegradeJob:
+def _regrade_job(
+    organization: Organization, job_id: str, *, actor: object
+) -> RegradeJob:
     return get_object_or_404(
-        RegradeJob.objects.select_related(
-            "assessment_version", "grading_revision", "delivery"
-        ),
+        regrade_jobs_for(organization, actor=actor),
         pk=job_id,
-        organization=organization,
     )
 
 
@@ -432,7 +439,9 @@ class RegradeJobDetailView(APIView):
         organization = _organization(request, slug)
         _require(can_view_regrading(request.user, organization))
         return ApiResponse(
-            RegradeJobSerializer(_regrade_job(organization, job_id)).data
+            RegradeJobSerializer(
+                _regrade_job(organization, job_id, actor=request.user)
+            ).data
         )
 
 
@@ -444,7 +453,9 @@ class RegradeJobAttemptListView(APIView):
     def get(self, request: Request, slug: str, job_id: str) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_view_regrading(request.user, organization))
-        rows = _regrade_job(organization, job_id).attempt_items.order_by("id")
+        rows = _regrade_job(
+            organization, job_id, actor=request.user
+        ).attempt_items.order_by("id")
         return ApiResponse(RegradeJobAttemptSerializer(rows, many=True).data)
 
 
@@ -458,7 +469,7 @@ class RegradeJobRetryView(APIView):
         result = _domain_call(
             lambda: retry_failed_regrade_job(
                 actor=request.user,
-                job=_regrade_job(organization, job_id),
+                job=_regrade_job(organization, job_id, actor=request.user),
                 **serializer.validated_data,
             )
         )
@@ -824,8 +835,12 @@ class MyGradebookDetailView(APIView):
         )
 
 
-def _analytics_scope(request: Request, version: AssessmentVersion):
-    queryset = AssessmentAnalyticsSnapshot.objects.filter(assessment_version=version)
+def _analytics_scope(
+    request: Request, organization: Organization, version: AssessmentVersion
+):
+    queryset = analytics_snapshots_for(organization, actor=request.user).filter(
+        assessment_version=version
+    )
     delivery_id = request.query_params.get("delivery")
     revision_id = request.query_params.get("grading_revision")
     queryset = (
@@ -839,9 +854,9 @@ def _analytics_scope(request: Request, version: AssessmentVersion):
 
 
 def _latest_analytics_snapshot(
-    request: Request, version: AssessmentVersion
+    request: Request, organization: Organization, version: AssessmentVersion
 ) -> AssessmentAnalyticsSnapshot:
-    snapshot = _analytics_scope(request, version).first()
+    snapshot = _analytics_scope(request, organization, version).first()
     if snapshot is None:
         raise Http404
     return snapshot
@@ -856,7 +871,7 @@ class AnalyticsAssessmentView(APIView):
         organization = _organization(request, slug)
         _require(can_view_analytics(request.user, organization))
         snapshot = _latest_analytics_snapshot(
-            request, _version(organization, version_id)
+            request, organization, _version(organization, version_id)
         )
         return ApiResponse(AnalyticsSnapshotSerializer(snapshot).data)
 
@@ -870,7 +885,7 @@ class AnalyticsItemListView(APIView):
         organization = _organization(request, slug)
         _require(can_view_analytics(request.user, organization))
         snapshot = _latest_analytics_snapshot(
-            request, _version(organization, version_id)
+            request, organization, _version(organization, version_id)
         )
         return ApiResponse(
             ItemAnalyticsSerializer(snapshot.items.all(), many=True).data
@@ -888,7 +903,7 @@ class AnalyticsItemDetailView(APIView):
         organization = _organization(request, slug)
         _require(can_view_analytics(request.user, organization))
         snapshot = _latest_analytics_snapshot(
-            request, _version(organization, version_id)
+            request, organization, _version(organization, version_id)
         )
         item = get_object_or_404(snapshot.items, assessment_item_id=assessment_item_id)
         return ApiResponse(ItemAnalyticsSerializer(item).data)
@@ -911,13 +926,14 @@ class AnalyticsRefreshView(APIView):
         delivery_id = values.get("delivery_id")
         delivery = (
             get_object_or_404(
-                AssessmentDelivery,
+                deliveries_for(organization, actor=request.user),
                 pk=delivery_id,
-                organization=organization,
             )
             if delivery_id
             else None
         )
+        if delivery is None:
+            _require(has_institutional_learning_scope(request.user, organization))
         result = _domain_call(
             lambda: create_analytics_refresh_job(
                 actor=request.user,
@@ -944,6 +960,7 @@ class AnalyticsJobView(APIView):
         organization = _organization(request, slug)
         _require(can_view_analytics(request.user, organization))
         job = get_object_or_404(
-            AnalyticsRefreshJob, pk=job_id, organization=organization
+            analytics_refresh_jobs_for(organization, actor=request.user),
+            pk=job_id,
         )
         return ApiResponse(AnalyticsJobSerializer(job).data)

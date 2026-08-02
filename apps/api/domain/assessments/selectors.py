@@ -7,12 +7,16 @@ from domain.learning.policies import has_institutional_learning_scope
 from domain.organizations.models import Organization
 
 from .models import (
+    AnalyticsRefreshJob,
     Assessment,
+    AssessmentAnalyticsSnapshot,
     AssessmentDelivery,
     Attempt,
     CourseGradebook,
     DeliveryAssignment,
     QuestionBank,
+    RegradeJob,
+    Response,
 )
 
 
@@ -61,6 +65,71 @@ def gradebooks_for(
     return queryset.filter(
         course_group_id__in=group_ids, migration_review_required=False
     )
+
+
+def attempts_for_results(
+    organization: Organization, *, actor: object
+) -> QuerySet[Attempt]:
+    queryset = Attempt.objects.filter(
+        delivery_assignment__delivery__organization=organization
+    ).select_related("assessment_version")
+    if has_institutional_learning_scope(actor, organization):  # type: ignore[arg-type]
+        return queryset
+    group_ids = visible_course_group_ids_for_actor(
+        actor=actor, organization=organization
+    )
+    return queryset.filter(
+        delivery_assignment__delivery__course_group_activity__course_group_id__in=group_ids,
+        delivery_assignment__delivery__migration_review_required=False,
+    )
+
+
+def responses_for_manual_grading(
+    organization: Organization, *, actor: object
+) -> QuerySet[Response]:
+    queryset = Response.objects.filter(
+        attempt_item__attempt__delivery_assignment__delivery__organization=organization
+    )
+    if has_institutional_learning_scope(actor, organization):  # type: ignore[arg-type]
+        return queryset
+    group_ids = visible_course_group_ids_for_actor(
+        actor=actor, organization=organization
+    )
+    return queryset.filter(
+        attempt_item__attempt__delivery_assignment__delivery__course_group_activity__course_group_id__in=group_ids,
+        attempt_item__attempt__delivery_assignment__delivery__migration_review_required=False,
+    )
+
+
+def regrade_jobs_for(
+    organization: Organization, *, actor: object
+) -> QuerySet[RegradeJob]:
+    queryset = RegradeJob.objects.filter(organization=organization).select_related(
+        "assessment_version", "grading_revision", "delivery"
+    )
+    if has_institutional_learning_scope(actor, organization):  # type: ignore[arg-type]
+        return queryset
+    return queryset.filter(delivery__in=deliveries_for(organization, actor=actor))
+
+
+def analytics_snapshots_for(
+    organization: Organization, *, actor: object
+) -> QuerySet[AssessmentAnalyticsSnapshot]:
+    queryset = AssessmentAnalyticsSnapshot.objects.filter(
+        assessment_version__assessment__organization=organization
+    )
+    if has_institutional_learning_scope(actor, organization):  # type: ignore[arg-type]
+        return queryset
+    return queryset.filter(delivery__in=deliveries_for(organization, actor=actor))
+
+
+def analytics_refresh_jobs_for(
+    organization: Organization, *, actor: object
+) -> QuerySet[AnalyticsRefreshJob]:
+    queryset = AnalyticsRefreshJob.objects.filter(organization=organization)
+    if has_institutional_learning_scope(actor, organization):  # type: ignore[arg-type]
+        return queryset
+    return queryset.filter(delivery__in=deliveries_for(organization, actor=actor))
 
 
 def learner_assignments(

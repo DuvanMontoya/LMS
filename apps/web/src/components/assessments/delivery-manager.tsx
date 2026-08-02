@@ -47,6 +47,7 @@ type ReleaseOption = {
 
 export function DeliveryManager({
   canManage,
+  canViewResults,
   deliveries,
   enrollments,
   releaseOptions,
@@ -54,6 +55,7 @@ export function DeliveryManager({
   versions,
 }: Readonly<{
   canManage: boolean;
+  canViewResults: boolean;
   deliveries: AssessmentDeliveryPage;
   enrollments: EnrollmentOption[];
   releaseOptions: ReleaseOption[];
@@ -275,14 +277,16 @@ export function DeliveryManager({
                         slug={slug}
                       />
                     ) : null}
-                    <Button asChild type="button" variant="ghost">
-                      <Link
-                        href={`/organizaciones/${slug}/evaluaciones/resultados?delivery=${delivery.id}`}
-                      >
-                        Ver intentos y resultados{' '}
-                        <ArrowRight data-icon="inline-end" />
-                      </Link>
-                    </Button>
+                    {canViewResults ? (
+                      <Button asChild type="button" variant="ghost">
+                        <Link
+                          href={`/organizaciones/${slug}/evaluaciones/resultados?delivery=${delivery.id}`}
+                        >
+                          Ver intentos y resultados{' '}
+                          <ArrowRight data-icon="inline-end" />
+                        </Link>
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </li>
@@ -404,7 +408,7 @@ function AssignmentControl({
           onChange={(event) => setCohortId(event.target.value)}
           value={cohortId}
         >
-          <option value="">Asignar grupo de curso</option>
+          <option value="">Asignar sección</option>
           {cohorts.map(([id, name]) => (
             <option key={id} value={id}>
               {name}
@@ -424,7 +428,7 @@ function AssignmentControl({
           type="button"
           variant="outline"
         >
-          Asignar grupo de curso
+          Asignar sección
         </Button>
       </div>
       <div className="md:col-span-2">

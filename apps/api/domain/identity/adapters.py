@@ -78,9 +78,12 @@ class LMSAccountAdapter(DefaultAccountAdapter):
             payload = json.loads(request.body.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
             return False
-        submitted_email = payload.get("email") if isinstance(payload, dict) else None
+        if not isinstance(payload, dict):
+            return False
+        submitted_email = cast("dict[str, object]", payload).get("email")
         return isinstance(submitted_email, str) and (
-            submitted_email.strip().casefold() == invitation.email.casefold()
+            submitted_email.strip().casefold()
+            == cast("str", invitation.email).casefold()
         )
 
     def confirm_email(self, request: HttpRequest, email_address: EmailAddress) -> bool:

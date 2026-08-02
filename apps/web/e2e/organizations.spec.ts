@@ -26,6 +26,120 @@ async function logout(page: import('@playwright/test').Page) {
 }
 
 test.describe.serial('institutional organization access', () => {
+  test('each role reaches every route exposed in its sidebar without a 404', async ({
+    page,
+  }) => {
+    test.slow();
+    const roleLandings: ReadonlyArray<readonly [string, string]> = [
+      [
+        'owner@organizations.e2e.test',
+        `/organizaciones/${organizationSlug}/miembros`,
+      ],
+      [
+        'administrator@organizations.e2e.test',
+        `/organizaciones/${organizationSlug}/aprendizaje/cohortes`,
+      ],
+      [
+        'author@organizations.e2e.test',
+        `/organizaciones/${organizationSlug}/cursos`,
+      ],
+      [
+        'reviewer@organizations.e2e.test',
+        `/organizaciones/${organizationSlug}/cursos`,
+      ],
+      [
+        'instructor@organizations.e2e.test',
+        `/organizaciones/${organizationSlug}/aprendizaje/mis-asignaturas`,
+      ],
+      [
+        'learner@organizations.e2e.test',
+        `/organizaciones/${organizationSlug}/aprendizaje`,
+      ],
+    ];
+    for (const [email, landingPath] of roleLandings) {
+      await login(page, email, landingPath);
+      const sidebar = page.locator('[data-sidebar="sidebar"]');
+      const hrefs = await sidebar
+        .locator('a[href]')
+        .evaluateAll((links) => [
+          ...new Set(
+            links
+              .map((link) => link.getAttribute('href'))
+              .filter(
+                (href): href is string =>
+                  href?.startsWith('/organizaciones/organizacion-a') ?? false,
+              ),
+          ),
+        ]);
+
+      for (const href of hrefs) {
+        const response = await page.goto(href);
+        expect(response?.status(), `${email} → ${href}`).not.toBe(404);
+      }
+      await logout(page);
+    }
+  });
+
+  test('administrator follows the compact workflow and sees the course-authoring handoff', async ({
+    page,
+  }) => {
+    await login(
+      page,
+      'administrator@organizations.e2e.test',
+      `/organizaciones/${organizationSlug}/cursos`,
+    );
+
+    const sidebar = page.locator('[data-sidebar="sidebar"]');
+    await expect(
+      sidebar.getByText('Institución', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      sidebar.getByText('Diseño académico', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      sidebar.getByText('Operación académica', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      sidebar.getByText('Herramientas académicas', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      sidebar.getByRole('link', { name: 'Configuración', exact: true }),
+    ).toHaveCount(0);
+    for (const label of [
+      'Currículo',
+      'Responsabilidades docentes',
+      'Cursos',
+      'Grupos',
+      'Calendario',
+      'Clases en vivo',
+      'Recursos',
+    ]) {
+      await expect(
+        sidebar.getByRole('link', { name: label, exact: true }),
+      ).toBeVisible();
+    }
+    expect(
+      await sidebar.evaluate(
+        (element) => element.scrollHeight <= element.clientHeight,
+      ),
+    ).toBe(true);
+
+    await page.getByRole('button', { name: /Abrir menú de cuenta/ }).click();
+    await expect(
+      page.getByRole('menuitem', { name: 'Configuración', exact: true }),
+    ).toHaveAttribute(
+      'href',
+      `/organizaciones/${organizationSlug}/configuracion`,
+    );
+
+    await expect(
+      page.getByRole('region', { name: 'Acceso a la creación de cursos' }),
+    ).toContainText('Crear y editar cursos corresponde al rol Autor');
+    await expect(
+      page.getByRole('link', { name: 'Gestionar roles' }),
+    ).toHaveAttribute('href', `/organizaciones/${organizationSlug}/miembros`);
+  });
+
   test('owner adds, suspends, reactivates, revokes and rejoins a verified member', async ({
     page,
   }) => {

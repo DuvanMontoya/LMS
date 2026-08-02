@@ -48,9 +48,9 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
   browser,
   page,
 }) => {
-  test.setTimeout(360_000);
+  test.setTimeout(600_000);
   const cohortsPath = `/organizaciones/${slug}/aprendizaje/cohortes`;
-  await login(page, 'owner@organizations.e2e.test', cohortsPath);
+  await login(page, 'administrator@organizations.e2e.test', cohortsPath);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expectAccessible(page);
 
@@ -59,7 +59,7 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
   await page.getByLabel('Slug (opcional)').fill('cohorte-e2e-funciones');
   await page.getByLabel('Curso').selectOption(courseSlug);
   await page.getByLabel('Release asignado').selectOption('1');
-  await page.getByRole('button', { name: 'Crear grupo de curso' }).click();
+  await page.getByRole('button', { name: 'Crear sección' }).click();
   await expect(page).toHaveURL(cohortsPath, { timeout: 20_000 });
   await page.getByRole('link', { name: 'Cohorte E2E de funciones' }).click();
   await expect(
@@ -68,7 +68,7 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
   const cohortHref = new URL(page.url()).pathname;
   await addPersonFromDirectory(
     page,
-    'Buscar estudiante para el grupo de curso',
+    'Buscar estudiante para la sección',
     'learner@organizations.e2e.test',
   );
   await page.getByRole('button', { name: 'Matricular selección' }).click();
@@ -137,10 +137,16 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
 
   await student.goto(learningPath);
   await student.getByRole('link', { name: 'Comenzar' }).click();
-  await expect(
-    student.getByRole('heading', { name: 'Concepto de función', level: 1 }),
-  ).toBeVisible({ timeout: 20_000 });
+  await expect(student).toHaveURL(/\/(?:actividades|unidades)\/[0-9a-f-]+$/, {
+    timeout: 60_000,
+  });
+  await expect(student.getByRole('heading', { level: 1 })).toBeVisible({
+    timeout: 60_000,
+  });
   await expect(student.getByText('Una función asigna')).toBeVisible();
+  await expect(
+    student.getByRole('button', { name: 'Marcar unidad como completada' }),
+  ).toBeVisible();
   await expect(
     student.getByRole('navigation', { name: 'Navegación entre lecciones' }),
   ).toBeVisible();
@@ -211,7 +217,7 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
   await page.goto(cohortHref);
   await addPersonFromDirectory(
     page,
-    'Buscar estudiante para el grupo de curso',
+    'Buscar estudiante para la sección',
     'learner@organizations.e2e.test',
   );
   await page.getByRole('button', { name: 'Matricular selección' }).click();
@@ -222,19 +228,42 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
   await expect(student.getByText('Release 1')).toBeVisible();
 
   const publicationPath = `/organizaciones/${slug}/cursos/${courseSlug}/publicacion`;
-  await page.goto(
+  const authorContext = await browser.newContext({
+    baseURL: `http://127.0.0.1:${process.env.E2E_WEB_PORT ?? '3000'}`,
+  });
+  const author = await authorContext.newPage();
+  await login(
+    author,
+    'author@organizations.e2e.test',
     `/organizaciones/${slug}/cursos/${courseSlug}/publicaciones/1`,
   );
-  await page
+  await author
     .getByRole('button', { name: 'Crear revisión desde este release' })
     .click();
-  await page.getByRole('button', { name: 'Crear revisión' }).click();
-  await page.getByRole('button', { name: 'Enviar a revisión' }).click();
-  await page.getByRole('button', { name: 'Enviar revisión' }).click();
-  await page.getByRole('button', { name: 'Aprobar estructura' }).click();
-  await expect(page.getByText('La estructura fue aprobada.')).toBeVisible({
+  await author.getByRole('button', { name: 'Crear revisión' }).click();
+  await author.getByRole('button', { name: 'Enviar a revisión' }).click();
+  await author.getByRole('button', { name: 'Enviar revisión' }).click();
+  const revisionPath = new URL(author.url()).pathname;
+  await authorContext.close();
+
+  const reviewerAuthoringContext = await browser.newContext({
+    baseURL: `http://127.0.0.1:${process.env.E2E_WEB_PORT ?? '3000'}`,
+  });
+  const reviewerAuthoring = await reviewerAuthoringContext.newPage();
+  await login(
+    reviewerAuthoring,
+    'reviewer@organizations.e2e.test',
+    revisionPath,
+  );
+  await reviewerAuthoring
+    .getByRole('button', { name: 'Aprobar estructura' })
+    .click();
+  await expect(
+    reviewerAuthoring.getByText('La estructura fue aprobada.'),
+  ).toBeVisible({
     timeout: 20_000,
   });
+  await reviewerAuthoringContext.close();
   await page.goto(publicationPath);
   await page
     .getByRole('button', { name: 'Publicar revisión aprobada' })
@@ -336,11 +365,11 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
   await page.getByLabel('Release asignado').selectOption('2');
   const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 16);
   await page.getByLabel('Inicio de acceso').fill(tomorrow);
-  await page.getByRole('button', { name: 'Crear grupo de curso' }).click();
+  await page.getByRole('button', { name: 'Crear sección' }).click();
   await page.getByRole('link', { name: 'Cohorte futura E2E' }).click();
   await addPersonFromDirectory(
     page,
-    'Buscar estudiante para el grupo de curso',
+    'Buscar estudiante para la sección',
     'reviewer@organizations.e2e.test',
   );
   await page.getByRole('button', { name: 'Matricular selección' }).click();

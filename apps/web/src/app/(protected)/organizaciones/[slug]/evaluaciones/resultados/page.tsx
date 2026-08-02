@@ -20,13 +20,15 @@ export default async function AssessmentResultsPage({
     <main className="academic-page" id="contenido-principal">
       <PageHeader
         actions={
-          <Button asChild size="sm" variant="outline">
-            <Link
-              href={`/organizaciones/${slug}/evaluaciones/calificacion-manual`}
-            >
-              Calificación manual
-            </Link>
-          </Button>
+          data.access.capabilities.includes('assessment.grading.manage') ? (
+            <Button asChild size="sm" variant="outline">
+              <Link
+                href={`/organizaciones/${slug}/evaluaciones/calificacion-manual`}
+              >
+                Calificación manual
+              </Link>
+            </Button>
+          ) : null
         }
         breadcrumbs={[
           { href: `/organizaciones/${slug}`, label: data.organization.name },

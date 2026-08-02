@@ -9,7 +9,11 @@ from rest_framework.test import APIClient
 from domain.courses.choices import ActivityCompletionMethod, ActivityType
 from domain.courses.services import create_activity, create_module
 from domain.learning.models import CourseGroupActivity
-from domain.learning.services import create_academic_period, create_cohort
+from domain.learning.services import (
+    create_academic_period,
+    create_cohort,
+    enroll_member,
+)
 from domain.organizations.choices import RoleCode
 from domain.organizations.models import Membership
 from domain.organizations.services import (
@@ -18,7 +22,9 @@ from domain.organizations.services import (
 )
 
 from ..api.serializers import AttemptResultSerializer
+from ..choices import ResponseStatus
 from ..gradebooks import create_gradebook
+from ..models import AnalyticsRefreshJob, AssessmentAnalyticsSnapshot, RegradeJob
 from ..services import (
     activate_delivery,
     assign_delivery,
@@ -208,6 +214,200 @@ class AssessmentApiSecurityTests(AssessmentFixtureMixin, TestCase):
             client.get(f"{base}/gradebooks/{foreign_gradebook.id}/").status_code,
             404,
         )
+
+        def attempt_for_group(group, delivery, suffix: str):
+            learner = self.member(
+                context["owner"],
+                context["organization"],
+                RoleCode.LEARNER,
+                f"group-learner-{suffix}@example.test",
+            )
+            membership = Membership.objects.get(
+                organization=context["organization"], user=learner
+            )
+            enrollment = enroll_member(
+                actor=context["owner"],
+                organization=context["organization"],
+                course=context["release"].course,
+                membership=membership,
+                release=context["release"],
+                cohort=group,
+            )
+            delivery = activate_delivery(
+                actor=context["owner"],
+                delivery=delivery,
+                expected_version=delivery.lock_version,
+            )
+            assignment = assign_delivery(
+                actor=context["owner"],
+                delivery=delivery,
+                release_assignment=enrollment.current_release_assignment,
+            )
+            attempt = start_attempt(actor=learner, assignment=assignment)
+            attempt, response = save_response(
+                actor=learner,
+                attempt=attempt,
+                attempt_item=attempt.items.get(),
+                expected_version=attempt.lock_version,
+                payload={
+                    "schema_version": 1,
+                    "type": "single_choice",
+                    "value": "b",
+                },
+            )
+            response.status = ResponseStatus.PENDING_MANUAL
+            response.save(update_fields=("status", "updated_at"))
+            return attempt, response
+
+        assigned_attempt, assigned_response = attempt_for_group(
+            assigned_group, assigned_delivery, "assigned"
+        )
+        foreign_attempt, foreign_response = attempt_for_group(
+            foreign_group, foreign_delivery, "foreign"
+        )
+        results = client.get(f"{base}/results/")
+        self.assertEqual(results.status_code, 200)
+        result_rows = results.json()["results"]
+        self.assertEqual({row["id"] for row in result_rows}, {str(assigned_attempt.id)})
+        manual = client.get(f"{base}/manual-grading/")
+        self.assertEqual(manual.status_code, 200)
+        self.assertEqual(
+            {row["response_id"] for row in manual.json()},
+            {str(assigned_response.id)},
+        )
+        self.assertEqual(
+            client.post(
+                f"{base}/manual-grading/{foreign_response.id}/",
+                {"score": "1.000", "feedback": "No autorizado"},
+                format="json",
+            ).status_code,
+            404,
+        )
+        self.assertNotEqual(assigned_attempt.id, foreign_attempt.id)
+
+        grading_revision = context["assessment_version"].grading_policy.current_revision
+        self.assertIsNotNone(grading_revision)
+        assigned_regrade = RegradeJob.objects.create(
+            organization=context["organization"],
+            assessment_version=context["assessment_version"],
+            grading_revision=grading_revision,
+            delivery=assigned_delivery,
+            reason="Recalificación del grupo asignado.",
+            task_id=uuid.uuid4(),
+            created_by=context["owner"],
+        )
+        foreign_regrade = RegradeJob.objects.create(
+            organization=context["organization"],
+            assessment_version=context["assessment_version"],
+            grading_revision=grading_revision,
+            delivery=foreign_delivery,
+            reason="Recalificación del grupo ajeno.",
+            task_id=uuid.uuid4(),
+            created_by=context["owner"],
+        )
+        for delivery in (assigned_delivery, foreign_delivery):
+            AssessmentAnalyticsSnapshot.objects.create(
+                assessment_version=context["assessment_version"],
+                grading_revision=grading_revision,
+                delivery=delivery,
+                sample_size=1,
+                mean_percent_basis_points=10_000,
+                created_by=context["owner"],
+            )
+        assigned_analytics_job = AnalyticsRefreshJob.objects.create(
+            organization=context["organization"],
+            assessment_version=context["assessment_version"],
+            grading_revision=grading_revision,
+            delivery=assigned_delivery,
+            task_id=uuid.uuid4(),
+            created_by=context["owner"],
+        )
+        foreign_analytics_job = AnalyticsRefreshJob.objects.create(
+            organization=context["organization"],
+            assessment_version=context["assessment_version"],
+            grading_revision=grading_revision,
+            delivery=foreign_delivery,
+            task_id=uuid.uuid4(),
+            created_by=context["owner"],
+        )
+        regrades = client.get(f"{base}/regrade-jobs/")
+        self.assertEqual(regrades.status_code, 200)
+        self.assertEqual(
+            {row["id"] for row in regrades.json()}, {str(assigned_regrade.id)}
+        )
+        self.assertEqual(
+            client.get(f"{base}/regrade-jobs/{foreign_regrade.id}/").status_code,
+            404,
+        )
+        analytics_url = (
+            f"{base}/analytics/assessments/{context['assessment_version'].id}/"
+        )
+        self.assertEqual(
+            client.get(
+                analytics_url, {"delivery": str(assigned_delivery.id)}
+            ).status_code,
+            200,
+        )
+        self.assertEqual(
+            client.get(
+                analytics_url, {"delivery": str(foreign_delivery.id)}
+            ).status_code,
+            404,
+        )
+        self.assertEqual(
+            client.get(
+                f"{base}/analytics/jobs/{assigned_analytics_job.id}/"
+            ).status_code,
+            200,
+        )
+        self.assertEqual(
+            client.get(
+                f"{base}/analytics/jobs/{foreign_analytics_job.id}/"
+            ).status_code,
+            404,
+        )
+        advanced_payload = {
+            "assessment_version_id": str(context["assessment_version"].id),
+            "grading_revision_id": str(grading_revision.id),
+            "delivery_id": str(foreign_delivery.id),
+        }
+        self.assertEqual(
+            client.post(
+                f"{base}/analytics/refresh/", advanced_payload, format="json"
+            ).status_code,
+            404,
+        )
+        self.assertEqual(
+            client.post(
+                f"{base}/regrade-jobs/",
+                {
+                    **advanced_payload,
+                    "reason": "Intento sobre grupo ajeno.",
+                    "preserve_manual_grades": True,
+                },
+                format="json",
+            ).status_code,
+            404,
+        )
+
+    def test_administrator_can_read_revision_metadata_for_analytics(self) -> None:
+        context = self.assessment_context(with_learning=True)
+        administrator = self.member(
+            context["owner"],
+            context["organization"],
+            RoleCode.ADMINISTRATOR,
+            "analytics-administrator@example.test",
+        )
+        client = APIClient()
+        client.force_authenticate(administrator)
+        response = client.get(
+            "/api/v1/organizations/"
+            f"{context['organization'].slug}/assessments/scoring-policies/"
+            f"{context['assessment_version'].id}/revisions/"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json())
+        self.assertNotIn("grading_payload", response.content.decode("utf-8"))
 
     def test_learner_attempt_payload_never_contains_grading_material(self) -> None:
         context = self.assessment_context(with_learning=True)

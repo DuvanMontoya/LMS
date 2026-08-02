@@ -221,7 +221,7 @@ export async function getCohorts(slug: string, query: CohortQuery = {}) {
       params: { path: { slug }, query },
       cache: 'no-store',
     }),
-    'No fue posible consultar los grupos de curso.',
+    'No fue posible consultar las secciones.',
   )) as CohortPage;
   return { ...organization, cohorts };
 }
@@ -269,7 +269,7 @@ export async function getCohort(slug: string, cohortId: string) {
         params: { path },
         cache: 'no-store',
       }),
-      'No fue posible consultar el grupo de curso.',
+      'No fue posible consultar la sección.',
     ) as Promise<Cohort>,
     required(
       client.GET(
@@ -279,7 +279,7 @@ export async function getCohort(slug: string, cohortId: string) {
           cache: 'no-store',
         },
       ),
-      'No fue posible consultar el progreso del grupo de curso.',
+      'No fue posible consultar el progreso de la sección.',
     ) as Promise<CohortProgress>,
     required(
       client.GET(
@@ -289,7 +289,7 @@ export async function getCohort(slug: string, cohortId: string) {
           cache: 'no-store',
         },
       ),
-      'No fue posible consultar las matrículas del grupo de curso.',
+      'No fue posible consultar las matrículas de la sección.',
     ),
     canManage
       ? getLearningAdminOptionsFromClient(client, slug)
@@ -371,7 +371,7 @@ async function getLearningAdminOptionsFromClient(
           },
           cache: 'no-store',
         }),
-        'No fue posible consultar los grupos de curso disponibles.',
+        'No fue posible consultar las secciones disponibles.',
       ) as Promise<CohortPage>,
       required(
         client.GET('/api/v1/organizations/{slug}/learning/academic-groups/', {

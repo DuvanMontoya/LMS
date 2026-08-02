@@ -1,5 +1,6 @@
 import uuid
 
+from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
@@ -10,8 +11,12 @@ from domain.learning.services import (
     create_academic_group,
     replace_academic_group_roster,
 )
+from domain.organizations.choices import RoleCode
 from domain.organizations.models import Membership
-from domain.organizations.services import create_organization_with_owner
+from domain.organizations.services import (
+    add_existing_member_with_roles,
+    create_organization_with_owner,
+)
 
 
 class AcademicGroupTests(TestCase):
@@ -22,17 +27,32 @@ class AcademicGroupTests(TestCase):
         organization = create_organization_with_owner(
             actor=owner, name="Colegio", slug="colegio"
         )
+        administrator = get_user_model().objects.create_user(
+            email="group-administrator@example.test", password="AdminPassword!42"
+        )
+        EmailAddress.objects.create(
+            user=administrator,
+            email=administrator.email,
+            primary=True,
+            verified=True,
+        )
+        add_existing_member_with_roles(
+            actor=owner,
+            organization=organization,
+            user=administrator,
+            roles={RoleCode.ADMINISTRATOR},
+        )
         learner = get_user_model().objects.create_user(
             email="group-learner@example.test", password="LearnerPassword!42"
         )
         membership = Membership.objects.create(
             organization=organization,
             user=learner,
-            status_changed_by=owner,
+            status_changed_by=administrator,
             status_changed_at=timezone.now(),
         )
         group = create_academic_group(
-            actor=owner,
+            actor=administrator,
             organization=organization,
             name="Undécimo A",
             academic_year=2026,
@@ -41,7 +61,7 @@ class AcademicGroupTests(TestCase):
         )
 
         replace_academic_group_roster(
-            actor=owner,
+            actor=administrator,
             group=group,
             members=[
                 {"membership_id": membership.id, "role": AcademicGroupRole.LEARNER}
@@ -56,7 +76,7 @@ class AcademicGroupTests(TestCase):
 
         with self.assertRaises(LearningPermissionDenied):
             replace_academic_group_roster(
-                actor=owner,
+                actor=administrator,
                 group=group,
                 members=[
                     {
@@ -71,7 +91,7 @@ class AcademicGroupTests(TestCase):
         self.assertEqual(row.role, AcademicGroupRole.LEARNER)
 
         replace_academic_group_roster(
-            actor=owner,
+            actor=administrator,
             group=group,
             members=[],
             expected_group_version=group.lock_version + 1,

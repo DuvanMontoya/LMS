@@ -1,5 +1,45 @@
 # Project status
 
+## Navegación institucional y secuencia de trabajo — en curso 2026-08-02
+
+- **Auditoría de rutas:** el sidebar global es estable: no revela ni reemplaza
+  secciones al entrar en cursos o evaluaciones. Las pantallas de detalle y
+  formularios se alcanzan desde su listado, breadcrumb o cabecera local, sin
+  convertirse en navegación lateral dinámica. Buscar, notificaciones, perfil,
+  preferencias, ayuda y configuración quedan deliberadamente en el header o
+  menú de cuenta. Las rutas no autorizadas siguen protegidas por capacidad en
+  servidor; el sidebar no se usa como barrera de acceso.
+- **Cursos:** la ruta `/cursos/nuevo` y su acción existen, pero requieren
+  `course.authoring.manage`. `administrator` sólo consulta cursos aprobados por
+  ADR 0038 y por eso no recibía “Crear curso”. La lista ahora explica esa
+  separación y enlaza a gestionar roles cuando la persona puede asignarlos; no
+  se amplió de forma implícita la autoridad de autoría del administrador.
+- **Navegación corregida:** `Configuración` queda sólo en el menú de cuenta;
+  `Grupos académicos` se llama `Grupos`. Para administración la secuencia es
+  `Institución` → `Diseño académico` (Currículo → Responsabilidades docentes →
+  Cursos) → `Operación académica` → `Herramientas académicas` (Calendario,
+  Clases en vivo, Recursos y Biblioteca). Se retiraron submenús que repetían
+  acciones ya presentes en las cabeceras de página y las etiquetas de grupo se
+  compactaron para conservar una sola línea. `Secciones` es el nombre de
+  producto para el grupo concreto de un curso, release y período; queda
+  separado de los `Grupos` institucionales.
+- **Evaluaciones:** el sidebar es estable al entrar a cualquier ruta de este
+  dominio. La sección muestra desde el inicio sólo las capacidades efectivas;
+  ya no reemplaza la navegación por una lista dependiente de la URL. El acceso
+  “Calificación manual” de Resultados ahora exige también
+  `assessment.grading.manage`, de modo que quien sólo ve resultados no recibe
+  un botón que acaba en 404. Se corrigió además la contradicción de analítica:
+  `administrator` puede consultar y actualizar analítica, pero no recalificar;
+  ahora el API le entrega únicamente los metadatos de revisión que la pantalla
+  necesita, nunca el payload de calificación.
+- **Evidencia actual:** Vitest de `PlatformShell` pasó **10/10**; TypeScript,
+  ESLint, Prettier y `ruff` pasaron. La prueba PostgreSQL
+  `test_administrator_can_read_revision_metadata_for_analytics` pasó y verifica
+  la política que originaba el 404. La matriz Chromium aislada de todas las
+  rutas expuestas fue lanzada, pero agotó 240 s durante su preparación efímera
+  sin llegar a producir resultado de Playwright; sigue pendiente ejecutar esa
+  matriz completa y la comprobación visual a 390 px y escritorio.
+
 ## Incorporación privada y superficies por rol — en curso 2026-08-02
 
 - **Decisión:** ADR 0039 separa alta pública de activación por invitación. El

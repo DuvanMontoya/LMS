@@ -28,17 +28,17 @@ vi.mock('@/components/auth/logout-button', () => ({
   LogoutButton: () => <button type="button">Cerrar sesión</button>,
 }));
 
-import {
-  courseWorkspaceBase,
-  isNavigationItemActive,
-  PlatformShell,
-} from './platform-shell';
+import { isNavigationItemActive, PlatformShell } from './platform-shell';
 
 type Role =
   'owner' | 'administrator' | 'author' | 'reviewer' | 'instructor' | 'learner';
 
-function renderNavigation(role: Role, capabilities: readonly string[]) {
-  pathname = '/organizaciones/academia';
+function renderNavigation(
+  role: Role,
+  capabilities: readonly string[],
+  currentPath = '/organizaciones/academia',
+) {
+  pathname = currentPath;
   const { container } = render(
     <TooltipProvider>
       <PlatformShell
@@ -122,7 +122,7 @@ describe('PlatformShell role navigation', () => {
       expect(navigation.getByText('Autoría y contenido')).toBeInTheDocument();
       expect(navigation.getByRole('link', { name: 'Currículo' })).toBeVisible();
       expect(
-        navigation.getByRole('link', { name: 'Autoría de evaluaciones' }),
+        navigation.getByRole('link', { name: 'Panel de evaluaciones' }),
       ).toBeVisible();
       expect(
         navigation.queryByRole('link', { name: 'Mis grupos' }),
@@ -131,7 +131,7 @@ describe('PlatformShell role navigation', () => {
         navigation.queryByRole('link', { name: 'Clases en vivo' }),
       ).not.toBeInTheDocument();
       expect(
-        navigation.queryByRole('link', { name: 'Evaluación y calificación' }),
+        navigation.queryByRole('link', { name: 'Entregas' }),
       ).not.toBeInTheDocument();
       expect(
         navigation.queryByRole('link', { name: 'Personas' }),
@@ -160,8 +160,9 @@ describe('PlatformShell role navigation', () => {
       navigation.getByRole('link', { name: 'Mis asignaturas' }),
     ).toBeVisible();
     expect(navigation.getByRole('link', { name: 'Mis grupos' })).toBeVisible();
+    expect(navigation.getByRole('link', { name: 'Entregas' })).toBeVisible();
     expect(
-      navigation.getByRole('link', { name: 'Evaluación y calificación' }),
+      navigation.getByRole('link', { name: 'Calificación manual' }),
     ).toBeVisible();
     expect(
       navigation.queryByRole('link', { name: 'Currículo' }),
@@ -209,15 +210,14 @@ describe('PlatformShell role navigation', () => {
 
     expect(navigation.getByRole('link', { name: 'Personas' })).toBeVisible();
     expect(
-      navigation.getByRole('link', { name: 'Configuración institucional' }),
-    ).toBeVisible();
+      navigation.queryByRole('link', { name: 'Configuración' }),
+    ).not.toBeInTheDocument();
     for (const forbidden of [
       'Currículo',
       'Cursos',
       'Calendario',
       'Clases en vivo',
-      'Autoría de evaluaciones',
-      'Evaluación y calificación',
+      'Panel de evaluaciones',
       'Grupos y matrículas',
     ]) {
       expect(
@@ -229,6 +229,7 @@ describe('PlatformShell role navigation', () => {
   it('gives administrators operations without authoring or grading powers', () => {
     const navigation = renderNavigation('administrator', [
       'catalog.view',
+      'catalog.teaching_responsibility.manage',
       'course.approved.view',
       'course.published.view',
       'learning.cohort.view',
@@ -237,86 +238,99 @@ describe('PlatformShell role navigation', () => {
       'assessment.delivery.view',
       'assessment.results.view',
       'assessment.gradebook.view',
+      'assessment.analytics.view',
       'asset.library.view',
       'membership.view',
       'membership.settings.view',
     ]);
 
-    expect(
-      navigation.getByText('1 · Preparación institucional'),
-    ).toBeInTheDocument();
-    expect(
-      navigation.getByText('2 · Diseño y operación académica'),
-    ).toBeInTheDocument();
-    expect(
-      navigation.getByText('3 · Ejecución y matrículas'),
-    ).toBeInTheDocument();
+    expect(navigation.getByText('Institución')).toBeInTheDocument();
+    expect(navigation.getByText('Diseño académico')).toBeInTheDocument();
+    expect(navigation.getByText('Operación académica')).toBeInTheDocument();
+    expect(navigation.getByText('Herramientas académicas')).toBeInTheDocument();
     expect(navigation.getByRole('link', { name: 'Currículo' })).toBeVisible();
     expect(
-      navigation.getByRole('link', { name: 'Entregas y resultados' }),
+      navigation.getByRole('link', { name: 'Responsabilidades docentes' }),
+    ).toBeVisible();
+    expect(navigation.getByRole('link', { name: 'Grupos' })).toBeVisible();
+    expect(navigation.getByRole('link', { name: 'Entregas' })).toBeVisible();
+    expect(
+      navigation.getByRole('link', { name: 'Analítica de ítems' }),
     ).toBeVisible();
     expect(
-      navigation.queryByRole('link', { name: 'Autoría de evaluaciones' }),
+      navigation.queryByRole('link', { name: 'Panel de evaluaciones' }),
     ).not.toBeInTheDocument();
     expect(
       navigation.queryByRole('link', { name: 'Calificación manual' }),
     ).not.toBeInTheDocument();
 
-    const configuration = navigation.getByRole('link', {
-      name: 'Configuración institucional',
-    });
     const curriculum = navigation.getByRole('link', { name: 'Currículo' });
+    const responsibilities = navigation.getByRole('link', {
+      name: 'Responsabilidades docentes',
+    });
+    const courses = navigation.getByRole('link', { name: 'Cursos' });
     const courseGroup = navigation.getByRole('link', {
-      name: 'Grupos de curso',
+      name: 'Secciones',
     });
     expect(
-      configuration.compareDocumentPosition(curriculum) &
+      curriculum.compareDocumentPosition(responsibilities) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      curriculum.compareDocumentPosition(courseGroup) &
+      responsibilities.compareDocumentPosition(courses) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      courses.compareDocumentPosition(courseGroup) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
-});
 
-describe('courseWorkspaceBase', () => {
-  const organizationBase = '/organizaciones/academia';
+  it('keeps routes stable and never reveals a contextual sidebar section', () => {
+    const capabilities = [
+      'assessment.delivery.view',
+      'assessment.results.view',
+      'assessment.gradebook.view',
+      'assessment.analytics.view',
+    ];
+    const baseNavigation = renderNavigation('administrator', capabilities);
+    expect(
+      baseNavigation.getByRole('link', { name: 'Entregas' }),
+    ).toBeVisible();
+    expect(
+      baseNavigation.queryByRole('link', { name: 'Calificación manual' }),
+    ).not.toBeInTheDocument();
+    cleanup();
 
-  it('keeps the current course context across its nested routes', () => {
+    const evaluationNavigation = renderNavigation(
+      'administrator',
+      capabilities,
+      '/organizaciones/academia/evaluaciones/entregas',
+    );
     expect(
-      courseWorkspaceBase(
-        '/organizaciones/academia/cursos/calculo/estructura',
-        organizationBase,
-      ),
-    ).toBe('/organizaciones/academia/cursos/calculo');
+      evaluationNavigation.getByRole('link', { name: 'Entregas' }),
+    ).toBeVisible();
     expect(
-      courseWorkspaceBase(
-        '/organizaciones/academia/cursos/calculo/unidades/unit-1/contenido',
-        organizationBase,
-      ),
-    ).toBe('/organizaciones/academia/cursos/calculo');
-  });
-
-  it('does not mistake the course list or creation form for a workspace', () => {
+      evaluationNavigation.getByRole('link', { name: 'Resultados' }),
+    ).toBeVisible();
     expect(
-      courseWorkspaceBase('/organizaciones/academia/cursos', organizationBase),
-    ).toBeUndefined();
+      evaluationNavigation.getByRole('link', {
+        name: 'Libros de calificaciones',
+      }),
+    ).toBeVisible();
     expect(
-      courseWorkspaceBase(
-        '/organizaciones/academia/cursos/nuevo',
-        organizationBase,
-      ),
-    ).toBeUndefined();
-  });
-
-  it('does not leak context across organizations', () => {
-    expect(
-      courseWorkspaceBase(
-        '/organizaciones/otra/cursos/calculo',
-        organizationBase,
-      ),
-    ).toBeUndefined();
+      evaluationNavigation.getByRole('link', { name: 'Analítica de ítems' }),
+    ).toBeVisible();
+    for (const forbidden of [
+      'Nueva evaluación',
+      'Calificación manual',
+      'Recalificación',
+      'Curso actual',
+    ]) {
+      expect(
+        evaluationNavigation.queryByRole('link', { name: forbidden }),
+      ).not.toBeInTheDocument();
+    }
   });
 });
 

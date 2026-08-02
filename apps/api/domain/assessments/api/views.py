@@ -52,7 +52,6 @@ from ..models import (
     QuestionBank,
     QuestionRevision,
     QuestionVersion,
-    Response,
 )
 from ..policies import (
     can_approve_authoring,
@@ -75,10 +74,12 @@ from ..policies import (
 )
 from ..selectors import (
     assessments_for,
+    attempts_for_results,
     deliveries_for,
     learner_assignments,
     learner_attempts,
     question_banks_for,
+    responses_for_manual_grading,
 )
 from ..services import (
     activate_delivery,
@@ -1893,9 +1894,7 @@ class ResultsListView(APIView):
     def get(self, request: Request, slug: str) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_view_results(request.user, organization))
-        queryset = Attempt.objects.filter(
-            delivery_assignment__delivery__organization=organization
-        ).select_related("assessment_version")
+        queryset = attempts_for_results(organization, actor=request.user)
         delivery_id = request.query_params.get("delivery_id")
         if delivery_id:
             queryset = queryset.filter(delivery_assignment__delivery_id=delivery_id)
@@ -1911,8 +1910,8 @@ class PendingManualListView(APIView):
         organization = _organization(request, slug)
         _require(can_grade_manually(request.user, organization))
         responses = (
-            Response.objects.filter(
-                attempt_item__attempt__delivery_assignment__delivery__organization=organization,
+            responses_for_manual_grading(organization, actor=request.user)
+            .filter(
                 status__in=(
                     ResponseStatus.PENDING_MANUAL,
                     ResponseStatus.MANUALLY_GRADED,
@@ -1957,9 +1956,8 @@ class ManualGradeView(APIView):
         organization = _organization(request, slug)
         _require(can_grade_manually(request.user, organization))
         response = get_object_or_404(
-            Response,
+            responses_for_manual_grading(organization, actor=request.user),
             pk=response_id,
-            attempt_item__attempt__delivery_assignment__delivery__organization=organization,
         )
         serializer = ManualGradeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

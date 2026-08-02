@@ -10,12 +10,10 @@ import {
   ChevronDown,
   ClipboardCheck,
   FileCheck2,
-  GitBranch,
   GraduationCap,
   Images,
   LayoutDashboard,
   LibraryBig,
-  ListTree,
   Search,
   Settings2,
   NotebookTabs,
@@ -23,8 +21,6 @@ import {
   RefreshCcw,
   Send,
   SquarePen,
-  Tags,
-  Target,
   UserRound,
   Users,
   Video,
@@ -191,9 +187,6 @@ function PlatformSidebar({
   const organizationBase = activeOrganization
     ? `/organizaciones/${activeOrganization.slug}`
     : undefined;
-  const assessmentWorkspaceActive =
-    organizationBase !== undefined &&
-    pathname.startsWith(`${organizationBase}/evaluaciones`);
   const academicGroupLabel = institutionOperations
     ? 'Operación académica'
     : teachingWorkspace && contentWorkspace
@@ -242,42 +235,10 @@ function PlatformSidebar({
           label: 'Mis clases en vivo',
           visible: learnerWorkspace && !teachingWorkspace,
         },
-        {
-          href: `${organizationBase}/evaluaciones/asignadas`,
-          icon: ClipboardCheck,
-          label: 'Mis evaluaciones',
-          visible:
-            !assessmentWorkspaceActive &&
-            learnerWorkspace &&
-            capabilities.has('assessment.attempt'),
-        },
-        {
-          href: `${organizationBase}/evaluaciones/calificaciones`,
-          icon: Award,
-          label: 'Mis calificaciones',
-          visible:
-            !assessmentWorkspaceActive &&
-            learnerWorkspace &&
-            capabilities.has('assessment.attempt'),
-        },
       ]
     : [];
   const academicNavigation: NavigationItem[] = organizationBase
     ? [
-        {
-          href: `${organizationBase}/calendario`,
-          icon: CalendarDays,
-          label: 'Calendario',
-          visible: institutionOperations || teachingWorkspace,
-        },
-        {
-          activePrefixes: [`${organizationBase}/clases/`],
-          exact: true,
-          href: `${organizationBase}/clases`,
-          icon: Video,
-          label: 'Clases en vivo',
-          visible: institutionOperations || teachingWorkspace,
-        },
         {
           href: `${organizationBase}/aprendizaje/mis-asignaturas`,
           icon: LibraryBig,
@@ -293,32 +254,6 @@ function PlatformSidebar({
         },
         {
           activePrefixes: [`${organizationBase}/curriculo/asignaturas/`],
-          children: [
-            {
-              href: `${organizationBase}/aprendizaje/mis-asignaturas`,
-              label: 'Responsabilidades docentes',
-              exact: true,
-              visible: institutionOperations,
-            },
-            {
-              href: `${organizationBase}/curriculo/conceptos`,
-              icon: Tags,
-              label: 'Conceptos',
-              exact: true,
-            },
-            {
-              href: `${organizationBase}/curriculo/objetivos`,
-              icon: Target,
-              label: 'Objetivos',
-              exact: true,
-            },
-            {
-              href: `${organizationBase}/curriculo/prerrequisitos`,
-              icon: GitBranch,
-              label: 'Prerrequisitos',
-              exact: true,
-            },
-          ],
           href: `${organizationBase}/curriculo`,
           icon: LibraryBig,
           label: 'Currículo',
@@ -327,15 +262,15 @@ function PlatformSidebar({
             capabilities.has('catalog.view'),
         },
         {
-          children: [
-            {
-              href: `${organizationBase}/cursos/nuevo`,
-              icon: Plus,
-              label: 'Crear curso',
-              exact: true,
-              visible: capabilities.has('course.authoring.manage'),
-            },
-          ],
+          href: `${organizationBase}/aprendizaje/mis-asignaturas`,
+          icon: Users,
+          label: 'Responsabilidades docentes',
+          exact: true,
+          visible:
+            institutionOperations &&
+            capabilities.has('catalog.teaching_responsibility.manage'),
+        },
+        {
           href: `${organizationBase}/cursos`,
           icon: BookOpenCheck,
           label:
@@ -345,16 +280,31 @@ function PlatformSidebar({
             (capabilities.has('course.authoring.view') ||
               capabilities.has('course.approved.view')),
         },
+      ]
+    : [];
+  const academicToolsNavigation: NavigationItem[] = organizationBase
+    ? [
         {
-          children: [
-            {
-              href: `${organizationBase}/recursos/nuevo`,
-              icon: Plus,
-              label: 'Cargar recurso',
-              exact: true,
-              visible: capabilities.has('asset.upload'),
-            },
-          ],
+          href: `${organizationBase}/calendario`,
+          icon: CalendarDays,
+          label:
+            teachingWorkspace && !institutionOperations
+              ? 'Mi calendario'
+              : 'Calendario',
+          visible: institutionOperations || teachingWorkspace,
+        },
+        {
+          activePrefixes: [`${organizationBase}/clases/`],
+          exact: true,
+          href: `${organizationBase}/clases`,
+          icon: Video,
+          label:
+            teachingWorkspace && !institutionOperations
+              ? 'Mis clases en vivo'
+              : 'Clases en vivo',
+          visible: institutionOperations || teachingWorkspace,
+        },
+        {
           href: `${organizationBase}/recursos`,
           icon: Images,
           label: 'Recursos',
@@ -370,160 +320,85 @@ function PlatformSidebar({
             (institutionOperations || contentWorkspace || teachingWorkspace) &&
             capabilities.has('course.published.view'),
         },
+      ]
+    : [];
+  const assessmentNavigation: NavigationItem[] = organizationBase
+    ? [
         {
-          children: [
-            {
-              href: `${organizationBase}/evaluaciones/bancos`,
-              label: 'Bancos de preguntas',
-              exact: true,
-              visible:
-                capabilities.has('assessment.bank.view') ||
-                capabilities.has('assessment.question.view'),
-            },
-          ],
           href: `${organizationBase}/evaluaciones`,
           icon: ClipboardCheck,
-          label: 'Autoría de evaluaciones',
-          visible:
-            !assessmentWorkspaceActive &&
-            contentWorkspace &&
-            (capabilities.has('assessment.authoring.view') ||
-              capabilities.has('assessment.bank.view') ||
-              capabilities.has('assessment.question.view')),
+          label: 'Panel de evaluaciones',
+          exact: true,
+          visible: capabilities.has('assessment.authoring.view'),
         },
         {
-          children: [
-            {
-              href: `${organizationBase}/evaluaciones/resultados`,
-              label: 'Resultados',
-              visible: capabilities.has('assessment.results.view'),
-            },
-            {
-              href: `${organizationBase}/evaluaciones/calificacion-manual`,
-              label: 'Calificación manual',
-              visible: capabilities.has('assessment.grading.manage'),
-            },
-            {
-              href: `${organizationBase}/evaluaciones/gradebooks`,
-              label: 'Libros de calificaciones',
-              visible: capabilities.has('assessment.gradebook.view'),
-            },
-          ],
-          href: `${organizationBase}/evaluaciones/entregas`,
-          icon: ClipboardCheck,
-          label:
-            institutionOperations && !teachingWorkspace
-              ? 'Entregas y resultados'
-              : 'Evaluación y calificación',
+          href: `${organizationBase}/evaluaciones/nueva`,
+          icon: Plus,
+          label: 'Nueva evaluación',
+          exact: true,
+          visible: capabilities.has('assessment.authoring.manage'),
+        },
+        {
+          href: `${organizationBase}/evaluaciones/bancos`,
+          icon: NotebookTabs,
+          label: 'Bancos de preguntas',
           visible:
-            (institutionOperations || teachingWorkspace) &&
-            !assessmentWorkspaceActive &&
-            capabilities.has('assessment.delivery.view'),
+            capabilities.has('assessment.bank.view') ||
+            capabilities.has('assessment.question.view'),
+        },
+        {
+          href: `${organizationBase}/evaluaciones/entregas`,
+          icon: Send,
+          label: 'Entregas',
+          visible: capabilities.has('assessment.delivery.view'),
+        },
+        {
+          href: `${organizationBase}/evaluaciones/resultados`,
+          icon: FileCheck2,
+          label: 'Resultados',
+          visible: capabilities.has('assessment.results.view'),
+        },
+        {
+          href: `${organizationBase}/evaluaciones/calificacion-manual`,
+          icon: SquarePen,
+          label: 'Calificación manual',
+          visible: capabilities.has('assessment.grading.manage'),
+        },
+        {
+          href: `${organizationBase}/evaluaciones/regrading`,
+          icon: RefreshCcw,
+          label: 'Recalificación',
+          visible: capabilities.has('assessment.regrading.view'),
+        },
+        {
+          href: `${organizationBase}/evaluaciones/gradebooks`,
+          icon: BookOpenCheck,
+          label: 'Libros de calificaciones',
+          visible: capabilities.has('assessment.gradebook.view'),
+        },
+        {
+          href: `${organizationBase}/evaluaciones/analitica`,
+          icon: BarChart3,
+          label: 'Analítica de ítems',
+          visible: capabilities.has('assessment.analytics.view'),
+        },
+        {
+          href: `${organizationBase}/evaluaciones/asignadas`,
+          icon: GraduationCap,
+          label: 'Mis evaluaciones',
+          visible: learnerWorkspace && capabilities.has('assessment.attempt'),
+        },
+        {
+          href: `${organizationBase}/evaluaciones/calificaciones`,
+          icon: Award,
+          label: 'Mis calificaciones',
+          visible: learnerWorkspace && capabilities.has('assessment.attempt'),
         },
       ]
     : [];
-  const assessmentNavigation: NavigationItem[] =
-    organizationBase && assessmentWorkspaceActive
-      ? [
-          {
-            href: `${organizationBase}/evaluaciones`,
-            icon: ClipboardCheck,
-            label: 'Panel de evaluaciones',
-            exact: true,
-            visible:
-              contentWorkspace && capabilities.has('assessment.authoring.view'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/nueva`,
-            icon: Plus,
-            label: 'Nueva evaluación',
-            exact: true,
-            visible:
-              contentWorkspace &&
-              capabilities.has('assessment.authoring.manage'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/bancos`,
-            icon: NotebookTabs,
-            label: 'Bancos de preguntas',
-            visible:
-              contentWorkspace &&
-              (capabilities.has('assessment.bank.view') ||
-                capabilities.has('assessment.question.view')),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/entregas`,
-            icon: Send,
-            label: 'Entregas',
-            visible:
-              (institutionOperations || teachingWorkspace) &&
-              capabilities.has('assessment.delivery.view'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/resultados`,
-            icon: FileCheck2,
-            label: 'Resultados',
-            visible:
-              (institutionOperations || teachingWorkspace) &&
-              capabilities.has('assessment.results.view'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/calificacion-manual`,
-            icon: SquarePen,
-            label: 'Calificación manual',
-            visible:
-              (institutionOperations || teachingWorkspace) &&
-              capabilities.has('assessment.grading.manage'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/regrading`,
-            icon: RefreshCcw,
-            label: 'Recalificación',
-            visible:
-              (institutionOperations || teachingWorkspace) &&
-              capabilities.has('assessment.regrading.view'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/gradebooks`,
-            icon: BookOpenCheck,
-            label: 'Libros de calificaciones',
-            visible:
-              (institutionOperations || teachingWorkspace) &&
-              capabilities.has('assessment.gradebook.view'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/analitica`,
-            icon: BarChart3,
-            label: 'Analítica de ítems',
-            visible:
-              (institutionOperations || teachingWorkspace) &&
-              capabilities.has('assessment.analytics.view'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/asignadas`,
-            icon: GraduationCap,
-            label: 'Mis evaluaciones',
-            visible: learnerWorkspace && capabilities.has('assessment.attempt'),
-          },
-          {
-            href: `${organizationBase}/evaluaciones/calificaciones`,
-            icon: Award,
-            label: 'Mis calificaciones',
-            visible: learnerWorkspace && capabilities.has('assessment.attempt'),
-          },
-        ]
-      : [];
   const preparationNavigation: NavigationItem[] =
     organizationBase && institutionGovernance
       ? [
-          {
-            href: `${organizationBase}/configuracion`,
-            icon: Settings2,
-            label: 'Configuración institucional',
-            visible:
-              capabilities.has('membership.settings.view') ||
-              capabilities.has('integration.view'),
-          },
           {
             href: `${organizationBase}/miembros`,
             icon: Users,
@@ -531,20 +406,15 @@ function PlatformSidebar({
             visible: capabilities.has('membership.view'),
           },
           {
-            activePrefixes: [
-              `${organizationBase}/aprendizaje/grupos`,
-              `${organizationBase}/aprendizaje/periodos`,
-            ],
-            children: [
-              {
-                href: `${organizationBase}/aprendizaje/grupos`,
-                label: 'Grupos académicos',
-                visible: capabilities.has('learning.cohort.view'),
-              },
-            ],
             href: `${organizationBase}/aprendizaje/periodos`,
             icon: CalendarDays,
-            label: 'Periodos académicos',
+            label: 'Períodos',
+            visible: capabilities.has('learning.cohort.view'),
+          },
+          {
+            href: `${organizationBase}/aprendizaje/grupos`,
+            icon: Users,
+            label: 'Grupos',
             visible: capabilities.has('learning.cohort.view'),
           },
         ]
@@ -555,7 +425,7 @@ function PlatformSidebar({
           {
             href: `${organizationBase}/aprendizaje/cohortes`,
             icon: GraduationCap,
-            label: 'Grupos de curso',
+            label: 'Secciones',
             visible: capabilities.has('learning.cohort.view'),
           },
           {
@@ -569,70 +439,11 @@ function PlatformSidebar({
   const orderedAcademicNavigation = orderNavigation(
     academicNavigation,
     institutionOperations
-      ? [
-          'Currículo',
-          'Cursos',
-          'Recursos',
-          'Autoría de evaluaciones',
-          'Biblioteca',
-          'Calendario',
-          'Clases en vivo',
-          'Entregas y resultados',
-        ]
+      ? ['Currículo', 'Responsabilidades docentes', 'Cursos']
       : contentWorkspace
-        ? [
-            'Currículo',
-            'Cursos',
-            'Recursos',
-            'Autoría de evaluaciones',
-            'Biblioteca',
-          ]
-        : [
-            'Mis asignaturas',
-            'Mis grupos',
-            'Calendario',
-            'Clases en vivo',
-            'Recursos',
-            'Biblioteca',
-            'Evaluación y calificación',
-          ],
+        ? ['Currículo', 'Cursos']
+        : ['Mis asignaturas', 'Mis grupos'],
   );
-  const courseBase = organizationBase
-    ? courseWorkspaceBase(pathname, organizationBase)
-    : undefined;
-  const courseNavigation: NavigationItem[] = courseBase
-    ? [
-        {
-          href: courseBase,
-          icon: BookOpenCheck,
-          label: 'Resumen del curso',
-          exact: true,
-        },
-        {
-          activePrefixes: [`${courseBase}/unidades/`],
-          href: `${courseBase}/estructura`,
-          icon: ListTree,
-          label: 'Estructura',
-          exact: true,
-        },
-        {
-          href: `${courseBase}/revision`,
-          icon: FileCheck2,
-          label: 'Revisión',
-          exact: true,
-          visible: contentWorkspace,
-        },
-        {
-          activePrefixes: [`${courseBase}/publicaciones/`],
-          href: `${courseBase}/publicacion`,
-          icon: Send,
-          label: 'Publicación',
-          exact: true,
-          visible: capabilities.has('course.release.history.view'),
-        },
-      ]
-    : [];
-
   return (
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader className="border-b border-sidebar-border p-3">
@@ -729,18 +540,6 @@ function PlatformSidebar({
           </SidebarGroup>
         ) : null}
 
-        {assessmentNavigation.some((item) => item.visible !== false) ? (
-          <SidebarGroup>
-            <SidebarGroupLabel>Evaluaciones</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <NavigationList
-                items={assessmentNavigation}
-                pathname={pathname}
-              />
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ) : null}
-
         {learnerNavigation.some((item) => item.visible !== false) ? (
           <SidebarGroup>
             <SidebarGroupLabel>Mi aprendizaje</SidebarGroupLabel>
@@ -752,7 +551,7 @@ function PlatformSidebar({
 
         {preparationNavigation.some((item) => item.visible !== false) ? (
           <SidebarGroup>
-            <SidebarGroupLabel>1 · Preparación institucional</SidebarGroupLabel>
+            <SidebarGroupLabel>Institución</SidebarGroupLabel>
             <SidebarGroupContent>
               <NavigationList
                 items={preparationNavigation}
@@ -765,9 +564,7 @@ function PlatformSidebar({
         {orderedAcademicNavigation.some((item) => item.visible !== false) ? (
           <SidebarGroup>
             <SidebarGroupLabel>
-              {institutionOperations
-                ? '2 · Diseño y operación académica'
-                : academicGroupLabel}
+              {institutionOperations ? 'Diseño académico' : academicGroupLabel}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <NavigationList
@@ -778,20 +575,35 @@ function PlatformSidebar({
           </SidebarGroup>
         ) : null}
 
-        {courseNavigation.some((item) => item.visible !== false) ? (
+        {assessmentNavigation.some((item) => item.visible !== false) ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Curso actual</SidebarGroupLabel>
+            <SidebarGroupLabel>Evaluaciones</SidebarGroupLabel>
             <SidebarGroupContent>
-              <NavigationList items={courseNavigation} pathname={pathname} />
+              <NavigationList
+                items={assessmentNavigation}
+                pathname={pathname}
+              />
             </SidebarGroupContent>
           </SidebarGroup>
         ) : null}
 
         {executionNavigation.some((item) => item.visible !== false) ? (
           <SidebarGroup>
-            <SidebarGroupLabel>3 · Ejecución y matrículas</SidebarGroupLabel>
+            <SidebarGroupLabel>Operación académica</SidebarGroupLabel>
             <SidebarGroupContent>
               <NavigationList items={executionNavigation} pathname={pathname} />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
+
+        {academicToolsNavigation.some((item) => item.visible !== false) ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Herramientas académicas</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavigationList
+                items={academicToolsNavigation}
+                pathname={pathname}
+              />
             </SidebarGroupContent>
           </SidebarGroup>
         ) : null}
@@ -873,7 +685,7 @@ function AccountMenu({
           <DropdownMenuItem asChild>
             <Link href={`/organizaciones/${organization.slug}/configuracion`}>
               <Building2 />
-              Configuración institucional
+              Configuración
             </Link>
           </DropdownMenuItem>
         ) : null}
@@ -1042,17 +854,6 @@ export function isNavigationItemActive(
       true ||
     (!item.exact && pathname.startsWith(`${item.href}/`))
   );
-}
-
-export function courseWorkspaceBase(
-  pathname: string,
-  organizationBase: string,
-) {
-  const prefix = `${organizationBase}/cursos/`;
-  if (!pathname.startsWith(prefix)) return undefined;
-  const courseSlug = pathname.slice(prefix.length).split('/')[0];
-  if (!courseSlug || courseSlug === 'nuevo') return undefined;
-  return `${prefix}${courseSlug}`;
 }
 
 function initials(email: string) {

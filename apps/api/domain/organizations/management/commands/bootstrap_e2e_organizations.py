@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from datetime import date
 from typing import TYPE_CHECKING, cast
 
 from allauth.account.models import EmailAddress
@@ -9,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
 from domain.catalog.services import (
+    assign_subject_teaching_responsibility,
     create_area,
     create_discipline,
     create_learning_objective,
@@ -16,6 +18,7 @@ from domain.catalog.services import (
     create_subject,
 )
 from domain.organizations.choices import RoleCode
+from domain.organizations.models import Membership
 from domain.organizations.services import (
     add_existing_member_with_roles,
     create_organization_with_owner,
@@ -89,14 +92,14 @@ class Command(BaseCommand):
             roles={RoleCode.AUTHOR},
         )
         area = create_area(
-            actor=owner,
+            actor=author,
             organization=organization,
             name="Matemáticas",
             slug="matematicas",
             description="",
         )
         discipline = create_discipline(
-            actor=owner,
+            actor=author,
             organization=organization,
             area=area,
             name="Fundamentos",
@@ -104,7 +107,7 @@ class Command(BaseCommand):
             description="",
         )
         subject = create_subject(
-            actor=owner,
+            actor=author,
             organization=organization,
             discipline=discipline,
             name="Precálculo",
@@ -112,7 +115,7 @@ class Command(BaseCommand):
             description="",
         )
         create_root_topic(
-            actor=owner,
+            actor=author,
             organization=organization,
             subject=subject,
             title="Funciones",
@@ -120,13 +123,25 @@ class Command(BaseCommand):
             description="",
         )
         create_learning_objective(
-            actor=owner,
+            actor=author,
             organization=organization,
             subject=subject,
             code="OBJ-COURSE-001",
             statement="Interpretar funciones mediante distintas representaciones.",
             description="",
             cognitive_level="understand",
+        )
+        assign_subject_teaching_responsibility(
+            actor=administrator,
+            organization=organization,
+            subject=subject,
+            membership=Membership.objects.get(
+                organization=organization,
+                user=author,
+            ),
+            starts_on=date.today(),
+            ends_on=None,
+            rationale="Alcance de autoría para los fixtures aislados.",
         )
         add_existing_member_with_roles(
             actor=owner,
@@ -145,6 +160,18 @@ class Command(BaseCommand):
             organization=organization,
             user=reviewer,
             roles={RoleCode.REVIEWER},
+        )
+        assign_subject_teaching_responsibility(
+            actor=administrator,
+            organization=organization,
+            subject=subject,
+            membership=Membership.objects.get(
+                organization=organization,
+                user=reviewer,
+            ),
+            starts_on=date.today(),
+            ends_on=None,
+            rationale="Alcance de revisión para los fixtures aislados.",
         )
         create_organization_with_owner(
             actor=external_owner, name="Organización B", slug="organizacion-b"

@@ -22,6 +22,9 @@ export default async function AssessmentsPage({
   const canManage = data.access.capabilities.includes(
     'assessment.authoring.manage',
   );
+  const canViewBanks =
+    data.access.capabilities.includes('assessment.bank.view') ||
+    data.access.capabilities.includes('assessment.question.view');
   const approved = data.assessments.results.filter(
     (assessment) => assessment.latest_version_number,
   ).length;
@@ -33,11 +36,13 @@ export default async function AssessmentsPage({
       <PageHeader
         actions={
           <div className="flex gap-2">
-            <Button asChild size="sm" variant="outline">
-              <Link href={`/organizaciones/${slug}/evaluaciones/bancos`}>
-                <LibraryBig data-icon="inline-start" /> Bancos
-              </Link>
-            </Button>
+            {canViewBanks ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/organizaciones/${slug}/evaluaciones/bancos`}>
+                  <LibraryBig data-icon="inline-start" /> Bancos
+                </Link>
+              </Button>
+            ) : null}
             {canManage ? (
               <Button asChild size="sm">
                 <Link href={`/organizaciones/${slug}/evaluaciones/nueva`}>

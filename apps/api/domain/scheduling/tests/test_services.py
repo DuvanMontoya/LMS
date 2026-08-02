@@ -15,7 +15,9 @@ from domain.learning.services import (
     create_cohort,
     make_enrollment_individual,
     replace_academic_group_roster,
+    replace_cohort_staff,
 )
+from domain.organizations.choices import RoleCode
 from domain.organizations.models import Membership
 from domain.scheduling.choices import (
     AttendanceRole,
@@ -28,6 +30,7 @@ from domain.scheduling.exceptions import (
     LiveSessionOutsideWindow,
     SchedulingAccessDenied,
     SchedulingConflict,
+    SchedulingInvalid,
 )
 from domain.scheduling.livekit_gateway import LiveKitGateway
 from domain.scheduling.policies import LiveAccess
@@ -72,6 +75,12 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
             migration_review_required=True,
             academic_group=group,
             name="Álgebra grupo de agenda",
+            staff=[
+                {
+                    "membership_id": context["series"].host_membership_id,
+                    "role": "lead_instructor",
+                }
+            ],
         )
         confirm_cohort_roster_sync(
             actor=context["owner"],
@@ -115,6 +124,84 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
         with self.assertRaises(SchedulingAccessDenied):
             join_live_session(
                 actor=context["learner"], session_id=session.id, gateway=gateway
+            )
+
+    def test_course_group_host_requires_and_keeps_current_staff_assignment(
+        self,
+    ) -> None:
+        context = self.scheduling_context()
+        cohort = create_cohort(
+            actor=context["owner"],
+            organization=context["organization"],
+            course=context["course"],
+            release=context["enrollment"].current_release_assignment.release,
+            migration_review_required=True,
+            name="Grupo con alcance docente",
+            staff=[
+                {
+                    "membership_id": context["series"].host_membership_id,
+                    "role": "lead_instructor",
+                }
+            ],
+        )
+        unassigned = self.member(
+            context["owner"],
+            context["organization"],
+            RoleCode.INSTRUCTOR,
+            "unassigned-scheduling-host@example.test",
+        )
+        unassigned_membership = Membership.objects.get(
+            organization=context["organization"], user=unassigned
+        )
+        with self.assertRaises(SchedulingInvalid):
+            create_event_series(
+                actor=context["owner"],
+                organization=context["organization"],
+                course=context["course"],
+                course_group=cohort,
+                host_membership=unassigned_membership,
+                title="Clase con anfitrión ajeno",
+                description="",
+                event_type=EventType.LIVE_CLASS,
+                timezone_name="America/Bogota",
+                first_starts_at=timezone.now() + timedelta(minutes=2),
+                duration_minutes=45,
+            )
+
+        series = create_event_series(
+            actor=context["host"],
+            organization=context["organization"],
+            course=context["course"],
+            course_group=cohort,
+            host_membership=context["series"].host_membership,
+            title="Clase con asignación vigente",
+            description="",
+            event_type=EventType.LIVE_CLASS,
+            timezone_name="America/Bogota",
+            first_starts_at=timezone.now() + timedelta(minutes=2),
+            duration_minutes=45,
+        )
+        cohort = replace_cohort_staff(
+            actor=context["owner"],
+            cohort=cohort,
+            staff=[],
+            expected_cohort_version=cohort.lock_version,
+        )
+        occurrence = series.occurrences.select_related("live_session").get()
+        with self.assertRaises(SchedulingAccessDenied):
+            reschedule_occurrence(
+                actor=context["host"],
+                occurrence_id=occurrence.id,
+                expected_version=occurrence.lock_version,
+                starts_at=occurrence.starts_at + timedelta(days=1),
+                ends_at=occurrence.ends_at + timedelta(days=1),
+                scope=RecurrenceScope.OCCURRENCE,
+            )
+        with self.assertRaises(SchedulingAccessDenied):
+            start_live_session(
+                actor=context["host"],
+                session_id=occurrence.live_session.id,
+                gateway=FakeLiveKitGateway(),
             )
 
     def test_standalone_session_is_visible_only_to_explicit_participants(self) -> None:
@@ -186,10 +273,10 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
         context = self.scheduling_context()
         gateway = FakeLiveKitGateway()
         first = start_live_session(
-            actor=context["owner"], session_id=context["session"].id, gateway=gateway
+            actor=context["host"], session_id=context["session"].id, gateway=gateway
         )
         second = start_live_session(
-            actor=context["owner"], session_id=context["session"].id, gateway=gateway
+            actor=context["host"], session_id=context["session"].id, gateway=gateway
         )
         learner = join_live_session(
             actor=context["learner"], session_id=context["session"].id, gateway=gateway
@@ -210,7 +297,7 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
                 gateway=gateway,
             )
         start_live_session(
-            actor=context["owner"], session_id=context["session"].id, gateway=gateway
+            actor=context["host"], session_id=context["session"].id, gateway=gateway
         )
         with self.assertRaises(SchedulingAccessDenied):
             end_live_session(
@@ -267,7 +354,7 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
         occurrence.save(update_fields=("starts_at", "ends_at", "updated_at"))
         with self.assertRaises(LiveSessionOutsideWindow):
             start_live_session(
-                actor=context["owner"],
+                actor=context["host"],
                 session_id=context["session"].id,
                 gateway=FakeLiveKitGateway(),
             )

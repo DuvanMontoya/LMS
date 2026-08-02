@@ -76,6 +76,12 @@ def _validate_host(
         actor_member is None or actor_member.id != host.id
     ):
         raise SchedulingAccessDenied("Sólo puedes programar clases propias.")
+    if course_group is not None and not actor_has_course_group_staff_scope(
+        actor=host.user, course_group=course_group
+    ):
+        raise SchedulingInvalid(
+            "El profesor debe tener una asignación vigente en el grupo de curso."
+        )
     if (
         course_group is not None
         and not can_manage_schedule(actor, organization)

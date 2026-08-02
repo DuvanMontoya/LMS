@@ -682,11 +682,11 @@
   }
 
   [data-slot='sidebar-group-label'] {
-    @apply h-9 font-mono text-[0.625rem] font-semibold tracking-wider uppercase;
+    @apply h-7 truncate font-mono text-[0.625rem] font-semibold tracking-wider uppercase;
   }
 
   [data-slot='sidebar-menu-button'] {
-    @apply min-h-9 rounded-lg;
+    @apply min-h-8 rounded-lg;
   }
 
   [data-slot='sidebar-menu-button'][data-active='true'] {

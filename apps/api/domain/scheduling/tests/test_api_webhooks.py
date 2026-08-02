@@ -124,7 +124,13 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
         learner_membership = Membership.objects.get(
             organization=organization, user=learner
         )
-        owner_membership = Membership.objects.get(organization=organization, user=owner)
+        host = self.member(
+            owner,
+            organization,
+            RoleCode.INSTRUCTOR,
+            "live-activity-host@example.test",
+        )
+        host_membership = Membership.objects.get(organization=organization, user=host)
         period = create_academic_period(
             actor=owner,
             organization=organization,
@@ -141,6 +147,12 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
             release=release,
             academic_period=period,
             name="Grupo en vivo",
+            staff=[
+                {
+                    "membership_id": host_membership.id,
+                    "role": "lead_instructor",
+                }
+            ],
         )
         activity = CourseGroupActivity(
             course_group=cohort,
@@ -223,7 +235,7 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
             course=revision.course,
             course_group=cohort,
             course_group_activity=activity,
-            host_membership=owner_membership,
+            host_membership=host_membership,
             title=f"{activity.title} · apoyo",
             description="",
             event_type=EventType.LIVE_CLASS,
@@ -245,7 +257,7 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
             course=revision.course,
             course_group=cohort,
             course_group_activity=activity,
-            host_membership=owner_membership,
+            host_membership=host_membership,
             title=activity.title,
             description="",
             event_type=EventType.LIVE_CLASS,

@@ -14,7 +14,7 @@ export default async function AcademicGroupsPage({
           { href: `/organizaciones/${slug}`, label: data.organization.name },
           { label: 'Grupos académicos' },
         ]}
-        description="Agrupa estudiantes, docentes y acompañantes por año y nivel; luego reutiliza el padrón en grupos de curso concretos."
+        description="Agrupa estudiantes, docentes y acompañantes por año y nivel; luego reutiliza el padrón en secciones concretas."
         eyebrow="Organización del aprendizaje"
         title="Grupos académicos"
       />

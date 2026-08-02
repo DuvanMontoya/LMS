@@ -42,9 +42,9 @@ const concepts = [
     example: 'Revisión R3 aprobada → release R3 publicado',
   },
   {
-    name: 'Grupo académico y grupo de curso',
+    name: 'Grupo y sección',
     definition:
-      'El grupo académico es un padrón reutilizable; el grupo de curso ejecuta un curso, release y periodo concretos.',
+      'El grupo es un padrón reutilizable; una sección ejecuta un curso, release y período concretos.',
     example: '8.º A → Álgebra I · 8.º A · P2 · R3',
   },
   {
@@ -177,7 +177,7 @@ export function AcademicHelpCenter({
           href: `${base}/aprendizaje/cohortes`,
           icon: ClipboardList,
           result: 'Grupo de curso operativo',
-          title: 'Abrir el grupo de curso',
+          title: 'Abrir la sección',
         },
         {
           capability: 'learning.enrollment.view',

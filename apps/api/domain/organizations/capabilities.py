@@ -151,6 +151,7 @@ _INSTITUTION_OPERATIONS_CAPABILITIES = (
             Capability.ASSESSMENT_RESULTS_VIEW,
             Capability.ASSESSMENT_GRADEBOOK_VIEW,
             Capability.ASSESSMENT_ANALYTICS_VIEW,
+            Capability.ASSESSMENT_ANALYTICS_REFRESH,
             Capability.ASSET_LIBRARY_VIEW,
             Capability.ASSET_LIBRARY_MANAGE,
             Capability.ASSET_UPLOAD,
