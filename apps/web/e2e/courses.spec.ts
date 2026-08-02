@@ -188,16 +188,12 @@ test('course authoring, conflict, review, approval, roles and axe work end to en
     .getByLabel('Configurar lección «Funciones y representaciones»')
     .click();
   await lesson
-    .getByRole('checkbox', { name: 'Funciones', exact: true })
+    .getByRole('checkbox', { name: /^Funciones\b/ })
     .check();
-  await lesson.getByRole('button', { name: 'Guardar temas' }).click();
-  await expect(
-    page.getByText('Temas de la unidad actualizados.'),
-  ).toBeVisible();
   await lesson.getByRole('checkbox', { name: /OBJ-COURSE-001/ }).check();
-  await lesson.getByRole('button', { name: 'Guardar objetivos' }).click();
+  await lesson.getByRole('button', { name: 'Guardar configuración' }).click();
   await expect(
-    page.getByText('Objetivos de la unidad actualizados.'),
+    page.getByText('Información y alineación de la lección actualizadas.'),
   ).toBeVisible();
 
   await page.getByLabel('Nombre del módulo').fill('Aplicaciones');
@@ -221,9 +217,9 @@ test('course authoring, conflict, review, approval, roles and axe work end to en
     .locator('xpath=ancestor::li[1]');
   await lesson.getByLabel('Configurar lección «Modelación contextual»').click();
   await lesson.getByRole('checkbox', { name: /OBJ-COURSE-001/ }).check();
-  await lesson.getByRole('button', { name: 'Guardar objetivos' }).click();
+  await lesson.getByRole('button', { name: 'Guardar configuración' }).click();
   await expect(
-    page.getByText('Objetivos de la unidad actualizados.'),
+    page.getByText('Información y alineación de la lección actualizadas.'),
   ).toBeVisible();
 
   await page
@@ -356,8 +352,10 @@ test('course authoring, conflict, review, approval, roles and axe work end to en
   await lesson
     .getByRole('textbox', { name: 'Título', exact: true })
     .fill('Modelación contextual corregida');
-  await lesson.getByRole('button', { name: 'Guardar información' }).click();
-  await expect(page.getByText('Unidad actualizada.')).toBeVisible();
+  await lesson.getByRole('button', { name: 'Guardar configuración' }).click();
+  await expect(
+    page.getByText('Información y alineación de la lección actualizadas.'),
+  ).toBeVisible();
   await page.goto(coursePath);
   await submitForReview(page);
   await expect(page.getByText('Estado actual: En revisión')).toBeVisible({

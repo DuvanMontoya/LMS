@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import TypeVar, cast
+from uuid import UUID
 
 from django.db.models import Model, QuerySet
 from django.http import HttpRequest
@@ -9,7 +10,7 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -110,6 +111,8 @@ from .serializers import (
 
 CatalogModel = TypeVar("CatalogModel", bound=Model)
 
+CATALOG_PAGE_SIZE_MAX = 100
+
 
 def _organization(request: Request, slug: str) -> Organization:
     return organization_visible_to(request.user, slug)
@@ -146,6 +149,46 @@ def _catalog_error(error: CatalogDomainError) -> Response:
         },
         status=status.HTTP_400_BAD_REQUEST,
     )
+
+
+def _uuid_list_query(
+    request: Request, name: str, *, maximum: int = CATALOG_PAGE_SIZE_MAX
+) -> list[UUID]:
+    raw = request.query_params.get(name, "")
+    if not raw:
+        return []
+    values = [item.strip() for item in raw.split(",") if item.strip()]
+    if len(values) > maximum:
+        raise ValidationError({name: f"No puede contener más de {maximum} UUID."})
+    try:
+        return [UUID(value) for value in values]
+    except ValueError as error:
+        raise ValidationError({name: "Debe contener UUID válidos."}) from error
+
+
+def _windowed_response(request: Request, rows: QuerySet, serializer) -> Response:
+    """Preserve legacy unpaginated reads while allowing bounded directory views."""
+
+    if "limit" not in request.query_params and "offset" not in request.query_params:
+        return Response(serializer(rows, many=True).data)
+    try:
+        limit = int(request.query_params.get("limit", "24"))
+        offset = int(request.query_params.get("offset", "0"))
+    except ValueError as error:
+        raise ValidationError(
+            {"pagination": "limit y offset deben ser enteros."}
+        ) from error
+    if not 1 <= limit <= CATALOG_PAGE_SIZE_MAX or offset < 0:
+        raise ValidationError(
+            {
+                "pagination": f"limit debe estar entre 1 y {CATALOG_PAGE_SIZE_MAX} y offset no puede ser negativo."
+            }
+        )
+    total = rows.count()
+    response = Response(serializer(rows[offset : offset + limit], many=True).data)
+    response["X-Total-Count"] = str(total)
+    response["Access-Control-Expose-Headers"] = "X-Total-Count"
+    return response
 
 
 def _can_manage_teaching_responsibilities(
@@ -671,7 +714,13 @@ class SubjectPrerequisiteView(APIView):
 class SubjectPrerequisiteListView(APIView):
     """Return all visible subject edges in one organization-scoped query."""
 
-    @extend_schema(responses={200: PrerequisiteGraphEntrySerializer(many=True)})
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("entity", str, OpenApiParameter.QUERY),
+            OpenApiParameter("prerequisite", str, OpenApiParameter.QUERY),
+        ],
+        responses={200: PrerequisiteGraphEntrySerializer(many=True)},
+    )
     def get(self, request: Request, slug: str) -> Response:
         organization = _organization(request, slug)
         visible_statuses = _visible(request, organization)
@@ -684,6 +733,10 @@ class SubjectPrerequisiteListView(APIView):
             .select_related("subject", "prerequisite")
             .order_by("subject__name", "prerequisite__name")
         )
+        if entity_id := request.query_params.get("entity"):
+            rows = rows.filter(subject_id=entity_id)
+        if prerequisite_id := request.query_params.get("prerequisite"):
+            rows = rows.filter(prerequisite_id=prerequisite_id)
         return Response(
             [
                 {
@@ -763,7 +816,13 @@ class ConceptPrerequisiteView(APIView):
 class ConceptPrerequisiteListView(APIView):
     """Return all visible concept edges in one organization-scoped query."""
 
-    @extend_schema(responses={200: PrerequisiteGraphEntrySerializer(many=True)})
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("entity", str, OpenApiParameter.QUERY),
+            OpenApiParameter("prerequisite", str, OpenApiParameter.QUERY),
+        ],
+        responses={200: PrerequisiteGraphEntrySerializer(many=True)},
+    )
     def get(self, request: Request, slug: str) -> Response:
         organization = _organization(request, slug)
         visible_statuses = _visible(request, organization)
@@ -776,6 +835,10 @@ class ConceptPrerequisiteListView(APIView):
             .select_related("concept", "prerequisite")
             .order_by("concept__name", "prerequisite__name")
         )
+        if entity_id := request.query_params.get("entity"):
+            rows = rows.filter(concept_id=entity_id)
+        if prerequisite_id := request.query_params.get("prerequisite"):
+            rows = rows.filter(prerequisite_id=prerequisite_id)
         return Response(
             [
                 {
@@ -929,6 +992,10 @@ class ObjectiveConceptAssociationView(APIView):
 
 class ObjectiveConceptAssociationListView(APIView):
     @extend_schema(
+        parameters=[
+            OpenApiParameter("subject", str, OpenApiParameter.QUERY),
+            OpenApiParameter("objectives", str, OpenApiParameter.QUERY),
+        ],
         responses={200: ConceptAssociationEntrySerializer(many=True)},
         description="Return visible objective-to-concept associations in one organization-scoped query.",
     )
@@ -944,6 +1011,10 @@ class ObjectiveConceptAssociationListView(APIView):
             .select_related("learning_objective", "concept")
             .order_by("learning_objective_id", "position")
         )
+        if subject_id := request.query_params.get("subject"):
+            rows = rows.filter(learning_objective__subject_id=subject_id)
+        if objective_ids := _uuid_list_query(request, "objectives"):
+            rows = rows.filter(learning_objective_id__in=objective_ids)
         grouped: dict[str, list[str]] = {}
         for link in rows:
             grouped.setdefault(str(link.learning_objective_id), []).append(
@@ -1113,8 +1184,12 @@ class ConceptListView(CatalogFilteredListView):
     @extend_schema(
         parameters=[
             OpenApiParameter("status", str, OpenApiParameter.QUERY),
+            OpenApiParameter("subject", str, OpenApiParameter.QUERY),
+            OpenApiParameter("ids", str, OpenApiParameter.QUERY),
             OpenApiParameter("search", str, OpenApiParameter.QUERY),
             OpenApiParameter("ordering", str, OpenApiParameter.QUERY),
+            OpenApiParameter("limit", int, OpenApiParameter.QUERY),
+            OpenApiParameter("offset", int, OpenApiParameter.QUERY),
         ],
         responses={200: ConceptSerializer(many=True)},
     )
@@ -1123,7 +1198,7 @@ class ConceptListView(CatalogFilteredListView):
         rows = self.filter_catalog_queryset(
             request, concepts_visible_to(organization, _visible(request, organization))
         )
-        return Response(ConceptSerializer(rows, many=True).data)
+        return _windowed_response(request, rows, ConceptSerializer)
 
     @extend_schema(request=CreateConceptSerializer, responses={201: ConceptSerializer})
     def post(self, request: Request, slug: str) -> Response:
@@ -1208,6 +1283,8 @@ class ObjectiveListView(CatalogFilteredListView):
             OpenApiParameter("cognitive_level", str, OpenApiParameter.QUERY),
             OpenApiParameter("search", str, OpenApiParameter.QUERY),
             OpenApiParameter("ordering", str, OpenApiParameter.QUERY),
+            OpenApiParameter("limit", int, OpenApiParameter.QUERY),
+            OpenApiParameter("offset", int, OpenApiParameter.QUERY),
         ],
         responses={200: ObjectiveSerializer(many=True)},
     )
@@ -1219,7 +1296,7 @@ class ObjectiveListView(CatalogFilteredListView):
                 organization, _visible(request, organization)
             ),
         )
-        return Response(ObjectiveSerializer(rows, many=True).data)
+        return _windowed_response(request, rows, ObjectiveSerializer)
 
     @extend_schema(
         request=CreateObjectiveSerializer, responses={201: ObjectiveSerializer}

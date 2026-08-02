@@ -552,6 +552,12 @@ class UnitUpdateSerializer(ExpectedVersionSerializer):
     estimated_duration_minutes = serializers.IntegerField(
         min_value=1, required=False, allow_null=True
     )
+    topic_ids = serializers.ListField(
+        child=serializers.UUIDField(), allow_empty=True, max_length=200, required=False
+    )
+    learning_objective_ids = serializers.ListField(
+        child=serializers.UUIDField(), allow_empty=True, max_length=200, required=False
+    )
 
 
 class UnitTopicSerializer(serializers.ModelSerializer):

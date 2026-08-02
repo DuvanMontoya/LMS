@@ -758,6 +758,13 @@ class AssessmentActivityBindingInputSerializer(serializers.Serializer):
     expected_revision_version = serializers.IntegerField(min_value=1)
 
 
+class AssessmentCourseActivityCreateSerializer(
+    AssessmentActivityBindingInputSerializer
+):
+    module_id = serializers.UUIDField()
+    required = serializers.BooleanField(default=True)
+
+
 class AssessmentActivityBindingSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     activity_id = serializers.UUIDField()

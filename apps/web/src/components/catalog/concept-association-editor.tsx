@@ -1,11 +1,21 @@
 'use client';
 
-import { ArrowDown, ArrowUp, LoaderCircle, Plus, Save, X } from 'lucide-react';
-import { useState } from 'react';
+import {
+  ArrowDown,
+  ArrowUp,
+  LoaderCircle,
+  Plus,
+  Save,
+  Search,
+  X,
+} from 'lucide-react';
+import { useDeferredValue, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import type { components } from '@/lib/api/generated/platform';
 import {
+  useCatalogConceptSearch,
   useReplaceObjectiveConcepts,
   useReplaceTopicConcepts,
 } from '@/lib/catalog/hooks';
@@ -32,10 +42,23 @@ export function ConceptAssociationEditor({
   const objectiveMutation = useReplaceObjectiveConcepts(slug);
   const mutation = entity === 'topic' ? topicMutation : objectiveMutation;
   const [selectedIds, setSelectedIds] = useState<string[]>([...initialIds]);
+  const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
+  const searchQuery = useCatalogConceptSearch(slug, deferredSearch);
+  const indexedConcepts = useMemo(
+    () =>
+      new Map(
+        [...concepts, ...(searchQuery.data ?? [])].map((concept) => [
+          concept.id,
+          concept,
+        ]),
+      ),
+    [concepts, searchQuery.data],
+  );
   const selected = selectedIds
-    .map((id) => concepts.find((concept) => concept.id === id))
+    .map((id) => indexedConcepts.get(id))
     .filter((concept): concept is Concept => Boolean(concept));
-  const available = concepts.filter(
+  const available = (searchQuery.data ?? concepts.slice(0, 20)).filter(
     (concept) => !selectedIds.includes(concept.id),
   );
   const noun = entity === 'topic' ? 'tema' : 'objetivo';
@@ -55,23 +78,20 @@ export function ConceptAssociationEditor({
     });
   }
 
-  return (
-    <section
-      aria-label={`Editor de conceptos del ${noun}`}
-      className={
-        embedded
-          ? 'border-t bg-muted/15 px-4 py-4'
-          : 'mt-4 rounded-md border bg-muted/15 p-4'
-      }
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold">Conceptos del {noun}</h3>
-        <span className="text-xs text-muted-foreground">
-          {selected.length} asociados
-        </span>
-      </div>
+  const editor = (
+    <div className={embedded ? '' : 'border-t px-4 py-4'}>
+      <label className="relative block max-w-md">
+        <span className="sr-only">Buscar concepto para asociar</span>
+        <Search className="pointer-events-none absolute top-2.5 left-3 size-4 text-muted-foreground" />
+        <Input
+          className="h-9 pl-9"
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Buscar concepto institucional"
+          value={search}
+        />
+      </label>
       <div
-        className="mt-3 flex flex-wrap gap-1.5"
+        className="mt-2 flex max-h-28 flex-wrap gap-1.5 overflow-y-auto"
         aria-label={`Conceptos disponibles del ${noun}`}
         role="group"
       >
@@ -89,6 +109,16 @@ export function ConceptAssociationEditor({
             Añadir {concept.name}
           </Button>
         ))}
+        {searchQuery.isLoading ? (
+          <span className="inline-flex items-center gap-2 px-2 text-xs text-muted-foreground">
+            <LoaderCircle className="size-3.5 animate-spin" /> Buscando…
+          </span>
+        ) : null}
+        {!searchQuery.isLoading && available.length === 0 ? (
+          <span className="px-2 py-1 text-xs text-muted-foreground">
+            No hay conceptos disponibles con este criterio.
+          </span>
+        ) : null}
       </div>
       <ol
         className="mt-3 divide-y border-y"
@@ -162,6 +192,38 @@ export function ConceptAssociationEditor({
         {mutation.isSuccess ? 'Asociaciones guardadas.' : ''}
         {mutation.error instanceof Error ? mutation.error.message : ''}
       </p>
-    </section>
+    </div>
+  );
+
+  if (embedded) {
+    return (
+      <section
+        aria-label={`Editor de conceptos del ${noun}`}
+        className="border-t bg-muted/15 px-4 py-4"
+      >
+        <div className="mb-3 flex items-baseline justify-between gap-2">
+          <h3 className="text-sm font-semibold">Conceptos del {noun}</h3>
+          <span className="text-xs text-muted-foreground">
+            {selected.length} asociados
+          </span>
+        </div>
+        {editor}
+      </section>
+    );
+  }
+
+  return (
+    <details
+      aria-label={`Editor de conceptos del ${noun}`}
+      className="mt-3 rounded-lg border bg-muted/10 open:bg-background"
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm font-medium">
+        <span>Conceptos asociados</span>
+        <span className="text-xs font-normal text-muted-foreground">
+          {selected.length}
+        </span>
+      </summary>
+      {editor}
+    </details>
   );
 }

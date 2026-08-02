@@ -12,6 +12,7 @@ from domain.courses.exceptions import (
     CourseCurriculumAlignmentInvalid,
     CourseRevisionNotReady,
 )
+from domain.courses.models import CourseActivity
 from domain.courses.selectors import courses_visible_to_actor
 from domain.courses.services import (
     assign_course_teaching_exception,
@@ -21,6 +22,7 @@ from domain.courses.services import (
     replace_unit_learning_objectives,
     replace_unit_topics,
     submit_revision_for_review,
+    update_unit,
 )
 from domain.organizations.choices import RoleCode
 from domain.organizations.models import Membership
@@ -29,6 +31,92 @@ from .support import CourseFixtureMixin
 
 
 class CourseIntegrityTests(CourseFixtureMixin, TestCase):
+    def test_unit_configuration_is_scoped_and_atomic(self) -> None:
+        owner, organization, subject, objective, topic, revision = (
+            self.course_revision()
+        )
+        module, revision = create_module(
+            actor=owner,
+            organization=organization,
+            revision=revision,
+            expected_version=revision.lock_version,
+            title="Módulo",
+        )
+        unit, revision = create_unit(
+            actor=owner,
+            organization=organization,
+            module=module,
+            expected_version=revision.lock_version,
+            title="Lección inicial",
+        )
+        previous_version = revision.lock_version
+        unit, revision = update_unit(
+            actor=owner,
+            organization=organization,
+            unit=unit,
+            expected_version=previous_version,
+            title="Lección configurada",
+            summary="Información y alineación coherentes.",
+            estimated_duration_minutes=45,
+            topics=[topic],
+            learning_objectives=[objective],
+        )
+        self.assertEqual(revision.lock_version, previous_version + 1)
+        self.assertEqual(
+            list(unit.topic_alignments.values_list("topic_id", flat=True)),
+            [topic.id],
+        )
+        self.assertEqual(
+            list(
+                unit.objective_alignments.values_list(
+                    "learning_objective_id", flat=True
+                )
+            ),
+            [objective.id],
+        )
+        activity = CourseActivity.objects.get(lesson_unit=unit)
+        self.assertEqual(
+            list(
+                activity.objective_alignments.values_list(
+                    "learning_objective_id", flat=True
+                )
+            ),
+            [objective.id],
+        )
+
+        unaligned_subject = create_subject(
+            actor=owner,
+            organization=organization,
+            discipline=subject.discipline,
+            name="Geometría",
+            slug="geometria-configuracion",
+            description="",
+        )
+        unaligned_objective = create_learning_objective(
+            actor=owner,
+            organization=organization,
+            subject=unaligned_subject,
+            code="GEO-CONFIG-01",
+            statement="Usar una referencia ajena.",
+            description="",
+            cognitive_level="apply",
+        )
+        with self.assertRaises(CourseCurriculumAlignmentInvalid):
+            update_unit(
+                actor=owner,
+                organization=organization,
+                unit=unit,
+                expected_version=revision.lock_version,
+                title="No debe persistir",
+                topics=[],
+                learning_objectives=[unaligned_objective],
+            )
+        unit.refresh_from_db()
+        revision.refresh_from_db()
+        self.assertEqual(unit.title, "Lección configurada")
+        self.assertEqual(revision.lock_version, previous_version + 1)
+        self.assertEqual(unit.topic_alignments.count(), 1)
+
     def test_course_exception_scopes_authoring_without_granting_group_access(
         self,
     ) -> None:

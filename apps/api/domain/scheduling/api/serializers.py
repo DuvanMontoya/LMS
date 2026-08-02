@@ -17,6 +17,18 @@ class LiveClassActivityBindingInputSerializer(serializers.Serializer):
     )
 
 
+class LiveClassCourseActivityCreateSerializer(serializers.Serializer):
+    module_id = serializers.UUIDField()
+    expected_revision_version = serializers.IntegerField(min_value=1)
+    title = serializers.CharField(max_length=200)
+    summary = serializers.CharField(max_length=1200, required=False, allow_blank=True)
+    estimated_duration_minutes = serializers.IntegerField(min_value=1, max_value=720)
+    required = serializers.BooleanField(default=True)
+    minimum_attendance_basis_points = serializers.IntegerField(
+        min_value=1, max_value=10_000
+    )
+
+
 class LiveClassActivityBindingSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     activity_id = serializers.UUIDField()

@@ -15,6 +15,8 @@ async function login(
   await page.getByLabel('Correo electrónico').fill(email);
   await page.getByLabel('Contraseña').fill(password);
   await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+  await page.waitForURL(/\/organizaciones\/organizacion-a\//);
+  await page.goto('/organizaciones/organizacion-a/curriculo');
   await expect(page).toHaveURL('/organizaciones/organizacion-a/curriculo');
 }
 
@@ -43,7 +45,7 @@ test('owner sees the curriculum hierarchy in Chromium', async ({ page }) => {
   await page.getByRole('link', { name: 'Precálculo' }).click();
   await expect(page.getByRole('heading', { name: 'Precálculo' })).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Árbol de temas' }),
+    page.getByRole('heading', { name: 'Estructura temática' }),
   ).toBeVisible();
   await expect(
     page.getByLabel('Temas de la asignatura').getByText('Funciones', {
@@ -164,6 +166,7 @@ test('owner creates a topic and learning objective through visible forms', async
     .locator('ul[aria-label="Temas de la asignatura"]')
     .first();
   const continuity = page.locator('li[data-topic-title="Continuidad"]');
+  await continuity.getByText('Gestionar tema', { exact: true }).click();
   await continuity.getByRole('button', { name: 'Reducir nivel' }).click();
   await expect(
     topicTree.locator(':scope > li[data-topic-title="Continuidad"]'),
@@ -171,10 +174,11 @@ test('owner creates a topic and learning objective through visible forms', async
   const rootContinuity = topicTree.locator(
     ':scope > li[data-topic-title="Continuidad"]',
   );
+  await rootContinuity.getByText('Gestionar tema', { exact: true }).click();
   await rootContinuity
-    .getByLabel('Mover bajo')
+    .getByLabel('Mover Continuidad bajo otro tema')
     .selectOption({ label: 'Límites' });
-  await rootContinuity.getByRole('button', { name: 'Mover como hijo' }).click();
+  await rootContinuity.getByRole('button', { name: 'Anidar' }).click();
   await expect(
     topicTree.locator(':scope > li[data-topic-title="Continuidad"]'),
   ).not.toBeVisible();
@@ -306,6 +310,7 @@ test('owner orders visible topic and objective concept associations', async ({
   const topicEditor = topic.locator(
     ':scope > section[aria-label="Editor de conceptos del tema"]',
   );
+  await topicEditor.getByText('Conceptos asociados', { exact: false }).click();
   await topicEditor
     .getByRole('button', { name: 'Añadir Transformación lineal' })
     .click();
@@ -342,6 +347,7 @@ test('owner must remove active associations before archiving a concept', async (
   const topicEditor = topic.locator(
     ':scope > section[aria-label="Editor de conceptos del tema"]',
   );
+  await topicEditor.getByText('Conceptos asociados', { exact: false }).click();
   await topicEditor
     .getByRole('button', { name: 'Quitar Transformación lineal' })
     .click();
@@ -427,6 +433,7 @@ test('owner edits each visible catalog level', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Precálculo' })).toBeVisible();
   const topic = page.locator('li[data-topic-title="Límites"]');
   const topicActions = topic.locator(':scope > fieldset');
+  await topicActions.getByText('Gestionar tema', { exact: true }).click();
   await topicActions.getByRole('button', { name: 'Editar tema' }).click();
   await topicActions
     .getByLabel('Editar título de Límites')

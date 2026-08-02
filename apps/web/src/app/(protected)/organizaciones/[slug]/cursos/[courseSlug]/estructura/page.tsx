@@ -13,7 +13,7 @@ export default async function CourseStructurePage({
   const { courseSlug, slug } = await params;
   const data = await getCourseWorkspace(slug, courseSlug);
   const assessmentVersions = data.access.capabilities.includes(
-    'assessment.authoring.view',
+    'assessment.authoring.manage',
   )
     ? await getApprovedAssessmentVersionOptions(slug)
     : [];
@@ -47,12 +47,15 @@ export default async function CourseStructurePage({
       <div className="mt-6">
         <StructureEditor
           assessmentVersions={assessmentVersions}
+          canManageAssessments={data.access.capabilities.includes(
+            'assessment.authoring.manage',
+          )}
           canManage={data.access.capabilities.includes(
             'course.authoring.manage',
           )}
           courseSlug={courseSlug}
           key={data.outline.revision.lock_version}
-          objectives={data.objectives}
+          objectives={data.unitObjectives}
           outline={data.outline}
           slug={slug}
           topics={data.topics}

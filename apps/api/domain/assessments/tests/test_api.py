@@ -7,6 +7,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from domain.courses.choices import ActivityCompletionMethod, ActivityType
+from domain.courses.models import CourseActivity
 from domain.courses.services import create_activity, create_module
 from domain.learning.models import CourseGroupActivity
 from domain.learning.services import (
@@ -37,6 +38,47 @@ from .support import AssessmentFixtureMixin
 
 
 class AssessmentApiSecurityTests(AssessmentFixtureMixin, TestCase):
+    def test_approved_version_creates_and_binds_curricular_activity_atomically(
+        self,
+    ) -> None:
+        context = self.assessment_context()
+        revision = context["course_revision"]
+        module, revision = create_module(
+            actor=context["owner"],
+            organization=context["organization"],
+            revision=revision,
+            expected_version=revision.lock_version,
+            title="Evaluaciones",
+        )
+        client = APIClient()
+        client.force_authenticate(user=context["owner"])
+        url = (
+            f"/api/v1/organizations/{context['organization'].slug}/assessments/"
+            "course-activities/"
+        )
+        payload = {
+            "assessment_version_id": str(context["assessment_version"].id),
+            "expected_revision_version": revision.lock_version,
+            "module_id": str(module.id),
+            "required": True,
+        }
+        created = client.post(url, payload, format="json")
+        self.assertEqual(created.status_code, 201)
+        activity = CourseActivity.objects.get(pk=created.data["activity_id"])
+        version = context["assessment_version"]
+        self.assertEqual(activity.title, version.title)
+        self.assertEqual(
+            activity.estimated_duration_minutes, version.time_limit_minutes
+        )
+        self.assertEqual(activity.minimum_grade_basis_points, version.pass_basis_points)
+        self.assertEqual(
+            created.data["revision_lock_version"], revision.lock_version + 2
+        )
+        before = CourseActivity.objects.count()
+        conflict = client.post(url, payload, format="json")
+        self.assertEqual(conflict.status_code, 409)
+        self.assertEqual(CourseActivity.objects.count(), before)
+
     def test_approved_assessment_version_binds_once_to_curricular_activity(
         self,
     ) -> None:

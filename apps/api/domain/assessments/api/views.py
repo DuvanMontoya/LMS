@@ -20,7 +20,7 @@ from rest_framework.response import Response as ApiResponse
 from rest_framework.views import APIView
 
 from domain.catalog.models import LearningObjective
-from domain.courses.models import CourseActivity
+from domain.courses.models import CourseActivity, CourseModule
 from domain.learning.models import (
     CourseGroupActivity,
     EnrollmentCohortAssignment,
@@ -36,7 +36,10 @@ from domain.organizations.selectors import organization_visible_to
 from domain.publishing.models import CourseRelease
 
 from ..choices import AuthoringStatus, ResponseStatus
-from ..course_activities import bind_assessment_activity
+from ..course_activities import (
+    bind_assessment_activity,
+    create_and_bind_assessment_activity,
+)
 from ..exceptions import AssessmentDomainError
 from ..models import (
     Assessment,
@@ -116,6 +119,7 @@ from .filters import AssessmentFilter, DeliveryFilter, QuestionBankFilter
 from .serializers import (
     AssessmentActivityBindingInputSerializer,
     AssessmentActivityBindingSerializer,
+    AssessmentCourseActivityCreateSerializer,
     AssessmentCreateSerializer,
     AssessmentExpectedVersionSerializer,
     AssessmentOutlineSerializer,
@@ -226,6 +230,54 @@ class AssessmentActivityBindingView(APIView):
                 {
                     "id": binding.id,
                     "activity_id": binding.activity_id,
+                    "assessment_version_id": binding.assessment_version_id,
+                    "revision_lock_version": revision_lock_version,
+                }
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AssessmentCourseActivityCreateView(APIView):
+    @extend_schema(
+        operation_id="assessment_course_activity_create",
+        request=AssessmentCourseActivityCreateSerializer,
+        responses={201: AssessmentActivityBindingSerializer},
+    )
+    def post(self, request: Request, slug: str) -> ApiResponse:
+        organization = _organization(request, slug)
+        serializer = AssessmentCourseActivityCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        module = get_object_or_404(
+            CourseModule.objects.select_related("revision__course"),
+            pk=serializer.validated_data["module_id"],
+            revision__course__organization=organization,
+        )
+        assessment_version = get_object_or_404(
+            AssessmentVersion.objects.select_related("assessment"),
+            pk=serializer.validated_data["assessment_version_id"],
+            assessment__organization=organization,
+        )
+        result = _call(
+            lambda: create_and_bind_assessment_activity(
+                actor=request.user,
+                organization=organization,
+                module=module,
+                assessment_version=assessment_version,
+                expected_revision_version=serializer.validated_data[
+                    "expected_revision_version"
+                ],
+                required=serializer.validated_data["required"],
+            )
+        )
+        if isinstance(result, ApiResponse):
+            return result
+        binding, activity, revision_lock_version = result
+        return ApiResponse(
+            AssessmentActivityBindingSerializer(
+                {
+                    "id": binding.id,
+                    "activity_id": activity.id,
                     "assessment_version_id": binding.assessment_version_id,
                     "revision_lock_version": revision_lock_version,
                 }

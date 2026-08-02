@@ -1,10 +1,13 @@
 'use client';
 
-import { LoaderCircle, Save } from 'lucide-react';
+import { ArrowRight, LoaderCircle, Plus, Save, Search, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
+  useCatalogConceptSearch,
   useReplaceConceptPrerequisites,
   useReplaceSubjectPrerequisites,
 } from '@/lib/catalog/hooks';
@@ -15,122 +18,154 @@ type Item = Pick<components['schemas']['Concept'], 'id' | 'name'>;
 type Link = components['schemas']['SubjectPrerequisite'];
 
 export function PrerequisiteEditor({
+  dependentItems,
   entity,
-  initial,
+  initialLinks,
   items,
   slug,
+  target,
 }: Readonly<{
+  dependentItems: readonly Item[];
   entity: EntityKind;
-  initial: Record<string, Link[]>;
+  initialLinks: readonly Link[];
   items: readonly Item[];
   slug: string;
+  target: Item;
 }>) {
+  const router = useRouter();
   const conceptMutation = useReplaceConceptPrerequisites(slug);
   const subjectMutation = useReplaceSubjectPrerequisites(slug);
-  const [targetId, setTargetId] = useState(items[0]?.id ?? '');
-  const [linksByTarget, setLinksByTarget] = useState(initial);
-  const links = linksByTarget[targetId] ?? [];
-  const target = items.find((item) => item.id === targetId);
-  const candidates = items.filter((item) => item.id !== targetId);
-  const dependentItems = useMemo(
-    () =>
-      items.filter(
+  const mutation = entity === 'concept' ? conceptMutation : subjectMutation;
+  const [links, setLinks] = useState<Link[]>([...initialLinks]);
+  const [search, setSearch] = useState('');
+  const conceptSearch = useCatalogConceptSearch(slug, search);
+  const selectedIds = useMemo(
+    () => new Set(links.map((link) => link.prerequisite_id)),
+    [links],
+  );
+  const candidates = useMemo(() => {
+    const normalized = search.trim().toLocaleLowerCase('es');
+    if (!normalized) return [];
+    const source = entity === 'concept' ? (conceptSearch.data ?? []) : items;
+    return source
+      .filter(
         (item) =>
-          item.id !== targetId &&
-          (linksByTarget[item.id] ?? []).some(
-            (link) => link.prerequisite_id === targetId,
-          ),
-      ),
-    [linksByTarget, items, targetId],
+          item.id !== target.id &&
+          !selectedIds.has(item.id) &&
+          item.name.toLocaleLowerCase('es').includes(normalized),
+      )
+      .slice(0, 12);
+  }, [conceptSearch.data, entity, items, search, selectedIds, target.id]);
+  const itemById = new Map(
+    [...items, ...(conceptSearch.data ?? [])].map((item) => [item.id, item]),
   );
 
-  function updateLinks(next: Link[]) {
-    setLinksByTarget((current) => ({ ...current, [targetId]: next }));
-  }
-
-  function toggle(prerequisiteId: string, enabled: boolean) {
-    updateLinks(
-      enabled
-        ? [...links, { kind: 'required', prerequisite_id: prerequisiteId }]
-        : links.filter((link) => link.prerequisite_id !== prerequisiteId),
+  function updateLink(prerequisiteId: string, values: Partial<Link>) {
+    setLinks((current) =>
+      current.map((link) =>
+        link.prerequisite_id === prerequisiteId ? { ...link, ...values } : link,
+      ),
     );
   }
 
   async function save() {
-    if (!targetId) return;
     try {
       if (entity === 'concept') {
         await conceptMutation.mutateAsync({
-          entityId: targetId,
+          entityId: target.id,
           prerequisites: links,
         });
-        return;
+      } else {
+        await subjectMutation.mutateAsync({
+          prerequisites: links,
+          subjectId: target.id,
+        });
       }
-      await subjectMutation.mutateAsync({
-        prerequisites: links,
-        subjectId: targetId,
-      });
+      router.refresh();
     } catch {
-      // The mutation state renders the safe server error in the live region.
+      // The mutation exposes the safe API message in the live region.
     }
   }
 
   return (
-    <section className="academic-panel p-5">
-      <h2 className="text-base font-semibold">
-        Prerrequisitos de {entity === 'concept' ? 'conceptos' : 'asignaturas'}
-      </h2>
-      <label className="academic-field mt-4">
-        {entity === 'concept' ? 'Concepto' : 'Asignatura'}
-        <select
-          className="academic-control"
-          onChange={(event) => setTargetId(event.target.value)}
-          value={targetId}
+    <section className="rounded-xl border bg-background shadow-xs">
+      <header className="flex flex-col gap-2 border-b px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
+        <div>
+          <p className="text-[0.6875rem] font-semibold tracking-[0.1em] text-primary uppercase">
+            {entity === 'concept' ? 'Grafo conceptual' : 'Ruta académica'}
+          </p>
+          <h2 className="mt-1 text-lg font-semibold tracking-tight">
+            Prerrequisitos de {target.name}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {links.length} dependencias directas · {dependentItems.length}{' '}
+            relaciones inversas
+          </p>
+        </div>
+        <Button
+          disabled={mutation.isPending}
+          onClick={() => void save()}
+          size="sm"
+          type="button"
         >
-          {items.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <fieldset className="mt-5">
-        <legend className="mb-2 text-sm font-semibold">Requiere</legend>
-        {candidates.length ? (
-          <div className="divide-y border-y">
-            {candidates.map((item) => {
-              const link = links.find(
-                (candidate) => candidate.prerequisite_id === item.id,
-              );
-              return (
-                <div className="px-3 py-3" key={item.id}>
-                  <label className="flex gap-2 text-sm font-medium">
-                    <input
-                      checked={Boolean(link)}
-                      onChange={(event) =>
-                        toggle(item.id, event.target.checked)
-                      }
-                      type="checkbox"
-                    />
-                    {item.name}
-                  </label>
-                  {link ? (
-                    <div className="mt-3 grid gap-3 border-l-2 border-primary/20 pl-4 sm:grid-cols-2">
+          {mutation.isPending ? (
+            <LoaderCircle className="animate-spin" />
+          ) : (
+            <Save />
+          )}
+          Guardar cambios
+        </Button>
+      </header>
+
+      <div className="grid gap-5 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.42fr)] lg:p-5">
+        <div>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Requiere</h3>
+            <span className="text-xs text-muted-foreground">
+              {links.length} seleccionados
+            </span>
+          </div>
+          <div className="mt-2 grid gap-2">
+            {links.length ? (
+              links.map((link) => {
+                const item = itemById.get(link.prerequisite_id);
+                return (
+                  <article
+                    className="rounded-lg border bg-muted/10 p-3"
+                    key={link.prerequisite_id}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 text-sm font-semibold">
+                        {item?.name ?? 'Entidad no disponible'}
+                      </span>
+                      <Button
+                        aria-label={`Quitar ${item?.name ?? 'prerrequisito'}`}
+                        onClick={() =>
+                          setLinks((current) =>
+                            current.filter(
+                              (candidate) =>
+                                candidate.prerequisite_id !==
+                                link.prerequisite_id,
+                            ),
+                          )
+                        }
+                        size="icon-sm"
+                        title="Quitar"
+                        type="button"
+                        variant="ghost"
+                      >
+                        <X />
+                      </Button>
+                    </div>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-[10rem_1fr]">
                       <label className="academic-field">
                         Tipo
                         <select
-                          className="academic-control"
+                          className="academic-control h-9"
                           onChange={(event) =>
-                            updateLinks(
-                              links.map((candidate) =>
-                                candidate.prerequisite_id === item.id
-                                  ? {
-                                      ...candidate,
-                                      kind: event.target.value as Link['kind'],
-                                    }
-                                  : candidate,
-                              ),
-                            )
+                            updateLink(link.prerequisite_id, {
+                              kind: event.target.value as Link['kind'],
+                            })
                           }
                           value={link.kind}
                         >
@@ -140,79 +175,106 @@ export function PrerequisiteEditor({
                       </label>
                       <label className="academic-field">
                         Justificación
-                        <input
-                          className="academic-control"
+                        <Input
+                          className="h-9"
                           onChange={(event) =>
-                            updateLinks(
-                              links.map((candidate) =>
-                                candidate.prerequisite_id === item.id
-                                  ? {
-                                      ...candidate,
-                                      rationale: event.target.value,
-                                    }
-                                  : candidate,
-                              ),
-                            )
+                            updateLink(link.prerequisite_id, {
+                              rationale: event.target.value,
+                            })
                           }
+                          placeholder="Por qué se necesita"
                           value={link.rationale ?? ''}
                         />
                       </label>
                     </div>
-                  ) : null}
-                </div>
-              );
-            })}
+                  </article>
+                );
+              })
+            ) : (
+              <div className="rounded-lg border border-dashed px-4 py-7 text-center text-sm text-muted-foreground">
+                No tiene prerrequisitos directos.
+              </div>
+            )}
           </div>
-        ) : (
-          <p className="border-y py-4 text-sm text-muted-foreground">
-            No hay otras entidades activas para relacionar.
+
+          <div className="mt-4 rounded-lg border p-3">
+            <label className="relative block">
+              <span className="sr-only">Buscar prerrequisito para añadir</span>
+              <Search className="pointer-events-none absolute top-2.5 left-3 size-4 text-muted-foreground" />
+              <Input
+                className="h-9 pl-9"
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={`Buscar ${entity === 'concept' ? 'concepto' : 'asignatura'} para añadir`}
+                value={search}
+              />
+            </label>
+            {search.trim() ? (
+              <div className="mt-2 grid max-h-52 gap-1 overflow-y-auto">
+                {candidates.length ? (
+                  candidates.map((item) => (
+                    <button
+                      className="flex min-h-9 items-center justify-between rounded-md px-2 text-left text-sm hover:bg-muted"
+                      key={item.id}
+                      onClick={() => {
+                        setLinks((current) => [
+                          ...current,
+                          {
+                            kind: 'required',
+                            prerequisite_id: item.id,
+                          },
+                        ]);
+                      }}
+                      type="button"
+                    >
+                      {item.name}
+                      <Plus className="size-4 text-primary" />
+                    </button>
+                  ))
+                ) : (
+                  <p className="px-2 py-3 text-xs text-muted-foreground">
+                    Sin coincidencias disponibles.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Escribe para buscar. No se muestran cientos de opciones sin
+                intención.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <aside className="rounded-lg border bg-muted/15 p-4">
+          <h3 className="text-sm font-semibold">Es requisito de</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Dependencias inversas calculadas desde el grafo actual.
           </p>
-        )}
-      </fieldset>
-      <section
-        className="mt-5 border-t pt-4"
-        aria-labelledby="dependent-heading"
-      >
-        <h3 id="dependent-heading" className="font-medium">
-          Es requisito de
-        </h3>
-        <ul className="mt-2 text-sm text-foreground/80">
-          {dependentItems.length ? (
-            dependentItems.map((item) => <li key={item.id}>{item.name}</li>)
-          ) : (
-            <li className="text-muted-foreground">
-              Sin dependencias inversas.
-            </li>
-          )}
-        </ul>
-      </section>
-      <Button
-        className="mt-4"
-        disabled={
-          conceptMutation.isPending || subjectMutation.isPending || !target
-        }
-        onClick={() => void save()}
-        type="button"
-      >
-        {conceptMutation.isPending || subjectMutation.isPending ? (
-          <LoaderCircle className="animate-spin" />
-        ) : (
-          <Save />
-        )}
-        Guardar prerrequisitos
-      </Button>
+          <ul className="mt-3 grid gap-2">
+            {dependentItems.length ? (
+              dependentItems.map((item) => (
+                <li
+                  className="flex items-center gap-2 rounded-md bg-background px-3 py-2 text-sm font-medium shadow-xs"
+                  key={item.id}
+                >
+                  <ArrowRight className="size-4 text-primary" />
+                  {item.name}
+                </li>
+              ))
+            ) : (
+              <li className="text-sm text-muted-foreground">
+                Sin dependencias inversas.
+              </li>
+            )}
+          </ul>
+        </aside>
+      </div>
       <p
         aria-live="polite"
-        className="min-h-5 pt-2 text-xs text-muted-foreground"
+        className="min-h-5 border-t px-5 py-2 text-xs text-muted-foreground"
       >
-        {conceptMutation.isSuccess ? 'Prerrequisitos guardados.' : ''}
-        {subjectMutation.isSuccess ? 'Prerrequisitos guardados.' : ''}
-        {conceptMutation.error instanceof Error
-          ? conceptMutation.error.message
-          : ''}
-        {subjectMutation.error instanceof Error
-          ? subjectMutation.error.message
-          : ''}
+        {mutation.isSuccess ? 'Prerrequisitos guardados.' : ''}
+        {mutation.error instanceof Error ? mutation.error.message : ''}
       </p>
     </section>
   );

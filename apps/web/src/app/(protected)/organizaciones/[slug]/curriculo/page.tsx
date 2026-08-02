@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 
 import { CurriculumCreateActions } from '@/components/catalog/curriculum-create-actions';
 import { CurriculumExplorer } from '@/components/catalog/curriculum-explorer';
+import { CurriculumWorkspaceNav } from '@/components/catalog/curriculum-workspace-nav';
 import { PageHeader } from '@/components/platform/page-header';
 import { Button } from '@/components/ui/button';
 import { createPlatformServerClient } from '@/lib/api/platform-server-client';
@@ -64,6 +65,7 @@ export default async function CurriculumPage({
         eyebrow="Currículo institucional"
         title="Currículo"
       />
+      <CurriculumWorkspaceNav current="" slug={slug} />
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-sm font-semibold">Mapa curricular</h2>

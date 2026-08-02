@@ -200,8 +200,13 @@ export async function getApprovedAssessmentVersionOptions(slug: string) {
         'No fue posible consultar las versiones aprobadas.',
       )) as AssessmentVersion[];
       return versions.map((version) => ({
+        attemptLimit: version.attempt_limit,
+        description: version.description,
+        durationMinutes: version.time_limit_minutes,
         id: version.id,
         label: `${version.title} · versión ${version.number}`,
+        passBasisPoints: version.pass_basis_points,
+        title: version.title,
       }));
     }),
   );

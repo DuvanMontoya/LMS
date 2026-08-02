@@ -1160,6 +1160,8 @@ def update_unit(
     organization: Organization,
     unit: CourseUnit,
     expected_version: int,
+    topics: Sequence[Topic] | None = None,
+    learning_objectives: Sequence[LearningObjective] | None = None,
     **changes: object,
 ) -> tuple[CourseUnit, CourseRevision]:
     _require_manage(actor, organization)
@@ -1186,11 +1188,16 @@ def update_unit(
         CourseStructureInvalid,
         "La actualización contiene campos internos.",
     )
+    if topics is not None:
+        _validate_unit_topics(locked, topics)
+    if learning_objectives is not None:
+        _validate_unit_learning_objectives(locked, learning_objectives)
     for field, value in changes.items():
         setattr(locked_unit, field, value)
-    locked_unit.updated_by = actor
-    locked_unit.full_clean()
-    locked_unit.save(update_fields=[*changes, "updated_by", "updated_at"])
+    if changes:
+        locked_unit.updated_by = actor
+        locked_unit.full_clean()
+        locked_unit.save(update_fields=[*changes, "updated_by", "updated_at"])
     activity_changes = {
         field: value
         for field, value in changes.items()
@@ -1205,6 +1212,12 @@ def update_unit(
         activity.updated_by = actor
         activity.full_clean()
         activity.save(update_fields=[*activity_changes, "updated_by", "updated_at"])
+    if topics is not None:
+        _replace_locked_unit_topics(locked_unit, topics, actor)
+    if learning_objectives is not None:
+        _replace_locked_unit_learning_objectives(
+            locked_unit, learning_objectives, actor
+        )
     return locked_unit, _finish(locked, actor)
 
 
@@ -1453,28 +1466,8 @@ def replace_unit_topics(
         organization=organization,
         expected_version=expected_version,
     )
-    _require(
-        len({topic.id for topic in topics}) == len(topics),
-        CourseCurriculumAlignmentInvalid,
-        "Los temas no pueden repetirse.",
-    )
-    subject_ids = set(revision.subject_alignments.values_list("subject_id", flat=True))
-    for topic in topics:
-        _validate_catalog_entity(topic, organization)
-        _require(
-            topic.subject_id in subject_ids,
-            CourseCurriculumAlignmentInvalid,
-            "Cada tema debe pertenecer a una asignatura alineada.",
-        )
-    locked_unit.topic_alignments.all().delete()
-    CourseUnitTopic.objects.bulk_create(
-        [
-            CourseUnitTopic(
-                unit=locked_unit, topic=topic, position=index, created_by=actor
-            )
-            for index, topic in enumerate(topics, start=1)
-        ]
-    )
+    _validate_unit_topics(revision, topics)
+    _replace_locked_unit_topics(locked_unit, topics, actor)
     return _finish(revision, actor)
 
 
@@ -1494,6 +1487,44 @@ def replace_unit_learning_objectives(
         organization=organization,
         expected_version=expected_version,
     )
+    _validate_unit_learning_objectives(revision, learning_objectives)
+    _replace_locked_unit_learning_objectives(locked_unit, learning_objectives, actor)
+    return _finish(revision, actor)
+
+
+def _validate_unit_topics(revision: CourseRevision, topics: Sequence[Topic]) -> None:
+    _require(
+        len({topic.id for topic in topics}) == len(topics),
+        CourseCurriculumAlignmentInvalid,
+        "Los temas no pueden repetirse.",
+    )
+    subject_ids = set(revision.subject_alignments.values_list("subject_id", flat=True))
+    organization = revision.course.organization
+    for topic in topics:
+        _validate_catalog_entity(topic, organization)
+        _require(
+            topic.subject_id in subject_ids,
+            CourseCurriculumAlignmentInvalid,
+            "Cada tema debe pertenecer a una asignatura alineada.",
+        )
+
+
+def _replace_locked_unit_topics(
+    unit: CourseUnit, topics: Sequence[Topic], actor: Any
+) -> None:
+    unit.topic_alignments.all().delete()
+    CourseUnitTopic.objects.bulk_create(
+        [
+            CourseUnitTopic(unit=unit, topic=topic, position=index, created_by=actor)
+            for index, topic in enumerate(topics, start=1)
+        ]
+    )
+
+
+def _validate_unit_learning_objectives(
+    revision: CourseRevision,
+    learning_objectives: Sequence[LearningObjective],
+) -> None:
     _require(
         len({item.id for item in learning_objectives}) == len(learning_objectives),
         CourseCurriculumAlignmentInvalid,
@@ -1502,6 +1533,7 @@ def replace_unit_learning_objectives(
     aligned_ids = set(
         revision.objective_alignments.values_list("learning_objective_id", flat=True)
     )
+    organization = revision.course.organization
     for objective in learning_objectives:
         _validate_catalog_entity(objective, organization)
         _require(
@@ -1509,13 +1541,20 @@ def replace_unit_learning_objectives(
             CourseCurriculumAlignmentInvalid,
             "La unidad sólo puede usar objetivos alineados con el curso.",
         )
-    locked_unit.objective_alignments.all().delete()
-    activity = CourseActivity.objects.select_for_update().get(lesson_unit=locked_unit)
+
+
+def _replace_locked_unit_learning_objectives(
+    unit: CourseUnit,
+    learning_objectives: Sequence[LearningObjective],
+    actor: Any,
+) -> None:
+    unit.objective_alignments.all().delete()
+    activity = CourseActivity.objects.select_for_update().get(lesson_unit=unit)
     activity.objective_alignments.all().delete()
     CourseUnitLearningObjective.objects.bulk_create(
         [
             CourseUnitLearningObjective(
-                unit=locked_unit,
+                unit=unit,
                 learning_objective=objective,
                 position=index,
                 created_by=actor,
@@ -1534,7 +1573,6 @@ def replace_unit_learning_objectives(
             for index, objective in enumerate(learning_objectives, start=1)
         ]
     )
-    return _finish(revision, actor)
 
 
 def _transition(

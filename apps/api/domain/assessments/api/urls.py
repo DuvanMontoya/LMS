@@ -11,6 +11,10 @@ AREV = ASSESSMENT + "revisions/<uuid:revision_id>/"
 
 urlpatterns = [
     path(
+        BASE + "course-activities/",
+        views.AssessmentCourseActivityCreateView.as_view(),
+    ),
+    path(
         BASE + "course-activities/<uuid:activity_id>/binding/",
         views.AssessmentActivityBindingView.as_view(),
     ),

@@ -98,6 +98,7 @@ describe('StructureEditor', () => {
       <QueryProvider>
         <StructureEditor
           assessmentVersions={[]}
+          canManageAssessments={false}
           canManage={false}
           courseSlug="algebra"
           objectives={[]}
@@ -127,6 +128,7 @@ describe('StructureEditor', () => {
       <QueryProvider>
         <StructureEditor
           assessmentVersions={[]}
+          canManageAssessments
           canManage
           courseSlug="algebra"
           objectives={[]}
@@ -144,15 +146,24 @@ describe('StructureEditor', () => {
       screen.getByRole('heading', { name: 'Secuencia curricular unificada' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Añadir lección')).toBeInTheDocument();
-    expect(
-      screen.getByText('Añadir clase en vivo o evaluación'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Añadir clase en vivo')).toBeInTheDocument();
+    expect(screen.getByText('Añadir evaluación')).toBeInTheDocument();
     expect(
       screen.queryByText('Contenido y alineación de las lecciones'),
     ).not.toBeInTheDocument();
+    expect(screen.getByText('Configurar lección')).toBeInTheDocument();
     expect(
-      screen.getByText('Configurar información y alineación'),
+      screen.getByRole('button', { name: 'Guardar configuración' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText('Esta asignatura aún no tiene currículo utilizable'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Guardar temas' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Guardar objetivos' }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', {
         name: 'Mover «Relaciones» una posición arriba',

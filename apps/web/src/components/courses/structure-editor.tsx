@@ -13,29 +13,43 @@ import {
   CircleAlert,
   ClipboardCheck,
   Plus,
+  Settings2,
   Video,
 } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  LessonConfiguration,
+  type LessonConfigurationInput,
+} from '@/components/courses/lesson-configuration';
+import type { CourseTopicOption } from '@/lib/courses/curriculum-topics';
 import type { components } from '@/lib/api/generated/platform';
 import {
   RevisionConflictError,
-  useBindActivity,
-  useCreateActivity,
+  useCreateAssessmentActivity,
+  useCreateLiveClassActivity,
   useCreateModule,
   useCreateUnit,
   useReorderActivities,
   useReorderStructure,
-  useReplaceUnitAlignment,
   useSetStructureArchived,
   useUpdateStructure,
 } from '@/lib/courses/hooks';
 
 type Outline = components['schemas']['Outline'];
 type Objective = components['schemas']['Objective'];
-type Topic = components['schemas']['Topic'];
+type Topic = CourseTopicOption;
+type AssessmentVersionOption = {
+  attemptLimit: number | null;
+  description: string;
+  durationMinutes: number | null;
+  id: string;
+  label: string;
+  passBasisPoints: number;
+  title: string;
+};
 const contentStatusLabels: Record<string, string> = {
   empty: 'Contenido vacío',
   missing: 'Sin contenido',
@@ -57,6 +71,7 @@ function statusLabel(value: string) {
 
 export function StructureEditor({
   assessmentVersions,
+  canManageAssessments,
   canManage,
   courseSlug,
   objectives,
@@ -64,7 +79,8 @@ export function StructureEditor({
   slug,
   topics,
 }: Readonly<{
-  assessmentVersions: Array<{ id: string; label: string }>;
+  assessmentVersions: AssessmentVersionOption[];
+  canManageAssessments: boolean;
   canManage: boolean;
   courseSlug: string;
   objectives: Objective[];
@@ -83,14 +99,13 @@ export function StructureEditor({
   const moduleTitle = useRef<HTMLInputElement>(null);
   const path = { courseSlug, revisionId: outline.revision.id, slug };
   const createModule = useCreateModule(path);
-  const createActivity = useCreateActivity(path);
-  const bindActivity = useBindActivity(path);
+  const createAssessmentActivity = useCreateAssessmentActivity(path);
+  const createLiveClassActivity = useCreateLiveClassActivity(path);
   const createUnit = useCreateUnit(path);
   const updateStructure = useUpdateStructure(path);
   const reorder = useReorderStructure(path);
   const reorderActivities = useReorderActivities(path);
   const archive = useSetStructureArchived(path);
-  const unitAlignment = useReplaceUnitAlignment(path);
 
   function failed(cause: unknown) {
     setError(
@@ -138,66 +153,64 @@ export function StructureEditor({
     }
   }
 
-  async function addActivity(moduleId: string, formData: FormData) {
+  async function addLiveClass(moduleId: string, formData: FormData) {
     setError('');
-    const activityType = String(formData.get('activity-type')) as
-      'assessment' | 'live_class';
-    const threshold = formData.get('activity-threshold')
-      ? Number(formData.get('activity-threshold')) * 100
-      : null;
-    const duration = formData.get('activity-duration')
-      ? Number(formData.get('activity-duration'))
-      : null;
+    const duration = Number(formData.get('live-duration'));
+    const thresholdPercent = Number(formData.get('live-threshold'));
+    if (
+      !Number.isFinite(duration) ||
+      duration < 1 ||
+      !Number.isFinite(thresholdPercent) ||
+      thresholdPercent < 1 ||
+      thresholdPercent > 100
+    ) {
+      setError(
+        'Define una duración válida y un umbral de asistencia entre 1 % y 100 %.',
+      );
+      return;
+    }
+    const threshold = thresholdPercent * 100;
+    try {
+      const created = await createLiveClassActivity.mutateAsync({
+        estimated_duration_minutes: duration,
+        expected_revision_version: version,
+        minimum_attendance_basis_points: threshold,
+        module_id: moduleId,
+        required: formData.get('live-required') === 'on',
+        summary: String(formData.get('live-summary') ?? ''),
+        title: String(formData.get('live-title') ?? ''),
+      });
+      setVersion(created.revision_lock_version);
+      setMessage('Clase en vivo añadida con su política de asistencia.');
+      router.refresh();
+    } catch (cause) {
+      failed(cause);
+    }
+  }
+
+  async function addAssessment(moduleId: string, formData: FormData) {
+    setError('');
     const assessmentVersionId = String(
       formData.get('assessment-version') ?? '',
     );
-    if (activityType === 'assessment' && !assessmentVersionId) {
+    const option = assessmentVersions.find(
+      (item) => item.id === assessmentVersionId,
+    );
+    if (!option) {
       setError('Selecciona una versión aprobada de evaluación.');
       return;
     }
     try {
-      const created = await createActivity.mutateAsync({
-        body: {
-          activity_type: activityType,
-          completion_method:
-            activityType === 'live_class' ? 'attendance' : 'pass',
-          estimated_duration_minutes: duration,
-          expected_version: version,
-          minimum_attendance_basis_points:
-            activityType === 'live_class' ? threshold : null,
-          minimum_grade_basis_points:
-            activityType === 'assessment' ? threshold : null,
-          required: formData.get('activity-required') === 'on',
-          summary: String(formData.get('activity-summary') ?? ''),
-          title: String(formData.get('activity-title') ?? ''),
-        },
-        moduleId,
+      const created = await createAssessmentActivity.mutateAsync({
+        assessment_version_id: option.id,
+        expected_revision_version: version,
+        module_id: moduleId,
+        required: formData.get('assessment-required') === 'on',
       });
-      const binding = await bindActivity.mutateAsync(
-        activityType === 'assessment'
-          ? {
-              activityId: created.id,
-              body: {
-                assessment_version_id: assessmentVersionId,
-                expected_revision_version: created.lock_version,
-              },
-              kind: 'assessment',
-            }
-          : {
-              activityId: created.id,
-              body: {
-                expected_revision_version: created.lock_version,
-                minimum_attendance_minutes:
-                  duration && threshold
-                    ? Math.max(1, Math.ceil((duration * threshold) / 10000))
-                    : duration,
-                minimum_attended_occurrences: 1,
-              },
-              kind: 'live_class',
-            },
+      setVersion(created.revision_lock_version);
+      setMessage(
+        'Evaluación añadida con la duración y el umbral de su versión aprobada.',
       );
-      setVersion(binding.revision_lock_version);
-      setMessage('Actividad curricular y binding operativo creados.');
       router.refresh();
     } catch (cause) {
       failed(cause);
@@ -224,23 +237,26 @@ export function StructureEditor({
     }
   }
 
-  async function editUnit(unitId: string, formData: FormData) {
+  async function saveUnitConfiguration(
+    unitId: string,
+    input: LessonConfigurationInput,
+  ) {
     setError('');
     try {
       await updateStructure.mutateAsync({
         body: {
-          estimated_duration_minutes: formData.get('unit-duration')
-            ? Number(formData.get('unit-duration'))
-            : null,
+          estimated_duration_minutes: input.estimatedDurationMinutes,
           expected_version: version,
-          summary: String(formData.get('unit-summary') ?? ''),
-          title: String(formData.get('unit-title') ?? ''),
+          learning_objective_ids: input.learningObjectiveIds,
+          summary: input.summary,
+          title: input.title,
+          topic_ids: input.topicIds,
         },
         id: unitId,
         kind: 'unit',
       });
       setVersion((current) => current + 1);
-      setMessage('Unidad actualizada.');
+      setMessage('Información y alineación de la lección actualizadas.');
       router.refresh();
     } catch (cause) {
       failed(cause);
@@ -325,41 +341,6 @@ export function StructureEditor({
       setVersion((current) => current + 1);
       setMessage(
         restore ? 'Elemento restaurado al final.' : 'Elemento archivado.',
-      );
-      router.refresh();
-    } catch (cause) {
-      failed(cause);
-    }
-  }
-
-  async function saveUnitAlignment(
-    unitId: string,
-    kind: 'objectives' | 'topics',
-    formData: FormData,
-  ) {
-    try {
-      const ids = formData.getAll(kind).map(String);
-      const result = await unitAlignment.mutateAsync(
-        kind === 'topics'
-          ? {
-              body: { expected_version: version, topic_ids: ids },
-              kind,
-              unitId,
-            }
-          : {
-              body: {
-                expected_version: version,
-                learning_objective_ids: ids,
-              },
-              kind,
-              unitId,
-            },
-      );
-      setVersion(result.lock_version);
-      setMessage(
-        kind === 'topics'
-          ? 'Temas de la unidad actualizados.'
-          : 'Objetivos de la unidad actualizados.',
       );
       router.refresh();
     } catch (cause) {
@@ -705,200 +686,41 @@ export function StructureEditor({
                                       </Link>
                                     </Button>
                                     {canManage && editable ? (
-                                      <details className="w-full rounded-lg border bg-muted/10 px-3 py-2 sm:w-auto sm:min-w-80 sm:flex-1">
+                                      <details className="w-full overflow-hidden rounded-lg border bg-muted/10">
                                         <summary
                                           aria-label={`Configurar lección «${lesson.title}»`}
-                                          className="cursor-pointer text-sm font-medium"
+                                          className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm font-medium marker:hidden hover:bg-muted/25"
                                         >
-                                          Configurar información y alineación
+                                          <span className="flex items-center gap-2">
+                                            <Settings2 className="size-4 text-primary" />
+                                            Configurar lección
+                                          </span>
+                                          <span className="text-xs font-normal text-muted-foreground">
+                                            Información · temas · objetivos
+                                          </span>
                                         </summary>
-                                        <div className="mt-3 grid gap-4 xl:grid-cols-2">
-                                          <form
-                                            action={(formData) =>
-                                              editUnit(lesson.id, formData)
-                                            }
-                                            className="grid content-start gap-3 rounded-lg border bg-card p-3"
-                                          >
-                                            <p className="text-sm font-semibold">
-                                              Información de la lección
-                                            </p>
-                                            <label className="academic-field">
-                                              Título
-                                              <input
-                                                className="academic-control"
-                                                defaultValue={lesson.title}
-                                                maxLength={200}
-                                                name="unit-title"
-                                                required
-                                              />
-                                            </label>
-                                            <label className="academic-field">
-                                              Resumen
-                                              <textarea
-                                                className="academic-control min-h-20"
-                                                defaultValue={lesson.summary}
-                                                maxLength={1200}
-                                                name="unit-summary"
-                                              />
-                                            </label>
-                                            <label className="academic-field">
-                                              Duración (minutos)
-                                              <input
-                                                className="academic-control"
-                                                defaultValue={
-                                                  lesson.estimated_duration_minutes ??
-                                                  ''
-                                                }
-                                                min={1}
-                                                name="unit-duration"
-                                                type="number"
-                                              />
-                                            </label>
-                                            <Button
-                                              className="w-fit"
-                                              size="sm"
-                                              type="submit"
-                                            >
-                                              Guardar información
-                                            </Button>
-                                          </form>
-                                          <div className="grid gap-3">
-                                            <form
-                                              action={(formData) =>
-                                                saveUnitAlignment(
-                                                  lesson.id,
-                                                  'topics',
-                                                  formData,
-                                                )
-                                              }
-                                              className="rounded-lg border bg-card p-3"
-                                            >
-                                              <fieldset>
-                                                <legend className="text-sm font-semibold">
-                                                  Temas
-                                                </legend>
-                                                <div className="mt-2 max-h-44 space-y-1 overflow-y-auto">
-                                                  {topics.length ? (
-                                                    topics.map((topic) => (
-                                                      <label
-                                                        className="flex gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-                                                        key={topic.id}
-                                                      >
-                                                        <input
-                                                          className="mt-0.5 size-4 accent-primary"
-                                                          defaultChecked={lesson.topics.some(
-                                                            (item) =>
-                                                              item.topic.id ===
-                                                              topic.id,
-                                                          )}
-                                                          name="topics"
-                                                          type="checkbox"
-                                                          value={topic.id}
-                                                        />
-                                                        {topic.title}
-                                                      </label>
-                                                    ))
-                                                  ) : (
-                                                    <p className="text-sm text-muted-foreground">
-                                                      No hay temas disponibles.
-                                                    </p>
-                                                  )}
-                                                </div>
-                                              </fieldset>
-                                              <Button
-                                                className="mt-3"
-                                                size="sm"
-                                                type="submit"
-                                                variant="outline"
-                                              >
-                                                {topics.length
-                                                  ? 'Guardar temas'
-                                                  : 'Limpiar temas'}
-                                              </Button>
-                                            </form>
-                                            <form
-                                              action={(formData) =>
-                                                saveUnitAlignment(
-                                                  lesson.id,
-                                                  'objectives',
-                                                  formData,
-                                                )
-                                              }
-                                              className="rounded-lg border bg-card p-3"
-                                            >
-                                              <fieldset>
-                                                <legend className="text-sm font-semibold">
-                                                  Objetivos
-                                                </legend>
-                                                <div className="mt-2 max-h-44 space-y-1 overflow-y-auto">
-                                                  {objectives.length ? (
-                                                    objectives.map(
-                                                      (objective) => (
-                                                        <label
-                                                          className="flex gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-                                                          key={objective.id}
-                                                        >
-                                                          <input
-                                                            className="mt-0.5 size-4 accent-primary"
-                                                            defaultChecked={lesson.learning_objectives.some(
-                                                              (item) =>
-                                                                item
-                                                                  .learning_objective
-                                                                  .id ===
-                                                                objective.id,
-                                                            )}
-                                                            name="objectives"
-                                                            type="checkbox"
-                                                            value={objective.id}
-                                                          />
-                                                          <span>
-                                                            <strong>
-                                                              {objective.code}
-                                                            </strong>{' '}
-                                                            —{' '}
-                                                            {
-                                                              objective.statement
-                                                            }
-                                                          </span>
-                                                        </label>
-                                                      ),
-                                                    )
-                                                  ) : (
-                                                    <p className="text-sm text-muted-foreground">
-                                                      No hay objetivos
-                                                      disponibles.
-                                                    </p>
-                                                  )}
-                                                </div>
-                                              </fieldset>
-                                              <Button
-                                                className="mt-3"
-                                                size="sm"
-                                                type="submit"
-                                                variant="outline"
-                                              >
-                                                {objectives.length
-                                                  ? 'Guardar objetivos'
-                                                  : 'Limpiar objetivos'}
-                                              </Button>
-                                            </form>
-                                          </div>
-                                        </div>
-                                        <div className="mt-3 flex justify-end border-t pt-3">
-                                          <Button
-                                            onClick={() =>
+                                        <div className="border-t p-2 sm:p-3">
+                                          <LessonConfiguration
+                                            alignedSubjects={outline.subjects}
+                                            isSaving={updateStructure.isPending}
+                                            lesson={lesson}
+                                            objectives={objectives}
+                                            onArchive={() =>
                                               setArchived(
                                                 lesson.id,
                                                 'unit',
                                                 false,
                                               )
                                             }
-                                            size="sm"
-                                            type="button"
-                                            variant="outline"
-                                          >
-                                            <Archive /> Archivar lección
-                                          </Button>
+                                            onSave={(input) =>
+                                              saveUnitConfiguration(
+                                                lesson.id,
+                                                input,
+                                              )
+                                            }
+                                            organizationSlug={slug}
+                                            topics={topics}
+                                          />
                                         </div>
                                       </details>
                                     ) : null}
@@ -945,14 +767,30 @@ export function StructureEditor({
                   </ol>
                 ) : null}
                 {canManage && editable && module.status === 'active' ? (
-                  <div className="mt-3 grid gap-2 lg:grid-cols-2">
-                    <details className="rounded-lg border bg-background px-3 py-2">
-                      <summary className="cursor-pointer text-sm font-medium">
-                        Añadir lección
+                  <div
+                    className={
+                      canManageAssessments
+                        ? 'mt-3 grid gap-2 xl:grid-cols-3'
+                        : 'mt-3 grid gap-2 lg:grid-cols-2'
+                    }
+                  >
+                    <details className="group rounded-lg border bg-background">
+                      <summary className="flex cursor-pointer list-none items-start gap-3 px-3 py-3 marker:hidden hover:bg-muted/20">
+                        <span className="rounded-md bg-primary/10 p-1.5 text-primary">
+                          <BookOpenText className="size-4" />
+                        </span>
+                        <span>
+                          <span className="block text-sm font-semibold">
+                            Añadir lección
+                          </span>
+                          <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                            Contenido asincrónico y alineación
+                          </span>
+                        </span>
                       </summary>
                       <form
                         action={(formData) => addUnit(module.id, formData)}
-                        className="mt-3 grid gap-3"
+                        className="grid gap-3 border-t p-3"
                       >
                         <label className="academic-field">
                           Título de la lección
@@ -973,89 +811,166 @@ export function StructureEditor({
                         </Button>
                       </form>
                     </details>
-                    <details className="rounded-lg border bg-background px-3 py-2">
-                      <summary className="cursor-pointer text-sm font-medium">
-                        Añadir clase en vivo o evaluación
+                    <details className="group rounded-lg border bg-background">
+                      <summary className="flex cursor-pointer list-none items-start gap-3 px-3 py-3 marker:hidden hover:bg-muted/20">
+                        <span className="rounded-md bg-primary/10 p-1.5 text-primary">
+                          <Video className="size-4" />
+                        </span>
+                        <span>
+                          <span className="block text-sm font-semibold">
+                            Añadir clase en vivo
+                          </span>
+                          <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                            Sesión sincrónica y asistencia
+                          </span>
+                        </span>
                       </summary>
                       <form
-                        action={(formData) => addActivity(module.id, formData)}
-                        className="mt-3 grid gap-3 md:grid-cols-2"
+                        action={(formData) => addLiveClass(module.id, formData)}
+                        className="grid gap-3 border-t p-3"
                       >
                         <label className="academic-field">
-                          Tipo
-                          <select
-                            className="academic-control"
-                            name="activity-type"
-                          >
-                            <option value="live_class">Clase en vivo</option>
-                            <option value="assessment">Evaluación</option>
-                          </select>
-                        </label>
-                        <label className="academic-field md:col-span-2">
-                          Versión aprobada de evaluación
-                          <select
-                            className="academic-control"
-                            name="assessment-version"
-                          >
-                            <option value="">
-                              Selecciona si el tipo es evaluación
-                            </option>
-                            {assessmentVersions.map((option) => (
-                              <option key={option.id} value={option.id}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label className="academic-field">
-                          Título
+                          Título de la clase
                           <input
                             className="academic-control"
                             maxLength={200}
-                            name="activity-title"
+                            name="live-title"
+                            placeholder="Ej. Taller de integración por partes"
                             required
                           />
                         </label>
-                        <label className="academic-field md:col-span-2">
+                        <label className="academic-field">
                           Resumen
                           <textarea
                             className="academic-control min-h-20"
                             maxLength={1200}
-                            name="activity-summary"
+                            name="live-summary"
+                            placeholder="Propósito y dinámica de la sesión"
                           />
                         </label>
-                        <label className="academic-field">
-                          Duración estimada (minutos)
-                          <input
-                            className="academic-control"
-                            min={1}
-                            name="activity-duration"
-                            type="number"
-                          />
-                        </label>
-                        <label className="academic-field">
-                          Umbral de asistencia/nota (%)
-                          <input
-                            className="academic-control"
-                            max={100}
-                            min={0}
-                            name="activity-threshold"
-                            type="number"
-                          />
-                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <label className="academic-field">
+                            Duración (min)
+                            <input
+                              className="academic-control"
+                              defaultValue={60}
+                              min={1}
+                              name="live-duration"
+                              required
+                              type="number"
+                            />
+                          </label>
+                          <label className="academic-field">
+                            Asistencia mínima (%)
+                            <input
+                              className="academic-control"
+                              defaultValue={75}
+                              max={100}
+                              min={1}
+                              name="live-threshold"
+                              required
+                              type="number"
+                            />
+                          </label>
+                        </div>
                         <label className="flex items-center gap-2 text-sm font-medium">
                           <input
                             defaultChecked
-                            name="activity-required"
+                            name="live-required"
                             type="checkbox"
                           />
-                          Actividad obligatoria
+                          Clase obligatoria
                         </label>
                         <Button className="w-fit" type="submit">
-                          <Plus /> Añadir actividad
+                          <Plus /> Añadir clase
                         </Button>
                       </form>
                     </details>
+                    {canManageAssessments ? (
+                      <details className="group rounded-lg border bg-background">
+                        <summary className="flex cursor-pointer list-none items-start gap-3 px-3 py-3 marker:hidden hover:bg-muted/20">
+                          <span className="rounded-md bg-primary/10 p-1.5 text-primary">
+                            <ClipboardCheck className="size-4" />
+                          </span>
+                          <span>
+                            <span className="block text-sm font-semibold">
+                              Añadir evaluación
+                            </span>
+                            <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                              Usa una versión aprobada
+                            </span>
+                          </span>
+                        </summary>
+                        <form
+                          action={(formData) =>
+                            addAssessment(module.id, formData)
+                          }
+                          className="grid gap-3 border-t p-3"
+                        >
+                          {assessmentVersions.length ? (
+                            <>
+                              <label className="academic-field">
+                                Evaluación aprobada
+                                <select
+                                  className="academic-control"
+                                  name="assessment-version"
+                                  required
+                                >
+                                  <option value="">
+                                    Selecciona una evaluación
+                                  </option>
+                                  {assessmentVersions.map((option) => (
+                                    <option key={option.id} value={option.id}>
+                                      {option.label} ·{' '}
+                                      {option.durationMinutes
+                                        ? `${option.durationMinutes} min`
+                                        : 'sin tiempo límite'}{' '}
+                                      · aprobación{' '}
+                                      {option.passBasisPoints / 100} % ·{' '}
+                                      {option.attemptLimit
+                                        ? `${option.attemptLimit} intento${option.attemptLimit === 1 ? '' : 's'}`
+                                        : 'intentos sin límite'}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <p className="rounded-md bg-muted/30 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                                Título, descripción, duración, intentos y nota
+                                mínima provienen de la versión aprobada. No se
+                                duplican aquí.
+                              </p>
+                              <label className="flex items-center gap-2 text-sm font-medium">
+                                <input
+                                  defaultChecked
+                                  name="assessment-required"
+                                  type="checkbox"
+                                />
+                                Evaluación obligatoria
+                              </label>
+                              <Button className="w-fit" type="submit">
+                                <Plus /> Añadir evaluación
+                              </Button>
+                            </>
+                          ) : (
+                            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                              <p>No hay versiones aprobadas disponibles.</p>
+                              <Button
+                                asChild
+                                className="mt-3"
+                                size="sm"
+                                variant="outline"
+                              >
+                                <Link
+                                  href={`/organizaciones/${slug}/evaluaciones`}
+                                >
+                                  Gestionar evaluaciones
+                                </Link>
+                              </Button>
+                            </div>
+                          )}
+                        </form>
+                      </details>
+                    ) : null}
                   </div>
                 ) : null}
               </section>

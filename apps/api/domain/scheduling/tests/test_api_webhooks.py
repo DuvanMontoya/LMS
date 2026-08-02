@@ -12,6 +12,7 @@ from livekit import api
 from rest_framework.test import APIClient
 
 from domain.courses.choices import ActivityCompletionMethod, ActivityType
+from domain.courses.models import CourseActivity
 from domain.courses.services import create_activity, create_module
 from domain.learning.contracts import register_live_session_requirement
 from domain.learning.models import (
@@ -58,6 +59,44 @@ def signed_webhook(payload: dict[str, object]) -> tuple[bytes, str]:
 
 @override_settings(**LIVEKIT_SETTINGS)
 class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
+    def test_live_activity_is_created_with_its_attendance_policy_atomically(
+        self,
+    ) -> None:
+        owner, organization, _subject, _objective, _topic, revision = (
+            self.course_revision()
+        )
+        module, revision = create_module(
+            actor=owner,
+            organization=organization,
+            revision=revision,
+            expected_version=revision.lock_version,
+            title="Clases en vivo",
+        )
+        client = APIClient()
+        client.force_authenticate(user=owner)
+        url = f"/api/v1/organizations/{organization.slug}/scheduling/course-activities/"
+        payload = {
+            "estimated_duration_minutes": 60,
+            "expected_revision_version": revision.lock_version,
+            "minimum_attendance_basis_points": 7500,
+            "module_id": str(module.id),
+            "required": True,
+            "summary": "Resolución guiada.",
+            "title": "Tutoría integral",
+        }
+        created = client.post(url, payload, format="json")
+        self.assertEqual(created.status_code, 201)
+        activity = CourseActivity.objects.get(pk=created.data["activity_id"])
+        self.assertEqual(activity.estimated_duration_minutes, 60)
+        self.assertEqual(created.data["minimum_attendance_minutes"], 45)
+        self.assertEqual(
+            created.data["revision_lock_version"], revision.lock_version + 2
+        )
+        before = CourseActivity.objects.count()
+        conflict = client.post(url, payload, format="json")
+        self.assertEqual(conflict.status_code, 409)
+        self.assertEqual(CourseActivity.objects.count(), before)
+
     def test_live_activity_authoring_binds_immutable_attendance_policy(self) -> None:
         owner, organization, _subject, _objective, _topic, revision = (
             self.course_revision()

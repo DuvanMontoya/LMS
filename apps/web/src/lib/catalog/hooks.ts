@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiErrorMessage } from '@/lib/api/api-error';
 import { platformBrowserClient } from '@/lib/api/platform-browser-client';
@@ -43,6 +43,30 @@ export function useCreateConcept(slug: string) {
       ),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: catalogKeys.concepts(slug) }),
+  });
+}
+
+export function useCatalogConceptSearch(slug: string, search: string) {
+  return useQuery({
+    queryKey: catalogKeys.conceptSearch(slug, search),
+    queryFn: () =>
+      requireData(
+        platformBrowserClient.GET(
+          '/api/v1/organizations/{slug}/catalog/concepts/',
+          {
+            params: {
+              path: { slug },
+              query: {
+                limit: 20,
+                ordering: 'name',
+                status: 'active',
+                ...(search.trim() ? { search: search.trim() } : {}),
+              },
+            },
+          },
+        ),
+      ),
+    staleTime: 30_000,
   });
 }
 

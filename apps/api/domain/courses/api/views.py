@@ -1365,12 +1365,35 @@ class UnitDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
         expected_version = data.pop("expected_version")
+        topic_ids = data.pop("topic_ids", None)
+        objective_ids = data.pop("learning_objective_ids", None)
         try:
+            topics = None
+            if topic_ids is not None:
+                topic_rows = list(
+                    Topic.objects.filter(
+                        id__in=topic_ids,
+                        subject__discipline__area__organization=organization,
+                    ).select_related("subject__discipline__area")
+                )
+                if len(topic_rows) != len(set(topic_ids)):
+                    raise CourseCrossOrganizationRelation(
+                        "Un tema no pertenece a la organización."
+                    )
+                topics_by_id = {item.id: item for item in topic_rows}
+                topics = [topics_by_id[item] for item in topic_ids]
+            learning_objectives = (
+                _scoped_objectives(organization, objective_ids)
+                if objective_ids is not None
+                else None
+            )
             unit, locked = update_unit(
                 actor=request.user,
                 organization=organization,
                 unit=_unit(revision, unit_id),
                 expected_version=expected_version,
+                topics=topics,
+                learning_objectives=learning_objectives,
                 **data,
             )
         except CourseDomainError as error:

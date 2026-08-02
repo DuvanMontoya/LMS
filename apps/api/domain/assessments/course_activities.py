@@ -6,17 +6,68 @@ from typing import Any
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from domain.courses.choices import ActivityType, AuthoringStatus
-from domain.courses.models import CourseActivity, CourseRevision
+from domain.courses.choices import (
+    ActivityCompletionMethod,
+    ActivityType,
+    AuthoringStatus,
+)
+from domain.courses.exceptions import (
+    CourseAccessDenied,
+    CourseDomainError,
+    CourseRevisionConflict,
+)
+from domain.courses.models import CourseActivity, CourseModule, CourseRevision
 from domain.courses.policies import (
     can_manage_course,
     has_course_academic_responsibility,
 )
+from domain.courses.services import create_activity
 from domain.organizations.models import Organization
 
 from .exceptions import AssessmentConflict, AssessmentForbidden, AssessmentInvalid
 from .models import AssessmentActivityBinding, AssessmentVersion
 from .policies import can_manage_authoring
+
+
+@transaction.atomic
+def create_and_bind_assessment_activity(
+    *,
+    actor: Any,
+    organization: Organization,
+    module: CourseModule,
+    assessment_version: AssessmentVersion,
+    expected_revision_version: int,
+    required: bool,
+) -> tuple[AssessmentActivityBinding, CourseActivity, int]:
+    try:
+        activity, revision = create_activity(
+            actor=actor,
+            organization=organization,
+            module=module,
+            expected_version=expected_revision_version,
+            activity_type=ActivityType.ASSESSMENT,
+            title=assessment_version.title,
+            summary=assessment_version.description,
+            estimated_duration_minutes=assessment_version.time_limit_minutes,
+            required=required,
+            completion_method=ActivityCompletionMethod.PASS,
+            minimum_attendance_basis_points=None,
+            minimum_grade_basis_points=assessment_version.pass_basis_points,
+        )
+    except CourseRevisionConflict as error:
+        raise AssessmentConflict(str(error)) from error
+    except CourseAccessDenied as error:
+        raise AssessmentForbidden(str(error)) from error
+    except CourseDomainError as error:
+        raise AssessmentInvalid(str(error)) from error
+    binding, lock_version = bind_assessment_activity(
+        actor=actor,
+        organization=organization,
+        activity=activity,
+        assessment_version=assessment_version,
+        expected_revision_version=revision.lock_version,
+    )
+    return binding, activity, lock_version
 
 
 @transaction.atomic

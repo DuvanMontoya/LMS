@@ -575,6 +575,51 @@ class CatalogApiTests(TestCase):
             ],
         )
 
+        filtered = client.get(
+            f"{prefix}/objective-concepts/?subject={subject.data['id']}"
+        )
+        self.assertEqual(filtered.status_code, 200)
+        self.assertEqual(filtered.data, aggregate.data)
+        by_objective = client.get(
+            f"{prefix}/objective-concepts/?objectives={objective.data['id']}"
+        )
+        self.assertEqual(by_objective.status_code, 200)
+        self.assertEqual(by_objective.data, aggregate.data)
+        self.assertEqual(
+            client.get(f"{prefix}/objective-concepts/?objectives=invalid").status_code,
+            400,
+        )
+
+        other_subject = client.post(
+            f"{prefix}/subjects/",
+            {
+                "discipline_id": discipline.data["id"],
+                "name": "Otra asignatura",
+                "slug": "otra-asignatura",
+            },
+            format="json",
+        )
+        self.assertEqual(
+            client.get(
+                f"{prefix}/objective-concepts/?subject={other_subject.data['id']}"
+            ).data,
+            [],
+        )
+
+        concept_window = client.get(
+            f"{prefix}/concepts/?subject={subject.data['id']}&limit=1&offset=0"
+        )
+        self.assertEqual(concept_window.status_code, 200)
+        self.assertEqual(concept_window.data[0]["id"], concept.data["id"])
+        self.assertEqual(concept_window.headers["X-Total-Count"], "1")
+
+        objective_window = client.get(
+            f"{prefix}/learning-objectives/?subject={subject.data['id']}&limit=1"
+        )
+        self.assertEqual(objective_window.status_code, 200)
+        self.assertEqual(objective_window.data[0]["id"], objective.data["id"])
+        self.assertEqual(objective_window.headers["X-Total-Count"], "1")
+
     def test_detail_actions_update_move_and_archive_objective(self) -> None:
         owner, organization = self.operational_organization(
             email="owner@example.test", name="Institución", slug="institucion"

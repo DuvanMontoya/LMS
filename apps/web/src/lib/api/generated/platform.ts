@@ -148,6 +148,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/submit/': {
     post: operations['assessment_attempts_submit'];
   };
+  '/api/v1/organizations/{slug}/assessments/course-activities/': {
+    post: operations['assessment_course_activity_create'];
+  };
   '/api/v1/organizations/{slug}/assessments/course-activities/{activity_id}/binding/': {
     post: operations['assessment_course_activity_binding_create'];
   };
@@ -867,6 +870,9 @@ export interface paths {
     get: operations['scheduling_calendar_events_list'];
     post: operations['scheduling_calendar_events_create'];
   };
+  '/api/v1/organizations/{slug}/scheduling/course-activities/': {
+    post: operations['scheduling_course_activity_create'];
+  };
   '/api/v1/organizations/{slug}/scheduling/course-activities/{activity_id}/binding/': {
     post: operations['scheduling_course_activity_binding_create'];
   };
@@ -1329,6 +1335,15 @@ export interface components {
      */
     AssessmentAuthoringStatus:
       'draft' | 'in_review' | 'changes_requested' | 'approved';
+    AssessmentCourseActivityCreate: {
+      /** Format: uuid */
+      assessment_version_id: string;
+      expected_revision_version: number;
+      /** Format: uuid */
+      module_id: string;
+      /** @default true */
+      required?: boolean;
+    };
     AssessmentCreate: {
       attempt_limit?: number | null;
       description?: string;
@@ -3537,6 +3552,17 @@ export interface components {
       minimum_attendance_minutes?: number | null;
       minimum_attended_occurrences: number;
     };
+    LiveClassCourseActivityCreate: {
+      estimated_duration_minutes: number;
+      expected_revision_version: number;
+      minimum_attendance_basis_points: number;
+      /** Format: uuid */
+      module_id: string;
+      /** @default true */
+      required?: boolean;
+      summary?: string;
+      title: string;
+    };
     LiveConnection: {
       serverUrl: string;
       session: components['schemas']['LiveSessionSummary'];
@@ -5196,8 +5222,10 @@ export interface components {
     UnitUpdate: {
       estimated_duration_minutes?: number | null;
       expected_version: number;
+      learning_objective_ids?: string[];
       summary?: string;
       title?: string;
+      topic_ids?: string[];
     };
     UpdateArea: {
       description?: string;
@@ -7027,6 +7055,27 @@ export interface operations {
       };
     };
   };
+  assessment_course_activity_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentCourseActivityCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentCourseActivityCreate'];
+        'multipart/form-data': components['schemas']['AssessmentCourseActivityCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['AssessmentActivityBinding'];
+        };
+      };
+    };
+  };
   assessment_course_activity_binding_create: {
     parameters: {
       path: {
@@ -8809,6 +8858,10 @@ export interface operations {
   /** @description Return all visible concept edges in one organization-scoped query. */
   organizations_catalog_concept_prerequisites_list: {
     parameters: {
+      query?: {
+        entity?: string;
+        prerequisite?: string;
+      };
       path: {
         slug: string;
       };
@@ -8825,9 +8878,13 @@ export interface operations {
   organizations_catalog_concepts_list: {
     parameters: {
       query?: {
+        ids?: string;
+        limit?: number;
+        offset?: number;
         ordering?: string;
         search?: string;
         status?: string;
+        subject?: string;
       };
       path: {
         slug: string;
@@ -9082,6 +9139,8 @@ export interface operations {
     parameters: {
       query?: {
         cognitive_level?: string;
+        limit?: number;
+        offset?: number;
         ordering?: string;
         search?: string;
         status?: string;
@@ -9228,6 +9287,10 @@ export interface operations {
   /** @description Return visible objective-to-concept associations in one organization-scoped query. */
   organizations_catalog_objective_concepts_list: {
     parameters: {
+      query?: {
+        objectives?: string;
+        subject?: string;
+      };
       path: {
         slug: string;
       };
@@ -9243,6 +9306,10 @@ export interface operations {
   /** @description Return all visible subject edges in one organization-scoped query. */
   organizations_catalog_subject_prerequisites_list: {
     parameters: {
+      query?: {
+        entity?: string;
+        prerequisite?: string;
+      };
       path: {
         slug: string;
       };
@@ -12519,6 +12586,27 @@ export interface operations {
       400: {
         content: {
           'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_course_activity_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LiveClassCourseActivityCreate'];
+        'application/x-www-form-urlencoded': components['schemas']['LiveClassCourseActivityCreate'];
+        'multipart/form-data': components['schemas']['LiveClassCourseActivityCreate'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['LiveClassActivityBinding'];
         };
       };
     };

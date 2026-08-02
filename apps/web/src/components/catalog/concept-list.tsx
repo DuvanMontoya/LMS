@@ -1,6 +1,13 @@
 'use client';
 
-import { Archive, Pencil, RotateCcw } from 'lucide-react';
+import {
+  Archive,
+  BookOpenText,
+  GitBranch,
+  Pencil,
+  RotateCcw,
+} from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -60,7 +67,7 @@ export function ConceptList({
 
   return (
     <>
-      <ul className="mt-6 divide-y border-y">
+      <ul className="mt-4 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
         {concepts.length ? (
           concepts.map((concept) => (
             <ConceptRow
@@ -73,11 +80,16 @@ export function ConceptList({
                 router.refresh();
               }}
               pending={setArchived.isPending || updateConcept.isPending}
+              slug={slug}
             />
           ))
         ) : (
-          <li className="px-4 py-10 text-center text-sm text-muted-foreground">
-            No hay conceptos registrados.
+          <li className="col-span-full rounded-xl border border-dashed px-4 py-12 text-center">
+            <BookOpenText className="mx-auto size-6 text-muted-foreground" />
+            <p className="mt-3 text-sm font-medium">Sin resultados</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Ajusta la búsqueda, la asignatura o el estado.
+            </p>
           </li>
         )}
       </ul>
@@ -97,6 +109,7 @@ function ConceptRow({
   onSetStatus,
   onUpdate,
   pending,
+  slug,
 }: Readonly<{
   canManage: boolean;
   concept: Concept;
@@ -107,21 +120,39 @@ function ConceptRow({
     name: string;
   }) => Promise<void>;
   pending: boolean;
+  slug: string;
 }>) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(concept.name);
   const [definition, setDefinition] = useState(concept.definition);
   return (
-    <li className="flex flex-wrap items-start justify-between gap-4 px-1 py-5 sm:px-3">
+    <li className="flex min-h-44 flex-col rounded-xl border bg-background p-4 shadow-xs">
       <div className="min-w-0 flex-1">
-        <h2 className="font-semibold">{concept.name}</h2>
-        <p className="mt-1 text-foreground/80">{concept.definition}</p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {concept.status === 'archived' ? 'Archivado' : 'Activo'}
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="font-semibold tracking-tight">{concept.name}</h2>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${
+              concept.status === 'archived'
+                ? 'bg-muted text-muted-foreground'
+                : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+            }`}
+          >
+            {concept.status === 'archived' ? 'Archivado' : 'Activo'}
+          </span>
+        </div>
+        <p className="mt-2 line-clamp-3 text-sm leading-6 text-foreground/75">
+          {concept.definition}
         </p>
       </div>
       {canManage ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-1.5 border-t pt-3">
+          <Button asChild size="sm" variant="ghost">
+            <Link
+              href={`/organizaciones/${slug}/curriculo/prerrequisitos?graph=concepts&target=${concept.id}`}
+            >
+              <GitBranch /> Prerrequisitos
+            </Link>
+          </Button>
           <Dialog
             onOpenChange={(open) => {
               setEditing(open);
@@ -133,7 +164,7 @@ function ConceptRow({
             open={editing}
           >
             <DialogTrigger asChild>
-              <Button size="sm" type="button" variant="outline">
+              <Button size="sm" type="button" variant="ghost">
                 <Pencil />
                 Editar
               </Button>

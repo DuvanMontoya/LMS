@@ -1,0 +1,494 @@
+'use client';
+
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Archive,
+  BookOpenCheck,
+  ExternalLink,
+  GraduationCap,
+  Save,
+  Search,
+  Target,
+} from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { platformBrowserClient } from '@/lib/api/platform-browser-client';
+import type { components } from '@/lib/api/generated/platform';
+import {
+  type CourseTopicOption,
+  flattenCourseTopics,
+} from '@/lib/courses/curriculum-topics';
+import { cn } from '@/lib/utils';
+
+type Outline = components['schemas']['Outline'];
+type Lesson = Outline['modules'][number]['units'][number];
+type Objective = components['schemas']['Objective'];
+type RevisionSubject = Outline['subjects'][number];
+type TopicTree = components['schemas']['Topic'][];
+
+export type LessonConfigurationInput = {
+  estimatedDurationMinutes: number | null;
+  learningObjectiveIds: string[];
+  summary: string;
+  title: string;
+  topicIds: string[];
+};
+
+function searchable(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es-CO');
+}
+
+export function LessonConfiguration({
+  alignedSubjects,
+  isSaving,
+  lesson,
+  objectives,
+  onArchive,
+  onSave,
+  organizationSlug,
+  topics,
+}: Readonly<{
+  alignedSubjects: readonly RevisionSubject[];
+  isSaving: boolean;
+  lesson: Lesson;
+  objectives: Objective[];
+  onArchive: () => void;
+  onSave: (input: LessonConfigurationInput) => Promise<void>;
+  organizationSlug: string;
+  topics: CourseTopicOption[];
+}>) {
+  const [title, setTitle] = useState(lesson.title);
+  const [summary, setSummary] = useState(lesson.summary);
+  const [duration, setDuration] = useState(
+    lesson.estimated_duration_minutes?.toString() ?? '',
+  );
+  const [selectedTopicIds, setSelectedTopicIds] = useState(
+    lesson.topics.map((item) => item.topic.id),
+  );
+  const [selectedObjectiveIds, setSelectedObjectiveIds] = useState(
+    lesson.learning_objectives.map((item) => item.learning_objective.id),
+  );
+  const [query, setQuery] = useState('');
+  const subjectById = useMemo(
+    () =>
+      new Map(alignedSubjects.map((item) => [item.subject.id, item] as const)),
+    [alignedSubjects],
+  );
+  const primarySubject =
+    alignedSubjects.find((item) => item.alignment_type === 'primary') ??
+    alignedSubjects[0];
+  const [activeSubjectId, setActiveSubjectId] = useState(
+    primarySubject?.subject.id ?? '',
+  );
+  const activeSubject = alignedSubjects.find(
+    (item) => item.subject.id === activeSubjectId,
+  );
+  const {
+    data: additionalTopics = [],
+    isError: didTopicsFail,
+    isLoading: isLoadingTopics,
+  } = useQuery({
+    enabled:
+      Boolean(activeSubject) &&
+      activeSubject?.subject.id !== primarySubject?.subject.id,
+    queryKey: [
+      'course-curriculum-topics',
+      organizationSlug,
+      activeSubject?.subject.id,
+    ],
+    queryFn: async () => {
+      if (!activeSubject) return [];
+      const { data, response } = await platformBrowserClient.GET(
+        '/api/v1/organizations/{slug}/catalog/subjects/{subject_id}/topics/',
+        {
+          params: {
+            path: {
+              slug: organizationSlug,
+              subject_id: activeSubject.subject.id,
+            },
+          },
+        },
+      );
+      if (!response.ok || !data) {
+        throw new Error('No fue posible consultar los temas de la asignatura.');
+      }
+      return flattenCourseTopics(data as TopicTree, activeSubject.subject);
+    },
+    staleTime: 60_000,
+  });
+  const activeTopics =
+    activeSubject?.subject.id === primarySubject?.subject.id
+      ? topics
+      : additionalTopics;
+  const normalizedQuery = searchable(query.trim());
+  const visibleTopics = activeTopics.filter((topic) => {
+    const subject = topic.subject_name;
+    return searchable(
+      `${topic.ancestor_titles.join(' ')} ${topic.title} ${subject}`,
+    ).includes(normalizedQuery);
+  });
+  const activeObjectives = objectives.filter(
+    (objective) => objective.subject_id === activeSubjectId,
+  );
+  const visibleObjectives = activeObjectives.filter((objective) => {
+    const subject = subjectById.get(objective.subject_id)?.subject.name ?? '';
+    return searchable(
+      `${objective.code} ${objective.statement} ${subject}`,
+    ).includes(normalizedQuery);
+  });
+  const hasCurriculumOptions =
+    activeTopics.length > 0 || activeObjectives.length > 0;
+  const alignmentCount = selectedTopicIds.length + selectedObjectiveIds.length;
+
+  function toggle(current: string[], id: string, checked: boolean) {
+    return checked
+      ? [...new Set([...current, id])]
+      : current.filter((x) => x !== id);
+  }
+
+  return (
+    <form
+      action={() =>
+        onSave({
+          estimatedDurationMinutes: duration ? Number(duration) : null,
+          learningObjectiveIds: selectedObjectiveIds,
+          summary,
+          title,
+          topicIds: selectedTopicIds,
+        })
+      }
+      className="mt-3 overflow-hidden rounded-xl border bg-card shadow-xs"
+    >
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b bg-muted/15 px-4 py-4 sm:px-5">
+        <div>
+          <p className="text-xs font-semibold tracking-wider text-primary uppercase">
+            Configuración integral
+          </p>
+          <h5 className="mt-1 font-semibold">
+            Define la lección en un solo paso
+          </h5>
+          <p className="mt-1 text-sm text-muted-foreground">
+            La información y la alineación se guardan juntas, sin estados
+            parciales.
+          </p>
+        </div>
+        <Badge variant={alignmentCount ? 'secondary' : 'outline'}>
+          {alignmentCount}{' '}
+          {alignmentCount === 1 ? 'alineación' : 'alineaciones'}
+        </Badge>
+      </header>
+
+      <div className="grid min-w-0 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+        <section className="border-b p-4 sm:p-5 xl:border-r xl:border-b-0">
+          <div className="mb-4 flex items-center gap-2">
+            <BookOpenCheck className="size-4 text-primary" />
+            <h6 className="font-semibold">Información esencial</h6>
+          </div>
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <Label htmlFor={`lesson-title-${lesson.id}`}>Título</Label>
+              <Input
+                id={`lesson-title-${lesson.id}`}
+                maxLength={200}
+                onChange={(event) => setTitle(event.target.value)}
+                required
+                value={title}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`lesson-summary-${lesson.id}`}>Resumen</Label>
+              <Textarea
+                id={`lesson-summary-${lesson.id}`}
+                maxLength={1200}
+                onChange={(event) => setSummary(event.target.value)}
+                placeholder="Explica qué aprenderá la persona en esta lección."
+                rows={5}
+                value={summary}
+              />
+            </div>
+            <div className="max-w-56 space-y-2">
+              <Label htmlFor={`lesson-duration-${lesson.id}`}>
+                Duración estimada
+              </Label>
+              <div className="relative">
+                <Input
+                  className="pr-16"
+                  id={`lesson-duration-${lesson.id}`}
+                  min={1}
+                  onChange={(event) => setDuration(event.target.value)}
+                  placeholder="45"
+                  type="number"
+                  value={duration}
+                />
+                <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
+                  minutos
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="min-w-0 p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <GraduationCap className="size-4 text-primary" />
+                <h6 className="font-semibold">Alineación curricular</h6>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Solo se muestran referencias válidas para esta revisión.
+              </p>
+            </div>
+            <div
+              className="flex flex-wrap gap-1.5"
+              aria-label="Asignaturas alineadas"
+            >
+              {alignedSubjects.map((item) => (
+                <Button
+                  aria-pressed={activeSubjectId === item.subject.id}
+                  className="h-7 rounded-full px-2.5 text-xs"
+                  key={item.subject.id}
+                  onClick={() => {
+                    setActiveSubjectId(item.subject.id);
+                    setQuery('');
+                  }}
+                  size="sm"
+                  type="button"
+                  variant={
+                    activeSubjectId === item.subject.id
+                      ? 'secondary'
+                      : 'outline'
+                  }
+                >
+                  {item.subject.name}
+                  {item.alignment_type === 'primary' ? ' · principal' : ''}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {isLoadingTopics ? (
+            <div className="mt-4 rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+              Cargando la taxonomía complementaria…
+            </div>
+          ) : didTopicsFail ? (
+            <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-5 text-sm text-destructive">
+              No fue posible cargar los temas de esta asignatura. Intenta
+              abrirla de nuevo antes de guardar.
+            </div>
+          ) : hasCurriculumOptions ? (
+            <>
+              <div className="relative mt-4">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  aria-label="Buscar temas u objetivos"
+                  className="pl-9"
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Buscar por tema, código, objetivo o asignatura"
+                  type="search"
+                  value={query}
+                />
+              </div>
+              <div className="mt-4 grid min-w-0 gap-4 2xl:grid-cols-2">
+                <AlignmentGroup
+                  emptyLabel={
+                    normalizedQuery
+                      ? 'Ningún tema coincide con la búsqueda.'
+                      : 'Las asignaturas alineadas aún no tienen temas.'
+                  }
+                  icon={BookOpenCheck}
+                  label="Temas"
+                  selectedCount={
+                    activeTopics.filter((topic) =>
+                      selectedTopicIds.includes(topic.id),
+                    ).length
+                  }
+                >
+                  {visibleTopics.map((topic) => (
+                    <AlignmentOption
+                      checked={selectedTopicIds.includes(topic.id)}
+                      key={topic.id}
+                      label={topic.title}
+                      onChange={(checked) =>
+                        setSelectedTopicIds((ids) =>
+                          toggle(ids, topic.id, checked),
+                        )
+                      }
+                      context={topic.ancestor_titles.join(' › ')}
+                      subject={topic.subject_name}
+                    />
+                  ))}
+                </AlignmentGroup>
+                <AlignmentGroup
+                  emptyLabel={
+                    normalizedQuery
+                      ? 'Ningún objetivo coincide con la búsqueda.'
+                      : 'La revisión aún no tiene objetivos seleccionados.'
+                  }
+                  icon={Target}
+                  label="Objetivos de la revisión"
+                  selectedCount={
+                    activeObjectives.filter((objective) =>
+                      selectedObjectiveIds.includes(objective.id),
+                    ).length
+                  }
+                >
+                  {visibleObjectives.map((objective) => (
+                    <AlignmentOption
+                      checked={selectedObjectiveIds.includes(objective.id)}
+                      code={objective.code}
+                      key={objective.id}
+                      label={objective.statement}
+                      onChange={(checked) =>
+                        setSelectedObjectiveIds((ids) =>
+                          toggle(ids, objective.id, checked),
+                        )
+                      }
+                      subject={
+                        subjectById.get(objective.subject_id)?.subject.name
+                      }
+                    />
+                  ))}
+                </AlignmentGroup>
+              </div>
+            </>
+          ) : (
+            <div className="mt-4 rounded-xl border border-dashed bg-muted/10 px-5 py-7 text-center">
+              <Target className="mx-auto size-5 text-muted-foreground" />
+              <p className="mt-3 text-sm font-semibold">
+                Esta asignatura aún no tiene currículo utilizable
+              </p>
+              <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-muted-foreground">
+                Agrega temas a {activeSubject?.subject.name ?? 'la asignatura'}{' '}
+                y selecciona sus objetivos en la alineación de la revisión. Las
+                complementarias se consultan solo cuando las abres.
+              </p>
+              <Button asChild className="mt-4" size="sm" variant="outline">
+                <Link
+                  href={
+                    activeSubject
+                      ? `/organizaciones/${organizationSlug}/curriculo/asignaturas/${activeSubject.subject.id}`
+                      : `/organizaciones/${organizationSlug}/curriculo`
+                  }
+                >
+                  Abrir currículo institucional
+                  <ExternalLink data-icon="inline-end" />
+                </Link>
+              </Button>
+            </div>
+          )}
+        </section>
+      </div>
+
+      <footer className="flex flex-col-reverse gap-3 border-t bg-muted/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <Button onClick={onArchive} type="button" variant="ghost">
+          <Archive /> Archivar lección
+        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <p className="text-xs text-muted-foreground">
+            Un guardado · una versión · sin cambios parciales
+          </p>
+          <Button disabled={isSaving} type="submit">
+            <Save /> {isSaving ? 'Guardando…' : 'Guardar configuración'}
+          </Button>
+        </div>
+      </footer>
+    </form>
+  );
+}
+
+function AlignmentGroup({
+  children,
+  emptyLabel,
+  icon: Icon,
+  label,
+  selectedCount,
+}: Readonly<{
+  children: React.ReactNode;
+  emptyLabel: string;
+  icon: typeof Target;
+  label: string;
+  selectedCount: number;
+}>) {
+  const hasItems = Array.isArray(children)
+    ? children.length > 0
+    : Boolean(children);
+  return (
+    <fieldset className="min-w-0 overflow-hidden rounded-lg border bg-background">
+      <legend className="sr-only">{label}</legend>
+      <div className="flex items-center justify-between gap-3 border-b bg-muted/15 px-3 py-2.5">
+        <span className="flex items-center gap-2 text-sm font-semibold">
+          <Icon className="size-4 text-primary" /> {label}
+        </span>
+        <Badge variant="outline">{selectedCount} seleccionados</Badge>
+      </div>
+      <div className="max-h-64 overflow-y-auto p-2">
+        {hasItems ? (
+          <div className="grid gap-1">{children}</div>
+        ) : (
+          <p className="px-2 py-6 text-center text-xs text-muted-foreground">
+            {emptyLabel}
+          </p>
+        )}
+      </div>
+    </fieldset>
+  );
+}
+
+function AlignmentOption({
+  checked,
+  code,
+  context,
+  label,
+  onChange,
+  subject,
+}: Readonly<{
+  checked: boolean;
+  code?: string;
+  context?: string | undefined;
+  label: string;
+  onChange: (checked: boolean) => void;
+  subject?: string | undefined;
+}>) {
+  return (
+    <label
+      className={cn(
+        'flex cursor-pointer gap-3 rounded-md border border-transparent px-2.5 py-2 text-sm transition-colors hover:bg-muted/40',
+        checked && 'border-primary/20 bg-primary/[0.035]',
+      )}
+    >
+      <input
+        checked={checked}
+        className="mt-0.5 size-4 shrink-0 accent-primary"
+        onChange={(event) => onChange(event.target.checked)}
+        type="checkbox"
+      />
+      <span className="min-w-0">
+        <span className="block leading-5">
+          {code ? <strong className="font-mono text-xs">{code}</strong> : null}
+          {code ? ' — ' : null}
+          {label}
+        </span>
+        {context ? (
+          <span className="mt-0.5 block truncate text-[0.6875rem] text-muted-foreground">
+            {context}
+          </span>
+        ) : null}
+        {subject ? (
+          <span className="mt-0.5 block text-[0.6875rem] text-muted-foreground">
+            {subject}
+          </span>
+        ) : null}
+      </span>
+    </label>
+  );
+}

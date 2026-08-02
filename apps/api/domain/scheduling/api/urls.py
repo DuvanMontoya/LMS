@@ -8,6 +8,10 @@ SESSION = BASE + "live-sessions/<uuid:session_id>/"
 
 urlpatterns = [
     path(
+        BASE + "course-activities/",
+        views.LiveClassCourseActivityCreateView.as_view(),
+    ),
+    path(
         BASE + "course-activities/<uuid:activity_id>/binding/",
         views.LiveClassActivityBindingView.as_view(),
     ),

@@ -39,9 +39,14 @@ const objectiveSchema = z.object({
 type ObjectiveValues = z.infer<typeof objectiveSchema>;
 
 export function ObjectiveForm({
+  selectedSubjectId,
   slug,
   subjects,
-}: Readonly<{ slug: string; subjects: readonly Subject[] }>) {
+}: Readonly<{
+  selectedSubjectId?: string | undefined;
+  slug: string;
+  subjects: readonly Subject[];
+}>) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const createObjective = useCreateObjective(slug);
@@ -52,7 +57,7 @@ export function ObjectiveForm({
       cognitive_level: '',
       description: '',
       statement: '',
-      subject_id: subjects[0]?.id ?? '',
+      subject_id: selectedSubjectId ?? subjects[0]?.id ?? '',
     },
   });
   async function onSubmit(values: ObjectiveValues) {

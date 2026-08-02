@@ -205,6 +205,52 @@ export function useBindActivity(path: RevisionPath) {
   });
 }
 
+export function useCreateAssessmentActivity(path: RevisionPath) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      body: components['schemas']['AssessmentCourseActivityCreate'],
+    ) =>
+      requireData(
+        platformBrowserClient.POST(
+          '/api/v1/organizations/{slug}/assessments/course-activities/',
+          { body, params: { path: { slug: path.slug } } },
+        ),
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: courseKeys.outline(
+          path.slug,
+          path.courseSlug,
+          path.revisionId,
+        ),
+      }),
+  });
+}
+
+export function useCreateLiveClassActivity(path: RevisionPath) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      body: components['schemas']['LiveClassCourseActivityCreate'],
+    ) =>
+      requireData(
+        platformBrowserClient.POST(
+          '/api/v1/organizations/{slug}/scheduling/course-activities/',
+          { body, params: { path: { slug: path.slug } } },
+        ),
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: courseKeys.outline(
+          path.slug,
+          path.courseSlug,
+          path.revisionId,
+        ),
+      }),
+  });
+}
+
 export function useUpdateStructure(path: RevisionPath) {
   const queryClient = useQueryClient();
   return useMutation({

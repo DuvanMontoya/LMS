@@ -14,7 +14,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from domain.courses.models import Course, CourseActivity
+from domain.courses.models import Course, CourseActivity, CourseModule
 from domain.learning.contracts import course_group_for_scheduling
 from domain.learning.models import CourseGroupActivity
 from domain.organizations.choices import MembershipStatus
@@ -22,7 +22,10 @@ from domain.organizations.models import Membership, Organization
 from domain.organizations.policies import active_membership
 from domain.organizations.selectors import organization_visible_to
 from domain.scheduling.calendar_extensions import external_calendar_events
-from domain.scheduling.course_activities import bind_live_class_activity
+from domain.scheduling.course_activities import (
+    bind_live_class_activity,
+    create_and_bind_live_class_activity,
+)
 from domain.scheduling.exceptions import SchedulingDomainError
 from domain.scheduling.models import AcademicEventOccurrence, LiveSession
 from domain.scheduling.policies import can_create_schedule
@@ -55,6 +58,7 @@ from .serializers import (
     EventRescheduleSerializer,
     LiveClassActivityBindingInputSerializer,
     LiveClassActivityBindingSerializer,
+    LiveClassCourseActivityCreateSerializer,
     LiveConnectionSerializer,
     LiveSessionDetailSerializer,
     LiveSessionListQuerySerializer,
@@ -122,6 +126,57 @@ class LiveClassActivityBindingView(APIView):
                 {
                     "id": binding.id,
                     "activity_id": binding.activity_id,
+                    "minimum_attended_occurrences": binding.minimum_attended_occurrences,
+                    "minimum_attendance_minutes": binding.minimum_attendance_minutes,
+                    "revision_lock_version": revision_lock_version,
+                }
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class LiveClassCourseActivityCreateView(APIView):
+    @extend_schema(
+        operation_id="scheduling_course_activity_create",
+        request=LiveClassCourseActivityCreateSerializer,
+        responses={201: LiveClassActivityBindingSerializer},
+    )
+    def post(self, request: Request, slug: str) -> Response:
+        organization = _organization(request, slug)
+        serializer = LiveClassCourseActivityCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        module = get_object_or_404(
+            CourseModule.objects.select_related("revision__course"),
+            pk=serializer.validated_data["module_id"],
+            revision__course__organization=organization,
+        )
+        result = _domain_call(
+            lambda: create_and_bind_live_class_activity(
+                actor=request.user,
+                organization=organization,
+                module=module,
+                expected_revision_version=serializer.validated_data[
+                    "expected_revision_version"
+                ],
+                title=serializer.validated_data["title"],
+                summary=serializer.validated_data.get("summary", ""),
+                estimated_duration_minutes=serializer.validated_data[
+                    "estimated_duration_minutes"
+                ],
+                required=serializer.validated_data["required"],
+                minimum_attendance_basis_points=serializer.validated_data[
+                    "minimum_attendance_basis_points"
+                ],
+            )
+        )
+        if isinstance(result, Response):
+            return result
+        binding, activity, revision_lock_version = result
+        return Response(
+            LiveClassActivityBindingSerializer(
+                {
+                    "id": binding.id,
+                    "activity_id": activity.id,
                     "minimum_attended_occurrences": binding.minimum_attended_occurrences,
                     "minimum_attendance_minutes": binding.minimum_attendance_minutes,
                     "revision_lock_version": revision_lock_version,

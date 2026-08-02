@@ -17,6 +17,46 @@ from .support import CourseFixtureMixin
 
 
 class CourseApiTests(CourseFixtureMixin, TestCase):
+    def test_patch_unit_saves_information_and_alignment_once(self) -> None:
+        owner, organization, _subject, objective, topic, revision = (
+            self.course_revision()
+        )
+        module, revision = create_module(
+            actor=owner,
+            organization=organization,
+            revision=revision,
+            expected_version=revision.lock_version,
+            title="Módulo",
+        )
+        unit, revision = create_unit(
+            actor=owner,
+            organization=organization,
+            module=module,
+            expected_version=revision.lock_version,
+            title="Lección",
+        )
+        response = self.client_for(owner).patch(
+            f"/api/v1/organizations/{organization.slug}/courses/"
+            f"{revision.course.slug}/revisions/{revision.id}/units/{unit.id}/",
+            {
+                "expected_version": revision.lock_version,
+                "title": "Lección integralmente configurada",
+                "summary": "Un único contrato de escritura.",
+                "estimated_duration_minutes": 40,
+                "topic_ids": [str(topic.id)],
+                "learning_objective_ids": [str(objective.id)],
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["lock_version"], revision.lock_version + 1)
+        unit.refresh_from_db()
+        self.assertEqual(unit.title, "Lección integralmente configurada")
+        self.assertEqual(unit.topic_alignments.get().topic_id, topic.id)
+        self.assertEqual(
+            unit.objective_alignments.get().learning_objective_id, objective.id
+        )
+
     def test_author_creates_courses_only_for_assigned_subjects(self) -> None:
         owner, organization, subject, objective, _topic = self.curriculum()
         author = self.member(

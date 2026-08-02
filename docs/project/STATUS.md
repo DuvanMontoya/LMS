@@ -1328,3 +1328,84 @@ Siguiente paso:
   negoció STARTTLS y autenticó Django en `smtp.resend.com:587` sin enviar correo.
 - Pendiente explícito: obtener autorización y destinatario para transmitir un
   único correo real y comprobar su recepción. No se realizó ningún despliegue.
+
+## Remediación integral de estructura de cursos y asignaturas — 2026-08-02
+
+- Se reprodujo en `calculo-integral` la contaminación con temas y objetivos de
+  Cálculo Diferencial. La causa no era sólo visual: el workspace cargaba todo el
+  catálogo institucional, aplanaba únicamente raíces de temas y permitía que la
+  interfaz ofreciera selecciones que el dominio rechazaba después.
+- El curso carga inicialmente sólo la asignatura principal. Las asignaturas de
+  apoyo quedan disponibles de forma explícita y sus temas se solicitan bajo
+  demanda al abrir su pestaña; no se descargan ni mezclan cientos de opciones.
+  El árbol se recorre recursivamente y muestra la ruta de ancestros, por lo que
+  los temas hijos también pueden seleccionarse sin perder contexto.
+- La página de asignatura limita las asociaciones de conceptos a los temas de
+  esa asignatura. Se sustituyó la composición extensa por métricas compactas,
+  árbol jerárquico y acciones progresivas de tema/conceptos, conservando las
+  operaciones y contratos existentes.
+- Información, duración, temas y objetivos de una lección se guardan mediante
+  un único PATCH y una sola transacción con control de versión. La validación y
+  el reemplazo de alineaciones ocurren bajo el mismo lock; un dato ajeno a la
+  revisión o asignatura provoca rollback completo, sin estados parciales.
+- Añadir lección, clase en vivo y evaluación son ahora tres flujos separados.
+  Clases y evaluaciones usan endpoints transaccionales especializados que crean
+  y vinculan la actividad en una operación. La evaluación hereda título,
+  descripción, duración, umbral y límite de intentos de su versión aprobada; la
+  clase calcula su mínimo de asistencia desde su propia duración en servidor.
+- Se reparó mediante el servicio de dominio la revisión local de Cálculo
+  Integral: se retiraron las alineaciones de apoyo accidentales con Cálculo
+  Diferencial y Precálculo, manteniendo Cálculo Integral como principal y sin
+  borrar los temas reales `Antiderivada` y `Sumas de Riemann`.
+- Evidencia verde: courses 24/24, assessments API 9/9, scheduling 21/21, Vitest
+  focal 4/4, Ruff, ESLint, TypeScript, OpenAPI/cliente sincronizados,
+  `makemigrations --check` sin cambios y build de producción Next.js. Chromium
+  recorrió el curso y la asignatura con identidad autora; comprobó aislamiento,
+  tema padre/hijo, metadatos heredados de evaluación, axe en el flujo de curso
+  y ausencia de overflow a 390 px en ambas superficies.
+- El E2E focal de cursos cerró 1/1 y las otras tres rutas del archivo ya habían
+  cerrado verdes en la corrida integrada. La prueba de jerarquía curricular
+  actualizada cerró 1/1; los seis escenarios CRUD encadenados restantes siguen
+  usando contratos visuales anteriores (campos hoy dentro de diálogos) y no se
+  declaran verdes. El producto y las APIs ejercitadas no fallaron, pero esa
+  modernización transversal del archivo E2E queda registrada como deuda de
+  pruebas preexistente fuera de esta remediación.
+- No se añadieron dependencias, modelos ni migraciones, no se alteraron límites
+  de dominio y no se realizó commit, push ni despliegue.
+
+## Remediación integral de espacios curriculares — 2026-08-02
+
+- Objetivos dejó de presentar el catálogo institucional completo: exige un
+  contexto explícito de asignatura, conserva ese contexto en la URL y consulta
+  únicamente sus objetivos y asociaciones visibles. La respuesta está paginada
+  a 20 registros y las asociaciones/conceptos relacionados se leen por lotes
+  acotados, sin volver a cargar miles de filas en segundo plano.
+- Conceptos se define y presenta como diccionario institucional reutilizable,
+  no como temario. Incluye búsqueda remota, filtro por uso en una asignatura,
+  estado, conteo, paginación de 24 y tarjetas compactas; la estructura temática
+  permanece en la página de cada asignatura.
+- Prerrequisitos separa el grafo entre asignaturas del grafo entre conceptos.
+  Sólo abre un objetivo a la vez, carga sus aristas directas e inversas y no
+  muestra todos los candidatos hasta que existe una búsqueda intencional. La UI
+  explica por qué otras asignaturas sí son candidatas en ese grafo y no las
+  presenta como contenido ya asociado.
+- Las cuatro superficies de currículo comparten una navegación compacta y
+  semántica. Los filtros y editores se remontan al cambiar de contexto para
+  evitar selecciones visuales obsoletas después de una navegación suave.
+- API añadió filtros por asignatura, UUID de objetivos y extremos del grafo,
+  además de ventanas `limit/offset` con `X-Total-Count`; conserva las lecturas
+  legacy no paginadas para no romper consumidores existentes. UUID y límites se
+  validan con error 400 y todas las consultas siguen confinadas a la organización.
+- Evidencia: `domain/catalog/tests/test_api.py` 12/12 sobre PostgreSQL real;
+  Ruff, ESLint, TypeScript, OpenAPI/cliente y `makemigrations --check` verdes.
+  El E2E focal de Chromium pasó 1/1 con navegación suave, aislamiento explícito,
+  390 px, ausencia de overflow y axe WCAG A/AA en objetivos, conceptos y ambos
+  grafos de prerrequisitos.
+- La sesión Chrome autenticada del usuario recorrió las tres rutas locales:
+  Cálculo Integral mostró sólo `CNPER`; su filtro de conceptos devolvió 0 y el
+  grafo de asignaturas mantuvo Cálculo Integral como objetivo, sin mostrar el
+  grafo conceptual simultáneamente. No se modificaron datos durante esta revisión.
+- La suite global del backend continúa con 320/348 pruebas verdes y 28 fallos de
+  fixtures/policies preexistentes en varios dominios; la prueba focal de catálogo
+  queda verde, pero no se declara la batería global resuelta. No se añadieron
+  dependencias ni migraciones y no se realizó commit, push o despliegue.

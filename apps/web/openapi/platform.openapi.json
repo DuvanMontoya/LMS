@@ -701,6 +701,20 @@
         "enum": ["draft", "in_review", "changes_requested", "approved"],
         "type": "string"
       },
+      "AssessmentCourseActivityCreate": {
+        "properties": {
+          "assessment_version_id": { "format": "uuid", "type": "string" },
+          "expected_revision_version": { "minimum": 1, "type": "integer" },
+          "module_id": { "format": "uuid", "type": "string" },
+          "required": { "default": true, "type": "boolean" }
+        },
+        "required": [
+          "assessment_version_id",
+          "expected_revision_version",
+          "module_id"
+        ],
+        "type": "object"
+      },
       "AssessmentCreate": {
         "properties": {
           "attempt_limit": {
@@ -5365,6 +5379,33 @@
         ],
         "type": "object"
       },
+      "LiveClassCourseActivityCreate": {
+        "properties": {
+          "estimated_duration_minutes": {
+            "maximum": 720,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "expected_revision_version": { "minimum": 1, "type": "integer" },
+          "minimum_attendance_basis_points": {
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "module_id": { "format": "uuid", "type": "string" },
+          "required": { "default": true, "type": "boolean" },
+          "summary": { "maxLength": 1200, "type": "string" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": [
+          "estimated_duration_minutes",
+          "expected_revision_version",
+          "minimum_attendance_basis_points",
+          "module_id",
+          "title"
+        ],
+        "type": "object"
+      },
       "LiveConnection": {
         "properties": {
           "serverUrl": { "type": "string" },
@@ -8769,8 +8810,18 @@
             "type": "integer"
           },
           "expected_version": { "minimum": 1, "type": "integer" },
+          "learning_objective_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 200,
+            "type": "array"
+          },
           "summary": { "maxLength": 1200, "type": "string" },
-          "title": { "maxLength": 200, "type": "string" }
+          "title": { "maxLength": 200, "type": "string" },
+          "topic_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 200,
+            "type": "array"
+          }
         },
         "required": ["expected_version"],
         "type": "object"
@@ -12174,6 +12225,53 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/AttemptResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/course-activities/": {
+      "post": {
+        "operationId": "assessment_course_activity_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentCourseActivityCreate"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentCourseActivityCreate"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentCourseActivityCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentActivityBinding"
+                }
               }
             },
             "description": ""
@@ -16117,6 +16215,12 @@
         "description": "Return all visible concept edges in one organization-scoped query.",
         "operationId": "organizations_catalog_concept_prerequisites_list",
         "parameters": [
+          { "in": "query", "name": "entity", "schema": { "type": "string" } },
+          {
+            "in": "query",
+            "name": "prerequisite",
+            "schema": { "type": "string" }
+          },
           {
             "in": "path",
             "name": "slug",
@@ -16148,6 +16252,9 @@
         "description": "Applies declared filters only after the organization visibility boundary.",
         "operationId": "organizations_catalog_concepts_list",
         "parameters": [
+          { "in": "query", "name": "ids", "schema": { "type": "string" } },
+          { "in": "query", "name": "limit", "schema": { "type": "integer" } },
+          { "in": "query", "name": "offset", "schema": { "type": "integer" } },
           { "in": "query", "name": "ordering", "schema": { "type": "string" } },
           { "in": "query", "name": "search", "schema": { "type": "string" } },
           {
@@ -16156,7 +16263,8 @@
             "required": true,
             "schema": { "type": "string" }
           },
-          { "in": "query", "name": "status", "schema": { "type": "string" } }
+          { "in": "query", "name": "status", "schema": { "type": "string" } },
+          { "in": "query", "name": "subject", "schema": { "type": "string" } }
         ],
         "responses": {
           "200": {
@@ -16648,6 +16756,8 @@
             "name": "cognitive_level",
             "schema": { "type": "string" }
           },
+          { "in": "query", "name": "limit", "schema": { "type": "integer" } },
+          { "in": "query", "name": "offset", "schema": { "type": "integer" } },
           { "in": "query", "name": "ordering", "schema": { "type": "string" } },
           { "in": "query", "name": "search", "schema": { "type": "string" } },
           {
@@ -16939,11 +17049,17 @@
         "operationId": "organizations_catalog_objective_concepts_list",
         "parameters": [
           {
+            "in": "query",
+            "name": "objectives",
+            "schema": { "type": "string" }
+          },
+          {
             "in": "path",
             "name": "slug",
             "required": true,
             "schema": { "type": "string" }
-          }
+          },
+          { "in": "query", "name": "subject", "schema": { "type": "string" } }
         ],
         "responses": {
           "200": {
@@ -16969,6 +17085,12 @@
         "description": "Return all visible subject edges in one organization-scoped query.",
         "operationId": "organizations_catalog_subject_prerequisites_list",
         "parameters": [
+          { "in": "query", "name": "entity", "schema": { "type": "string" } },
+          {
+            "in": "query",
+            "name": "prerequisite",
+            "schema": { "type": "string" }
+          },
           {
             "in": "path",
             "name": "slug",
@@ -23873,6 +23995,53 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/course-activities/": {
+      "post": {
+        "operationId": "scheduling_course_activity_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveClassCourseActivityCreate"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveClassCourseActivityCreate"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveClassCourseActivityCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveClassActivityBinding"
+                }
               }
             },
             "description": ""

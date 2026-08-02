@@ -6,16 +6,76 @@ from typing import Any
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from domain.courses.choices import ActivityType, AuthoringStatus
-from domain.courses.models import CourseActivity, CourseRevision
+from domain.courses.choices import (
+    ActivityCompletionMethod,
+    ActivityType,
+    AuthoringStatus,
+)
+from domain.courses.exceptions import (
+    CourseAccessDenied,
+    CourseDomainError,
+    CourseRevisionConflict,
+)
+from domain.courses.models import CourseActivity, CourseModule, CourseRevision
 from domain.courses.policies import (
     can_manage_course,
     has_course_academic_responsibility,
 )
+from domain.courses.services import create_activity
 from domain.organizations.models import Organization
 
 from .exceptions import SchedulingAccessDenied, SchedulingConflict, SchedulingInvalid
 from .models import LiveClassActivityBinding
+
+
+@transaction.atomic
+def create_and_bind_live_class_activity(
+    *,
+    actor: Any,
+    organization: Organization,
+    module: CourseModule,
+    expected_revision_version: int,
+    title: str,
+    summary: str,
+    estimated_duration_minutes: int,
+    required: bool,
+    minimum_attendance_basis_points: int,
+    minimum_attended_occurrences: int = 1,
+) -> tuple[LiveClassActivityBinding, CourseActivity, int]:
+    try:
+        activity, revision = create_activity(
+            actor=actor,
+            organization=organization,
+            module=module,
+            expected_version=expected_revision_version,
+            activity_type=ActivityType.LIVE_CLASS,
+            title=title,
+            summary=summary,
+            estimated_duration_minutes=estimated_duration_minutes,
+            required=required,
+            completion_method=ActivityCompletionMethod.ATTENDANCE,
+            minimum_attendance_basis_points=minimum_attendance_basis_points,
+            minimum_grade_basis_points=None,
+        )
+    except CourseRevisionConflict as error:
+        raise SchedulingConflict(str(error)) from error
+    except CourseAccessDenied as error:
+        raise SchedulingAccessDenied(str(error)) from error
+    except CourseDomainError as error:
+        raise SchedulingInvalid(str(error)) from error
+    binding, lock_version = bind_live_class_activity(
+        actor=actor,
+        organization=organization,
+        activity=activity,
+        expected_revision_version=revision.lock_version,
+        minimum_attended_occurrences=minimum_attended_occurrences,
+        minimum_attendance_minutes=max(
+            1,
+            (estimated_duration_minutes * minimum_attendance_basis_points + 9_999)
+            // 10_000,
+        ),
+    )
+    return binding, activity, lock_version
 
 
 @transaction.atomic

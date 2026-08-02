@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import type { operations } from '@/lib/api/generated/platform';
 import { createPlatformServerClient } from '@/lib/api/platform-server-client';
 import { getOrganizationForPage } from '@/lib/organizations/server';
+import { flattenCourseTopics } from '@/lib/courses/curriculum-topics';
 
 type CoursePage =
   operations['organizations_courses_list']['responses'][200]['content']['application/json'];
@@ -170,16 +171,26 @@ export async function getCourseWorkspace(slug: string, courseSlug: string) {
         ) as Promise<Readiness>)
       : Promise.resolve(null),
   ]);
+  const revisionObjectiveIds = new Set(
+    outline.learning_objectives.map((item) => item.learning_objective.id),
+  );
+  const primarySubjectId = outline.subjects.find(
+    (item) => item.alignment_type === 'primary',
+  )?.subject.id;
+  const primarySubject = subjects.find(
+    (subject) => subject.id === primarySubjectId,
+  );
   const topicLists = await Promise.all(
-    subjects.map(
-      (subject) =>
-        required(
+    (primarySubject ? [primarySubject] : []).map(async (subject) =>
+      (
+        (await required(
           client.GET(
             '/api/v1/organizations/{slug}/catalog/subjects/{subject_id}/topics/',
             { params: { path: { slug, subject_id: subject.id } } },
           ),
           'No fue posible consultar los temas.',
-        ) as Promise<TopicList>,
+        )) as TopicList
+      ).flatMap((topic) => flattenCourseTopics([topic], subject)),
     ),
   );
   return {
@@ -194,5 +205,8 @@ export async function getCourseWorkspace(slug: string, courseSlug: string) {
     subjects,
     topics: topicLists.flat(),
     transitions,
+    unitObjectives: objectives.filter((objective) =>
+      revisionObjectiveIds.has(objective.id),
+    ),
   };
 }
