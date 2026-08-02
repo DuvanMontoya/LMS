@@ -38,6 +38,43 @@ class AcademicGroupMemberStatus(models.TextChoices):
     INACTIVE = "inactive", "Inactivo"
 
 
+class CohortRosterMode(models.TextChoices):
+    MANUAL = "manual", "Manual"
+    SYNCED = "synced", "Sincronizado con grupo académico"
+
+
+class CohortStaffRole(models.TextChoices):
+    LEAD_INSTRUCTOR = "lead_instructor", "Docente principal"
+    INSTRUCTOR = "instructor", "Docente"
+    ASSISTANT = "assistant", "Asistente"
+
+
+class EnrollmentCohortSource(models.TextChoices):
+    MANUAL = "manual", "Asignación manual"
+    ACADEMIC_GROUP_SYNC = "academic_group_sync", "Sincronización de grupo académico"
+    LEGACY_MIGRATION = "legacy_migration", "Migración compatible"
+    TRANSFER = "transfer", "Traslado"
+
+
+class EnrollmentWindowMode(models.TextChoices):
+    INHERIT = "inherit", "Hereda la política del grupo de curso"
+    INDIVIDUAL = "individual", "Excepción individual"
+
+
+class RosterEventType(models.TextChoices):
+    ACADEMIC_GROUP_ROSTER_REPLACED = (
+        "academic_group_roster_replaced",
+        "Padrón actualizado",
+    )
+    COURSE_GROUP_CREATED = "course_group_created", "Grupo de curso creado"
+    COURSE_GROUP_SYNCED = "course_group_synced", "Roster sincronizado"
+    ENROLLMENT_ASSIGNED = "enrollment_assigned", "Matrícula asignada al grupo"
+    ENROLLMENT_UNASSIGNED = "enrollment_unassigned", "Matrícula retirada del grupo"
+    STAFF_ASSIGNED = "staff_assigned", "Docente asignado"
+    STAFF_UNASSIGNED = "staff_unassigned", "Docente retirado"
+    LEGACY_BACKFILLED = "legacy_backfilled", "Historial compatible creado"
+
+
 class EnrollmentStatus(models.TextChoices):
     ACTIVE = "active", "Activa"
     SUSPENDED = "suspended", "Suspendida"

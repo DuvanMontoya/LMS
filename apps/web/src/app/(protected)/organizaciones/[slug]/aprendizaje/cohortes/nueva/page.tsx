@@ -16,13 +16,13 @@ export default async function NewCohortPage({
           { href: `/organizaciones/${slug}`, label: data.organization.name },
           {
             href: `/organizaciones/${slug}/aprendizaje/cohortes`,
-            label: 'Cohortes',
+            label: 'Grupos de curso',
           },
           { label: 'Nueva' },
         ]}
-        description="Fija un curso y release antes de matricular miembros."
+        description="Selecciona curso, release, grupo académico y equipo docente antes de sincronizar el padrón."
         eyebrow="Aprendizaje"
-        title="Nueva cohorte"
+        title="Nuevo grupo de curso"
       />
       <CohortCreateForm
         academicGroups={data.options.academicGroups}

@@ -5,7 +5,7 @@ import uuid
 from collections.abc import Callable
 from typing import Any
 
-from django.db.models import Count, QuerySet
+from django.db.models import Count, Q, QuerySet
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -19,7 +19,13 @@ from rest_framework.views import APIView
 from domain.courses.models import Course
 from domain.learning.assets import learning_asset_descriptors
 from domain.learning.exceptions import LearningDomainError
-from domain.learning.models import AcademicGroup, CourseEnrollment, LearningCohort
+from domain.learning.models import (
+    AcademicGroup,
+    AcademicGroupMember,
+    CohortStaffAssignment,
+    CourseEnrollment,
+    LearningCohort,
+)
 from domain.learning.selectors import (
     academic_groups_visible_to_actor,
     cohort_progress_summary,
@@ -38,14 +44,18 @@ from domain.learning.selectors import (
 from domain.learning.services import (
     archive_cohort,
     complete_unit,
+    confirm_cohort_roster_sync,
     create_academic_group,
     create_cohort,
     enroll_cohort_members,
     enroll_member,
+    make_enrollment_individual,
     open_unit,
+    preview_cohort_roster_sync,
     reactivate_enrollment,
     reopen_unit,
     replace_academic_group_roster,
+    replace_cohort_staff,
     revoke_enrollment,
     suspend_enrollment,
     update_cohort,
@@ -60,14 +70,21 @@ from .filters import CohortFilter, EnrollmentFilter
 from .serializers import (
     AcademicGroupCreateSerializer,
     AcademicGroupReadSerializer,
+    AcademicGroupRosterReadSerializer,
     AcademicGroupRosterSerializer,
     CohortCreateSerializer,
     CohortEnrollmentBatchSerializer,
     CohortReadSerializer,
+    CohortStaffReadSerializer,
+    CohortStaffReplaceSerializer,
+    CohortSyncPreviewSerializer,
+    CohortSyncRequestSerializer,
     CohortUpdateSerializer,
+    CohortVersionSerializer,
     CompleteUnitSerializer,
     CompletionResultSerializer,
     EnrollmentCreateSerializer,
+    EnrollmentIndividualizeSerializer,
     EnrollmentLifecycleSerializer,
     EnrollmentReadSerializer,
     ErrorSerializer,
@@ -76,9 +93,11 @@ from .serializers import (
     LearningOutlineSerializer,
     LearningUnitSerializer,
     MyLearningSerializer,
+    PaginatedAcademicGroupRosterSerializer,
     PaginatedAcademicGroupSerializer,
     PaginatedCohortProgressSerializer,
     PaginatedCohortSerializer,
+    PaginatedCohortStaffSerializer,
     PaginatedEnrollmentSerializer,
     PositionSerializer,
     ProgressSerializer,
@@ -155,6 +174,32 @@ class AcademicGroupListCreateView(APIView):
 
 
 class AcademicGroupRosterView(APIView):
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("search", str),
+            OpenApiParameter("page", int),
+            OpenApiParameter("page_size", int),
+        ],
+        responses={200: PaginatedAcademicGroupRosterSerializer},
+    )
+    def get(self, request: Request, slug: str, group_id: uuid.UUID) -> Response:
+        organization = _organization(request, slug)
+        group = get_object_or_404(
+            academic_groups_visible_to_actor(request.user, organization), pk=group_id
+        )
+        queryset = AcademicGroupMember.objects.filter(group=group).select_related(
+            "membership__user"
+        )
+        search = request.query_params.get("search", "").strip()
+        if search:
+            queryset = queryset.filter(membership__user__email__icontains=search)
+        return _paginate(
+            request,
+            queryset.order_by("status", "membership__user__email"),
+            AcademicGroupRosterReadSerializer,
+            self,
+        )
+
     @extend_schema(
         operation_id="learning_academic_group_roster_update",
         request=AcademicGroupRosterSerializer,
@@ -234,7 +279,21 @@ class CohortListCreateView(APIView):
         queryset = CohortFilter(
             request.query_params,
             queryset=cohorts_visible_to_actor(request.user, organization).annotate(
-                enrollment_count=Count("enrollments")
+                enrollment_count=Count(
+                    "enrollment_assignments",
+                    filter=Q(enrollment_assignments__ended_at__isnull=True),
+                ),
+                staff_count=Count(
+                    "staff_assignments",
+                    filter=Q(staff_assignments__ended_at__isnull=True),
+                ),
+                sync_learner_count=Count(
+                    "academic_group__roster",
+                    filter=Q(
+                        academic_group__roster__role="learner",
+                        academic_group__roster__status="active",
+                    ),
+                ),
             ),
         ).qs
         queryset = _ordered(
@@ -289,6 +348,8 @@ class CohortListCreateView(APIView):
                 description=data.get("description", ""),
                 access_starts_at=data.get("access_starts_at"),
                 access_ends_at=data.get("access_ends_at"),
+                roster_mode=data.get("roster_mode"),
+                staff=data.get("staff", []),
             )
         )
         if isinstance(result, Response):
@@ -329,12 +390,27 @@ class CohortDetailView(APIView):
 
 class CohortArchiveView(APIView):
     @extend_schema(
-        request=None, responses={200: CohortReadSerializer, 404: ErrorSerializer}
+        request=CohortVersionSerializer,
+        responses={
+            200: CohortReadSerializer,
+            404: ErrorSerializer,
+            409: ErrorSerializer,
+        },
     )
     def post(self, request: Request, slug: str, cohort_id: uuid.UUID) -> Response:
         organization = _organization(request, slug)
         cohort = cohort_visible_to_actor(request.user, organization, cohort_id)
-        result = _domain_call(lambda: archive_cohort(actor=request.user, cohort=cohort))
+        serializer = CohortVersionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = _domain_call(
+            lambda: archive_cohort(
+                actor=request.user,
+                cohort=cohort,
+                expected_cohort_version=serializer.validated_data[
+                    "expected_cohort_version"
+                ],
+            )
+        )
         if isinstance(result, Response):
             return result
         return Response(CohortReadSerializer(result).data)
@@ -352,7 +428,8 @@ class CohortEnrollmentView(APIView):
         organization = _organization(request, slug)
         cohort = cohort_visible_to_actor(request.user, organization, cohort_id)
         queryset = enrollments_visible_to_actor(request.user, organization).filter(
-            cohort=cohort
+            cohort_assignments__cohort=cohort,
+            cohort_assignments__ended_at__isnull=True,
         )
         return _paginate(
             request, queryset.order_by("-created_at"), EnrollmentReadSerializer, self
@@ -377,7 +454,12 @@ class CohortEnrollmentView(APIView):
             raise Http404
         result = _domain_call(
             lambda: enroll_cohort_members(
-                actor=request.user, cohort=cohort, memberships=memberships
+                actor=request.user,
+                cohort=cohort,
+                memberships=memberships,
+                expected_cohort_version=serializer.validated_data[
+                    "expected_cohort_version"
+                ],
             )
         )
         if isinstance(result, Response):
@@ -386,6 +468,101 @@ class CohortEnrollmentView(APIView):
             EnrollmentReadSerializer(result, many=True).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class CohortStaffView(APIView):
+    @extend_schema(
+        parameters=[OpenApiParameter("page", int), OpenApiParameter("page_size", int)],
+        responses={200: PaginatedCohortStaffSerializer},
+    )
+    def get(self, request: Request, slug: str, cohort_id: uuid.UUID) -> Response:
+        organization = _organization(request, slug)
+        cohort = cohort_visible_to_actor(request.user, organization, cohort_id)
+        queryset = CohortStaffAssignment.objects.filter(cohort=cohort).select_related(
+            "membership__user"
+        )
+        return _paginate(
+            request,
+            queryset.order_by("-ended_at", "membership__user__email"),
+            CohortStaffReadSerializer,
+            self,
+        )
+
+    @extend_schema(
+        request=CohortStaffReplaceSerializer,
+        responses={200: CohortReadSerializer, 409: ErrorSerializer},
+    )
+    def put(self, request: Request, slug: str, cohort_id: uuid.UUID) -> Response:
+        organization = _organization(request, slug)
+        cohort = cohort_visible_to_actor(request.user, organization, cohort_id)
+        serializer = CohortStaffReplaceSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = _domain_call(
+            lambda: replace_cohort_staff(
+                actor=request.user,
+                cohort=cohort,
+                staff=serializer.validated_data["staff"],
+                expected_cohort_version=serializer.validated_data[
+                    "expected_cohort_version"
+                ],
+            )
+        )
+        return (
+            result
+            if isinstance(result, Response)
+            else Response(CohortReadSerializer(result).data)
+        )
+
+
+class CohortSyncPreviewView(APIView):
+    @extend_schema(
+        request=CohortSyncRequestSerializer,
+        responses={200: CohortSyncPreviewSerializer, 409: ErrorSerializer},
+    )
+    def post(self, request: Request, slug: str, cohort_id: uuid.UUID) -> Response:
+        organization = _organization(request, slug)
+        cohort = cohort_visible_to_actor(request.user, organization, cohort_id)
+        serializer = CohortSyncRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = _domain_call(
+            lambda: preview_cohort_roster_sync(
+                actor=request.user,
+                cohort=cohort,
+                expected_cohort_version=serializer.validated_data[
+                    "expected_cohort_version"
+                ],
+                expected_academic_group_version=serializer.validated_data[
+                    "expected_academic_group_version"
+                ],
+            )
+        )
+        return result if isinstance(result, Response) else Response(result)
+
+
+class CohortSyncConfirmView(APIView):
+    @extend_schema(
+        request=CohortSyncRequestSerializer,
+        responses={200: CohortSyncPreviewSerializer, 409: ErrorSerializer},
+    )
+    def post(self, request: Request, slug: str, cohort_id: uuid.UUID) -> Response:
+        organization = _organization(request, slug)
+        cohort = cohort_visible_to_actor(request.user, organization, cohort_id)
+        serializer = CohortSyncRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = _domain_call(
+            lambda: confirm_cohort_roster_sync(
+                actor=request.user,
+                cohort=cohort,
+                expected_cohort_version=serializer.validated_data[
+                    "expected_cohort_version"
+                ],
+                expected_academic_group_version=serializer.validated_data[
+                    "expected_academic_group_version"
+                ],
+                reason=serializer.validated_data["reason"],
+            )
+        )
+        return result if isinstance(result, Response) else Response(result)
 
 
 class CohortProgressView(APIView):
@@ -420,6 +597,7 @@ class EnrollmentListCreateView(APIView):
         parameters=[
             OpenApiParameter("course", uuid.UUID),
             OpenApiParameter("cohort", uuid.UUID),
+            OpenApiParameter("individual", bool),
             OpenApiParameter("status", str),
             OpenApiParameter("release_number", int),
             OpenApiParameter("progress_status", str),
@@ -493,9 +671,11 @@ class EnrollmentListCreateView(APIView):
                 course=course,
                 membership=membership,
                 cohort=cohort,
+                expected_cohort_version=data.get("expected_cohort_version"),
                 release=release,
                 access_starts_at=data.get("access_starts_at"),
                 access_ends_at=data.get("access_ends_at"),
+                reason=data["reason"],
             )
         )
         if isinstance(result, Response):
@@ -598,6 +778,35 @@ class UpgradeEnrollmentView(APIView):
         if isinstance(result, Response):
             return result
         return Response(EnrollmentReadSerializer(result).data)
+
+
+class IndividualizeEnrollmentView(APIView):
+    @extend_schema(
+        request=EnrollmentIndividualizeSerializer,
+        responses={200: EnrollmentReadSerializer, 409: ErrorSerializer},
+    )
+    def post(self, request: Request, slug: str, enrollment_id: uuid.UUID) -> Response:
+        organization = _organization(request, slug)
+        enrollment = enrollment_visible_to_actor(
+            request.user, organization, enrollment_id
+        )
+        serializer = EnrollmentIndividualizeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = _domain_call(
+            lambda: make_enrollment_individual(
+                actor=request.user,
+                enrollment=enrollment,
+                expected_version=serializer.validated_data[
+                    "expected_enrollment_version"
+                ],
+                reason=serializer.validated_data["reason"],
+            )
+        )
+        return (
+            result
+            if isinstance(result, Response)
+            else Response(EnrollmentReadSerializer(result).data)
+        )
 
 
 class MyLearningView(APIView):

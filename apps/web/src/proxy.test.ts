@@ -9,6 +9,10 @@ function authenticatedRequest(path: string) {
   });
 }
 
+function publicRequest(path: string) {
+  return new NextRequest(`https://lms.example.test${path}`);
+}
+
 describe('route security headers', () => {
   afterEach(() => {
     delete process.env.NEXT_PUBLIC_LIVEKIT_URL;
@@ -37,5 +41,24 @@ describe('route security headers', () => {
       'camera=(), microphone=(), display-capture=(), geolocation=()',
     );
     expect(response.headers.has('Content-Security-Policy')).toBe(false);
+  });
+
+  it('allows public invitation activation without retaining its bearer token in shared caches or referrers', () => {
+    const response = proxy(
+      publicRequest('/invitaciones/activar?token=one-use-token'),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(response.headers.get('Referrer-Policy')).toBe('no-referrer');
+    expect(response.headers.get('X-Frame-Options')).toBe('DENY');
+  });
+
+  it('keeps authentication pages public while applying sensitive-page headers', () => {
+    const response = proxy(publicRequest('/auth/iniciar-sesion'));
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(response.headers.get('Referrer-Policy')).toBe(
+      'strict-origin-when-cross-origin',
+    );
   });
 });

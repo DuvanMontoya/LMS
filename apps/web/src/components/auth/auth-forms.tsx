@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useHydrated } from '@/hooks/use-hydrated';
 import { AuthApiError, mapAllauthErrorToSpanish } from '@/lib/auth/errors';
 import { getBrowserAuthSession } from '@/lib/auth/api';
 import {
@@ -168,14 +169,6 @@ function submitError<T extends FieldValues>(
   return error.message;
 }
 
-function useHydrated() {
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
-  return hydrated;
-}
-
 function SubmitButton({
   pending,
   hydrated = true,
@@ -229,47 +222,50 @@ export function LoginForm({
   };
   return (
     <form
+      aria-busy={!hydrated || login.isPending}
       method="post"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
       className="auth-form-grid"
     >
-      <StatusSummary message={statusMessage} />
-      <ErrorSummary message={message} />
-      <Field
-        name="email"
-        label="Correo electrónico"
-        type="email"
-        autoComplete="email"
-        register={form.register}
-        error={form.formState.errors.email?.message}
-      />
-      <PasswordField
-        name="password"
-        label="Contraseña"
-        autoComplete="current-password"
-        register={form.register}
-        error={form.formState.errors.password?.message}
-      />
-      <SubmitButton pending={login.isPending} hydrated={hydrated}>
-        Iniciar sesión
-      </SubmitButton>
-      <nav className="auth-form-links">
-        <Link
-          className="font-medium text-primary underline-offset-4 hover:underline"
-          href="/auth/recuperar-contrasena"
-        >
-          ¿Olvidaste tu contraseña?
-        </Link>
-        {registrationAvailable ? (
+      <fieldset className="contents" disabled={!hydrated || login.isPending}>
+        <StatusSummary message={statusMessage} />
+        <ErrorSummary message={message} />
+        <Field
+          name="email"
+          label="Correo electrónico"
+          type="email"
+          autoComplete="email"
+          register={form.register}
+          error={form.formState.errors.email?.message}
+        />
+        <PasswordField
+          name="password"
+          label="Contraseña"
+          autoComplete="current-password"
+          register={form.register}
+          error={form.formState.errors.password?.message}
+        />
+        <SubmitButton pending={login.isPending} hydrated={hydrated}>
+          Iniciar sesión
+        </SubmitButton>
+        <nav className="auth-form-links">
           <Link
             className="font-medium text-primary underline-offset-4 hover:underline"
-            href="/auth/registro"
+            href="/auth/recuperar-contrasena"
           >
-            Crear una cuenta
+            ¿Olvidaste tu contraseña?
           </Link>
-        ) : null}
-      </nav>
+          {registrationAvailable ? (
+            <Link
+              className="font-medium text-primary underline-offset-4 hover:underline"
+              href="/auth/registro"
+            >
+              Crear una cuenta
+            </Link>
+          ) : null}
+        </nav>
+      </fieldset>
     </form>
   );
 }
@@ -295,44 +291,47 @@ export function SignUpForm() {
   };
   return (
     <form
+      aria-busy={!hydrated || signUp.isPending}
       method="post"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
       className="auth-form-grid"
     >
-      <ErrorSummary message={message} />
-      <Field
-        name="email"
-        label="Correo electrónico"
-        type="email"
-        autoComplete="email"
-        register={form.register}
-        error={form.formState.errors.email?.message}
-      />
-      <PasswordField
-        name="password"
-        label="Contraseña nueva"
-        autoComplete="new-password"
-        register={form.register}
-        error={form.formState.errors.password?.message}
-      />
-      <PasswordField
-        name="confirmation"
-        label="Confirmar contraseña"
-        autoComplete="new-password"
-        register={form.register}
-        error={form.formState.errors.confirmation?.message}
-      />
-      <SubmitButton pending={signUp.isPending} hydrated={hydrated}>
-        Crear cuenta
-      </SubmitButton>
-      <p className="text-sm">
-        ¿Ya tienes cuenta?{' '}
-        <Link className="underline" href="/auth/iniciar-sesion">
-          Inicia sesión
-        </Link>
-        .
-      </p>
+      <fieldset className="contents" disabled={!hydrated || signUp.isPending}>
+        <ErrorSummary message={message} />
+        <Field
+          name="email"
+          label="Correo electrónico"
+          type="email"
+          autoComplete="email"
+          register={form.register}
+          error={form.formState.errors.email?.message}
+        />
+        <PasswordField
+          name="password"
+          label="Contraseña nueva"
+          autoComplete="new-password"
+          register={form.register}
+          error={form.formState.errors.password?.message}
+        />
+        <PasswordField
+          name="confirmation"
+          label="Confirmar contraseña"
+          autoComplete="new-password"
+          register={form.register}
+          error={form.formState.errors.confirmation?.message}
+        />
+        <SubmitButton pending={signUp.isPending} hydrated={hydrated}>
+          Crear cuenta
+        </SubmitButton>
+        <p className="text-sm">
+          ¿Ya tienes cuenta?{' '}
+          <Link className="underline" href="/auth/iniciar-sesion">
+            Inicia sesión
+          </Link>
+          .
+        </p>
+      </fieldset>
     </form>
   );
 }
@@ -373,36 +372,42 @@ export function VerifyEmailForm() {
   };
   return (
     <form
+      aria-busy={!hydrated || verify.isPending || resend.isPending}
       method="post"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
       className="auth-form-grid"
     >
-      <ErrorSummary message={message} />
-      <Field
-        name="code"
-        label="Código de verificación"
-        autoComplete="one-time-code"
-        register={form.register}
-        error={form.formState.errors.code?.message}
-      />
-      <SubmitButton pending={verify.isPending} hydrated={hydrated}>
-        Verificar correo
-      </SubmitButton>
-      <Button
-        type="button"
-        disabled={resend.isPending}
-        onClick={onResend}
-        className="h-11 w-full"
-        variant="outline"
+      <fieldset
+        className="contents"
+        disabled={!hydrated || verify.isPending || resend.isPending}
       >
-        {resend.isPending ? 'Reenviando…' : 'Reenviar código'}
-      </Button>
-      <p className="text-sm">
-        <Link className="underline" href="/auth/iniciar-sesion">
-          Volver a inicio de sesión
-        </Link>
-      </p>
+        <ErrorSummary message={message} />
+        <Field
+          name="code"
+          label="Código de verificación"
+          autoComplete="one-time-code"
+          register={form.register}
+          error={form.formState.errors.code?.message}
+        />
+        <SubmitButton pending={verify.isPending} hydrated={hydrated}>
+          Verificar correo
+        </SubmitButton>
+        <Button
+          type="button"
+          disabled={resend.isPending}
+          onClick={onResend}
+          className="h-11 w-full"
+          variant="outline"
+        >
+          {resend.isPending ? 'Reenviando…' : 'Reenviar código'}
+        </Button>
+        <p className="text-sm">
+          <Link className="underline" href="/auth/iniciar-sesion">
+            Volver a inicio de sesión
+          </Link>
+        </p>
+      </fieldset>
     </form>
   );
 }
@@ -427,28 +432,31 @@ export function PasswordRequestForm() {
   };
   return (
     <form
+      aria-busy={!hydrated || request.isPending}
       method="post"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
       className="auth-form-grid"
     >
-      <ErrorSummary message={message} />
-      <Field
-        name="email"
-        label="Correo electrónico"
-        type="email"
-        autoComplete="email"
-        register={form.register}
-        error={form.formState.errors.email?.message}
-      />
-      <SubmitButton pending={request.isPending} hydrated={hydrated}>
-        Solicitar código
-      </SubmitButton>
-      <p className="text-sm">
-        <Link className="underline" href="/auth/iniciar-sesion">
-          Volver a inicio de sesión
-        </Link>
-      </p>
+      <fieldset className="contents" disabled={!hydrated || request.isPending}>
+        <ErrorSummary message={message} />
+        <Field
+          name="email"
+          label="Correo electrónico"
+          type="email"
+          autoComplete="email"
+          register={form.register}
+          error={form.formState.errors.email?.message}
+        />
+        <SubmitButton pending={request.isPending} hydrated={hydrated}>
+          Solicitar código
+        </SubmitButton>
+        <p className="text-sm">
+          <Link className="underline" href="/auth/iniciar-sesion">
+            Volver a inicio de sesión
+          </Link>
+        </p>
+      </fieldset>
     </form>
   );
 }
@@ -475,66 +483,69 @@ export function PasswordResetForm() {
   };
   return (
     <form
+      aria-busy={!hydrated || reset.isPending}
       method="post"
       noValidate
       onSubmit={form.handleSubmit(onSubmit)}
       className="auth-form-grid"
     >
-      <StatusSummary
-        message={
-          searchParams.get('sent') === '1'
-            ? 'Código enviado. Escríbelo abajo junto con tu contraseña nueva antes de que venza.'
-            : null
-        }
-      />
-      <ErrorSummary message={message} />
-      <ol className="space-y-1 rounded-lg border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">
-        <li>
-          <strong className="text-foreground">1.</strong> Revisa el correo y la
-          carpeta de spam.
-        </li>
-        <li>
-          <strong className="text-foreground">2.</strong> Copia el código de un
-          solo uso; vence en 3 minutos.
-        </li>
-        <li>
-          <strong className="text-foreground">3.</strong> Escríbelo aquí y
-          define tu contraseña nueva.
-        </li>
-      </ol>
-      <Field
-        name="code"
-        label="Código recibido"
-        autoComplete="one-time-code"
-        register={form.register}
-        error={form.formState.errors.code?.message}
-      />
-      <PasswordField
-        name="password"
-        label="Nueva contraseña"
-        autoComplete="new-password"
-        register={form.register}
-        error={form.formState.errors.password?.message}
-      />
-      <PasswordField
-        name="confirmation"
-        label="Confirmar contraseña"
-        autoComplete="new-password"
-        register={form.register}
-        error={form.formState.errors.confirmation?.message}
-      />
-      <SubmitButton pending={reset.isPending} hydrated={hydrated}>
-        Restablecer contraseña
-      </SubmitButton>
-      <p className="text-sm">
-        <Link className="underline" href="/auth/iniciar-sesion">
-          Iniciar sesión
-        </Link>
-        {' · '}
-        <Link className="underline" href="/auth/recuperar-contrasena">
-          Solicitar otro código
-        </Link>
-      </p>
+      <fieldset className="contents" disabled={!hydrated || reset.isPending}>
+        <StatusSummary
+          message={
+            searchParams.get('sent') === '1'
+              ? 'Código enviado. Escríbelo abajo junto con tu contraseña nueva antes de que venza.'
+              : null
+          }
+        />
+        <ErrorSummary message={message} />
+        <ol className="space-y-1 rounded-lg border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">
+          <li>
+            <strong className="text-foreground">1.</strong> Revisa el correo y
+            la carpeta de spam.
+          </li>
+          <li>
+            <strong className="text-foreground">2.</strong> Copia el código de
+            un solo uso; vence en 3 minutos.
+          </li>
+          <li>
+            <strong className="text-foreground">3.</strong> Escríbelo aquí y
+            define tu contraseña nueva.
+          </li>
+        </ol>
+        <Field
+          name="code"
+          label="Código recibido"
+          autoComplete="one-time-code"
+          register={form.register}
+          error={form.formState.errors.code?.message}
+        />
+        <PasswordField
+          name="password"
+          label="Nueva contraseña"
+          autoComplete="new-password"
+          register={form.register}
+          error={form.formState.errors.password?.message}
+        />
+        <PasswordField
+          name="confirmation"
+          label="Confirmar contraseña"
+          autoComplete="new-password"
+          register={form.register}
+          error={form.formState.errors.confirmation?.message}
+        />
+        <SubmitButton pending={reset.isPending} hydrated={hydrated}>
+          Restablecer contraseña
+        </SubmitButton>
+        <p className="text-sm">
+          <Link className="underline" href="/auth/iniciar-sesion">
+            Iniciar sesión
+          </Link>
+          {' · '}
+          <Link className="underline" href="/auth/recuperar-contrasena">
+            Solicitar otro código
+          </Link>
+        </p>
+      </fieldset>
     </form>
   );
 }

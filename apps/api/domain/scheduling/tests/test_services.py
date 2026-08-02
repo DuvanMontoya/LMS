@@ -8,6 +8,14 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 
+from domain.learning.choices import AcademicGroupLevel, AcademicGroupRole
+from domain.learning.services import (
+    confirm_cohort_roster_sync,
+    create_academic_group,
+    create_cohort,
+    make_enrollment_individual,
+    replace_academic_group_roster,
+)
 from domain.organizations.models import Membership
 from domain.scheduling.choices import (
     AttendanceRole,
@@ -36,6 +44,78 @@ from .support import FakeLiveKitGateway, SchedulingFixtureMixin
 
 
 class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
+    def test_course_group_session_requires_current_group_assignment(self) -> None:
+        context = self.scheduling_context()
+        group = create_academic_group(
+            actor=context["owner"],
+            organization=context["organization"],
+            name="Grupo de agenda",
+            academic_year=2026,
+            level=AcademicGroupLevel.SECONDARY_11,
+        )
+        group = replace_academic_group_roster(
+            actor=context["owner"],
+            group=group,
+            expected_group_version=group.lock_version,
+            members=[
+                {
+                    "membership_id": context["learner_membership"].id,
+                    "role": AcademicGroupRole.LEARNER,
+                }
+            ],
+        )
+        cohort = create_cohort(
+            actor=context["owner"],
+            organization=context["organization"],
+            course=context["course"],
+            release=context["enrollment"].current_release_assignment.release,
+            academic_group=group,
+            name="Álgebra grupo de agenda",
+        )
+        confirm_cohort_roster_sync(
+            actor=context["owner"],
+            cohort=cohort,
+            expected_cohort_version=cohort.lock_version,
+            expected_academic_group_version=group.lock_version,
+            reason="Prueba de audiencia",
+        )
+        series = create_event_series(
+            actor=context["owner"],
+            organization=context["organization"],
+            course=context["course"],
+            course_group=cohort,
+            host_membership=context["series"].host_membership,
+            title="Clase sólo del grupo",
+            description="Audiencia por matrícula de grupo",
+            event_type=EventType.LIVE_CLASS,
+            timezone_name="America/Bogota",
+            first_starts_at=timezone.now() + timedelta(minutes=2),
+            duration_minutes=45,
+        )
+        session = series.occurrences.select_related("live_session").get().live_session
+        gateway = FakeLiveKitGateway()
+        start_live_session(
+            actor=context["owner"], session_id=session.id, gateway=gateway
+        )
+        self.assertEqual(
+            join_live_session(
+                actor=context["learner"], session_id=session.id, gateway=gateway
+            )["session"]["role"],
+            "student",
+        )
+
+        context["enrollment"].refresh_from_db()
+        make_enrollment_individual(
+            actor=context["owner"],
+            enrollment=context["enrollment"],
+            expected_version=context["enrollment"].lock_version,
+            reason="Excepción individual de prueba",
+        )
+        with self.assertRaises(SchedulingAccessDenied):
+            join_live_session(
+                actor=context["learner"], session_id=session.id, gateway=gateway
+            )
+
     def test_standalone_session_is_visible_only_to_explicit_participants(self) -> None:
         context = self.scheduling_context()
         outsider = get_user_model().objects.create_user(

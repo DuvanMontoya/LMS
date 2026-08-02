@@ -13,6 +13,11 @@
   `learning.0004` agrega requisitos externos y completitudes idempotentes;
   `scheduling.0002` agrega audiencia/progreso y `scheduling.0003` acepta los
   identificadores opacos `EV_…` que entrega LiveKit real.
+- **Evolución en curso (2026-08-01):** `scheduling.0004` incorpora una referencia
+  opcional y versionada al grupo de curso para que la audiencia de una clase se
+  resuelva por sus matrículas efectivas. La validación de esta ampliación queda
+  registrada con la reestructuración de roster; no reutiliza por sí sola el
+  cierre anterior como evidencia de aceptación.
 - **Operación local:** `livekit/livekit-server:v1.13.1` está fijado por digest
   en el perfil Compose `live`, con señalización/API 7880, RTC/TCP 7881,
   RTC/UDP 7882 y métricas 6789 sólo en loopback. `pnpm livekit:up|status|logs|
@@ -1029,6 +1034,30 @@ warnings, drift checks, `pip-audit` y `pnpm audit --prod` quedaron verdes.
 Siguiente paso:
 
 > **Prompt 12 — Matrículas y entrega del aprendizaje: acceso por curso, cohortes, progreso, continuidad, completitud y experiencia del estudiante.**
+
+## Reestructuración de membresías, grupos y matrículas — en curso 2026-08-01
+
+- **Estado:** implementación iniciada desde worktree limpio en `main`; no se han
+  creado ramas, commits ni cambios de producción. La auditoría reprodujo
+  `pnpm learning:test`: **19/19** en PostgreSQL real (2:31).
+- **Brecha confirmada:** el vínculo actual `AcademicGroup → LearningCohort` no
+  crea matrícula y la FK directa `CourseEnrollment.cohort` no conserva
+  traslados. Las policies vigentes también resuelven capacidades al alcance de
+  toda la institución para docentes.
+- **Decisión:** ADR 0035 preserva identidad, rutas y FK v1 de lectura mientras
+  introduce asignaciones históricas de roster y staff, sincronización opt-in,
+  política de ventana heredable/excepciones y restricción docente por grupo de
+  curso. No hay adopción automática de cohortes existentes.
+- **Evidencia pendiente:** migración/backfill sobre PostgreSQL vacío y datos
+  existentes; constraints/triggers, concurrencia, privacy matrix, contratos
+  assessments/scheduling, OpenAPI/cliente, Chromium/axe/teclado/390 px y la
+  batería transversal. La matriz viva está en
+  `docs/project/MEMBERSHIP_ROSTER_ACCEPTANCE.md`.
+- **Límite conocido durante la implementación:** las APIs de roster y matrícula
+  ya aceptan paginación y búsqueda del lado del servidor, pero el selector de
+  personas del asistente administrativo conserva el límite histórico de 100.
+  La sustitución por búsqueda remota accesible permanece como aceptación
+  pendiente; no se declara cerrado mientras exista esa carga acotada.
 
 ## Cierre local de correo, miembros, grupos y clases — 2026-08-01
 

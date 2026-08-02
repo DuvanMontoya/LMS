@@ -40,6 +40,7 @@ export default async function EnrollmentsPage({
     ? requested.progress
     : '';
   const data = await getEnrollments(slug, {
+    individual: true,
     ordering: '-created_at',
     page,
     page_size: PAGE_SIZE,
@@ -55,11 +56,11 @@ export default async function EnrollmentsPage({
       <PageHeader
         breadcrumbs={[
           { href: `/organizaciones/${slug}`, label: data.organization.name },
-          { label: 'Matrículas' },
+          { label: 'Matrículas individuales' },
         ]}
-        description="Acceso institucional fijado a releases publicados."
+        description="Excepciones de acceso individual fijadas a releases publicados."
         eyebrow="Aprendizaje"
-        title="Matrículas"
+        title="Matrículas individuales"
       />
       {canManage ? (
         <details className="academic-panel group mt-6">
@@ -67,12 +68,7 @@ export default async function EnrollmentsPage({
             Crear matrícula individual
           </summary>
           <div className="border-t p-5 sm:p-6">
-            <EnrollmentCreateForm
-              cohorts={data.options.cohorts}
-              courses={data.options.courses}
-              members={data.options.members}
-              slug={slug}
-            />
+            <EnrollmentCreateForm courses={data.options.courses} slug={slug} />
           </div>
         </details>
       ) : null}

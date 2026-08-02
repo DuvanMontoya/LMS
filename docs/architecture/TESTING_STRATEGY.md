@@ -86,7 +86,9 @@ PostgreSQL real. Prueba triggers mediante SQL directo, independencia de
 releases, ventanas, retiro, IDOR, mass assignment, lote atómico y drift.
 Vitest valida progress/IDs semánticos. Playwright crea una base aislada, forma
 cohorte/matrícula, completa 2/2, suspende/reactiva, ejecuta axe y 390 px y
-confirma cleanup.
+confirma cleanup. ADR 0035 añade pruebas de sincronización idempotente,
+versiones esperadas, bajas, traslado, herencia/excepción de ventana, privacidad
+docente y los contratos assessments/scheduling antes de declarar cierre.
 
 # Assessments Prompt 13
 

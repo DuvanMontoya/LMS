@@ -14,14 +14,13 @@ export default async function AcademicGroupsPage({
           { href: `/organizaciones/${slug}`, label: data.organization.name },
           { label: 'Grupos académicos' },
         ]}
-        description="Agrupa estudiantes, docentes y acompañantes por año y nivel; luego vincula el grupo con cohortes concretas de curso."
+        description="Agrupa estudiantes, docentes y acompañantes por año y nivel; luego reutiliza el padrón en grupos de curso concretos."
         eyebrow="Organización del aprendizaje"
         title="Grupos académicos"
       />
       <AcademicGroupsPanel
         canManage={data.access.capabilities.includes('learning.cohort.manage')}
         groups={data.groups.results}
-        members={data.members}
         slug={slug}
       />
     </main>

@@ -2,15 +2,19 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import type { components } from '@/lib/api/generated/platform';
 import {
   archiveLearningCohort,
   changeLearningEnrollmentStatus,
   completeLearningUnit,
   createLearningCohort,
   createLearningEnrollment,
+  confirmLearningCohortRosterSync,
   enrollLearningCohort,
+  makeLearningEnrollmentIndividual,
   openLearningUnit,
   reopenLearningUnit,
+  previewLearningCohortRosterSync,
   updateLearningPosition,
   upgradeLearningEnrollment,
 } from './api';
@@ -87,9 +91,9 @@ export function useUpdatePosition(path: Omit<UnitPath, 'unitId'>) {
   });
 }
 
-function useAdminLearningMutation<T>(
+function useAdminLearningMutation<T, TResult>(
   slug: string,
-  mutationFn: (value: T) => Promise<unknown>,
+  mutationFn: (value: T) => Promise<TResult>,
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -118,14 +122,39 @@ export function useCreateEnrollment(slug: string) {
 }
 
 export function useArchiveCohort(slug: string, cohortId: string) {
-  return useAdminLearningMutation(slug, () =>
-    archiveLearningCohort(slug, cohortId),
+  return useAdminLearningMutation(slug, (version: number) =>
+    archiveLearningCohort(slug, cohortId, version),
   );
 }
 
 export function useEnrollCohort(slug: string, cohortId: string) {
-  return useAdminLearningMutation(slug, (membershipIds: string[]) =>
-    enrollLearningCohort(slug, cohortId, membershipIds),
+  return useAdminLearningMutation(
+    slug,
+    ({
+      membershipIds,
+      version,
+    }: {
+      membershipIds: string[];
+      version: number;
+    }) => enrollLearningCohort(slug, cohortId, version, membershipIds),
+  );
+}
+
+export function useCohortRosterSync(slug: string, cohortId: string) {
+  return useAdminLearningMutation<
+    components['schemas']['CohortSyncRequest'],
+    components['schemas']['CohortSyncPreview']
+  >(slug, (body: Parameters<typeof previewLearningCohortRosterSync>[2]) =>
+    previewLearningCohortRosterSync(slug, cohortId, body),
+  );
+}
+
+export function useConfirmCohortRosterSync(slug: string, cohortId: string) {
+  return useAdminLearningMutation<
+    components['schemas']['CohortSyncRequest'],
+    components['schemas']['CohortSyncPreview']
+  >(slug, (body: Parameters<typeof confirmLearningCohortRosterSync>[2]) =>
+    confirmLearningCohortRosterSync(slug, cohortId, body),
   );
 }
 
@@ -147,5 +176,16 @@ export function useUpgradeEnrollment(slug: string, enrollmentId: string) {
     slug,
     ({ release, version }: { release: number; version: number }) =>
       upgradeLearningEnrollment(slug, enrollmentId, version, release),
+  );
+}
+
+export function useMakeEnrollmentIndividual(
+  slug: string,
+  enrollmentId: string,
+) {
+  return useAdminLearningMutation(
+    slug,
+    ({ reason, version }: { reason: string; version: number }) =>
+      makeLearningEnrollmentIndividual(slug, enrollmentId, version, reason),
   );
 }

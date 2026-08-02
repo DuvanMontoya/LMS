@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -10,17 +11,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  MembershipSearchPicker,
+  type MembershipOption,
+} from '@/components/learning/membership-search-picker';
+import {
   useCreateCohort,
   useCreateEnrollment,
   useEnrollCohort,
 } from '@/lib/learning/hooks';
 import type {
   LearningAcademicGroupOption,
-  LearningCohortOption,
   LearningCourseOption,
-  LearningMemberOption,
 } from '@/lib/learning/server';
-import { roleLabel, sortRoles } from '@/lib/organizations/labels';
 
 const optionalDate = z.string();
 
@@ -63,6 +65,14 @@ export function CohortCreateForm({
 }>) {
   const router = useRouter();
   const mutation = useCreateCohort(slug);
+  const [staff, setStaff] = useState<
+    Record<
+      string,
+      MembershipOption & {
+        role: 'lead_instructor' | 'instructor' | 'assistant';
+      }
+    >
+  >({});
   const initialCourse = courses[0];
   const form = useForm<CohortValues>({
     resolver: zodResolver(cohortSchema),
@@ -88,7 +98,7 @@ export function CohortCreateForm({
 
   async function submit(values: CohortValues) {
     const parsed = cohortSchema.parse(values);
-    await mutation.mutateAsync({
+    const created = await mutation.mutateAsync({
       access_ends_at: parsed.access_ends_at
         ? new Date(parsed.access_ends_at).toISOString()
         : null,
@@ -100,9 +110,18 @@ export function CohortCreateForm({
       description: parsed.description,
       name: parsed.name,
       release_number: parsed.release_number,
+      roster_mode: parsed.academic_group_id ? 'synced' : 'manual',
+      staff: Object.values(staff).map(({ id, role }) => ({
+        membership_id: id,
+        role,
+      })),
       ...(parsed.slug ? { slug: parsed.slug } : {}),
     });
-    router.push(`/organizaciones/${slug}/aprendizaje/cohortes`);
+    router.push(
+      parsed.academic_group_id
+        ? `/organizaciones/${slug}/aprendizaje/cohortes/${created.id}`
+        : `/organizaciones/${slug}/aprendizaje/cohortes`,
+    );
     router.refresh();
   }
 
@@ -119,6 +138,69 @@ export function CohortCreateForm({
       >
         <Input id="cohort-name" {...form.register('name')} />
       </Field>
+      <fieldset className="space-y-2 sm:col-span-2">
+        <legend className="text-sm font-medium">Equipo docente</legend>
+        <p className="text-xs leading-5 text-muted-foreground">
+          Asigna las personas que podrán gestionar este grupo de curso. Los
+          roles institucionales permanecen en la membresía.
+        </p>
+        <MembershipSearchPicker
+          ariaLabel="Buscar persona para el equipo docente"
+          excludeIds={Object.keys(staff)}
+          onSelect={(member) =>
+            setStaff((current) => ({
+              ...current,
+              [member.id]: { ...member, role: 'instructor' },
+            }))
+          }
+          slug={slug}
+        />
+        {Object.values(staff).length ? (
+          <div className="mt-2 grid gap-2 rounded-md border p-2 sm:grid-cols-2">
+            {Object.values(staff).map((member) => (
+              <div
+                className="grid gap-2 rounded-md p-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-center"
+                key={member.id}
+              >
+                <span className="truncate text-sm">{member.email}</span>
+                <select
+                  aria-label={`Rol de ${member.email}`}
+                  className="academic-control"
+                  onChange={(event) =>
+                    setStaff((current) => ({
+                      ...current,
+                      [member.id]: {
+                        ...member,
+                        role: event.target.value as
+                          'lead_instructor' | 'instructor' | 'assistant',
+                      },
+                    }))
+                  }
+                  value={member.role}
+                >
+                  <option value="lead_instructor">Docente principal</option>
+                  <option value="instructor">Docente</option>
+                  <option value="assistant">Asistente</option>
+                </select>
+                <Button
+                  onClick={() =>
+                    setStaff((current) => {
+                      const next = { ...current };
+                      delete next[member.id];
+                      return next;
+                    })
+                  }
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  Quitar
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </fieldset>
       <Field
         error={form.formState.errors.slug?.message}
         hint="Si lo dejas vacío, se genera a partir del nombre."
@@ -239,69 +321,43 @@ export function CohortCreateForm({
   );
 }
 
-const enrollmentSchema = z
-  .object({
-    access_ends_at: optionalDate,
-    access_starts_at: optionalDate,
-    cohort_id: z.string().uuid().or(z.literal('')),
-    course_slug: z.string().trim().min(1, 'Selecciona un curso.'),
-    membership_id: z.string().uuid('Selecciona un estudiante.'),
-    release_number: z
-      .string()
-      .regex(/^\d+$/, 'Selecciona un release.')
-      .or(z.literal('')),
-  })
-  .superRefine(({ cohort_id, release_number }, context) => {
-    if (!cohort_id && !release_number) {
-      context.addIssue({
-        code: 'custom',
-        message: 'Selecciona un release.',
-        path: ['release_number'],
-      });
-    }
-  });
+const enrollmentSchema = z.object({
+  access_ends_at: optionalDate,
+  access_starts_at: optionalDate,
+  course_slug: z.string().trim().min(1, 'Selecciona un curso.'),
+  membership_id: z.string().uuid('Selecciona un estudiante.'),
+  release_number: z.string().regex(/^\d+$/, 'Selecciona un release.'),
+});
 
 type EnrollmentValues = z.infer<typeof enrollmentSchema>;
 
 export function EnrollmentCreateForm({
-  cohorts,
   courses,
-  members,
   slug,
 }: Readonly<{
-  cohorts: LearningCohortOption[];
   courses: LearningCourseOption[];
-  members: LearningMemberOption[];
   slug: string;
 }>) {
   const router = useRouter();
   const mutation = useCreateEnrollment(slug);
+  const [student, setStudent] = useState<MembershipOption | null>(null);
   const form = useForm<EnrollmentValues>({
     resolver: zodResolver(enrollmentSchema),
     defaultValues: {
       access_ends_at: '',
       access_starts_at: '',
-      cohort_id: '',
       course_slug: '',
       membership_id: '',
       release_number: '',
     },
   });
-  const selectedCohortId = useWatch({
-    control: form.control,
-    name: 'cohort_id',
-  });
   const selectedCourseSlug = useWatch({
     control: form.control,
     name: 'course_slug',
   });
-  const selectedCohort = cohorts.find(
-    (cohort) => cohort.id === selectedCohortId,
-  );
   const selectedCourse = courses.find(
     (course) => course.slug === selectedCourseSlug,
   );
-  const cohortField = form.register('cohort_id');
   const courseField = form.register('course_slug');
 
   async function submit(values: EnrollmentValues) {
@@ -313,13 +369,11 @@ export function EnrollmentCreateForm({
       access_starts_at: parsed.access_starts_at
         ? new Date(parsed.access_starts_at).toISOString()
         : null,
-      cohort_id: parsed.cohort_id || null,
       course_slug: parsed.course_slug,
       membership_id: parsed.membership_id,
-      ...(parsed.release_number
-        ? { release_number: Number(parsed.release_number) }
-        : {}),
+      release_number: Number(parsed.release_number),
     });
+    setStudent(null);
     form.reset();
     router.refresh();
   }
@@ -336,116 +390,91 @@ export function EnrollmentCreateForm({
         label="Estudiante"
         name="enrollment-member"
       >
+        <>
+          <input type="hidden" {...form.register('membership_id')} />
+          <MembershipSearchPicker
+            ariaLabel="Buscar estudiante para matrícula individual"
+            excludeIds={student ? [student.id] : []}
+            onSelect={(member) => {
+              setStudent(member);
+              form.setValue('membership_id', member.id, {
+                shouldValidate: true,
+              });
+            }}
+            slug={slug}
+          />
+          {student ? (
+            <div className="mt-2 flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+              <span className="truncate">{student.email}</span>
+              <Button
+                onClick={() => {
+                  setStudent(null);
+                  form.setValue('membership_id', '', { shouldValidate: true });
+                }}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                Quitar
+              </Button>
+            </div>
+          ) : null}
+        </>
+      </Field>
+      <Field
+        error={form.formState.errors.course_slug?.message}
+        hint="Sólo aparecen cursos con releases disponibles."
+        label="Curso"
+        name="enrollment-course"
+      >
         <select
           className="academic-control"
-          id="enrollment-member"
-          {...form.register('membership_id')}
+          id="enrollment-course"
+          {...courseField}
+          onChange={(event) => {
+            void courseField.onChange(event);
+            const course = courses.find(
+              (option) => option.slug === event.target.value,
+            );
+            form.setValue(
+              'release_number',
+              course?.releases[0]?.number
+                ? String(course.releases[0].number)
+                : '',
+              { shouldValidate: true },
+            );
+          }}
         >
-          <option value="">Selecciona un estudiante</option>
-          {members.map((member) => (
-            <option key={member.id} value={member.id}>
-              {member.email} ·{' '}
-              {sortRoles(member.roles).map(roleLabel).join(', ')}
+          <option value="">Selecciona un curso</option>
+          {courses.map((course) => (
+            <option key={course.slug} value={course.slug}>
+              {course.title}
             </option>
           ))}
         </select>
       </Field>
       <Field
-        error={form.formState.errors.cohort_id?.message}
-        hint="Usa una cohorte o conserva la matrícula como individual."
-        label="Modalidad"
-        name="enrollment-cohort"
+        error={form.formState.errors.release_number?.message}
+        hint="Cambiarlo después requiere un upgrade explícito."
+        label="Release asignado"
+        name="enrollment-release"
       >
         <select
           className="academic-control"
-          id="enrollment-cohort"
-          {...cohortField}
-          onChange={(event) => {
-            void cohortField.onChange(event);
-            const cohort = cohorts.find(
-              (option) => option.id === event.target.value,
-            );
-            form.setValue('course_slug', cohort?.courseSlug ?? '', {
-              shouldValidate: Boolean(cohort),
-            });
-            form.setValue('release_number', '');
-          }}
+          disabled={!selectedCourse}
+          id="enrollment-release"
+          {...form.register('release_number')}
         >
-          <option value="">Matrícula individual</option>
-          {cohorts.map((cohort) => (
-            <option key={cohort.id} value={cohort.id}>
-              Cohorte · {cohort.name}
+          <option value="">Selecciona un release</option>
+          {selectedCourse?.releases.map((release) => (
+            <option key={release.number} value={release.number}>
+              Release {release.number}
+              {release.current ? ' · actual' : ''} · {release.unitCount}{' '}
+              unidades
             </option>
           ))}
         </select>
       </Field>
-      {selectedCohort ? (
-        <div className="rounded-md border bg-muted/20 p-4 sm:col-span-2">
-          <p className="text-sm font-medium">{selectedCohort.name}</p>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            {selectedCohort.courseTitle} · release{' '}
-            {selectedCohort.releaseNumber}. La cohorte define el curso y el
-            release.
-          </p>
-        </div>
-      ) : (
-        <>
-          <Field
-            error={form.formState.errors.course_slug?.message}
-            hint="Sólo aparecen cursos con releases disponibles."
-            label="Curso"
-            name="enrollment-course"
-          >
-            <select
-              className="academic-control"
-              id="enrollment-course"
-              {...courseField}
-              onChange={(event) => {
-                void courseField.onChange(event);
-                const course = courses.find(
-                  (option) => option.slug === event.target.value,
-                );
-                form.setValue(
-                  'release_number',
-                  course?.releases[0]?.number
-                    ? String(course.releases[0].number)
-                    : '',
-                  { shouldValidate: true },
-                );
-              }}
-            >
-              <option value="">Selecciona un curso</option>
-              {courses.map((course) => (
-                <option key={course.slug} value={course.slug}>
-                  {course.title}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field
-            error={form.formState.errors.release_number?.message}
-            hint="Cambiarlo después requiere un upgrade explícito."
-            label="Release asignado"
-            name="enrollment-release"
-          >
-            <select
-              className="academic-control"
-              disabled={!selectedCourse}
-              id="enrollment-release"
-              {...form.register('release_number')}
-            >
-              <option value="">Selecciona un release</option>
-              {selectedCourse?.releases.map((release) => (
-                <option key={release.number} value={release.number}>
-                  Release {release.number}
-                  {release.current ? ' · actual' : ''} · {release.unitCount}{' '}
-                  unidades
-                </option>
-              ))}
-            </select>
-          </Field>
-        </>
-      )}
       <Field
         error={form.formState.errors.access_starts_at?.message}
         hint="Opcional; puede restringir esta matrícula individualmente."
@@ -471,7 +500,7 @@ export function EnrollmentCreateForm({
         />
       </Field>
       <SubmitState
-        disabled={!members.length || (!cohorts.length && !courses.length)}
+        disabled={!student || !courses.length}
         error={mutation.error}
         label="Crear matrícula"
         pending={mutation.isPending}
@@ -488,19 +517,19 @@ const batchSchema = z.object({
 
 export function CohortBatchEnrollForm({
   cohortId,
+  cohortVersion,
   enrolledEmails,
-  members,
   slug,
 }: Readonly<{
   cohortId: string;
+  cohortVersion: number;
   enrolledEmails: readonly string[];
-  members: LearningMemberOption[];
   slug: string;
 }>) {
   const router = useRouter();
   const mutation = useEnrollCohort(slug, cohortId);
-  const availableMembers = members.filter(
-    (member) => !enrolledEmails.includes(member.email),
+  const [students, setStudents] = useState<Record<string, MembershipOption>>(
+    {},
   );
   const form = useForm<z.infer<typeof batchSchema>>({
     resolver: zodResolver(batchSchema),
@@ -508,7 +537,10 @@ export function CohortBatchEnrollForm({
   });
 
   async function submit({ membership_ids }: z.infer<typeof batchSchema>) {
-    await mutation.mutateAsync(membership_ids);
+    await mutation.mutateAsync({
+      membershipIds: membership_ids,
+      version: cohortVersion,
+    });
     form.reset();
     router.refresh();
   }
@@ -525,41 +557,62 @@ export function CohortBatchEnrollForm({
           Selecciona una o varias membresías activas. El lote se guarda de forma
           atómica.
         </p>
-        {availableMembers.length ? (
-          <div className="mt-4 grid max-h-72 gap-2 overflow-y-auto rounded-md border p-2 sm:grid-cols-2">
-            {availableMembers.map((member) => (
-              <label
-                className="flex min-w-0 cursor-pointer items-start gap-3 rounded-md p-3 transition-colors hover:bg-muted/40"
+        <MembershipSearchPicker
+          ariaLabel="Buscar estudiante para el grupo de curso"
+          excludeIds={Object.keys(students)}
+          onSelect={(member) => {
+            if (enrolledEmails.includes(member.email)) {
+              form.setError('membership_ids', {
+                message:
+                  'Esta persona ya tiene una matrícula activa en el grupo.',
+              });
+              return;
+            }
+            setStudents((current) => {
+              const next = { ...current, [member.id]: member };
+              form.setValue('membership_ids', Object.keys(next), {
+                shouldValidate: true,
+              });
+              return next;
+            });
+          }}
+          slug={slug}
+        />
+        {Object.values(students).length ? (
+          <div className="mt-3 grid gap-2 rounded-md border p-2 sm:grid-cols-2">
+            {Object.values(students).map((member) => (
+              <div
+                className="flex items-center justify-between gap-2 rounded-md px-2 py-1 text-sm"
                 key={member.id}
               >
-                <input
-                  className="mt-1 size-4 shrink-0 accent-primary"
-                  type="checkbox"
-                  value={member.id}
-                  {...form.register('membership_ids')}
-                />
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium">
-                    {member.email}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {sortRoles(member.roles).map(roleLabel).join(', ')}
-                  </span>
-                </span>
-              </label>
+                <span className="truncate">{member.email}</span>
+                <Button
+                  onClick={() =>
+                    setStudents((current) => {
+                      const next = { ...current };
+                      delete next[member.id];
+                      form.setValue('membership_ids', Object.keys(next), {
+                        shouldValidate: true,
+                      });
+                      return next;
+                    })
+                  }
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  Quitar
+                </Button>
+              </div>
             ))}
           </div>
-        ) : (
-          <p className="mt-4 rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-            No hay membresías activas pendientes de matrícula en esta cohorte.
-          </p>
-        )}
+        ) : null}
       </fieldset>
       <p aria-live="polite" className="text-sm text-destructive">
         {form.formState.errors.membership_ids?.message}
       </p>
       <SubmitState
-        disabled={!availableMembers.length}
+        disabled={!Object.keys(students).length}
         error={mutation.error}
         label="Matricular selección"
         pending={mutation.isPending}

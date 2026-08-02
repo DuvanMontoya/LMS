@@ -146,7 +146,9 @@ class IntegrationServiceAndApiTests(TestCase):
         base = f"/api/v1/organizations/{self.organization.slug}/integrations"
         with (
             self.captureOnCommitCallbacks(execute=True),
-            patch("domain.integrations.tasks.run_integration_health_check.delay") as delay,
+            patch(
+                "domain.integrations.tasks.run_integration_health_check.delay"
+            ) as delay,
         ):
             created = self.client.post(
                 f"{base}/api-key/",
@@ -158,7 +160,9 @@ class IntegrationServiceAndApiTests(TestCase):
         connection_id = created.json()["id"]
         delay.assert_called_once()
         self.assertEqual(
-            self.client.get(f"{base}/{connection_id}/health-checks/").json()[0]["status"],
+            self.client.get(f"{base}/{connection_id}/health-checks/").json()[0][
+                "status"
+            ],
             HealthCheckStatus.QUEUED,
         )
         self.assertEqual(self.client.get(f"{base}/").status_code, 200)

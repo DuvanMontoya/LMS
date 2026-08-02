@@ -31,6 +31,19 @@ async function expectAccessible(page: Page) {
   expect(results.violations).toEqual([]);
 }
 
+async function addPersonFromDirectory(
+  page: Page,
+  searchboxName: string,
+  email: string,
+) {
+  await page.getByRole('searchbox', { name: searchboxName }).fill(email);
+  const results = page.getByRole('list', { name: 'Resultados de personas' });
+  await expect(results).toBeVisible();
+  const add = results.getByRole('button', { name: 'Añadir' });
+  await expect(add).toHaveCount(1);
+  await add.click();
+}
+
 test('learning delivery: cohort, enrollment, progress, lifecycle and responsive access work', async ({
   browser,
   page,
@@ -38,32 +51,10 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
   test.setTimeout(360_000);
   const cohortsPath = `/organizaciones/${slug}/aprendizaje/cohortes`;
   await login(page, 'owner@organizations.e2e.test', cohortsPath);
-  await expect(
-    page.getByRole('heading', { name: 'Cohortes', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expectAccessible(page);
 
-  const membersResponse = await page.request.get(
-    `/api/v1/organizations/${slug}/memberships/?search=learner%40organizations.e2e.test`,
-  );
-  expect(membersResponse.ok()).toBe(true);
-  const members = (await membersResponse.json()) as {
-    results: { membership_id: string; user: { email: string } }[];
-  };
-  const learnerMembership = members.results.find(
-    (member) => member.user.email === 'learner@organizations.e2e.test',
-  );
-  const instructorMembership = members.results.find(
-    (member) => member.user.email === 'instructor@organizations.e2e.test',
-  );
-  const reviewerMembership = members.results.find(
-    (member) => member.user.email === 'reviewer@organizations.e2e.test',
-  );
-  expect(learnerMembership).toBeTruthy();
-  expect(instructorMembership).toBeTruthy();
-  expect(reviewerMembership).toBeTruthy();
-
-  await page.getByRole('link', { name: 'Nueva cohorte' }).click();
+  await page.goto(`${cohortsPath}/nueva`);
   await page.getByLabel('Nombre').fill('Cohorte E2E de funciones');
   await page.getByLabel('Slug (opcional)').fill('cohorte-e2e-funciones');
   await page.getByLabel('Curso').selectOption(courseSlug);
@@ -75,9 +66,11 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
     page.getByRole('heading', { name: 'Cohorte E2E de funciones' }),
   ).toBeVisible({ timeout: 20_000 });
   const cohortHref = new URL(page.url()).pathname;
-  await page
-    .getByRole('checkbox', { name: /learner@organizations\.e2e\.test/ })
-    .check();
+  await addPersonFromDirectory(
+    page,
+    'Buscar estudiante para el grupo de curso',
+    'learner@organizations.e2e.test',
+  );
   await page.getByRole('button', { name: 'Matricular selección' }).click();
   await expect(page.getByText('learner@organizations.e2e.test')).toBeVisible({
     timeout: 20_000,
@@ -216,9 +209,11 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
     student.getByRole('heading', { name: 'Aún no tienes matrículas' }),
   ).toBeVisible();
   await page.goto(cohortHref);
-  await page
-    .getByRole('checkbox', { name: /learner@organizations\.e2e\.test/ })
-    .check();
+  await addPersonFromDirectory(
+    page,
+    'Buscar estudiante para el grupo de curso',
+    'learner@organizations.e2e.test',
+  );
   await page.getByRole('button', { name: 'Matricular selección' }).click();
   await expect(
     page.getByText('learner@organizations.e2e.test').last(),
@@ -300,9 +295,11 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
 
   await page.goto(`/organizaciones/${slug}/aprendizaje/matriculas`);
   await page.getByText('Crear matrícula individual', { exact: true }).click();
-  await page
-    .getByLabel('Estudiante')
-    .selectOption(instructorMembership!.membership_id);
+  await addPersonFromDirectory(
+    page,
+    'Buscar estudiante para matrícula individual',
+    'instructor@organizations.e2e.test',
+  );
   await page.getByLabel('Curso').selectOption(courseSlug);
   await page.getByLabel('Release asignado').selectOption('1');
   await page.getByRole('button', { name: 'Crear matrícula' }).click();
@@ -341,9 +338,11 @@ test('learning delivery: cohort, enrollment, progress, lifecycle and responsive 
   await page.getByLabel('Inicio de acceso').fill(tomorrow);
   await page.getByRole('button', { name: 'Crear cohorte' }).click();
   await page.getByRole('link', { name: 'Cohorte futura E2E' }).click();
-  await page
-    .getByRole('checkbox', { name: /reviewer@organizations\.e2e\.test/ })
-    .check();
+  await addPersonFromDirectory(
+    page,
+    'Buscar estudiante para el grupo de curso',
+    'reviewer@organizations.e2e.test',
+  );
   await page.getByRole('button', { name: 'Matricular selección' }).click();
   const reviewerContext = await browser.newContext({
     baseURL: `http://127.0.0.1:${process.env.E2E_WEB_PORT ?? '3000'}`,

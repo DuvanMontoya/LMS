@@ -1,13 +1,19 @@
 # Entrega del aprendizaje
 
-Documento normativo de `domain.learning`, conforme a ADR 0022. La publicación
-crea una versión legible; la matrícula concede delivery sobre una versión fija.
+Documento normativo de `domain.learning`, conforme a ADR 0022 y ADR 0035. La
+publicación crea una versión legible; la matrícula concede delivery sobre una
+versión fija. Un grupo académico es un padrón institucional y un grupo de curso
+es la oferta concreta de curso/release.
 
 ## Modelo y ownership
 
 ```mermaid
 erDiagram
-  LearningCohort ||--o{ CourseEnrollment : agrupa
+  AcademicGroup ||--o{ AcademicGroupMember : mantiene
+  AcademicGroup ||--o{ LearningCohort : alimenta_opcionalmente
+  LearningCohort ||--o{ CohortStaffAssignment : asigna_docentes
+  LearningCohort ||--o{ EnrollmentCohortAssignment : agrupa_históricamente
+  CourseEnrollment ||--o{ EnrollmentCohortAssignment : cambia_de_grupo
   LearningCohort }o--|| CourseRelease : fija
   CourseEnrollment }o--|| Membership : vincula
   CourseEnrollment }o--|| Course : cursa
@@ -44,8 +50,8 @@ sequenceDiagram
   actor Admin
   participant Service
   participant PostgreSQL
-  Admin->>Service: enroll(membership, course/cohort)
-  Service->>PostgreSQL: BEGIN + lock membership/cohort/publication
+  Admin->>Service: preview/confirm roster o matrícula individual
+  Service->>PostgreSQL: BEGIN + lock roster/grupo/matrícula/publicación
   Service->>PostgreSQL: enrollment + assignment + progress + events
   PostgreSQL-->>Service: constraints válidas
   Service-->>Admin: COMMIT enrollment
@@ -127,8 +133,9 @@ flowchart LR
   A["/aprendizaje"] --> B["Mi aprendizaje"]
   B --> C["/aprender/course"]
   C --> D["/aprender/course/unidades/unit"]
-  E["/aprendizaje/cohortes"] --> F["detalle/nueva"]
-  G["/aprendizaje/matriculas"] --> H["detalle/lifecycle/upgrade"]
+  E["/aprendizaje/grupos-academicos"] --> F["padrón y ofertas vinculadas"]
+  G["/aprendizaje/grupos-curso"] --> H["asistente, roster, docentes y progreso"]
+  I["/aprendizaje/matriculas"] --> J["individuales, excepciones y lifecycle"]
 ```
 
 ## Concurrencia e inmutabilidad
@@ -158,8 +165,17 @@ flowchart TD
 
 - `active`, `suspended` y `revoked` son estados explícitos; revocación es
   terminal y reincorporación crea otra matrícula.
-- Una cohorte archivada impide altas nuevas sin revocar matrículas existentes.
-- Las ventanas se copian al matricular y no se actualizan retroactivamente.
+- Un grupo de curso archivado impide altas nuevas sin revocar matrículas
+  existentes. La ruta y modelo `LearningCohort` se preservan como compatibilidad
+  v1, pero no son el término principal de la UI.
+- Una matrícula tiene una asignación histórica de grupo de curso. Un traslado
+  dentro del mismo curso y release conserva su progreso; cambiar release usa
+  upgrade explícito.
+- Las ventanas se heredan desde la política del grupo de curso o se marcan como
+  excepción individual. Cambiar la política ajusta sólo herencias, nunca una
+  excepción ni un hecho histórico.
+- Sólo learners activos de un padrón académico se sincronizan. Una baja suspende
+  el acceso que nació de sincronización y deja toda evidencia conservada.
 - El total de unidades se fija desde el release; el porcentaje usa 0–10 000
   basis points. No hay floats persistidos.
 - Ausencia de `UnitProgress` significa `not_started`.

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from django.conf import settings
@@ -19,10 +20,15 @@ from .choices import (
     AcademicGroupMemberStatus,
     AcademicGroupRole,
     AssignmentReason,
+    CohortRosterMode,
+    CohortStaffRole,
     CohortStatus,
+    EnrollmentCohortSource,
     EnrollmentStatus,
+    EnrollmentWindowMode,
     LearningEventType,
     ProgressStatus,
+    RosterEventType,
     UnitProgressStatus,
 )
 
@@ -51,6 +57,7 @@ class AcademicGroup(NoPhysicalDeleteModel):
     status = models.CharField(
         max_length=16, choices=CohortStatus.choices, default=CohortStatus.ACTIVE
     )
+    lock_version = models.PositiveIntegerField(default=1, editable=False)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -71,6 +78,10 @@ class AcademicGroup(NoPhysicalDeleteModel):
             models.CheckConstraint(
                 condition=Q(academic_year__gte=2000, academic_year__lte=2200),
                 name="learning_group_academic_year",
+            ),
+            models.CheckConstraint(
+                condition=Q(lock_version__gt=0),
+                name="learning_group_lock_positive",
             ),
         ]
         indexes = [
@@ -164,8 +175,14 @@ class LearningCohort(NoPhysicalDeleteModel):
     status = models.CharField(
         max_length=16, choices=CohortStatus.choices, default=CohortStatus.ACTIVE
     )
+    roster_mode = models.CharField(
+        max_length=16,
+        choices=CohortRosterMode.choices,
+        default=CohortRosterMode.MANUAL,
+    )
     access_starts_at = models.DateTimeField(null=True, blank=True)
     access_ends_at = models.DateTimeField(null=True, blank=True)
+    lock_version = models.PositiveIntegerField(default=1, editable=False)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -205,6 +222,15 @@ class LearningCohort(NoPhysicalDeleteModel):
                 | Q(access_ends_at__isnull=True)
                 | Q(access_starts_at__lt=F("access_ends_at")),
                 name="learning_cohort_access_window",
+            ),
+            models.CheckConstraint(
+                condition=Q(lock_version__gt=0),
+                name="learning_cohort_lock_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(roster_mode=CohortRosterMode.MANUAL)
+                | Q(academic_group__isnull=False),
+                name="learning_synced_cohort_needs_group",
             ),
             models.CheckConstraint(
                 condition=(
@@ -304,6 +330,16 @@ class CourseEnrollment(NoPhysicalDeleteModel):
     )
     access_starts_at = models.DateTimeField(null=True, blank=True)
     access_ends_at = models.DateTimeField(null=True, blank=True)
+    access_provenance = models.CharField(
+        max_length=32,
+        choices=EnrollmentCohortSource.choices,
+        default=EnrollmentCohortSource.MANUAL,
+    )
+    access_window_mode = models.CharField(
+        max_length=16,
+        choices=EnrollmentWindowMode.choices,
+        default=EnrollmentWindowMode.INDIVIDUAL,
+    )
     lock_version = models.PositiveIntegerField(default=1, editable=False)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -391,6 +427,245 @@ class CourseEnrollment(NoPhysicalDeleteModel):
             or self.cohort.course_id != self.course_id
         ):
             raise ValidationError({"cohort": "La cohorte no corresponde al curso."})
+
+    @property
+    def active_cohort_assignment(self) -> EnrollmentCohortAssignment | None:
+        return (
+            self.cohort_assignments.select_related("cohort")
+            .filter(ended_at__isnull=True)
+            .first()
+        )
+
+    @property
+    def effective_cohort(self) -> LearningCohort | None:
+        # `cohort` is the temporary v1 read mirror. Services keep it in sync
+        # while assignment history is authoritative for roster mutations.
+        if self.cohort_id:
+            return self.cohort
+        assignment = self.active_cohort_assignment
+        if assignment is not None:
+            return assignment.cohort
+        return None
+
+    def effective_access_window(
+        self,
+    ) -> tuple[datetime | None, datetime | None]:
+        if self.access_window_mode == EnrollmentWindowMode.INHERIT:
+            cohort = self.effective_cohort
+            if cohort is not None:
+                return cohort.access_starts_at, cohort.access_ends_at
+        return self.access_starts_at, self.access_ends_at
+
+
+class EnrollmentCohortAssignment(NoPhysicalDeleteModel):
+    """Append-only membership of an enrollment in a concrete course group."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    enrollment = models.ForeignKey(
+        CourseEnrollment, on_delete=models.PROTECT, related_name="cohort_assignments"
+    )
+    cohort = models.ForeignKey(
+        LearningCohort,
+        on_delete=models.PROTECT,
+        related_name="enrollment_assignments",
+    )
+    source = models.CharField(max_length=32, choices=EnrollmentCohortSource.choices)
+    reason = models.CharField(max_length=500)
+    started_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="enrollment_cohort_assignments_started",
+    )
+    started_at = models.DateTimeField()
+    ended_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="enrollment_cohort_assignments_ended",
+    )
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["enrollment"],
+                condition=Q(ended_at__isnull=True),
+                name="learn_enroll_group_one_active",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(ended_at__isnull=True, ended_by__isnull=True)
+                    | Q(ended_at__isnull=False, ended_by__isnull=False)
+                ),
+                name="learn_enroll_group_end_state",
+            ),
+            models.CheckConstraint(
+                condition=Q(reason=Trim(F("reason"))) & ~Q(reason=""),
+                name="learn_enroll_group_reason_trimmed",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["cohort", "ended_at"], name="learn_enroll_group_cohort_ix"
+            ),
+            models.Index(
+                fields=["enrollment", "started_at"], name="learn_enroll_group_hist_ix"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.enrollment_id}:{self.cohort_id}:{self.source}"
+
+    def clean(self) -> None:
+        super().clean()
+        self.reason = self.reason.strip()
+        if not self.enrollment_id or not self.cohort_id:
+            return
+        if (
+            self.enrollment.organization_id != self.cohort.organization_id
+            or self.enrollment.course_id != self.cohort.course_id
+        ):
+            raise ValidationError(
+                {"cohort": "El grupo de curso no corresponde a la matrícula."}
+            )
+        if self.ended_at is None:
+            current = self.enrollment.current_release_assignment
+            if current is None or current.release_id != self.cohort.release_id:
+                raise ValidationError(
+                    {"cohort": "El grupo de curso usa otro release efectivo."}
+                )
+
+
+class CohortStaffAssignment(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    cohort = models.ForeignKey(
+        LearningCohort, on_delete=models.PROTECT, related_name="staff_assignments"
+    )
+    membership = models.ForeignKey(
+        Membership,
+        on_delete=models.PROTECT,
+        related_name="course_group_staff_assignments",
+    )
+    role = models.CharField(max_length=24, choices=CohortStaffRole.choices)
+    started_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="cohort_staff_assignments_started",
+    )
+    started_at = models.DateTimeField()
+    ended_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="cohort_staff_assignments_ended",
+    )
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cohort", "membership"],
+                condition=Q(ended_at__isnull=True),
+                name="learn_cohort_staff_one_active",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(ended_at__isnull=True, ended_by__isnull=True)
+                    | Q(ended_at__isnull=False, ended_by__isnull=False)
+                ),
+                name="learn_cohort_staff_end_state",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["membership", "ended_at"], name="learn_cohort_staff_member_ix"
+            ),
+            models.Index(
+                fields=["cohort", "ended_at"], name="learn_cohort_staff_cohort_ix"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.cohort_id}:{self.membership_id}:{self.role}"
+
+    def clean(self) -> None:
+        super().clean()
+        if (
+            self.cohort_id
+            and self.membership_id
+            and self.cohort.organization_id != self.membership.organization_id
+        ):
+            raise ValidationError(
+                {"membership": "La persona pertenece a otra organización."}
+            )
+
+
+class RosterEvent(NoPhysicalDeleteModel):
+    """Append-only evidence of roster and synchronization decisions."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, related_name="learning_roster_events"
+    )
+    academic_group = models.ForeignKey(
+        AcademicGroup,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="roster_events",
+    )
+    cohort = models.ForeignKey(
+        LearningCohort,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="roster_events",
+    )
+    event_type = models.CharField(max_length=48, choices=RosterEventType.choices)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="learning_roster_events",
+    )
+    occurred_at = models.DateTimeField()
+    details = models.JSONField(default=dict)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(academic_group__isnull=False) | Q(cohort__isnull=False),
+                name="learning_roster_event_has_target",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=["organization", "occurred_at"], name="learn_roster_event_org_ix"
+            ),
+            models.Index(
+                fields=["cohort", "occurred_at"], name="learn_roster_event_cohort_ix"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.organization_id}:{self.event_type}:{self.occurred_at.isoformat()}"
+        )
+
+    def clean(self) -> None:
+        super().clean()
+        if (
+            self.academic_group_id
+            and self.academic_group.organization_id != self.organization_id
+        ):
+            raise ValidationError(
+                {"academic_group": "El grupo pertenece a otra organización."}
+            )
+        if self.cohort_id and self.cohort.organization_id != self.organization_id:
+            raise ValidationError(
+                {"cohort": "El grupo de curso pertenece a otra organización."}
+            )
 
 
 class EnrollmentReleaseAssignment(NoPhysicalDeleteModel):

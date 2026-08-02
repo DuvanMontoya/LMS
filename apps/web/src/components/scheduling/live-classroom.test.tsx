@@ -26,6 +26,8 @@ const detail: LiveSessionDetail = {
   canStart: false,
   countsTowardProgress: false,
   course: { slug: 'algebra' },
+  course_group_id: null,
+  course_group_name: null,
   description: 'Sesión de práctica',
   hostName: 'Participante 00000000',
   id: '00000000-0000-0000-0000-000000000001',

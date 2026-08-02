@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from django.db.models import Avg, Count, F, Q, QuerySet
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 
-from domain.organizations.models import Organization
+from domain.organizations.capabilities import Capability
+from domain.organizations.models import Membership, Organization
 
 from .access import access_state
 from .choices import EnrollmentStatus, ProgressStatus
@@ -19,25 +20,45 @@ from .models import (
     LearningCohort,
     UnitProgress,
 )
-from .policies import can_view_cohorts, can_view_enrollments, can_view_progress
+from .policies import (
+    can_view_progress,
+    has_institutional_learning_scope,
+    learning_visibility_scope,
+)
 from .services import resolve_resume_target
 from .snapshots import snapshot_navigation, snapshot_outline, snapshot_unit
 
+if TYPE_CHECKING:
+    from domain.identity.models import User
+
 
 def cohorts_visible_to_actor(
-    actor: object, organization: Organization
+    actor: object,
+    organization: Organization,
+    *,
+    scope: tuple[Membership, bool] | None = None,
 ) -> QuerySet[LearningCohort]:
-    if not can_view_cohorts(actor, organization):  # type: ignore[arg-type]
+    scope = scope or learning_visibility_scope(
+        cast("User | None", actor), organization, Capability.LEARNING_COHORT_VIEW
+    )
+    if scope is None:
         return LearningCohort.objects.none()
-    return LearningCohort.objects.filter(organization=organization).select_related(
+    membership, has_institutional_scope = scope
+    queryset = LearningCohort.objects.filter(organization=organization).select_related(
         "course", "release", "academic_group", "created_by", "updated_by"
     )
+    if has_institutional_scope:
+        return queryset
+    return queryset.filter(
+        staff_assignments__membership=membership,
+        staff_assignments__ended_at__isnull=True,
+    ).distinct()
 
 
 def academic_groups_visible_to_actor(
     actor: object, organization: Organization
 ) -> QuerySet[AcademicGroup]:
-    if not can_view_cohorts(actor, organization):  # type: ignore[arg-type]
+    if not has_institutional_learning_scope(actor, organization):  # type: ignore[arg-type]
         return AcademicGroup.objects.none()
     return AcademicGroup.objects.filter(organization=organization).prefetch_related(
         "roster__membership__user", "course_cohorts__course"
@@ -45,25 +66,47 @@ def academic_groups_visible_to_actor(
 
 
 def enrollments_visible_to_actor(
-    actor: object, organization: Organization
+    actor: object,
+    organization: Organization,
+    *,
+    scope: tuple[Membership, bool] | None = None,
 ) -> QuerySet[CourseEnrollment]:
-    if not can_view_enrollments(actor, organization):  # type: ignore[arg-type]
+    scope = scope or learning_visibility_scope(
+        cast("User | None", actor), organization, Capability.LEARNING_ENROLLMENT_VIEW
+    )
+    if scope is None:
         return CourseEnrollment.objects.none()
-    return CourseEnrollment.objects.filter(organization=organization).select_related(
+    membership, has_institutional_scope = scope
+    queryset = CourseEnrollment.objects.filter(
+        organization=organization
+    ).select_related(
         "membership__user",
         "course__publication",
         "cohort",
         "current_release_assignment__release",
         "current_release_assignment__progress",
     )
+    if has_institutional_scope:
+        return queryset
+    return queryset.filter(
+        cohort_assignments__ended_at__isnull=True,
+        cohort_assignments__cohort__staff_assignments__membership=membership,
+        cohort_assignments__cohort__staff_assignments__ended_at__isnull=True,
+    ).distinct()
 
 
 def progress_visible_to_actor(
-    actor: object, organization: Organization
+    actor: object,
+    organization: Organization,
+    *,
+    scope: tuple[Membership, bool] | None = None,
 ) -> QuerySet[CourseProgress]:
-    if not can_view_progress(actor, organization):  # type: ignore[arg-type]
+    scope = scope or learning_visibility_scope(
+        cast("User | None", actor), organization, Capability.LEARNING_PROGRESS_VIEW
+    )
+    if scope is None:
         return CourseProgress.objects.none()
-    return CourseProgress.objects.filter(
+    queryset = CourseProgress.objects.filter(
         release_assignment__enrollment__organization=organization
     ).select_related(
         "release_assignment__release",
@@ -73,6 +116,14 @@ def progress_visible_to_actor(
         "release_assignment__enrollment__current_release_assignment__release",
         "release_assignment__enrollment__current_release_assignment__progress",
     )
+    membership, has_institutional_scope = scope
+    if has_institutional_scope:
+        return queryset
+    return queryset.filter(
+        release_assignment__enrollment__cohort_assignments__ended_at__isnull=True,
+        release_assignment__enrollment__cohort_assignments__cohort__staff_assignments__membership=membership,
+        release_assignment__enrollment__cohort_assignments__cohort__staff_assignments__ended_at__isnull=True,
+    ).distinct()
 
 
 def enrollment_visible_to_actor(
@@ -162,6 +213,11 @@ def resume_payload(enrollment: CourseEnrollment) -> dict[str, Any]:
     return {"unit_id": unit_id, "node_id": node_id, "href": href}
 
 
+def cohort_payload(enrollment: CourseEnrollment) -> dict[str, Any] | None:
+    cohort = enrollment.effective_cohort
+    return {"id": cohort.id, "name": cohort.name} if cohort else None
+
+
 def my_learning_payload(enrollment: CourseEnrollment) -> dict[str, Any]:
     assignment = enrollment.current_release_assignment
     if assignment is None:
@@ -180,11 +236,7 @@ def my_learning_payload(enrollment: CourseEnrollment) -> dict[str, Any]:
         "access_state": access_state(enrollment),
         "progress": progress_payload(assignment.progress),
         "resume": resume_payload(enrollment),
-        "cohort": (
-            {"id": enrollment.cohort_id, "name": enrollment.cohort.name}
-            if enrollment.cohort_id
-            else None
-        ),
+        "cohort": cohort_payload(enrollment),
     }
 
 
@@ -218,11 +270,7 @@ def learning_outline(enrollment: CourseEnrollment) -> dict[str, Any]:
         },
         "release_number": assignment.release.number,
         "progress": progress_payload(progress),
-        "cohort": (
-            {"id": enrollment.cohort_id, "name": enrollment.cohort.name}
-            if enrollment.cohort_id
-            else None
-        ),
+        "cohort": cohort_payload(enrollment),
         "resume": resume_payload(enrollment),
         "modules": modules,
     }
@@ -277,10 +325,7 @@ def progress_summary(
     if not can_view_progress(actor, organization):  # type: ignore[arg-type]
         raise Http404
     enrollment = get_object_or_404(
-        CourseEnrollment.objects.filter(organization=organization).select_related(
-            "current_release_assignment__progress"
-        ),
-        pk=enrollment_id,
+        enrollments_visible_to_actor(actor, organization), pk=enrollment_id
     )
     if enrollment.current_release_assignment_id is None:
         raise Http404
@@ -290,42 +335,61 @@ def progress_summary(
 def cohort_progress_summary(
     actor: object, organization: Organization, cohort_id: uuid.UUID
 ) -> dict[str, Any]:
-    cohort = cohort_visible_to_actor(actor, organization, cohort_id)
+    scope = learning_visibility_scope(
+        cast("User | None", actor),
+        organization,
+        Capability.LEARNING_COHORT_VIEW,
+        Capability.LEARNING_ENROLLMENT_VIEW,
+        Capability.LEARNING_PROGRESS_VIEW,
+    )
+    if scope is None:
+        raise Http404
+    cohort = get_object_or_404(
+        cohorts_visible_to_actor(actor, organization, scope=scope), pk=cohort_id
+    )
     rows = (
-        progress_visible_to_actor(actor, organization)
+        progress_visible_to_actor(actor, organization, scope=scope)
         .filter(
-            release_assignment__enrollment__cohort=cohort,
+            release_assignment__enrollment__cohort_assignments__cohort=cohort,
+            release_assignment__enrollment__cohort_assignments__ended_at__isnull=True,
             release_assignment__enrollment__current_release_assignment=F(
                 "release_assignment"
             ),
         )
         .order_by("-last_activity_at", "id")
     )
-    aggregates = CourseEnrollment.objects.filter(cohort=cohort).aggregate(
-        total_enrollments=Count("id"),
-        active=Count("id", filter=Q(status=EnrollmentStatus.ACTIVE)),
-        suspended=Count("id", filter=Q(status=EnrollmentStatus.SUSPENDED)),
-        revoked=Count("id", filter=Q(status=EnrollmentStatus.REVOKED)),
-        not_started=Count(
-            "id",
-            filter=Q(
-                current_release_assignment__progress__status=ProgressStatus.NOT_STARTED
+    aggregates = (
+        enrollments_visible_to_actor(actor, organization, scope=scope)
+        .filter(
+            cohort_assignments__cohort=cohort,
+            cohort_assignments__ended_at__isnull=True,
+        )
+        .aggregate(
+            total_enrollments=Count("id"),
+            active=Count("id", filter=Q(status=EnrollmentStatus.ACTIVE)),
+            suspended=Count("id", filter=Q(status=EnrollmentStatus.SUSPENDED)),
+            revoked=Count("id", filter=Q(status=EnrollmentStatus.REVOKED)),
+            not_started=Count(
+                "id",
+                filter=Q(
+                    current_release_assignment__progress__status=ProgressStatus.NOT_STARTED
+                ),
             ),
-        ),
-        in_progress=Count(
-            "id",
-            filter=Q(
-                current_release_assignment__progress__status=ProgressStatus.IN_PROGRESS
+            in_progress=Count(
+                "id",
+                filter=Q(
+                    current_release_assignment__progress__status=ProgressStatus.IN_PROGRESS
+                ),
             ),
-        ),
-        completed=Count(
-            "id",
-            filter=Q(
-                current_release_assignment__progress__status=ProgressStatus.COMPLETED
+            completed=Count(
+                "id",
+                filter=Q(
+                    current_release_assignment__progress__status=ProgressStatus.COMPLETED
+                ),
             ),
-        ),
-        average_basis_points=Avg(
-            "current_release_assignment__progress__percent_basis_points"
-        ),
+            average_basis_points=Avg(
+                "current_release_assignment__progress__percent_basis_points"
+            ),
+        )
     )
     return {**aggregates, "rows": rows}

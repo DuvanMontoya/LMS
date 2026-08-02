@@ -48,6 +48,13 @@ class AcademicEventSeries(NoPhysicalDeleteModel):
         on_delete=models.PROTECT,
         related_name="academic_event_series",
     )
+    course_group = models.ForeignKey(
+        "learning.LearningCohort",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="scheduled_event_series",
+    )
     host_membership = models.ForeignKey(
         Membership, on_delete=models.PROTECT, related_name="hosted_event_series"
     )
@@ -116,6 +123,10 @@ class AcademicEventSeries(NoPhysicalDeleteModel):
                 ),
                 name="sched_series_progress_configuration",
             ),
+            models.CheckConstraint(
+                condition=Q(course_group__isnull=True) | Q(course__isnull=False),
+                name="sched_series_group_requires_course",
+            ),
         ]
         indexes = [
             models.Index(
@@ -123,6 +134,10 @@ class AcademicEventSeries(NoPhysicalDeleteModel):
             ),
             models.Index(
                 fields=["course", "status"], name="sched_series_course_state_ix"
+            ),
+            models.Index(
+                fields=["course_group", "status"],
+                name="sched_series_group_state_ix",
             ),
             models.Index(fields=["host_membership"], name="sched_series_host_ix"),
         ]
@@ -138,6 +153,13 @@ class AcademicEventSeries(NoPhysicalDeleteModel):
         self.rrule = self.rrule.strip().removeprefix("RRULE:")
         if self.course_id and self.course.organization_id != self.organization_id:
             raise ValidationError({"course": "El curso pertenece a otra organización."})
+        if self.course_group_id and (
+            self.course_group.organization_id != self.organization_id
+            or self.course_group.course_id != self.course_id
+        ):
+            raise ValidationError(
+                {"course_group": "El grupo de curso no corresponde al curso."}
+            )
         if (
             self.host_membership_id
             and self.host_membership.organization_id != self.organization_id

@@ -5,13 +5,66 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from domain.learning.services import create_cohort, enroll_member
+from domain.learning.choices import AcademicGroupLevel, AcademicGroupRole
+from domain.learning.services import (
+    create_academic_group,
+    create_cohort,
+    enroll_member,
+    replace_academic_group_roster,
+)
 from domain.organizations.models import Membership
 
 from .support import LearningFixtureMixin
 
 
 class LearningApiTests(LearningFixtureMixin, TestCase):
+    def test_roster_read_is_searchable_and_stale_write_returns_conflict(self) -> None:
+        (
+            owner,
+            _learner,
+            organization,
+            membership,
+            _revision,
+            _module,
+            _unit,
+            _publication,
+            _release,
+            _enrollment,
+        ) = self.learning_context()
+        group = create_academic_group(
+            actor=owner,
+            organization=organization,
+            name="Undécimo para API",
+            academic_year=2026,
+            level=AcademicGroupLevel.SECONDARY_11,
+        )
+        group = replace_academic_group_roster(
+            actor=owner,
+            group=group,
+            expected_group_version=group.lock_version,
+            members=[
+                {"membership_id": membership.id, "role": AcademicGroupRole.LEARNER}
+            ],
+        )
+        client = APIClient()
+        client.force_authenticate(owner)
+        base = f"/api/v1/organizations/{organization.slug}/learning"
+
+        roster = client.get(
+            f"{base}/academic-groups/{group.id}/roster/",
+            {"search": membership.user.email, "page_size": 1},
+        )
+        self.assertEqual(roster.status_code, 200)
+        self.assertEqual(roster.json()["count"], 1)
+        self.assertEqual(roster.json()["results"][0]["email"], membership.user.email)
+
+        stale = client.put(
+            f"{base}/academic-groups/{group.id}/roster/",
+            {"expected_group_version": group.lock_version - 1, "members": []},
+            format="json",
+        )
+        self.assertEqual(stale.status_code, 409)
+
     def test_admin_and_student_surfaces_enforce_identity_scope(self) -> None:
         (
             owner,

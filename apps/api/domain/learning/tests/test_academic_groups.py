@@ -46,6 +46,7 @@ class AcademicGroupTests(TestCase):
             members=[
                 {"membership_id": membership.id, "role": AcademicGroupRole.LEARNER}
             ],
+            expected_group_version=group.lock_version,
         )
 
         row = group.roster.get()
@@ -63,12 +64,18 @@ class AcademicGroupTests(TestCase):
                         "role": AcademicGroupRole.INSTRUCTOR,
                     }
                 ],
+                expected_group_version=group.lock_version + 1,
             )
         row.refresh_from_db()
         self.assertEqual(row.status, "active")
         self.assertEqual(row.role, AcademicGroupRole.LEARNER)
 
-        replace_academic_group_roster(actor=owner, group=group, members=[])
+        replace_academic_group_roster(
+            actor=owner,
+            group=group,
+            members=[],
+            expected_group_version=group.lock_version + 1,
+        )
         row.refresh_from_db()
         self.assertEqual(row.status, "inactive")
         self.assertIsNotNone(row.ended_at)

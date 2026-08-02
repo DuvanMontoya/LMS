@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import {
   useArchiveCohort,
   useEnrollmentLifecycle,
+  useMakeEnrollmentIndividual,
   useUpgradeEnrollment,
 } from '@/lib/learning/hooks';
 import type { LearningCourseOption } from '@/lib/learning/server';
@@ -34,7 +35,13 @@ export function CohortActions({
   cohortId,
   slug,
   status,
-}: Readonly<{ cohortId: string; slug: string; status: string }>) {
+  version,
+}: Readonly<{
+  cohortId: string;
+  slug: string;
+  status: string;
+  version: number;
+}>) {
   const router = useRouter();
   const mutation = useArchiveCohort(slug, cohortId);
   if (status === 'archived') return null;
@@ -43,7 +50,7 @@ export function CohortActions({
       description="La cohorte dejará de aceptar matrículas nuevas. Su historial, matrículas y progreso permanecerán disponibles."
       label="Archivar"
       onConfirm={async () => {
-        await mutation.mutateAsync(undefined);
+        await mutation.mutateAsync(version);
         router.refresh();
       }}
       pending={mutation.isPending}
@@ -73,6 +80,7 @@ export function EnrollmentActions({
   const router = useRouter();
   const lifecycle = useEnrollmentLifecycle(slug, enrollmentId);
   const upgrade = useUpgradeEnrollment(slug, enrollmentId);
+  const individualize = useMakeEnrollmentIndividual(slug, enrollmentId);
   const [release, setRelease] = useState('');
 
   async function change(action: 'reactivate' | 'revoke' | 'suspend') {
@@ -129,6 +137,24 @@ export function EnrollmentActions({
             variant="destructive"
           >
             <ShieldX />
+          </ConfirmAction>
+        ) : null}
+        {cohortId && status !== 'revoked' ? (
+          <ConfirmAction
+            description="La matrícula dejará el grupo de curso, conservará su release y progreso, y quedará con una política de acceso individual."
+            label="Convertir a individual"
+            onConfirm={async () => {
+              await individualize.mutateAsync({
+                reason: 'Conversión administrativa explícita',
+                version,
+              });
+              router.refresh();
+            }}
+            pending={individualize.isPending}
+            title="Convertir matrícula a individual"
+            variant="outline"
+          >
+            <CircleArrowUp />
           </ConfirmAction>
         ) : null}
       </div>

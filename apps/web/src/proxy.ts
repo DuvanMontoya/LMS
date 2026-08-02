@@ -3,10 +3,28 @@ import { NextResponse, type NextRequest } from 'next/server';
 const sessionCookieName = process.env.AUTH_SESSION_COOKIE_NAME ?? 'sessionid';
 
 export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const isInvitationActivation =
+    pathname === '/invitaciones/activar' ||
+    pathname.startsWith('/invitaciones/activar/') ||
+    pathname === '/invitaciones/activar-cuenta' ||
+    pathname.startsWith('/invitaciones/activar-cuenta/');
+  const isPublicIdentityRoute =
+    pathname.startsWith('/auth/') || isInvitationActivation;
+
+  if (isPublicIdentityRoute) {
+    return setSensitivePageHeaders(
+      NextResponse.next(),
+      isInvitationActivation
+        ? 'no-referrer'
+        : 'strict-origin-when-cross-origin',
+    );
+  }
+
   if (request.cookies.has(sessionCookieName)) {
-    const response = NextResponse.next();
+    const response = setSensitivePageHeaders(NextResponse.next());
     const isLiveClass = /^\/organizaciones\/[^/]+\/clases\/[^/]+\/?$/.test(
-      request.nextUrl.pathname,
+      pathname,
     );
     response.headers.set(
       'Permissions-Policy',
@@ -38,11 +56,23 @@ export function proxy(request: NextRequest) {
     return response;
   }
   const loginUrl = new URL('/auth/iniciar-sesion', request.url);
-  loginUrl.searchParams.set(
-    'next',
-    `${request.nextUrl.pathname}${request.nextUrl.search}`,
+  loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
+  return setSensitivePageHeaders(NextResponse.redirect(loginUrl));
+}
+
+function setSensitivePageHeaders(
+  response: NextResponse,
+  referrerPolicy = 'strict-origin-when-cross-origin',
+) {
+  response.headers.set('Cache-Control', 'no-store');
+  response.headers.set('Referrer-Policy', referrerPolicy);
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set(
+    'Permissions-Policy',
+    'camera=(), microphone=(), display-capture=(), geolocation=()',
   );
-  return NextResponse.redirect(loginUrl);
+  return response;
 }
 
 function safeLiveKitOrigin(value: string | undefined, allowInsecure = false) {
@@ -61,9 +91,12 @@ function safeLiveKitOrigin(value: string | undefined, allowInsecure = false) {
 
 export const config = {
   matcher: [
+    '/auth/:path*',
     '/administracion/:path*',
     '/estudiar/:path*',
     '/invitaciones/aceptar/:path*',
+    '/invitaciones/activar/:path*',
+    '/invitaciones/activar-cuenta/:path*',
     '/organizaciones/:path*',
   ],
 };

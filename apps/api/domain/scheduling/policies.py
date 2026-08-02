@@ -7,7 +7,9 @@ from datetime import datetime
 from django.utils import timezone
 
 from domain.learning.contracts import (
+    actor_has_course_group_staff_scope,
     effective_course_enrollment,
+    effective_course_group_enrollment,
     effective_enrollments_for_actor,
 )
 from domain.organizations.capabilities import Capability
@@ -74,6 +76,12 @@ def live_access(
         membership
         and membership.id == session.occurrence.series.host_membership_id
         and has_capability(actor, organization, Capability.LIVE_SESSION_HOST)  # type: ignore[arg-type]
+        and (
+            session.occurrence.series.course_group_id is None
+            or actor_has_course_group_staff_scope(
+                actor=actor, course_group=session.occurrence.series.course_group
+            )
+        )
     ):
         return LiveAccess(
             role=AttendanceRole.HOST,
@@ -93,7 +101,16 @@ def live_access(
             can_moderate=True,
         )
     series = session.occurrence.series
-    if series.course_id:
+    if series.course_group_id:
+        enrollment = effective_course_group_enrollment(
+            actor=actor,
+            organization=organization,
+            course_group=series.course_group,
+            at=at or timezone.now(),
+        )
+        if enrollment is None:
+            return None
+    elif series.course_id:
         enrollment = effective_course_enrollment(
             actor=actor,
             organization=organization,

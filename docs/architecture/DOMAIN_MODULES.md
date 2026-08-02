@@ -10,7 +10,7 @@
 | `publishing` | Implemented: publication channel, immutable complete releases, integrity chain, withdrawal, draft cloning entry point and authenticated library. | Release/event rows are append-only and protected by PostgreSQL triggers; active points only to the newest release; reads use snapshots only. | Reads public courses/content/organization contracts. Courses and content never import publishing; no enrolment, progress, evaluation or delivery state. |
 | `authoring` | Draft, review, publication, immutable snapshots/history | Published revision immutable; restoration creates a new revision. Emits `published`, `publication_retracted`. | Courses/content/assessments; cannot alter attempts. |
 | `enrollments` | Enrolment, access window, status; future cohorts | Active access is evaluated at delivery time; historical enrolment facts retained. | Identity/courses/publication; no grading policy. |
-| `learning` | Study session, bookmark, continuation and generic external course-progress requirements. | Learner state is tied to the delivered version; external completion evidence is idempotent and source-addressed. Emits `learning_event`. | Enrolments/publications; no score ownership. Exposes a bounded write contract for scheduling without importing it. |
+| `learning` | Grupos académicos reutilizables, grupos de curso release-pinned, roster/staff histórico, matrículas, delivery, continuidad y requisitos externos. | Una matrícula conserva release/progreso; roster y staff son hechos auditables, con a lo sumo una asignación de grupo de curso activa. La política de ventana puede heredarse o excepcionarse explícitamente. Emite `learning_event` y eventos de roster. | Puede leer organizations/courses/publishing; no posee score ni importa scheduling/assessments. Expone contratos acotados de matrícula y asignación efectiva. |
 | `scheduling` | Course-linked or standalone series, explicit standalone audiences, bounded occurrences, live-session lifecycle, attendance segments and LiveKit webhook ledger. | PostgreSQL is authoritative; every live occurrence has one immutable room name; recurring sets are bounded; signed webhooks are idempotent and attendance is append-only by connection segment. | Reads organization policies, courses and public enrollment/progress contracts from learning. Existing academic domains never import scheduling. LiveKit and FullCalendar are adapters, not sources of truth. |
 | `assessments` | Implemented: banks, question/assessment revisions and immutable versions, deliveries, assignments, attempts, responses, deterministic initial scoring and manual decisions. Future: pools, regrading, gradebook and analytics. | Public/grading snapshots are separate; one open revision and one in-progress attempt; final order is materialized; versions/items/decisions/events are trigger-protected. | Reads organization policy, catalog objectives, publishing releases and learning assignments. Reverse imports are prohibited. ADR 0023 intentionally groups the initial attempt/grading lifecycle here. |
 | `attempts` | Future extraction candidate, not a Django app in Phase 13. | Any extraction must preserve IDs, snapshots, events and transactions. | Must not be created without a new ADR and migration plan. |
@@ -69,12 +69,14 @@ biblioteca. Los contratos de clonación crean UUID nuevos y documentos v1 sin
 importarlo. Un retiro cambia el canal y agrega evento, no el release. Véanse
 `PUBLISHING.md` y ADR 0021.
 
-`learning` posee `LearningCohort`, `CourseEnrollment`,
-`EnrollmentReleaseAssignment`, `CourseProgress`, `UnitProgress`,
-`LearningEvent`, políticas, servicios, selectores y API de delivery. Puede
-importar organizations, courses y publishing para validar referencias y leer
-snapshots; no importa content ni autoría viva. Publishing, courses y content no
-importan learning. Véanse `LEARNING.md` y ADR 0022.
+`learning` posee `AcademicGroup`, `LearningCohort` (nombre técnico compatible
+para grupo de curso), `CohortStaffAssignment`, `CourseEnrollment`,
+`EnrollmentCohortAssignment`, `EnrollmentReleaseAssignment`, progreso, hechos
+de roster y delivery. Puede importar organizations, courses y publishing para
+validar referencias y leer snapshots; no importa content ni autoría viva.
+Publishing, courses y content no importan learning. Assessments consume el
+grupo efectivo como snapshot y scheduling usa su contrato público, sin invertir
+la dependencia. Véanse `LEARNING.md`, ADR 0022 y ADR 0035.
 
 # Assessments boundary
 

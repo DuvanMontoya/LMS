@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from domain.courses.models import Course
+from domain.learning.contracts import course_group_for_scheduling
 from domain.organizations.choices import MembershipStatus
 from domain.organizations.models import Membership, Organization
 from domain.organizations.policies import active_membership
@@ -137,6 +138,21 @@ class CalendarEventListCreateView(APIView):
             if course_slug
             else None
         )
+        course_group = (
+            course_group_for_scheduling(
+                organization=organization, course_group_id=data["course_group_id"]
+            )
+            if data.get("course_group_id")
+            else None
+        )
+        if data.get("course_group_id") and course_group is None:
+            return Response(
+                {
+                    "code": "course_group_invalid",
+                    "detail": "El grupo de curso no está disponible.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         participant_ids = data.get("participant_membership_ids", [])
         participants = list(
             Membership.objects.select_related("organization", "user").filter(
@@ -170,6 +186,7 @@ class CalendarEventListCreateView(APIView):
                 actor=request.user,
                 organization=organization,
                 course=course,
+                course_group=course_group,
                 host_membership=host,
                 participant_memberships=participants,
                 title=data["title"],

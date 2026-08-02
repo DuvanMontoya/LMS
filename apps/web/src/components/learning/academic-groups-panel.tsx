@@ -8,14 +8,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  MembershipSearchPicker,
+  type MembershipOption,
+} from '@/components/learning/membership-search-picker';
 import type { components } from '@/lib/api/generated/platform';
 import { platformBrowserClient } from '@/lib/api/platform-browser-client';
 import type { AcademicGroupPage } from '@/lib/learning/server';
 
 type Level = components['schemas']['AcademicGroupLevel'];
 type GroupRole = components['schemas']['AcademicGroupRole'];
-type MemberOption = { email: string; id: string };
-
 const levels: Array<[Level, string]> = [
   ['early_childhood', 'Primera infancia'],
   ['preschool', 'Preescolar'],
@@ -40,12 +42,10 @@ const levels: Array<[Level, string]> = [
 export function AcademicGroupsPanel({
   canManage,
   groups,
-  members,
   slug,
 }: Readonly<{
   canManage: boolean;
   groups: AcademicGroupPage['results'];
-  members: MemberOption[];
   slug: string;
 }>) {
   const router = useRouter();
@@ -66,6 +66,23 @@ export function AcademicGroupsPanel({
           group.roster
             .filter((entry) => entry.status === 'active')
             .map((entry) => [entry.membership_id, entry.role]),
+        ),
+      ]),
+    ),
+  );
+  const [rosterPeople, setRosterPeople] = useState<
+    Record<string, Record<string, MembershipOption>>
+  >(() =>
+    Object.fromEntries(
+      groups.map((group) => [
+        group.id,
+        Object.fromEntries(
+          group.roster
+            .filter((entry) => entry.status === 'active')
+            .map((entry) => [
+              entry.membership_id,
+              { email: entry.email, id: entry.membership_id },
+            ]),
         ),
       ]),
     ),
@@ -103,11 +120,14 @@ export function AcademicGroupsPanel({
     setSavingGroup(groupId);
     setError('');
     const groupRoster = rosters[groupId] ?? {};
+    const group = groups.find((item) => item.id === groupId);
+    if (!group) return;
     const { error: responseError, response } = await platformBrowserClient.PUT(
       '/api/v1/organizations/{slug}/learning/academic-groups/{group_id}/roster/',
       {
         params: { path: { group_id: groupId, slug } },
         body: {
+          expected_group_version: group.lock_version,
           members: Object.entries(groupRoster)
             .filter((entry): entry is [string, GroupRole] => Boolean(entry[1]))
             .map(([membershipId, role]) => ({
@@ -139,7 +159,7 @@ export function AcademicGroupsPanel({
             <h2 className="text-lg font-semibold">Crear grupo académico</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Un mismo grupo puede organizar docentes y estudiantes y vincularse
-              a cohortes de varios cursos.
+              a grupos de curso de varios cursos.
             </p>
           </div>
           <label className="grid gap-1.5 text-sm font-medium">
@@ -240,7 +260,9 @@ export function AcademicGroupsPanel({
                 docentes
               </span>
               <span>·</span>
-              <span>{group.linked_cohort_count ?? 0} cohortes vinculadas</span>
+              <span>
+                {group.linked_cohort_count ?? 0} grupos de curso vinculados
+              </span>
             </div>
             {canManage ? (
               <details className="mt-4 border-t pt-4">
@@ -248,33 +270,94 @@ export function AcademicGroupsPanel({
                   Administrar integrantes
                 </summary>
                 <div className="mt-3 grid gap-2">
-                  {members.map((member) => (
-                    <label
-                      className="grid gap-2 text-sm sm:grid-cols-[minmax(0,1fr)_11rem] sm:items-center"
-                      key={member.id}
-                    >
-                      <span className="truncate">{member.email}</span>
-                      <select
-                        aria-label={`Participación de ${member.email}`}
-                        className="academic-control"
-                        onChange={(event) =>
-                          setRosters((current) => ({
-                            ...current,
-                            [group.id]: {
-                              ...(current[group.id] ?? {}),
-                              [member.id]: event.target.value as '' | GroupRole,
-                            },
-                          }))
-                        }
-                        value={rosters[group.id]?.[member.id] ?? ''}
-                      >
-                        <option value="">No pertenece</option>
-                        <option value="learner">Estudiante</option>
-                        <option value="instructor">Docente</option>
-                        <option value="assistant">Acompañante</option>
-                      </select>
-                    </label>
-                  ))}
+                  <MembershipSearchPicker
+                    ariaLabel={`Buscar integrante para ${group.name}`}
+                    excludeIds={Object.keys(rosters[group.id] ?? {})}
+                    onSelect={(member) => {
+                      setRosters((current) => ({
+                        ...current,
+                        [group.id]: {
+                          ...(current[group.id] ?? {}),
+                          [member.id]: 'learner',
+                        },
+                      }));
+                      setRosterPeople((current) => ({
+                        ...current,
+                        [group.id]: {
+                          ...(current[group.id] ?? {}),
+                          [member.id]: member,
+                        },
+                      }));
+                    }}
+                    slug={slug}
+                  />
+                  {Object.entries(rosters[group.id] ?? {}).length ? (
+                    <div className="mt-3 grid gap-2 rounded-md border p-2 sm:grid-cols-2">
+                      {Object.entries(rosters[group.id] ?? {}).map(
+                        ([membershipId, role]) => {
+                          const member = rosterPeople[group.id]?.[membershipId];
+                          return (
+                            <div
+                              className="grid gap-2 rounded-md p-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-center"
+                              key={membershipId}
+                            >
+                              <span className="truncate text-sm">
+                                {member?.email ?? membershipId}
+                              </span>
+                              <select
+                                aria-label={`Participación de ${member?.email ?? membershipId}`}
+                                className="academic-control"
+                                onChange={(event) =>
+                                  setRosters((current) => ({
+                                    ...current,
+                                    [group.id]: {
+                                      ...(current[group.id] ?? {}),
+                                      [membershipId]: event.target
+                                        .value as GroupRole,
+                                    },
+                                  }))
+                                }
+                                value={role}
+                              >
+                                <option value="learner">Estudiante</option>
+                                <option value="instructor">Docente</option>
+                                <option value="assistant">Acompañante</option>
+                              </select>
+                              <Button
+                                onClick={() => {
+                                  setRosters((current) => {
+                                    const nextGroup = {
+                                      ...(current[group.id] ?? {}),
+                                    };
+                                    delete nextGroup[membershipId];
+                                    return {
+                                      ...current,
+                                      [group.id]: nextGroup,
+                                    };
+                                  });
+                                  setRosterPeople((current) => {
+                                    const nextGroup = {
+                                      ...(current[group.id] ?? {}),
+                                    };
+                                    delete nextGroup[membershipId];
+                                    return {
+                                      ...current,
+                                      [group.id]: nextGroup,
+                                    };
+                                  });
+                                }}
+                                size="sm"
+                                type="button"
+                                variant="ghost"
+                              >
+                                Quitar
+                              </Button>
+                            </div>
+                          );
+                        },
+                      )}
+                    </div>
+                  ) : null}
                   <Button
                     className="mt-2 justify-self-start"
                     disabled={savingGroup === group.id}

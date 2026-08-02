@@ -24,6 +24,7 @@ class EventCreateSerializer(serializers.Serializer):
     course_slug = serializers.SlugField(
         required=False, allow_null=True, allow_blank=True
     )
+    course_group_id = serializers.UUIDField(required=False, allow_null=True)
     host_membership_id = serializers.UUIDField(required=False)
     participant_membership_ids = serializers.ListField(
         child=serializers.UUIDField(),
@@ -65,6 +66,8 @@ class CalendarExtendedPropsSerializer(serializers.Serializer):
     courseId = serializers.UUIDField(allow_null=True)
     courseSlug = serializers.CharField(allow_null=True)
     courseName = serializers.CharField()
+    courseGroupId = serializers.UUIDField(allow_null=True)
+    courseGroupName = serializers.CharField(allow_null=True)
     countsTowardProgress = serializers.BooleanField()
     attendanceThresholdMinutes = serializers.IntegerField(allow_null=True)
     eventType = serializers.CharField()
@@ -118,6 +121,8 @@ class LiveSessionDetailSerializer(serializers.Serializer):
     title = serializers.CharField()
     description = serializers.CharField()
     course = serializers.DictField(allow_null=True)
+    course_group_id = serializers.UUIDField(allow_null=True)
+    course_group_name = serializers.CharField(allow_null=True)
     countsTowardProgress = serializers.BooleanField()
     attendanceThresholdMinutes = serializers.IntegerField(allow_null=True)
     hostName = serializers.CharField()

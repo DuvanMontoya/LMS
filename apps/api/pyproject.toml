@@ -46,6 +46,7 @@ addopts = "--strict-config --strict-markers --cov=config --cov=domain --cov-repo
 
 [tool.coverage.run]
 branch = true
+omit = ["*/migrations/*"]
 source = ["config", "domain"]
 
 [tool.ruff]

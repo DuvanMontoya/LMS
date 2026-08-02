@@ -20,7 +20,12 @@ from rest_framework.response import Response as ApiResponse
 from rest_framework.views import APIView
 
 from domain.catalog.models import LearningObjective
-from domain.learning.models import EnrollmentReleaseAssignment, LearningCohort
+from domain.learning.models import (
+    EnrollmentCohortAssignment,
+    EnrollmentReleaseAssignment,
+    LearningCohort,
+)
+from domain.learning.policies import can_manage_course_group
 from domain.organizations.models import Organization
 from domain.organizations.selectors import organization_visible_to
 from domain.publishing.models import CourseRelease
@@ -1572,9 +1577,12 @@ class AssignDeliveryCohortView(APIView):
             pk=serializer.validated_data["cohort_id"],
             organization=organization,
         )
-        current_ids = cohort.enrollments.exclude(
-            current_release_assignment_id=None
-        ).values_list("current_release_assignment_id", flat=True)
+        _require(can_manage_course_group(request.user, cohort))
+        current_ids = EnrollmentCohortAssignment.objects.filter(
+            cohort=cohort,
+            ended_at__isnull=True,
+            enrollment__current_release_assignment__isnull=False,
+        ).values_list("enrollment__current_release_assignment_id", flat=True)
         assignments = list(
             EnrollmentReleaseAssignment.objects.filter(pk__in=current_ids)
         )

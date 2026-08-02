@@ -460,7 +460,7 @@ function PlatformSidebar({
         {
           href: `${organizationBase}/miembros`,
           icon: Users,
-          label: 'Personas y miembros',
+          label: 'Personas',
           visible: capabilities.has('membership.view'),
         },
         {
@@ -476,12 +476,12 @@ function PlatformSidebar({
             },
             {
               href: `${organizationBase}/aprendizaje/cohortes`,
-              label: 'Cohortes',
+              label: 'Grupos de curso',
               visible: capabilities.has('learning.cohort.view'),
             },
             {
               href: `${organizationBase}/aprendizaje/matriculas`,
-              label: 'Matrículas',
+              label: 'Matrículas individuales',
               visible: capabilities.has('learning.enrollment.view'),
             },
           ],

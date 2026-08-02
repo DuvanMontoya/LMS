@@ -1,4 +1,7 @@
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
+import uuid
+from datetime import datetime
+
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
@@ -6,10 +9,18 @@ from domain.learning.choices import (
     AcademicGroupLevel,
     AcademicGroupRole,
     AccessState,
+    CohortRosterMode,
+    CohortStaffRole,
     EnrollmentStatus,
     ProgressStatus,
 )
-from domain.learning.models import AcademicGroup, CourseEnrollment, LearningCohort
+from domain.learning.models import (
+    AcademicGroup,
+    AcademicGroupMember,
+    CohortStaffAssignment,
+    CourseEnrollment,
+    LearningCohort,
+)
 
 
 class ErrorSerializer(serializers.Serializer):
@@ -23,6 +34,23 @@ class AcademicGroupMemberSerializer(serializers.Serializer):
     email = serializers.EmailField(source="membership.user.email")
     role = serializers.ChoiceField(choices=AcademicGroupRole.choices)
     status = serializers.CharField()
+
+
+class AcademicGroupRosterReadSerializer(serializers.ModelSerializer):
+    membership_id = serializers.UUIDField(read_only=True)
+    email = serializers.EmailField(source="membership.user.email", read_only=True)
+
+    class Meta:
+        model = AcademicGroupMember
+        fields = (
+            "id",
+            "membership_id",
+            "email",
+            "role",
+            "status",
+            "joined_at",
+            "ended_at",
+        )
 
 
 class AcademicGroupReadSerializer(serializers.ModelSerializer):
@@ -40,6 +68,7 @@ class AcademicGroupReadSerializer(serializers.ModelSerializer):
             "section",
             "description",
             "status",
+            "lock_version",
             "roster",
             "linked_cohort_count",
             "created_at",
@@ -64,6 +93,7 @@ class AcademicGroupRosterEntrySerializer(serializers.Serializer):
 
 
 class AcademicGroupRosterSerializer(serializers.Serializer):
+    expected_group_version = serializers.IntegerField(min_value=1)
     members = AcademicGroupRosterEntrySerializer(many=True, allow_empty=True)
 
     def validate_members(
@@ -73,10 +103,6 @@ class AcademicGroupRosterSerializer(serializers.Serializer):
         if len(membership_ids) != len(set(membership_ids)):
             raise serializers.ValidationError(
                 "Una persona no puede aparecer más de una vez en el grupo."
-            )
-        if len(value) > 200:
-            raise serializers.ValidationError(
-                "El grupo no puede superar 200 integrantes."
             )
         return value
 
@@ -88,6 +114,13 @@ class PaginatedAcademicGroupSerializer(serializers.Serializer):
     results = AcademicGroupReadSerializer(many=True)
 
 
+class PaginatedAcademicGroupRosterSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = AcademicGroupRosterReadSerializer(many=True)
+
+
 class CohortReadSerializer(serializers.ModelSerializer):
     course_slug = serializers.CharField(source="course.slug")
     course_title = serializers.CharField(source="release.title")
@@ -97,6 +130,9 @@ class CohortReadSerializer(serializers.ModelSerializer):
     academic_group_name = serializers.CharField(
         source="academic_group.name", read_only=True, allow_null=True
     )
+    course_group_version = serializers.IntegerField(source="lock_version")
+    staff_count = serializers.IntegerField(read_only=True, required=False)
+    sync_learner_count = serializers.IntegerField(read_only=True, required=False)
 
     class Meta:
         model = LearningCohort
@@ -106,6 +142,8 @@ class CohortReadSerializer(serializers.ModelSerializer):
             "slug",
             "description",
             "status",
+            "roster_mode",
+            "course_group_version",
             "course_slug",
             "course_title",
             "release_number",
@@ -114,9 +152,16 @@ class CohortReadSerializer(serializers.ModelSerializer):
             "access_starts_at",
             "access_ends_at",
             "enrollment_count",
+            "staff_count",
+            "sync_learner_count",
             "created_at",
             "updated_at",
         )
+
+
+class CohortStaffEntrySerializer(serializers.Serializer):
+    membership_id = serializers.UUIDField()
+    role = serializers.ChoiceField(choices=CohortStaffRole.choices)
 
 
 class CohortCreateSerializer(serializers.Serializer):
@@ -130,13 +175,70 @@ class CohortCreateSerializer(serializers.Serializer):
     )
     access_starts_at = serializers.DateTimeField(required=False, allow_null=True)
     access_ends_at = serializers.DateTimeField(required=False, allow_null=True)
+    roster_mode = serializers.ChoiceField(
+        choices=CohortRosterMode.choices, required=False
+    )
+    staff = CohortStaffEntrySerializer(many=True, required=False, default=list)
+
+    def validate_staff(self, value: list[dict[str, object]]) -> list[dict[str, object]]:
+        membership_ids = [row["membership_id"] for row in value]
+        if len(membership_ids) != len(set(membership_ids)):
+            raise serializers.ValidationError("No repitas docentes.")
+        return value
 
 
 class CohortUpdateSerializer(serializers.Serializer):
+    expected_cohort_version = serializers.IntegerField(min_value=1)
     name = serializers.CharField(max_length=200)
     description = serializers.CharField(max_length=2_000, allow_blank=True)
     access_starts_at = serializers.DateTimeField(allow_null=True)
     access_ends_at = serializers.DateTimeField(allow_null=True)
+
+
+class CohortVersionSerializer(serializers.Serializer):
+    expected_cohort_version = serializers.IntegerField(min_value=1)
+
+
+class CohortStaffReplaceSerializer(serializers.Serializer):
+    expected_cohort_version = serializers.IntegerField(min_value=1)
+    staff = CohortStaffEntrySerializer(many=True)
+
+    def validate_staff(self, value: list[dict[str, object]]) -> list[dict[str, object]]:
+        membership_ids = [row["membership_id"] for row in value]
+        if len(membership_ids) != len(set(membership_ids)):
+            raise serializers.ValidationError("No repitas docentes.")
+        return value
+
+
+class CohortStaffReadSerializer(serializers.ModelSerializer):
+    membership_id = serializers.UUIDField(read_only=True)
+    email = serializers.EmailField(source="membership.user.email", read_only=True)
+
+    class Meta:
+        model = CohortStaffAssignment
+        fields = ("id", "membership_id", "email", "role", "started_at", "ended_at")
+
+
+class CohortSyncRequestSerializer(serializers.Serializer):
+    expected_cohort_version = serializers.IntegerField(min_value=1)
+    expected_academic_group_version = serializers.IntegerField(min_value=1)
+    reason = serializers.CharField(
+        max_length=500, required=False, default="Sincronización confirmada"
+    )
+
+
+class CohortSyncPreviewSerializer(serializers.Serializer):
+    course_group_id = serializers.UUIDField()
+    academic_group_id = serializers.UUIDField()
+    expected_cohort_version = serializers.IntegerField()
+    expected_academic_group_version = serializers.IntegerField()
+    creates = serializers.ListField(child=serializers.UUIDField())
+    assigns = serializers.ListField(child=serializers.UUIDField())
+    transfers = serializers.ListField(child=serializers.UUIDField())
+    reactivations = serializers.ListField(child=serializers.UUIDField())
+    suspensions = serializers.ListField(child=serializers.UUIDField())
+    unassignments = serializers.ListField(child=serializers.UUIDField())
+    conflicts = serializers.ListField(child=serializers.UUIDField())
 
 
 class ProgressSerializer(serializers.Serializer):
@@ -181,7 +283,10 @@ class EnrollmentReadSerializer(serializers.ModelSerializer):
     release_number = serializers.IntegerField(
         source="current_release_assignment.release.number"
     )
-    cohort_name = serializers.CharField(source="cohort.name", allow_null=True)
+    cohort_id = serializers.SerializerMethodField()
+    cohort_name = serializers.SerializerMethodField()
+    access_starts_at = serializers.SerializerMethodField()
+    access_ends_at = serializers.SerializerMethodField()
     access_state = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
     enrollment_version = serializers.IntegerField(source="lock_version")
@@ -209,6 +314,8 @@ class EnrollmentReadSerializer(serializers.ModelSerializer):
             "access_state",
             "access_starts_at",
             "access_ends_at",
+            "access_provenance",
+            "access_window_mode",
             "enrollment_version",
             "current_release_assignment_id",
             "current_release_id",
@@ -220,6 +327,26 @@ class EnrollmentReadSerializer(serializers.ModelSerializer):
         from domain.learning.access import access_state
 
         return access_state(instance)
+
+    @extend_schema_field(serializers.UUIDField(allow_null=True))
+    def get_cohort_id(self, instance: CourseEnrollment) -> uuid.UUID | None:
+        # The current cohort mirror is maintained by every roster mutation and
+        # selected by enrollment list queries. Reading reverse assignment
+        # history here would add a query for each individual enrollment.
+        cohort = instance.cohort
+        return cohort.id if cohort else None
+
+    def get_cohort_name(self, instance: CourseEnrollment) -> str | None:
+        cohort = instance.cohort
+        return cohort.name if cohort else None
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_access_starts_at(self, instance: CourseEnrollment) -> datetime | None:
+        return instance.effective_access_window()[0]
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_access_ends_at(self, instance: CourseEnrollment) -> datetime | None:
+        return instance.effective_access_window()[1]
 
     @extend_schema_field(ProgressSerializer)
     def get_progress(self, instance: CourseEnrollment) -> dict[str, object]:
@@ -233,19 +360,37 @@ class EnrollmentCreateSerializer(serializers.Serializer):
     membership_id = serializers.UUIDField()
     course_slug = serializers.SlugField()
     cohort_id = serializers.UUIDField(required=False, allow_null=True)
+    expected_cohort_version = serializers.IntegerField(
+        required=False, min_value=1, allow_null=True
+    )
     release_number = serializers.IntegerField(required=False, min_value=1)
     access_starts_at = serializers.DateTimeField(required=False, allow_null=True)
     access_ends_at = serializers.DateTimeField(required=False, allow_null=True)
+    reason = serializers.CharField(
+        max_length=500, required=False, default="Matrícula individual"
+    )
+
+    def validate(self, attrs: dict[str, object]) -> dict[str, object]:
+        if attrs.get("cohort_id") and not attrs.get("expected_cohort_version"):
+            raise serializers.ValidationError(
+                {
+                    "expected_cohort_version": "Debes enviar la versión del grupo de curso."
+                }
+            )
+        return attrs
 
 
 class CohortEnrollmentBatchSerializer(serializers.Serializer):
-    membership_ids = serializers.ListField(
-        child=serializers.UUIDField(), min_length=1, max_length=100
-    )
+    expected_cohort_version = serializers.IntegerField(min_value=1)
+    membership_ids = serializers.ListField(child=serializers.UUIDField(), min_length=1)
 
 
 class EnrollmentLifecycleSerializer(serializers.Serializer):
     expected_enrollment_version = serializers.IntegerField(min_value=1)
+
+
+class EnrollmentIndividualizeSerializer(EnrollmentLifecycleSerializer):
+    reason = serializers.CharField(max_length=500)
 
 
 class ReleaseUpgradeSerializer(EnrollmentLifecycleSerializer):
@@ -365,3 +510,10 @@ class PaginatedCohortProgressSerializer(serializers.Serializer):
     previous = serializers.URLField(allow_null=True)
     summary = CohortProgressSummarySerializer()
     results = EnrollmentReadSerializer(many=True)
+
+
+class PaginatedCohortStaffSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    next = serializers.URLField(allow_null=True)
+    previous = serializers.URLField(allow_null=True)
+    results = CohortStaffReadSerializer(many=True)

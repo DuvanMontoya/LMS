@@ -2,11 +2,12 @@
 
 import { LoaderCircle, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useHydrated } from '@/hooks/use-hydrated';
 import { platformBrowserClient } from '@/lib/api/platform-browser-client';
 
 export function ManagedAccountActivation() {
@@ -14,16 +15,14 @@ export function ManagedAccountActivation() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
+  const hydrated = useHydrated();
   return (
     <form
       className="space-y-4"
       method="post"
       onSubmit={async (event) => {
         event.preventDefault();
+        if (!hydrated || pending) return;
         setPending(true);
         setError('');
         const { response } = await platformBrowserClient.POST(
@@ -40,30 +39,32 @@ export function ManagedAccountActivation() {
         router.replace('/auth/iniciar-sesion');
       }}
     >
-      <div className="space-y-2">
-        <Label htmlFor="managed-password">Define tu contraseña</Label>
-        <Input
-          autoComplete="new-password"
-          id="managed-password"
-          minLength={12}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          type="password"
-          value={password}
-        />
-        <p className="text-xs text-muted-foreground">
-          Usa al menos 12 caracteres.
-        </p>
-      </div>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <Button disabled={pending || !hydrated} type="submit">
-        {pending || !hydrated ? (
-          <LoaderCircle className="animate-spin" />
-        ) : (
-          <Save />
-        )}
-        {!hydrated ? 'Preparando formulario seguro…' : 'Activar cuenta'}
-      </Button>
+      <fieldset className="contents" disabled={pending || !hydrated}>
+        <div className="space-y-2">
+          <Label htmlFor="managed-password">Define tu contraseña</Label>
+          <Input
+            autoComplete="new-password"
+            id="managed-password"
+            minLength={12}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            type="password"
+            value={password}
+          />
+          <p className="text-xs text-muted-foreground">
+            Usa al menos 12 caracteres.
+          </p>
+        </div>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <Button disabled={pending || !hydrated} type="submit">
+          {pending || !hydrated ? (
+            <LoaderCircle className="animate-spin" />
+          ) : (
+            <Save />
+          )}
+          {!hydrated ? 'Preparando formulario seguro…' : 'Activar cuenta'}
+        </Button>
+      </fieldset>
     </form>
   );
 }

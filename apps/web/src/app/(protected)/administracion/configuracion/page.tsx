@@ -1,10 +1,16 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 import { PlatformRegistrationForm } from '@/components/organizations/platform-registration-form';
 import { PageHeader } from '@/components/platform/page-header';
 import { createPlatformServerClient } from '@/lib/api/platform-server-client';
+import { getServerAuthSession } from '@/lib/auth/server-session';
 
 export default async function PlatformConfigurationPage() {
+  const session = await getServerAuthSession();
+  if (!session) {
+    redirect('/auth/iniciar-sesion?next=/administracion/configuracion');
+  }
+
   const client = await createPlatformServerClient();
   const { data, response } = await client.GET(
     '/api/v1/platform/registration-settings/',

@@ -20,11 +20,16 @@ from domain.publishing.models import CoursePublication, CourseRelease
 from .access import require_learning_access
 from .choices import (
     AcademicGroupMemberStatus,
+    AcademicGroupRole,
     AssignmentReason,
+    CohortRosterMode,
     CohortStatus,
+    EnrollmentCohortSource,
     EnrollmentStatus,
+    EnrollmentWindowMode,
     LearningEventType,
     ProgressStatus,
+    RosterEventType,
     UnitProgressStatus,
 )
 from .exceptions import (
@@ -45,16 +50,24 @@ from .exceptions import (
 from .models import (
     AcademicGroup,
     AcademicGroupMember,
+    CohortStaffAssignment,
     CourseEnrollment,
     CourseProgress,
+    EnrollmentCohortAssignment,
     EnrollmentReleaseAssignment,
     ExternalLearningRequirement,
     ExternalRequirementCompletion,
     LearningCohort,
     LearningEvent,
+    RosterEvent,
     UnitProgress,
 )
-from .policies import can_manage_cohorts, can_manage_enrollments
+from .policies import (
+    can_manage_cohorts,
+    can_manage_course_group,
+    can_manage_enrollment,
+    can_manage_enrollments,
+)
 from .snapshots import (
     snapshot_node_ids,
     snapshot_unit,
@@ -66,6 +79,32 @@ from .snapshots import (
 def _validate_window(starts_at: datetime | None, ends_at: datetime | None) -> None:
     if starts_at and ends_at and starts_at >= ends_at:
         raise AccessWindowInvalid("La fecha inicial debe ser anterior a la final.")
+
+
+def _require_version(current: int, expected: int, noun: str) -> None:
+    if current != expected:
+        raise EnrollmentConflict(f"{noun} cambió en otra operación.")
+
+
+def _roster_event(
+    *,
+    actor: object,
+    organization: Organization,
+    event_type: RosterEventType,
+    academic_group: AcademicGroup | None = None,
+    cohort: LearningCohort | None = None,
+    expected_cohort_version: int | None = None,
+    details: dict[str, object] | None = None,
+) -> RosterEvent:
+    return RosterEvent.objects.create(
+        organization=organization,
+        academic_group=academic_group,
+        cohort=cohort,
+        event_type=event_type,
+        actor=actor,
+        occurred_at=timezone.now(),
+        details=details or {},
+    )
 
 
 def _validate_release(
@@ -127,10 +166,12 @@ def replace_academic_group_roster(
     actor: object,
     group: AcademicGroup,
     members: list[dict[str, object]],
+    expected_group_version: int,
 ) -> AcademicGroup:
     group = AcademicGroup.objects.select_for_update().get(pk=group.pk)
     if not can_manage_cohorts(actor, group.organization):  # type: ignore[arg-type]
         raise LearningPermissionDenied("No puede administrar grupos académicos.")
+    _require_version(group.lock_version, expected_group_version, "El grupo académico")
     requested_roles = {entry["membership_id"]: str(entry["role"]) for entry in members}
     membership_ids = list(requested_roles)
     memberships = list(
@@ -176,6 +217,15 @@ def replace_academic_group_roster(
         elif row.role != role:
             row.role = role
             row.save(update_fields=["role"])
+    group.lock_version += 1
+    group.save(update_fields=["lock_version", "updated_at"])
+    _roster_event(
+        actor=actor,
+        organization=group.organization,
+        academic_group=group,
+        event_type=RosterEventType.ACADEMIC_GROUP_ROSTER_REPLACED,
+        details={"member_count": len(members), "group_version": group.lock_version},
+    )
     return group
 
 
@@ -251,6 +301,8 @@ def create_cohort(
     description: str = "",
     access_starts_at: datetime | None = None,
     access_ends_at: datetime | None = None,
+    roster_mode: str | None = None,
+    staff: Iterable[dict[str, object]] = (),
 ) -> LearningCohort:
     if not can_manage_cohorts(actor, organization):  # type: ignore[arg-type]
         raise LearningPermissionDenied("No puede administrar cohortes.")
@@ -259,6 +311,9 @@ def create_cohort(
     _validate_release(organization=organization, course=course, release=release)
     if academic_group and academic_group.organization_id != organization.id:
         raise LearningPermissionDenied("El grupo pertenece a otra organización.")
+    resolved_roster_mode = roster_mode or (
+        CohortRosterMode.SYNCED if academic_group else CohortRosterMode.MANUAL
+    )
     cohort = LearningCohort(
         organization=organization,
         course=course,
@@ -267,6 +322,7 @@ def create_cohort(
         name=name,
         slug=slugify(slug or name),
         description=description,
+        roster_mode=resolved_roster_mode,
         access_starts_at=access_starts_at,
         access_ends_at=access_ends_at,
         created_by=actor,
@@ -274,6 +330,27 @@ def create_cohort(
     )
     cohort.full_clean()
     cohort.save()
+    replace_cohort_staff(
+        actor=actor,
+        cohort=cohort,
+        staff=list(staff),
+        expected_cohort_version=cohort.lock_version,
+        emit_event=False,
+    )
+    cohort.refresh_from_db()
+    _roster_event(
+        actor=actor,
+        organization=organization,
+        cohort=cohort,
+        academic_group=academic_group,
+        event_type=RosterEventType.COURSE_GROUP_CREATED,
+        details={
+            "roster_mode": resolved_roster_mode,
+            "staff_count": CohortStaffAssignment.objects.filter(
+                cohort=cohort, ended_at__isnull=True
+            ).count(),
+        },
+    )
     return cohort
 
 
@@ -286,11 +363,13 @@ def update_cohort(
     description: str,
     access_starts_at: datetime | None,
     access_ends_at: datetime | None,
+    expected_cohort_version: int,
     release: CourseRelease | None = None,
 ) -> LearningCohort:
     cohort = LearningCohort.objects.select_for_update().get(pk=cohort.pk)
-    if not can_manage_cohorts(actor, cohort.organization):  # type: ignore[arg-type]
-        raise LearningPermissionDenied("No puede administrar cohortes.")
+    if not can_manage_course_group(actor, cohort):  # type: ignore[arg-type]
+        raise LearningPermissionDenied("No puede administrar este grupo de curso.")
+    _require_version(cohort.lock_version, expected_cohort_version, "El grupo de curso")
     if release is not None and release.id != cohort.release_id:
         raise CohortReleaseImmutable("El release de la cohorte es inmutable.")
     _validate_window(access_starts_at, access_ends_at)
@@ -299,6 +378,7 @@ def update_cohort(
     cohort.access_starts_at = access_starts_at
     cohort.access_ends_at = access_ends_at
     cohort.updated_by = actor
+    cohort.lock_version += 1
     cohort.full_clean()
     cohort.save(
         update_fields=[
@@ -308,16 +388,20 @@ def update_cohort(
             "access_ends_at",
             "updated_by",
             "updated_at",
+            "lock_version",
         ]
     )
     return cohort
 
 
 @transaction.atomic
-def archive_cohort(*, actor: object, cohort: LearningCohort) -> LearningCohort:
+def archive_cohort(
+    *, actor: object, cohort: LearningCohort, expected_cohort_version: int
+) -> LearningCohort:
     cohort = LearningCohort.objects.select_for_update().get(pk=cohort.pk)
     if not can_manage_cohorts(actor, cohort.organization):  # type: ignore[arg-type]
-        raise LearningPermissionDenied("No puede administrar cohortes.")
+        raise LearningPermissionDenied("No puede archivar grupos de curso.")
+    _require_version(cohort.lock_version, expected_cohort_version, "El grupo de curso")
     if cohort.status == CohortStatus.ARCHIVED:
         return cohort
     now = timezone.now()
@@ -325,6 +409,7 @@ def archive_cohort(*, actor: object, cohort: LearningCohort) -> LearningCohort:
     cohort.archived_by = actor
     cohort.archived_at = now
     cohort.updated_by = actor
+    cohort.lock_version += 1
     cohort.full_clean()
     cohort.save(
         update_fields=[
@@ -333,9 +418,414 @@ def archive_cohort(*, actor: object, cohort: LearningCohort) -> LearningCohort:
             "archived_at",
             "updated_by",
             "updated_at",
+            "lock_version",
         ]
     )
     return cohort
+
+
+@transaction.atomic
+def replace_cohort_staff(
+    *,
+    actor: object,
+    cohort: LearningCohort,
+    staff: list[dict[str, object]],
+    expected_cohort_version: int,
+    emit_event: bool = True,
+) -> LearningCohort:
+    """Replace staff by closing history rows instead of mutating their role."""
+
+    cohort = LearningCohort.objects.select_for_update().get(pk=cohort.pk)
+    if not can_manage_course_group(actor, cohort):  # type: ignore[arg-type]
+        raise LearningPermissionDenied("No puede administrar docentes de este grupo.")
+    _require_version(cohort.lock_version, expected_cohort_version, "El grupo de curso")
+    requested = {row["membership_id"]: str(row["role"]) for row in staff}
+    if len(requested) != len(staff):
+        raise EnrollmentConflict("No repitas docentes en el grupo de curso.")
+    memberships = list(
+        Membership.objects.select_for_update()
+        .filter(
+            organization=cohort.organization,
+            status=MembershipStatus.ACTIVE,
+            pk__in=requested,
+        )
+        .select_related("user")
+    )
+    if len(memberships) != len(requested) or any(
+        not membership.user.is_active for membership in memberships
+    ):
+        raise LearningPermissionDenied(
+            "Cada docente debe ser una membresía activa de la organización."
+        )
+    now = timezone.now()
+    existing = {
+        row.membership_id: row
+        for row in CohortStaffAssignment.objects.select_for_update().filter(
+            cohort=cohort, ended_at__isnull=True
+        )
+    }
+    changed = False
+    for membership_id, row in existing.items():
+        if membership_id not in requested or row.role != requested[membership_id]:
+            row.ended_at = now
+            row.ended_by = actor
+            row.save(update_fields=["ended_at", "ended_by"])
+            changed = True
+    for membership in memberships:
+        existing_row = existing.get(membership.id)
+        if existing_row is None or existing_row.role != requested[membership.id]:
+            CohortStaffAssignment.objects.create(
+                cohort=cohort,
+                membership=membership,
+                role=requested[membership.id],
+                started_by=actor,
+                started_at=now,
+            )
+            changed = True
+    if not changed:
+        return cohort
+    cohort.lock_version += 1
+    cohort.updated_by = actor
+    cohort.save(update_fields=["lock_version", "updated_by", "updated_at"])
+    if emit_event:
+        _roster_event(
+            actor=actor,
+            organization=cohort.organization,
+            cohort=cohort,
+            event_type=RosterEventType.STAFF_ASSIGNED,
+            details={
+                "staff_count": len(requested),
+                "course_group_version": cohort.lock_version,
+            },
+        )
+    return cohort
+
+
+def _active_academic_group_learners(group: AcademicGroup) -> list[Membership]:
+    return list(
+        Membership.objects.filter(
+            academic_groups__group=group,
+            academic_groups__role=AcademicGroupRole.LEARNER,
+            academic_groups__status=AcademicGroupMemberStatus.ACTIVE,
+            status=MembershipStatus.ACTIVE,
+            user__is_active=True,
+        )
+        .select_related("user")
+        .order_by("id")
+    )
+
+
+def preview_cohort_roster_sync(
+    *,
+    actor: object,
+    cohort: LearningCohort,
+    expected_cohort_version: int,
+    expected_academic_group_version: int,
+) -> dict[str, object]:
+    """Return a deterministic plan. This function intentionally never writes."""
+
+    cohort = LearningCohort.objects.select_related("academic_group").get(pk=cohort.pk)
+    if not can_manage_course_group(actor, cohort):  # type: ignore[arg-type]
+        raise LearningPermissionDenied("No puede sincronizar este grupo de curso.")
+    if cohort.academic_group is None or cohort.roster_mode != CohortRosterMode.SYNCED:
+        raise EnrollmentConflict("El grupo de curso no usa un padrón sincronizado.")
+    _require_version(cohort.lock_version, expected_cohort_version, "El grupo de curso")
+    group = cohort.academic_group
+    _require_version(
+        group.lock_version,
+        expected_academic_group_version,
+        "El grupo académico",
+    )
+    learners = _active_academic_group_learners(group)
+    desired_ids = {membership.id for membership in learners}
+    enrollments = {
+        enrollment.membership_id: enrollment
+        for enrollment in CourseEnrollment.objects.filter(
+            organization=cohort.organization, course=cohort.course
+        )
+        .exclude(status=EnrollmentStatus.REVOKED)
+        .select_related("current_release_assignment")
+    }
+    active_assignments = {
+        assignment.enrollment_id: assignment
+        for assignment in EnrollmentCohortAssignment.objects.filter(
+            enrollment__organization=cohort.organization,
+            enrollment__course=cohort.course,
+            ended_at__isnull=True,
+        ).select_related("enrollment__current_release_assignment")
+    }
+    target_assignments = {
+        assignment.enrollment.membership_id: assignment
+        for assignment in active_assignments.values()
+        if assignment.cohort_id == cohort.id
+    }
+    creates: list[str] = []
+    assigns: list[str] = []
+    transfers: list[str] = []
+    reactivations: list[str] = []
+    conflicts: list[str] = []
+    unchanged: list[str] = []
+    for membership in learners:
+        enrollment = enrollments.get(membership.id)
+        if enrollment is None:
+            creates.append(str(membership.id))
+            continue
+        assignment = active_assignments.get(enrollment.id)
+        if assignment is not None and assignment.cohort_id == cohort.id:
+            if enrollment.status == EnrollmentStatus.SUSPENDED and (
+                enrollment.access_provenance
+                == EnrollmentCohortSource.ACADEMIC_GROUP_SYNC
+            ):
+                reactivations.append(str(membership.id))
+            else:
+                unchanged.append(str(membership.id))
+            continue
+        current_release = enrollment.current_release_assignment
+        if current_release is None or current_release.release_id != cohort.release_id:
+            conflicts.append(str(membership.id))
+        elif assignment is None:
+            assigns.append(str(membership.id))
+        else:
+            transfers.append(str(membership.id))
+    suspensions: list[str] = []
+    unassignments: list[str] = []
+    for membership_id, assignment in target_assignments.items():
+        if membership_id in desired_ids:
+            continue
+        if (
+            assignment.enrollment.access_provenance
+            == EnrollmentCohortSource.ACADEMIC_GROUP_SYNC
+        ):
+            suspensions.append(str(membership_id))
+        else:
+            unassignments.append(str(membership_id))
+    return {
+        "course_group_id": str(cohort.id),
+        "academic_group_id": str(group.id),
+        "expected_cohort_version": cohort.lock_version,
+        "expected_academic_group_version": group.lock_version,
+        "creates": creates,
+        "assigns": assigns,
+        "transfers": transfers,
+        "reactivations": reactivations,
+        "suspensions": suspensions,
+        "unassignments": unassignments,
+        "conflicts": conflicts,
+    }
+
+
+def _close_cohort_assignment(
+    *, assignment: EnrollmentCohortAssignment, actor: object, now: datetime
+) -> None:
+    assignment.ended_by = actor
+    assignment.ended_at = now
+    assignment.save(update_fields=["ended_by", "ended_at"])
+
+
+def _assign_cohort(
+    *,
+    actor: object,
+    enrollment: CourseEnrollment,
+    cohort: LearningCohort,
+    source: EnrollmentCohortSource,
+    reason: str,
+    now: datetime,
+) -> EnrollmentCohortAssignment:
+    previous = (
+        EnrollmentCohortAssignment.objects.select_for_update()
+        .filter(enrollment=enrollment, ended_at__isnull=True)
+        .first()
+    )
+    if previous is not None:
+        _close_cohort_assignment(assignment=previous, actor=actor, now=now)
+    assignment = EnrollmentCohortAssignment(
+        enrollment=enrollment,
+        cohort=cohort,
+        source=source,
+        reason=reason,
+        started_by=actor,
+        started_at=now,
+    )
+    assignment.full_clean()
+    assignment.save()
+    enrollment.cohort = cohort
+    enrollment.access_window_mode = EnrollmentWindowMode.INHERIT
+    enrollment.access_starts_at = None
+    enrollment.access_ends_at = None
+    enrollment.lock_version += 1
+    enrollment.full_clean()
+    enrollment.save(
+        update_fields=[
+            "cohort",
+            "access_window_mode",
+            "access_starts_at",
+            "access_ends_at",
+            "lock_version",
+        ]
+    )
+    return assignment
+
+
+@transaction.atomic
+def confirm_cohort_roster_sync(
+    *,
+    actor: object,
+    cohort: LearningCohort,
+    expected_cohort_version: int,
+    expected_academic_group_version: int,
+    reason: str,
+) -> dict[str, object]:
+    """Apply a previewed roster change atomically and append its audit evidence."""
+
+    cohort = (
+        LearningCohort.objects.select_for_update()
+        .select_related("organization", "course", "release")
+        .get(pk=cohort.pk)
+    )
+    if cohort.academic_group is None:
+        raise EnrollmentConflict("El grupo de curso no tiene padrón académico.")
+    group = AcademicGroup.objects.select_for_update().get(pk=cohort.academic_group_id)
+    plan = preview_cohort_roster_sync(
+        actor=actor,
+        cohort=cohort,
+        expected_cohort_version=expected_cohort_version,
+        expected_academic_group_version=expected_academic_group_version,
+    )
+    if plan["conflicts"]:
+        raise EnrollmentConflict(
+            "La sincronización tiene conflictos de release y no escribió cambios."
+        )
+    now = timezone.now()
+    learners = _active_academic_group_learners(group)
+    desired_ids = {membership.id for membership in learners}
+    enrollments = {
+        enrollment.membership_id: enrollment
+        for enrollment in CourseEnrollment.objects.select_for_update(of=("self",))
+        .filter(organization=cohort.organization, course=cohort.course)
+        .exclude(status=EnrollmentStatus.REVOKED)
+        .select_related("current_release_assignment")
+    }
+    for membership in learners:
+        enrollment = enrollments.get(membership.id)
+        if enrollment is None:
+            _create_enrollment_rows(
+                actor=actor,
+                organization=cohort.organization,
+                course=cohort.course,
+                membership=membership,
+                release=cohort.release,
+                cohort=cohort,
+                access_starts_at=None,
+                access_ends_at=None,
+                access_provenance=EnrollmentCohortSource.ACADEMIC_GROUP_SYNC,
+                access_window_mode=EnrollmentWindowMode.INHERIT,
+                cohort_source=EnrollmentCohortSource.ACADEMIC_GROUP_SYNC,
+                cohort_reason=reason,
+            )
+            continue
+        current = (
+            EnrollmentCohortAssignment.objects.select_for_update()
+            .filter(enrollment=enrollment, ended_at__isnull=True)
+            .first()
+        )
+        if current is None or current.cohort_id != cohort.id:
+            _assign_cohort(
+                actor=actor,
+                enrollment=enrollment,
+                cohort=cohort,
+                source=(
+                    EnrollmentCohortSource.ACADEMIC_GROUP_SYNC
+                    if enrollment.access_provenance
+                    == EnrollmentCohortSource.ACADEMIC_GROUP_SYNC
+                    else EnrollmentCohortSource.TRANSFER
+                ),
+                reason=reason,
+                now=now,
+            )
+        if (
+            enrollment.status == EnrollmentStatus.SUSPENDED
+            and enrollment.access_provenance
+            == EnrollmentCohortSource.ACADEMIC_GROUP_SYNC
+        ):
+            enrollment.status = EnrollmentStatus.ACTIVE
+            enrollment.suspended_at = None
+            enrollment.status_changed_by = actor
+            enrollment.status_changed_at = now
+            enrollment.lock_version += 1
+            enrollment.full_clean()
+            enrollment.save(
+                update_fields=[
+                    "status",
+                    "suspended_at",
+                    "status_changed_by",
+                    "status_changed_at",
+                    "lock_version",
+                ]
+            )
+            assignment = enrollment.current_release_assignment
+            if assignment:
+                _event(
+                    event_type=LearningEventType.ENROLLMENT_REACTIVATED,
+                    enrollment=enrollment,
+                    assignment=assignment,
+                    progress=assignment.progress,
+                    actor=actor,
+                    occurred_at=now,
+                )
+    active_target = list(
+        EnrollmentCohortAssignment.objects.select_for_update(of=("self",))
+        .filter(cohort=cohort, ended_at__isnull=True)
+        .select_related("enrollment__current_release_assignment__progress")
+    )
+    for assignment in active_target:
+        enrollment = assignment.enrollment
+        if enrollment.membership_id in desired_ids:
+            continue
+        inherited_window = enrollment.effective_access_window()
+        _close_cohort_assignment(assignment=assignment, actor=actor, now=now)
+        enrollment.cohort = None
+        if enrollment.access_provenance == EnrollmentCohortSource.ACADEMIC_GROUP_SYNC:
+            enrollment.status = EnrollmentStatus.SUSPENDED
+            enrollment.suspended_at = now
+            enrollment.status_changed_by = actor
+            enrollment.status_changed_at = now
+        else:
+            enrollment.access_window_mode = EnrollmentWindowMode.INDIVIDUAL
+            enrollment.access_starts_at, enrollment.access_ends_at = inherited_window
+        enrollment.lock_version += 1
+        enrollment.full_clean()
+        enrollment.save()
+        if (
+            enrollment.access_provenance == EnrollmentCohortSource.ACADEMIC_GROUP_SYNC
+            and enrollment.current_release_assignment
+        ):
+            _event(
+                event_type=LearningEventType.ENROLLMENT_SUSPENDED,
+                enrollment=enrollment,
+                assignment=enrollment.current_release_assignment,
+                progress=enrollment.current_release_assignment.progress,
+                actor=actor,
+                occurred_at=now,
+            )
+    cohort.lock_version += 1
+    cohort.updated_by = actor
+    cohort.save(update_fields=["lock_version", "updated_by", "updated_at"])
+    _roster_event(
+        actor=actor,
+        organization=cohort.organization,
+        academic_group=group,
+        cohort=cohort,
+        event_type=RosterEventType.COURSE_GROUP_SYNCED,
+        details={
+            "reason": reason.strip(),
+            "course_group_version": cohort.lock_version,
+            "created": len(plan["creates"]),
+            "assigned": len(plan["assigns"]),
+            "transferred": len(plan["transfers"]),
+            "suspended": len(plan["suspensions"]),
+        },
+    )
+    return plan
 
 
 def _create_enrollment_rows(
@@ -348,6 +838,10 @@ def _create_enrollment_rows(
     cohort: LearningCohort | None,
     access_starts_at: datetime | None,
     access_ends_at: datetime | None,
+    access_provenance: EnrollmentCohortSource = EnrollmentCohortSource.MANUAL,
+    access_window_mode: EnrollmentWindowMode = EnrollmentWindowMode.INDIVIDUAL,
+    cohort_source: EnrollmentCohortSource | None = None,
+    cohort_reason: str = "Matrícula individual",
 ) -> CourseEnrollment:
     historical = CourseEnrollment.objects.filter(
         membership=membership,
@@ -362,6 +856,8 @@ def _create_enrollment_rows(
         cohort=cohort,
         access_starts_at=access_starts_at,
         access_ends_at=access_ends_at,
+        access_provenance=access_provenance,
+        access_window_mode=access_window_mode,
         created_by=actor,
         status_changed_by=actor,
         status_changed_at=now,
@@ -389,6 +885,17 @@ def _create_enrollment_rows(
     )
     enrollment.current_release_assignment = assignment
     enrollment.save(update_fields=["current_release_assignment"])
+    if cohort is not None:
+        cohort_assignment = EnrollmentCohortAssignment(
+            enrollment=enrollment,
+            cohort=cohort,
+            source=cohort_source or access_provenance,
+            reason=cohort_reason.strip(),
+            started_by=actor,
+            started_at=now,
+        )
+        cohort_assignment.full_clean()
+        cohort_assignment.save()
     _event(
         event_type=LearningEventType.ENROLLMENT_CREATED,
         enrollment=enrollment,
@@ -417,11 +924,14 @@ def enroll_member(
     membership: Membership,
     cohort: LearningCohort | None = None,
     release: CourseRelease | None = None,
+    expected_cohort_version: int | None = None,
     access_starts_at: datetime | None = None,
     access_ends_at: datetime | None = None,
+    source: EnrollmentCohortSource = EnrollmentCohortSource.MANUAL,
+    reason: str = "Matrícula individual",
 ) -> CourseEnrollment:
-    if not can_manage_enrollments(actor, organization):  # type: ignore[arg-type]
-        raise LearningPermissionDenied("No puede administrar matrículas.")
+    if cohort is None and not can_manage_enrollments(actor, organization):  # type: ignore[arg-type]
+        raise LearningPermissionDenied("No puede administrar matrículas individuales.")
     membership = (
         Membership.objects.select_for_update()
         .select_related("user")
@@ -446,6 +956,12 @@ def enroll_member(
         )
         if cohort.status != CohortStatus.ACTIVE:
             raise CohortArchived("La cohorte está archivada.")
+        if not can_manage_course_group(actor, cohort):  # type: ignore[arg-type]
+            raise LearningPermissionDenied("No puede administrar este grupo de curso.")
+        if expected_cohort_version is not None:
+            _require_version(
+                cohort.lock_version, expected_cohort_version, "El grupo de curso"
+            )
         if (
             cohort.organization_id != organization.id
             or cohort.course_id != course.id
@@ -453,10 +969,14 @@ def enroll_member(
         ):
             raise EnrollmentCohortMismatch("La cohorte no corresponde a la matrícula.")
         release = cohort.release
-        access_starts_at = cohort.access_starts_at
-        access_ends_at = cohort.access_ends_at
+        access_window_mode = (
+            EnrollmentWindowMode.INDIVIDUAL
+            if access_starts_at is not None or access_ends_at is not None
+            else EnrollmentWindowMode.INHERIT
+        )
     else:
         release = release or publication.current_release
+        access_window_mode = EnrollmentWindowMode.INDIVIDUAL
     _validate_window(access_starts_at, access_ends_at)
     _validate_release(organization=organization, course=course, release=release)
     if (
@@ -477,6 +997,10 @@ def enroll_member(
         cohort=cohort,
         access_starts_at=access_starts_at,
         access_ends_at=access_ends_at,
+        access_provenance=source,
+        access_window_mode=access_window_mode,
+        cohort_source=source if cohort is not None else None,
+        cohort_reason=reason,
     )
 
 
@@ -486,15 +1010,19 @@ def enroll_cohort_members(
     actor: object,
     cohort: LearningCohort,
     memberships: Iterable[Membership],
+    expected_cohort_version: int,
 ) -> list[CourseEnrollment]:
     rows = list(memberships)
-    if not rows or len(rows) > 100:
-        raise EnrollmentConflict("El lote debe contener entre 1 y 100 membresías.")
+    if not rows:
+        raise EnrollmentConflict("El lote debe contener al menos una membresía.")
     cohort = (
         LearningCohort.objects.select_for_update()
         .select_related("organization", "course", "release__course")
         .get(pk=cohort.pk)
     )
+    if not can_manage_course_group(actor, cohort):  # type: ignore[arg-type]
+        raise LearningPermissionDenied("No puede administrar este grupo de curso.")
+    _require_version(cohort.lock_version, expected_cohort_version, "El grupo de curso")
     results = []
     for membership in rows:
         results.append(
@@ -504,9 +1032,55 @@ def enroll_cohort_members(
                 course=cohort.course,
                 membership=membership,
                 cohort=cohort,
+                reason="Matrícula manual en grupo de curso",
             )
         )
+    cohort.lock_version += 1
+    cohort.updated_by = actor
+    cohort.save(update_fields=["lock_version", "updated_by", "updated_at"])
     return results
+
+
+@transaction.atomic
+def make_enrollment_individual(
+    *,
+    actor: object,
+    enrollment: CourseEnrollment,
+    expected_version: int,
+    reason: str,
+) -> CourseEnrollment:
+    """Keep access deliberately while removing the enrollment from a course group."""
+
+    enrollment = _locked_enrollment(enrollment)
+    if not can_manage_enrollment(actor, enrollment):  # type: ignore[arg-type]
+        raise LearningPermissionDenied("No puede convertir esta matrícula.")
+    _require_enrollment_version(enrollment, expected_version)
+    assignment = (
+        EnrollmentCohortAssignment.objects.select_for_update()
+        .filter(enrollment=enrollment, ended_at__isnull=True)
+        .first()
+    )
+    if assignment is None:
+        return enrollment
+    starts_at, ends_at = enrollment.effective_access_window()
+    now = timezone.now()
+    _close_cohort_assignment(assignment=assignment, actor=actor, now=now)
+    enrollment.cohort = None
+    enrollment.access_provenance = EnrollmentCohortSource.MANUAL
+    enrollment.access_window_mode = EnrollmentWindowMode.INDIVIDUAL
+    enrollment.access_starts_at = starts_at
+    enrollment.access_ends_at = ends_at
+    enrollment.lock_version += 1
+    enrollment.full_clean()
+    enrollment.save()
+    _roster_event(
+        actor=actor,
+        organization=enrollment.organization,
+        cohort=assignment.cohort,
+        event_type=RosterEventType.ENROLLMENT_UNASSIGNED,
+        details={"reason": reason.strip(), "enrollment_id": str(enrollment.id)},
+    )
+    return enrollment
 
 
 def _locked_enrollment(enrollment: CourseEnrollment) -> CourseEnrollment:
@@ -536,7 +1110,7 @@ def suspend_enrollment(
     *, actor: object, enrollment: CourseEnrollment, expected_version: int
 ) -> CourseEnrollment:
     enrollment = _locked_enrollment(enrollment)
-    if not can_manage_enrollments(actor, enrollment.organization):  # type: ignore[arg-type]
+    if not can_manage_enrollment(actor, enrollment):  # type: ignore[arg-type]
         raise LearningPermissionDenied("No puede suspender matrículas.")
     _require_enrollment_version(enrollment, expected_version)
     if enrollment.status != EnrollmentStatus.ACTIVE:
@@ -569,7 +1143,7 @@ def reactivate_enrollment(
     *, actor: object, enrollment: CourseEnrollment, expected_version: int
 ) -> CourseEnrollment:
     enrollment = _locked_enrollment(enrollment)
-    if not can_manage_enrollments(actor, enrollment.organization):  # type: ignore[arg-type]
+    if not can_manage_enrollment(actor, enrollment):  # type: ignore[arg-type]
         raise LearningPermissionDenied("No puede reactivar matrículas.")
     _require_enrollment_version(enrollment, expected_version)
     if enrollment.status != EnrollmentStatus.SUSPENDED:
@@ -613,7 +1187,7 @@ def revoke_enrollment(
     *, actor: object, enrollment: CourseEnrollment, expected_version: int
 ) -> CourseEnrollment:
     enrollment = _locked_enrollment(enrollment)
-    if not can_manage_enrollments(actor, enrollment.organization):  # type: ignore[arg-type]
+    if not can_manage_enrollment(actor, enrollment):  # type: ignore[arg-type]
         raise LearningPermissionDenied("No puede revocar matrículas.")
     _require_enrollment_version(enrollment, expected_version)
     if enrollment.status == EnrollmentStatus.REVOKED:
@@ -628,9 +1202,17 @@ def revoke_enrollment(
     assignment.ended_at = now
     assignment.ended_by = actor
     assignment.save(update_fields=["ended_at", "ended_by"])
+    cohort_assignment = (
+        EnrollmentCohortAssignment.objects.select_for_update()
+        .filter(enrollment=enrollment, ended_at__isnull=True)
+        .first()
+    )
+    if cohort_assignment is not None:
+        _close_cohort_assignment(assignment=cohort_assignment, actor=actor, now=now)
     enrollment.status = EnrollmentStatus.REVOKED
     enrollment.suspended_at = None
     enrollment.revoked_at = now
+    enrollment.cohort = None
     enrollment.status_changed_by = actor
     enrollment.status_changed_at = now
     enrollment.lock_version += 1
@@ -656,10 +1238,13 @@ def upgrade_enrollment_release(
     target_release: CourseRelease,
 ) -> CourseEnrollment:
     enrollment = _locked_enrollment(enrollment)
-    if not can_manage_enrollments(actor, enrollment.organization):  # type: ignore[arg-type]
+    if not can_manage_enrollment(actor, enrollment):  # type: ignore[arg-type]
         raise LearningPermissionDenied("No puede actualizar releases.")
     _require_enrollment_version(enrollment, expected_enrollment_version)
-    if enrollment.status == EnrollmentStatus.REVOKED or enrollment.cohort_id:
+    if (
+        enrollment.status == EnrollmentStatus.REVOKED
+        or enrollment.active_cohort_assignment is not None
+    ):
         raise EnrollmentReleaseUpgradeInvalid("Esta matrícula no admite upgrade.")
     _active_publication(enrollment.course)
     _validate_release(

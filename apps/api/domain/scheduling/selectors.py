@@ -9,13 +9,15 @@ from django.conf import settings
 from django.db.models import Q, QuerySet, Sum
 from django.utils import timezone
 
-from domain.learning.contracts import effective_course_ids_for_actor
+from domain.learning.contracts import (
+    effective_course_ids_for_actor,
+    visible_course_group_ids_for_actor,
+)
 from domain.organizations.models import Organization
 
 from .choices import LiveSessionStatus, OccurrenceStatus
 from .models import AcademicEventOccurrence, AttendanceSegment, LiveSession
 from .policies import (
-    can_create_schedule,
     can_edit_series,
     can_manage_schedule,
     can_view_schedule,
@@ -35,17 +37,20 @@ def occurrences_visible_to_actor(
         series__organization=organization
     ).select_related(
         "series__course",
+        "series__course_group",
         "series__host_membership__user",
         "live_session",
     )
-    if can_manage_schedule(actor, organization) or can_create_schedule(
-        actor, organization
-    ):
+    if can_manage_schedule(actor, organization):
         return queryset
+    course_group_ids = visible_course_group_ids_for_actor(
+        actor=actor, organization=organization
+    )
     course_ids = effective_course_ids_for_actor(actor=actor, organization=organization)
     actor_id = getattr(actor, "id", None)
     return queryset.filter(
-        Q(series__course_id__in=course_ids)
+        Q(series__course_group_id__in=course_group_ids)
+        | Q(series__course_group__isnull=True, series__course_id__in=course_ids)
         | Q(
             series__course__isnull=True,
             series__participants__membership__user_id=actor_id,
@@ -136,6 +141,16 @@ def occurrence_payload(
                 if occurrence.series.course_id
                 else "Sesión independiente"
             ),
+            "courseGroupId": (
+                str(occurrence.series.course_group_id)
+                if occurrence.series.course_group_id
+                else None
+            ),
+            "courseGroupName": (
+                occurrence.series.course_group.name
+                if occurrence.series.course_group_id
+                else None
+            ),
             "countsTowardProgress": occurrence.series.counts_toward_progress,
             "attendanceThresholdMinutes": (
                 occurrence.series.attendance_threshold_minutes
@@ -170,6 +185,7 @@ def live_session_detail(
         LiveSession.objects.select_related(
             "occurrence__series__organization",
             "occurrence__series__course",
+            "occurrence__series__course_group",
             "occurrence__series__host_membership__user",
         )
         .filter(
@@ -199,6 +215,16 @@ def _live_session_payload(*, session: LiveSession, actor: object) -> dict[str, A
                 "slug": occurrence.series.course.slug,
             }
             if occurrence.series.course_id
+            else None
+        ),
+        "course_group_id": (
+            str(occurrence.series.course_group_id)
+            if occurrence.series.course_group_id
+            else None
+        ),
+        "course_group_name": (
+            occurrence.series.course_group.name
+            if occurrence.series.course_group_id
             else None
         ),
         "countsTowardProgress": occurrence.series.counts_toward_progress,
@@ -233,6 +259,7 @@ def live_sessions_visible_to_actor(
     sessions = LiveSession.objects.filter(occurrence__in=occurrences).select_related(
         "occurrence__series__organization",
         "occurrence__series__course",
+        "occurrence__series__course_group",
         "occurrence__series__host_membership__user",
     )
     sessions = sessions.order_by(

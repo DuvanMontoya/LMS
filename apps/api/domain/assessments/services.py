@@ -1557,7 +1557,9 @@ def assign_delivery(
     assignment = DeliveryAssignment(
         delivery=locked_delivery,
         release_assignment=locked_release_assignment,
-        cohort=enrollment.cohort,
+        # The group is a delivery-time snapshot. Later roster changes do not
+        # rewrite an already assigned assessment or its attempts.
+        cohort=enrollment.effective_cohort,
         assigned_by_id=_actor_id(actor),
     )
     _clean_save(assignment)

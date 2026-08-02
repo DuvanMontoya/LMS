@@ -45,18 +45,18 @@ export default async function CohortsPage({
           canManage ? (
             <Button asChild>
               <Link href={`/organizaciones/${slug}/aprendizaje/cohortes/nueva`}>
-                Nueva cohorte
+                Nuevo grupo de curso
               </Link>
             </Button>
           ) : undefined
         }
         breadcrumbs={[
           { href: `/organizaciones/${slug}`, label: data.organization.name },
-          { label: 'Cohortes' },
+          { label: 'Grupos de curso' },
         ]}
-        description="Grupos institucionales vinculados a un release inmutable."
+        description="Grupos de curso vinculados a un release inmutable."
         eyebrow="Aprendizaje"
-        title="Cohortes"
+        title="Grupos de curso"
       />
       <form
         className="academic-panel mt-6 grid gap-3 p-4 sm:grid-cols-[minmax(14rem,1fr)_12rem_auto_auto] sm:items-end"
@@ -97,7 +97,7 @@ export default async function CohortsPage({
       <div className="academic-panel mt-5 overflow-x-auto">
         <table className="w-full min-w-3xl text-left text-sm">
           <caption className="sr-only">
-            Cohortes de aprendizaje de {data.organization.name}
+            Grupos de curso de {data.organization.name}
           </caption>
           <thead className="border-b bg-muted/30">
             <tr>
@@ -149,11 +149,11 @@ export default async function CohortsPage({
       {!data.cohorts.results.length ? (
         <section className="academic-panel mt-5 border-dashed px-6 py-12 text-center">
           <UsersRound className="mx-auto size-7 text-muted-foreground" />
-          <h2 className="mt-3 font-semibold">No encontramos cohortes</h2>
+          <h2 className="mt-3 font-semibold">No encontramos grupos de curso</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {search || status
               ? 'Ajusta los filtros para ampliar los resultados.'
-              : 'Crea la primera cohorte para organizar una entrega.'}
+              : 'Crea el primer grupo de curso para organizar una entrega.'}
           </p>
         </section>
       ) : null}

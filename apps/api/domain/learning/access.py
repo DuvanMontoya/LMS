@@ -42,9 +42,10 @@ def access_state(
         return AccessState.SUSPENDED
     if enrollment.membership.status != MembershipStatus.ACTIVE:
         return AccessState.MEMBERSHIP_INACTIVE
-    if enrollment.access_starts_at and now < enrollment.access_starts_at:
+    access_starts_at, access_ends_at = enrollment.effective_access_window()
+    if access_starts_at and now < access_starts_at:
         return AccessState.NOT_STARTED
-    if enrollment.access_ends_at and now >= enrollment.access_ends_at:
+    if access_ends_at and now >= access_ends_at:
         return AccessState.ENDED
     try:
         publication = enrollment.course.publication

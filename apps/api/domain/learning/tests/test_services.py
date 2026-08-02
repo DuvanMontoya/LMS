@@ -9,7 +9,10 @@ from django.utils import timezone
 
 from domain.learning.access import access_state, require_learning_access
 from domain.learning.choices import (
+    AcademicGroupRole,
     AccessState,
+    CohortRosterMode,
+    EnrollmentCohortSource,
     EnrollmentStatus,
     LearningEventType,
     ProgressStatus,
@@ -24,18 +27,23 @@ from domain.learning.exceptions import (
 )
 from domain.learning.models import (
     CourseEnrollment,
+    EnrollmentCohortAssignment,
     EnrollmentReleaseAssignment,
     LearningEvent,
     UnitProgress,
 )
 from domain.learning.services import (
     complete_unit,
+    confirm_cohort_roster_sync,
+    create_academic_group,
     create_cohort,
     enroll_cohort_members,
     enroll_member,
     open_unit,
+    preview_cohort_roster_sync,
     reactivate_enrollment,
     reopen_unit,
+    replace_academic_group_roster,
     revoke_enrollment,
     suspend_enrollment,
     update_learning_position,
@@ -48,6 +56,119 @@ from .support import LearningFixtureMixin
 
 
 class LearningServiceTests(LearningFixtureMixin, TestCase):
+    def test_roster_sync_preserves_manual_access_and_suspends_sync_access(self) -> None:
+        (
+            owner,
+            _learner,
+            organization,
+            manual_membership,
+            revision,
+            _module,
+            _unit,
+            _publication,
+            release,
+            manual_enrollment,
+        ) = self.learning_context()
+        synced_user = get_user_model().objects.create_user(
+            email="synced-roster@example.test", password="StrongLearningPassword!42"
+        )
+        synced_membership = Membership.objects.create(
+            organization=organization,
+            user=synced_user,
+            status_changed_by=owner,
+            status_changed_at=timezone.now(),
+        )
+        group = create_academic_group(
+            actor=owner,
+            organization=organization,
+            name="11-A",
+            academic_year=2026,
+            level="secondary_11",
+        )
+        group = replace_academic_group_roster(
+            actor=owner,
+            group=group,
+            expected_group_version=group.lock_version,
+            members=[
+                {
+                    "membership_id": manual_membership.id,
+                    "role": AcademicGroupRole.LEARNER,
+                },
+                {
+                    "membership_id": synced_membership.id,
+                    "role": AcademicGroupRole.LEARNER,
+                },
+            ],
+        )
+        cohort = create_cohort(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            release=release,
+            academic_group=group,
+            name="Álgebra 11-A",
+        )
+        self.assertEqual(cohort.roster_mode, CohortRosterMode.SYNCED)
+        preview = preview_cohort_roster_sync(
+            actor=owner,
+            cohort=cohort,
+            expected_cohort_version=cohort.lock_version,
+            expected_academic_group_version=group.lock_version,
+        )
+        self.assertEqual(set(preview["assigns"]), {str(manual_membership.id)})
+        self.assertEqual(set(preview["creates"]), {str(synced_membership.id)})
+        self.assertFalse(preview["conflicts"])
+        confirm_cohort_roster_sync(
+            actor=owner,
+            cohort=cohort,
+            expected_cohort_version=cohort.lock_version,
+            expected_academic_group_version=group.lock_version,
+            reason="Primer padrón",
+        )
+        manual_enrollment.refresh_from_db()
+        synced_enrollment = CourseEnrollment.objects.get(membership=synced_membership)
+        self.assertIsNotNone(manual_enrollment.effective_cohort)
+        self.assertEqual(manual_enrollment.effective_cohort.id, cohort.id)
+        self.assertEqual(
+            synced_enrollment.access_provenance,
+            EnrollmentCohortSource.ACADEMIC_GROUP_SYNC,
+        )
+        cohort.refresh_from_db()
+        group = replace_academic_group_roster(
+            actor=owner,
+            group=group,
+            expected_group_version=group.lock_version,
+            members=[],
+        )
+        preview = preview_cohort_roster_sync(
+            actor=owner,
+            cohort=cohort,
+            expected_cohort_version=cohort.lock_version,
+            expected_academic_group_version=group.lock_version,
+        )
+        self.assertEqual(set(preview["unassignments"]), {str(manual_membership.id)})
+        self.assertEqual(set(preview["suspensions"]), {str(synced_membership.id)})
+        confirm_cohort_roster_sync(
+            actor=owner,
+            cohort=cohort,
+            expected_cohort_version=cohort.lock_version,
+            expected_academic_group_version=group.lock_version,
+            reason="Baja del padrón",
+        )
+        manual_enrollment.refresh_from_db()
+        synced_enrollment.refresh_from_db()
+        self.assertEqual(manual_enrollment.status, EnrollmentStatus.ACTIVE)
+        self.assertIsNone(manual_enrollment.effective_cohort)
+        self.assertEqual(synced_enrollment.status, EnrollmentStatus.SUSPENDED)
+        self.assertIsNone(synced_enrollment.effective_cohort)
+        self.assertEqual(
+            EnrollmentCohortAssignment.objects.filter(
+                enrollment__in=[manual_enrollment, synced_enrollment],
+                ended_at__isnull=False,
+            ).count(),
+            2,
+        )
+
     def test_enrollment_is_release_pinned_and_duplicate_is_rejected(self) -> None:
         (
             owner,
@@ -276,6 +397,7 @@ class LearningServiceTests(LearningFixtureMixin, TestCase):
                 actor=owner,
                 cohort=cohort,
                 memberships=[newcomer_membership, existing_membership],
+                expected_cohort_version=cohort.lock_version,
             )
         self.assertFalse(
             CourseEnrollment.objects.filter(membership=newcomer_membership).exists()

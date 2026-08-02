@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { useHydrated } from '@/hooks/use-hydrated';
 import {
   Card,
   CardContent,
@@ -130,6 +131,7 @@ export function MemberOnboardingForm({
     email: string;
     mode: OnboardingMode;
   }>();
+  const isHydrated = useHydrated();
   const pending = invitation.isPending || managedAccount.isPending;
 
   function updateField<K extends keyof PersonFields>(field: K, value: string) {
@@ -148,6 +150,7 @@ export function MemberOnboardingForm({
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isHydrated) return;
     setSuccess(undefined);
     if (roles.length === 0) return;
     const payload: components['schemas']['ManagedAccountCreate'] = {
@@ -205,315 +208,332 @@ export function MemberOnboardingForm({
         </CardHeader>
         <CardContent>
           <form
+            aria-busy={!isHydrated || pending}
             className="space-y-6"
             noValidate
             onSubmit={(event) => void submit(event)}
           >
-            <fieldset className="space-y-3">
-              <legend className="text-sm font-medium">Cómo se incorpora</legend>
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="flex cursor-pointer gap-3 rounded-lg border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                  <input
-                    checked={mode === 'managed'}
-                    className="mt-0.5 size-4 accent-primary"
-                    name="onboarding-mode"
-                    onChange={() => setMode('managed')}
-                    type="radio"
-                  />
-                  <span>
-                    <span className="block text-sm font-semibold">
-                      Crear cuenta administrada
-                    </span>
-                    <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                      Crea ahora el usuario institucional inactivo y le envía un
-                      enlace para que establezca su propia contraseña.
-                    </span>
-                  </span>
-                </label>
-                <label className="flex cursor-pointer gap-3 rounded-lg border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                  <input
-                    checked={mode === 'invitation'}
-                    className="mt-0.5 size-4 accent-primary"
-                    name="onboarding-mode"
-                    onChange={() => setMode('invitation')}
-                    type="radio"
-                  />
-                  <span>
-                    <span className="block text-sm font-semibold">
-                      Invitar a una cuenta
-                    </span>
-                    <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                      Envía un enlace de un solo uso. La persona usa su cuenta
-                      existente o crea y verifica una nueva.
-                    </span>
-                  </span>
-                </label>
-              </div>
-            </fieldset>
-
-            <fieldset className="space-y-4">
-              <legend className="text-sm font-medium">
-                Datos de la persona
-              </legend>
-              <p className="text-xs leading-5 text-muted-foreground">
-                Para iniciar bastan estos datos. La persona completa su perfil
-                después de activar el acceso; no hace falta repetir un
-                formulario largo para incorporarla.
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field
-                  inputMode="email"
-                  label="Correo institucional o personal"
-                  onChange={(value) => updateField('email', value)}
-                  required
-                  type="email"
-                  value={person.email}
-                />
-                <Field
-                  label="Primer nombre"
-                  onChange={(value) => updateField('givenName', value)}
-                  required={mode === 'managed'}
-                  value={person.givenName}
-                />
-                <Field
-                  label="Primer apellido"
-                  onChange={(value) => updateField('familyName', value)}
-                  required={mode === 'managed'}
-                  value={person.familyName}
-                />
-                <SelectField
-                  label="Tipo de miembro"
-                  onChange={(value) => updateField('memberType', value)}
-                  options={memberTypeOptions}
-                  required={mode === 'managed'}
-                  value={person.memberType}
-                />
-              </div>
-            </fieldset>
-
-            <details className="rounded-lg border bg-muted/20 p-4">
-              <summary className="cursor-pointer text-sm font-medium marker:text-primary">
-                Añadir datos personales opcionales
-              </summary>
-              <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                Puedes completarlos ahora si los necesitas para tu operación;
-                ninguno bloquea la invitación ni la activación.
-              </p>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <Field
-                  label="Segundo nombre"
-                  onChange={(value) => updateField('middleName', value)}
-                  value={person.middleName}
-                />
-                <Field
-                  label="Segundo apellido"
-                  onChange={(value) => updateField('secondFamilyName', value)}
-                  value={person.secondFamilyName}
-                />
-                <Field
-                  label="Nombre visible"
-                  onChange={(value) => updateField('preferredName', value)}
-                  value={person.preferredName}
-                />
-                <Field
-                  label="ID institucional"
-                  onChange={(value) => updateField('institutionalId', value)}
-                  value={person.institutionalId}
-                />
-                <Field
-                  label="WhatsApp"
-                  onChange={(value) => updateField('whatsapp', value)}
-                  type="tel"
-                  value={person.whatsapp}
-                />
-                <div className="space-y-2">
-                  <Field
-                    label="Fecha de nacimiento"
-                    onChange={(value) => {
-                      const age = ageFromBirthDate(value);
-                      setPerson((current) => ({
-                        ...current,
-                        dateOfBirth: value,
-                        documentType: suggestedDocument(age),
-                      }));
-                    }}
-                    type="date"
-                    value={person.dateOfBirth}
-                  />
-                  {ageFromBirthDate(person.dateOfBirth) !== null ? (
-                    <p className="text-xs text-muted-foreground">
-                      Edad calculada: {ageFromBirthDate(person.dateOfBirth)}{' '}
-                      años.
-                    </p>
-                  ) : null}
-                </div>
-                <SelectField
-                  label="Tipo de documento"
-                  onChange={(value) => updateField('documentType', value)}
-                  options={documentTypeOptions}
-                  value={person.documentType}
-                />
-                <Field
-                  label="Número de documento"
-                  onChange={(value) => updateField('documentNumber', value)}
-                  value={person.documentNumber}
-                />
-                <SelectField
-                  label="Género"
-                  onChange={(value) => updateField('gender', value)}
-                  options={genderOptions}
-                  value={person.gender}
-                />
-              </div>
-            </details>
-
-            <details className="rounded-lg border bg-muted/20 p-4">
-              <summary className="cursor-pointer text-sm font-medium marker:text-primary">
-                Añadir contexto académico y de ubicación
-              </summary>
-              <p className="text-xs leading-5 text-muted-foreground">
-                Estos datos ayudan a organizar grupos, cursos y acompañamiento.
-                Sólo solicita lo pertinente.
-              </p>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <SelectField
-                  label="Situación educativa"
-                  onChange={(value) => updateField('educationStage', value)}
-                  options={educationStageOptions}
-                  value={person.educationStage}
-                />
-                {educationInstitutionApplies(person.educationStage) ? (
-                  <Field
-                    label="Institución educativa"
-                    onChange={(value) =>
-                      updateField('educationInstitution', value)
-                    }
-                    required
-                    value={person.educationInstitution}
-                  />
-                ) : null}
-                <SelectField
-                  label="Grado o nivel"
-                  onChange={(value) => updateField('educationLevel', value)}
-                  options={educationLevelOptions}
-                  value={person.educationLevel}
-                />
-                <SelectField
-                  label="Departamento"
-                  onChange={(value) => updateField('departmentCode', value)}
-                  options={departmentOptions}
-                  value={person.departmentCode}
-                />
-                <Field
-                  label="Municipio o ciudad"
-                  onChange={(value) => updateField('municipality', value)}
-                  value={person.municipality}
-                />
-                <Field
-                  label="Dirección"
-                  onChange={(value) => updateField('address', value)}
-                  value={person.address}
-                />
-                <SelectField
-                  label="Estrato"
-                  onChange={(value) =>
-                    updateField('socioeconomicStratum', value)
-                  }
-                  options={socioeconomicStratumOptions}
-                  value={person.socioeconomicStratum}
-                />
-                <SelectField
-                  label="Motivo de registro"
-                  onChange={(value) => updateField('registrationReason', value)}
-                  options={registrationReasonOptions}
-                  value={person.registrationReason}
-                />
-                {person.registrationReason === 'other' ? (
-                  <Field
-                    label="Describe el motivo"
-                    onChange={(value) =>
-                      updateField('registrationReasonDetail', value)
-                    }
-                    value={person.registrationReasonDetail}
-                  />
-                ) : null}
-              </div>
-            </details>
-
-            <fieldset className="space-y-3">
-              <legend className="text-sm font-medium">
-                Roles institucionales
-              </legend>
-              <p className="text-xs leading-5 text-muted-foreground">
-                Asigna solo lo que la persona necesita. Un estudiante puede
-                combinarse con otros roles cuando existe una responsabilidad
-                real; el rol propietario nunca se incorpora desde este flujo.
-              </p>
-              <div className="grid overflow-hidden rounded-lg border sm:grid-cols-2">
-                {assignableRoles.map((role) => (
-                  <label
-                    className="flex min-h-11 items-center gap-3 border-b px-3 text-sm last:border-b-0 hover:bg-muted/30 sm:odd:border-r sm:nth-last-[-n+2]:border-b-0"
-                    key={role}
-                  >
-                    <input
-                      checked={roles.includes(role)}
-                      className="size-4 accent-primary"
-                      onChange={(event) =>
-                        toggleRole(role, event.target.checked)
-                      }
-                      type="checkbox"
-                    />
-                    {roleLabel(role)}
-                  </label>
-                ))}
-              </div>
-              {roles.length === 0 ? (
-                <p className="text-sm text-destructive">
-                  Selecciona al menos un rol.
+            <fieldset className="contents" disabled={!isHydrated || pending}>
+              {!isHydrated ? (
+                <p className="text-sm text-muted-foreground" role="status">
+                  Preparando formulario seguro…
                 </p>
               ) : null}
-            </fieldset>
+              <fieldset className="space-y-3">
+                <legend className="text-sm font-medium">
+                  Cómo se incorpora
+                </legend>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="flex cursor-pointer gap-3 rounded-lg border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <input
+                      checked={mode === 'managed'}
+                      className="mt-0.5 size-4 accent-primary"
+                      name="onboarding-mode"
+                      onChange={() => setMode('managed')}
+                      type="radio"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold">
+                        Crear cuenta administrada
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                        Crea ahora el usuario institucional inactivo y le envía
+                        un enlace para que establezca su propia contraseña.
+                      </span>
+                    </span>
+                  </label>
+                  <label className="flex cursor-pointer gap-3 rounded-lg border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <input
+                      checked={mode === 'invitation'}
+                      className="mt-0.5 size-4 accent-primary"
+                      name="onboarding-mode"
+                      onChange={() => setMode('invitation')}
+                      type="radio"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold">
+                        Invitar a una cuenta
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                        Envía un enlace de un solo uso. La persona usa su cuenta
+                        existente o crea y verifica una nueva.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
 
-            {error ? (
-              <Alert variant="destructive">
-                <AlertTitle>No se pudo registrar a la persona</AlertTitle>
-                <AlertDescription>{apiError(error)}</AlertDescription>
-              </Alert>
-            ) : null}
-            {success ? (
-              <Alert className="border-emerald-600/20 bg-emerald-500/5">
-                <CheckCircle2 className="text-emerald-700" />
-                <AlertTitle>Incorporación creada</AlertTitle>
-                <AlertDescription>
-                  {success.mode === 'managed'
-                    ? `Se creó la cuenta inactiva de ${success.email} y se envió su activación.`
-                    : `Se envió la invitación a ${success.email}.`}{' '}
-                  Puedes seguir su aceptación, reenvío o revocación en
-                  <Link
-                    className="ml-1 font-medium underline"
-                    href={`/organizaciones/${slug}/miembros/invitaciones`}
-                  >
-                    Invitaciones
+              <fieldset className="space-y-4">
+                <legend className="text-sm font-medium">
+                  Datos de la persona
+                </legend>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Para iniciar bastan estos datos. La persona completa su perfil
+                  después de activar el acceso; no hace falta repetir un
+                  formulario largo para incorporarla.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field
+                    inputMode="email"
+                    label="Correo institucional o personal"
+                    onChange={(value) => updateField('email', value)}
+                    required
+                    type="email"
+                    value={person.email}
+                  />
+                  <Field
+                    label="Primer nombre"
+                    onChange={(value) => updateField('givenName', value)}
+                    required={mode === 'managed'}
+                    value={person.givenName}
+                  />
+                  <Field
+                    label="Primer apellido"
+                    onChange={(value) => updateField('familyName', value)}
+                    required={mode === 'managed'}
+                    value={person.familyName}
+                  />
+                  <SelectField
+                    label="Tipo de miembro"
+                    onChange={(value) => updateField('memberType', value)}
+                    options={memberTypeOptions}
+                    required={mode === 'managed'}
+                    value={person.memberType}
+                  />
+                </div>
+              </fieldset>
+
+              <details className="rounded-lg border bg-muted/20 p-4">
+                <summary className="cursor-pointer text-sm font-medium marker:text-primary">
+                  Añadir datos personales opcionales
+                </summary>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  Puedes completarlos ahora si los necesitas para tu operación;
+                  ninguno bloquea la invitación ni la activación.
+                </p>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <Field
+                    label="Segundo nombre"
+                    onChange={(value) => updateField('middleName', value)}
+                    value={person.middleName}
+                  />
+                  <Field
+                    label="Segundo apellido"
+                    onChange={(value) => updateField('secondFamilyName', value)}
+                    value={person.secondFamilyName}
+                  />
+                  <Field
+                    label="Nombre visible"
+                    onChange={(value) => updateField('preferredName', value)}
+                    value={person.preferredName}
+                  />
+                  <Field
+                    label="ID institucional"
+                    onChange={(value) => updateField('institutionalId', value)}
+                    value={person.institutionalId}
+                  />
+                  <Field
+                    label="WhatsApp"
+                    onChange={(value) => updateField('whatsapp', value)}
+                    type="tel"
+                    value={person.whatsapp}
+                  />
+                  <div className="space-y-2">
+                    <Field
+                      label="Fecha de nacimiento"
+                      onChange={(value) => {
+                        const age = ageFromBirthDate(value);
+                        setPerson((current) => ({
+                          ...current,
+                          dateOfBirth: value,
+                          documentType: suggestedDocument(age),
+                        }));
+                      }}
+                      type="date"
+                      value={person.dateOfBirth}
+                    />
+                    {ageFromBirthDate(person.dateOfBirth) !== null ? (
+                      <p className="text-xs text-muted-foreground">
+                        Edad calculada: {ageFromBirthDate(person.dateOfBirth)}{' '}
+                        años.
+                      </p>
+                    ) : null}
+                  </div>
+                  <SelectField
+                    label="Tipo de documento"
+                    onChange={(value) => updateField('documentType', value)}
+                    options={documentTypeOptions}
+                    value={person.documentType}
+                  />
+                  <Field
+                    label="Número de documento"
+                    onChange={(value) => updateField('documentNumber', value)}
+                    value={person.documentNumber}
+                  />
+                  <SelectField
+                    label="Género"
+                    onChange={(value) => updateField('gender', value)}
+                    options={genderOptions}
+                    value={person.gender}
+                  />
+                </div>
+              </details>
+
+              <details className="rounded-lg border bg-muted/20 p-4">
+                <summary className="cursor-pointer text-sm font-medium marker:text-primary">
+                  Añadir contexto académico y de ubicación
+                </summary>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Estos datos ayudan a organizar grupos, cursos y
+                  acompañamiento. Sólo solicita lo pertinente.
+                </p>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <SelectField
+                    label="Situación educativa"
+                    onChange={(value) => updateField('educationStage', value)}
+                    options={educationStageOptions}
+                    value={person.educationStage}
+                  />
+                  {educationInstitutionApplies(person.educationStage) ? (
+                    <Field
+                      label="Institución educativa"
+                      onChange={(value) =>
+                        updateField('educationInstitution', value)
+                      }
+                      required
+                      value={person.educationInstitution}
+                    />
+                  ) : null}
+                  <SelectField
+                    label="Grado o nivel"
+                    onChange={(value) => updateField('educationLevel', value)}
+                    options={educationLevelOptions}
+                    value={person.educationLevel}
+                  />
+                  <SelectField
+                    label="Departamento"
+                    onChange={(value) => updateField('departmentCode', value)}
+                    options={departmentOptions}
+                    value={person.departmentCode}
+                  />
+                  <Field
+                    label="Municipio o ciudad"
+                    onChange={(value) => updateField('municipality', value)}
+                    value={person.municipality}
+                  />
+                  <Field
+                    label="Dirección"
+                    onChange={(value) => updateField('address', value)}
+                    value={person.address}
+                  />
+                  <SelectField
+                    label="Estrato"
+                    onChange={(value) =>
+                      updateField('socioeconomicStratum', value)
+                    }
+                    options={socioeconomicStratumOptions}
+                    value={person.socioeconomicStratum}
+                  />
+                  <SelectField
+                    label="Motivo de registro"
+                    onChange={(value) =>
+                      updateField('registrationReason', value)
+                    }
+                    options={registrationReasonOptions}
+                    value={person.registrationReason}
+                  />
+                  {person.registrationReason === 'other' ? (
+                    <Field
+                      label="Describe el motivo"
+                      onChange={(value) =>
+                        updateField('registrationReasonDetail', value)
+                      }
+                      value={person.registrationReasonDetail}
+                    />
+                  ) : null}
+                </div>
+              </details>
+
+              <fieldset className="space-y-3">
+                <legend className="text-sm font-medium">
+                  Roles institucionales
+                </legend>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Asigna solo lo que la persona necesita. Un estudiante puede
+                  combinarse con otros roles cuando existe una responsabilidad
+                  real; el rol propietario nunca se incorpora desde este flujo.
+                </p>
+                <div className="grid overflow-hidden rounded-lg border sm:grid-cols-2">
+                  {assignableRoles.map((role) => (
+                    <label
+                      className="flex min-h-11 items-center gap-3 border-b px-3 text-sm last:border-b-0 hover:bg-muted/30 sm:odd:border-r sm:nth-last-[-n+2]:border-b-0"
+                      key={role}
+                    >
+                      <input
+                        checked={roles.includes(role)}
+                        className="size-4 accent-primary"
+                        onChange={(event) =>
+                          toggleRole(role, event.target.checked)
+                        }
+                        type="checkbox"
+                      />
+                      {roleLabel(role)}
+                    </label>
+                  ))}
+                </div>
+                {roles.length === 0 ? (
+                  <p className="text-sm text-destructive">
+                    Selecciona al menos un rol.
+                  </p>
+                ) : null}
+              </fieldset>
+
+              {error ? (
+                <Alert variant="destructive">
+                  <AlertTitle>No se pudo registrar a la persona</AlertTitle>
+                  <AlertDescription>{apiError(error)}</AlertDescription>
+                </Alert>
+              ) : null}
+              {success ? (
+                <Alert className="border-emerald-600/20 bg-emerald-500/5">
+                  <CheckCircle2 className="text-emerald-700" />
+                  <AlertTitle>Incorporación creada</AlertTitle>
+                  <AlertDescription>
+                    {success.mode === 'managed'
+                      ? `Se creó la cuenta inactiva de ${success.email} y se envió su activación.`
+                      : `Se envió la invitación a ${success.email}.`}{' '}
+                    Puedes seguir su aceptación, reenvío o revocación en
+                    <Link
+                      className="ml-1 font-medium underline"
+                      href={`/organizaciones/${slug}/miembros/invitaciones`}
+                    >
+                      Invitaciones
+                    </Link>
+                    .
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  disabled={!isHydrated || pending || roles.length === 0}
+                  type="submit"
+                >
+                  {pending ? (
+                    <LoaderCircle className="animate-spin" />
+                  ) : (
+                    <UserPlus />
+                  )}
+                  {mode === 'managed'
+                    ? 'Crear cuenta y activación'
+                    : 'Enviar invitación'}
+                </Button>
+                <Button asChild type="button" variant="outline">
+                  <Link href={`/organizaciones/${slug}/miembros`}>
+                    Cancelar
                   </Link>
-                  .
-                </AlertDescription>
-              </Alert>
-            ) : null}
-            <div className="flex flex-wrap gap-3">
-              <Button disabled={pending || roles.length === 0} type="submit">
-                {pending ? (
-                  <LoaderCircle className="animate-spin" />
-                ) : (
-                  <UserPlus />
-                )}
-                {mode === 'managed'
-                  ? 'Crear cuenta y activación'
-                  : 'Enviar invitación'}
-              </Button>
-              <Button asChild type="button" variant="outline">
-                <Link href={`/organizaciones/${slug}/miembros`}>Cancelar</Link>
-              </Button>
-            </div>
+                </Button>
+              </div>
+            </fieldset>
           </form>
         </CardContent>
       </Card>

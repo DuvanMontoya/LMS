@@ -12,8 +12,14 @@ from domain.organizations.models import Organization
 from domain.publishing.choices import PublicationStatus
 
 from .access import access_state
-from .choices import AccessState, EnrollmentStatus
-from .models import CourseEnrollment, ExternalLearningRequirement
+from .choices import AccessState, EnrollmentStatus, EnrollmentWindowMode
+from .models import (
+    CohortStaffAssignment,
+    CourseEnrollment,
+    EnrollmentCohortAssignment,
+    ExternalLearningRequirement,
+    LearningCohort,
+)
 
 EXTERNAL_REQUIREMENT_LIVE_SESSION = "live_session"
 
@@ -73,7 +79,7 @@ def effective_enrollments_for_actor(
     if actor_id is None or not getattr(actor, "is_active", False):
         return CourseEnrollment.objects.none()
     moment = at or timezone.now()
-    return CourseEnrollment.objects.filter(
+    enrollments = CourseEnrollment.objects.filter(
         organization=organization,
         membership__user_id=actor_id,
         membership__status=MembershipStatus.ACTIVE,
@@ -81,10 +87,27 @@ def effective_enrollments_for_actor(
         current_release_assignment__isnull=False,
         current_release_assignment__ended_at__isnull=True,
         course__publication__status=PublicationStatus.ACTIVE,
-    ).filter(
-        Q(access_starts_at__isnull=True) | Q(access_starts_at__lte=moment),
-        Q(access_ends_at__isnull=True) | Q(access_ends_at__gt=moment),
     )
+    individual_window = (
+        Q(access_window_mode=EnrollmentWindowMode.INDIVIDUAL)
+        & (Q(access_starts_at__isnull=True) | Q(access_starts_at__lte=moment))
+        & (Q(access_ends_at__isnull=True) | Q(access_ends_at__gt=moment))
+    )
+    inherited_window = (
+        Q(
+            access_window_mode=EnrollmentWindowMode.INHERIT,
+            cohort_assignments__ended_at__isnull=True,
+        )
+        & (
+            Q(cohort_assignments__cohort__access_starts_at__isnull=True)
+            | Q(cohort_assignments__cohort__access_starts_at__lte=moment)
+        )
+        & (
+            Q(cohort_assignments__cohort__access_ends_at__isnull=True)
+            | Q(cohort_assignments__cohort__access_ends_at__gt=moment)
+        )
+    )
+    return enrollments.filter(individual_window | inherited_window).distinct()
 
 
 def effective_course_enrollment(
@@ -119,3 +142,72 @@ def effective_course_ids_for_actor(
             actor=actor, organization=organization, at=at
         ).values_list("course_id", flat=True)
     )
+
+
+def course_group_for_scheduling(
+    *, organization: Organization, course_group_id: uuid.UUID
+) -> LearningCohort | None:
+    """Stable lookup boundary for the scheduling module."""
+
+    return (
+        LearningCohort.objects.select_related("course", "release")
+        .filter(pk=course_group_id, organization=organization, status="active")
+        .first()
+    )
+
+
+def actor_has_course_group_staff_scope(
+    *, actor: object, course_group: LearningCohort
+) -> bool:
+    actor_id = getattr(actor, "id", None)
+    if actor_id is None:
+        return False
+    return CohortStaffAssignment.objects.filter(
+        cohort=course_group,
+        membership__user_id=actor_id,
+        membership__status=MembershipStatus.ACTIVE,
+        ended_at__isnull=True,
+    ).exists()
+
+
+def effective_course_group_enrollment(
+    *,
+    actor: object,
+    organization: Organization,
+    course_group: LearningCohort,
+    at: datetime | None = None,
+) -> CourseEnrollment | None:
+    return (
+        effective_enrollments_for_actor(actor=actor, organization=organization, at=at)
+        .filter(
+            cohort_assignments__cohort=course_group,
+            cohort_assignments__ended_at__isnull=True,
+        )
+        .select_related(
+            "membership__user",
+            "course__publication",
+            "current_release_assignment__release",
+        )
+        .first()
+    )
+
+
+def visible_course_group_ids_for_actor(
+    *, actor: object, organization: Organization, at: datetime | None = None
+) -> set[uuid.UUID]:
+    actor_id = getattr(actor, "id", None)
+    if actor_id is None or not getattr(actor, "is_active", False):
+        return set()
+    staff_ids = CohortStaffAssignment.objects.filter(
+        cohort__organization=organization,
+        membership__user_id=actor_id,
+        membership__status=MembershipStatus.ACTIVE,
+        ended_at__isnull=True,
+    ).values_list("cohort_id", flat=True)
+    learner_ids = EnrollmentCohortAssignment.objects.filter(
+        enrollment__in=effective_enrollments_for_actor(
+            actor=actor, organization=organization, at=at
+        ),
+        ended_at__isnull=True,
+    ).values_list("cohort_id", flat=True)
+    return {*(staff_ids), *(learner_ids)}

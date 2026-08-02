@@ -153,11 +153,18 @@ export function createLearningEnrollment(
   );
 }
 
-export function archiveLearningCohort(slug: string, cohortId: string) {
+export function archiveLearningCohort(
+  slug: string,
+  cohortId: string,
+  expectedCohortVersion: number,
+) {
   return requireMutationData(
     platformBrowserClient.POST(
       '/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/archive/',
-      { params: { path: { slug, cohort_id: cohortId } } },
+      {
+        body: { expected_cohort_version: expectedCohortVersion },
+        params: { path: { slug, cohort_id: cohortId } },
+      },
     ),
   );
 }
@@ -165,15 +172,45 @@ export function archiveLearningCohort(slug: string, cohortId: string) {
 export function enrollLearningCohort(
   slug: string,
   cohortId: string,
+  expectedCohortVersion: number,
   membershipIds: string[],
 ) {
   return requireMutationData(
     platformBrowserClient.POST(
       '/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/enrollments/',
       {
-        body: { membership_ids: membershipIds },
+        body: {
+          expected_cohort_version: expectedCohortVersion,
+          membership_ids: membershipIds,
+        },
         params: { path: { slug, cohort_id: cohortId } },
       },
+    ),
+  );
+}
+
+export function previewLearningCohortRosterSync(
+  slug: string,
+  cohortId: string,
+  body: components['schemas']['CohortSyncRequest'],
+) {
+  return requireMutationData(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/sync-preview/',
+      { body, params: { path: { slug, cohort_id: cohortId } } },
+    ),
+  );
+}
+
+export function confirmLearningCohortRosterSync(
+  slug: string,
+  cohortId: string,
+  body: components['schemas']['CohortSyncRequest'],
+) {
+  return requireMutationData(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/sync-confirm/',
+      { body, params: { path: { slug, cohort_id: cohortId } } },
     ),
   );
 }
@@ -215,6 +252,26 @@ export function upgradeLearningEnrollment(
         body: {
           expected_enrollment_version: expectedEnrollmentVersion,
           target_release_number: targetReleaseNumber,
+        },
+        params: { path: { slug, enrollment_id: enrollmentId } },
+      },
+    ),
+  );
+}
+
+export function makeLearningEnrollmentIndividual(
+  slug: string,
+  enrollmentId: string,
+  expectedEnrollmentVersion: number,
+  reason: string,
+) {
+  return requireMutationData(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/make-individual/',
+      {
+        body: {
+          expected_enrollment_version: expectedEnrollmentVersion,
+          reason,
         },
         params: { path: { slug, enrollment_id: enrollmentId } },
       },

@@ -672,6 +672,7 @@ export interface paths {
     post: operations['learning_academic_groups_create'];
   };
   '/api/v1/organizations/{slug}/learning/academic-groups/{group_id}/roster/': {
+    get: operations['organizations_learning_academic_groups_roster_retrieve'];
     put: operations['learning_academic_group_roster_update'];
   };
   '/api/v1/organizations/{slug}/learning/cohorts/': {
@@ -692,12 +693,25 @@ export interface paths {
   '/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/progress/': {
     get: operations['organizations_learning_cohorts_progress_retrieve'];
   };
+  '/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/staff/': {
+    get: operations['organizations_learning_cohorts_staff_retrieve'];
+    put: operations['organizations_learning_cohorts_staff_update'];
+  };
+  '/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/sync-confirm/': {
+    post: operations['organizations_learning_cohorts_sync_confirm_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/cohorts/{cohort_id}/sync-preview/': {
+    post: operations['organizations_learning_cohorts_sync_preview_create'];
+  };
   '/api/v1/organizations/{slug}/learning/enrollments/': {
     get: operations['learning_enrollments_list'];
     post: operations['learning_enrollments_create'];
   };
   '/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/': {
     get: operations['learning_enrollments_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/make-individual/': {
+    post: operations['organizations_learning_enrollments_make_individual_create'];
   };
   '/api/v1/organizations/{slug}/learning/enrollments/{enrollment_id}/progress/': {
     get: operations['organizations_learning_enrollments_progress_retrieve'];
@@ -945,6 +959,12 @@ export interface components {
       role: components['schemas']['AcademicGroupRole'];
       status: string;
     };
+    /**
+     * @description * `active` - Activo
+     * * `inactive` - Inactivo
+     * @enum {string}
+     */
+    AcademicGroupMemberStatus: 'active' | 'inactive';
     AcademicGroupRead: {
       academic_year: number;
       /** Format: date-time */
@@ -954,6 +974,7 @@ export interface components {
       id: string;
       level: components['schemas']['AcademicGroupLevel'];
       linked_cohort_count: number;
+      lock_version: number;
       name: string;
       roster: readonly components['schemas']['AcademicGroupMember'][];
       section?: string;
@@ -970,12 +991,27 @@ export interface components {
      */
     AcademicGroupRole: 'learner' | 'instructor' | 'assistant';
     AcademicGroupRoster: {
+      expected_group_version: number;
       members: components['schemas']['AcademicGroupRosterEntry'][];
     };
     AcademicGroupRosterEntry: {
       /** Format: uuid */
       membership_id: string;
       role: components['schemas']['AcademicGroupRole'];
+    };
+    AcademicGroupRosterRead: {
+      /** Format: email */
+      email: string;
+      /** Format: date-time */
+      ended_at?: string | null;
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      joined_at: string;
+      /** Format: uuid */
+      membership_id: string;
+      role: components['schemas']['AcademicGroupRole'];
+      status?: components['schemas']['AcademicGroupMemberStatus'];
     };
     AccessContext: {
       is_platform_operator: boolean;
@@ -1689,6 +1725,9 @@ export interface components {
       canStart: boolean;
       countsTowardProgress: boolean;
       /** Format: uuid */
+      courseGroupId: string | null;
+      courseGroupName: string | null;
+      /** Format: uuid */
       courseId: string | null;
       courseName: string;
       courseSlug: string | null;
@@ -1758,9 +1797,12 @@ export interface components {
       description?: string;
       name: string;
       release_number: number;
+      roster_mode?: components['schemas']['LearningCohortRosterMode'];
       slug?: string;
+      staff?: components['schemas']['CohortStaffEntry'][];
     };
     CohortEnrollmentBatch: {
+      expected_cohort_version: number;
       membership_ids: string[];
     };
     CohortProgressSummary: {
@@ -1782,6 +1824,7 @@ export interface components {
       access_ends_at?: string | null;
       /** Format: date-time */
       access_starts_at?: string | null;
+      course_group_version: number;
       course_slug: string;
       course_title: string;
       /** Format: date-time */
@@ -1792,15 +1835,68 @@ export interface components {
       id: string;
       name: string;
       release_number: number;
+      roster_mode?: components['schemas']['LearningCohortRosterMode'];
       slug: string;
+      staff_count: number;
       status?: components['schemas']['AssessmentGradebookColumnStatus'];
+      sync_learner_count: number;
       /** Format: date-time */
       updated_at: string;
     };
+    CohortStaffEntry: {
+      /** Format: uuid */
+      membership_id: string;
+      role: components['schemas']['CohortStaffRole'];
+    };
+    CohortStaffRead: {
+      /** Format: email */
+      email: string;
+      /** Format: date-time */
+      ended_at?: string | null;
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      membership_id: string;
+      role: components['schemas']['CohortStaffRole'];
+      /** Format: date-time */
+      started_at: string;
+    };
+    CohortStaffReplace: {
+      expected_cohort_version: number;
+      staff: components['schemas']['CohortStaffEntry'][];
+    };
+    /**
+     * @description * `lead_instructor` - Docente principal
+     * * `instructor` - Docente
+     * * `assistant` - Asistente
+     * @enum {string}
+     */
+    CohortStaffRole: 'lead_instructor' | 'instructor' | 'assistant';
     CohortSummary: {
       /** Format: uuid */
       id: string;
       name: string;
+    };
+    CohortSyncPreview: {
+      /** Format: uuid */
+      academic_group_id: string;
+      assigns: string[];
+      conflicts: string[];
+      /** Format: uuid */
+      course_group_id: string;
+      creates: string[];
+      expected_academic_group_version: number;
+      expected_cohort_version: number;
+      reactivations: string[];
+      suspensions: string[];
+      transfers: string[];
+      unassignments: string[];
+    };
+    CohortSyncRequest: {
+      expected_academic_group_version: number;
+      expected_cohort_version: number;
+      /** @default Sincronización confirmada */
+      reason?: string;
     };
     CohortUpdate: {
       /** Format: date-time */
@@ -1808,7 +1904,11 @@ export interface components {
       /** Format: date-time */
       access_starts_at: string | null;
       description: string;
+      expected_cohort_version: number;
       name: string;
+    };
+    CohortVersion: {
+      expected_cohort_version: number;
     };
     CompleteUnit: {
       expected_progress_version: number;
@@ -2279,19 +2379,28 @@ export interface components {
       /** Format: uuid */
       cohort_id?: string | null;
       course_slug: string;
+      expected_cohort_version?: number | null;
       /** Format: uuid */
       membership_id: string;
+      /** @default Matrícula individual */
+      reason?: string;
       release_number?: number;
+    };
+    EnrollmentIndividualize: {
+      expected_enrollment_version: number;
+      reason: string;
     };
     EnrollmentLifecycle: {
       expected_enrollment_version: number;
     };
     EnrollmentRead: {
       /** Format: date-time */
-      access_ends_at?: string | null;
+      access_ends_at: string | null;
+      access_provenance?: components['schemas']['LearningEnrollmentCohortSource'];
       /** Format: date-time */
-      access_starts_at?: string | null;
+      access_starts_at: string | null;
       access_state: string;
+      access_window_mode?: components['schemas']['LearningEnrollmentWindowMode'];
       /** Format: uuid */
       cohort_id: string | null;
       cohort_name: string | null;
@@ -2359,6 +2468,8 @@ export interface components {
       attendance_threshold_minutes?: number | null;
       /** @default false */
       counts_toward_progress?: boolean;
+      /** Format: uuid */
+      course_group_id?: string | null;
       course_slug?: string | null;
       description?: string;
       duration_minutes: number;
@@ -2890,6 +3001,27 @@ export interface components {
         [key: string]: unknown;
       }[];
     };
+    /**
+     * @description * `manual` - Manual
+     * * `synced` - Sincronizado con grupo académico
+     * @enum {string}
+     */
+    LearningCohortRosterMode: 'manual' | 'synced';
+    /**
+     * @description * `manual` - Asignación manual
+     * * `academic_group_sync` - Sincronización de grupo académico
+     * * `legacy_migration` - Migración compatible
+     * * `transfer` - Traslado
+     * @enum {string}
+     */
+    LearningEnrollmentCohortSource:
+      'manual' | 'academic_group_sync' | 'legacy_migration' | 'transfer';
+    /**
+     * @description * `inherit` - Hereda la política del grupo de curso
+     * * `individual` - Excepción individual
+     * @enum {string}
+     */
+    LearningEnrollmentWindowMode: 'inherit' | 'individual';
     LearningOutline: {
       cohort: components['schemas']['CohortSummary'] | null;
       course: components['schemas']['CourseSummary'];
@@ -2981,6 +3113,9 @@ export interface components {
       course: {
         [key: string]: unknown;
       } | null;
+      /** Format: uuid */
+      course_group_id: string | null;
+      course_group_name: string | null;
       description: string;
       hostName: string;
       /** Format: uuid */
@@ -3505,6 +3640,14 @@ export interface components {
       previous: string | null;
       results: components['schemas']['AcademicGroupRead'][];
     };
+    PaginatedAcademicGroupRoster: {
+      count: number;
+      /** Format: uri */
+      next: string | null;
+      /** Format: uri */
+      previous: string | null;
+      results: components['schemas']['AcademicGroupRosterRead'][];
+    };
     PaginatedCohort: {
       count: number;
       /** Format: uri */
@@ -3521,6 +3664,14 @@ export interface components {
       previous: string | null;
       results: components['schemas']['EnrollmentRead'][];
       summary: components['schemas']['CohortProgressSummary'];
+    };
+    PaginatedCohortStaff: {
+      count: number;
+      /** Format: uri */
+      next: string | null;
+      /** Format: uri */
+      previous: string | null;
+      results: components['schemas']['CohortStaffRead'][];
     };
     PaginatedEnrollment: {
       count: number;
@@ -10171,6 +10322,26 @@ export interface operations {
       };
     };
   };
+  organizations_learning_academic_groups_roster_retrieve: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+        search?: string;
+      };
+      path: {
+        group_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PaginatedAcademicGroupRoster'];
+        };
+      };
+    };
+  };
   learning_academic_group_roster_update: {
     parameters: {
       path: {
@@ -10306,6 +10477,13 @@ export interface operations {
         slug: string;
       };
     };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CohortVersion'];
+        'application/x-www-form-urlencoded': components['schemas']['CohortVersion'];
+        'multipart/form-data': components['schemas']['CohortVersion'];
+      };
+    };
     responses: {
       200: {
         content: {
@@ -10313,6 +10491,11 @@ export interface operations {
         };
       };
       404: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+      409: {
         content: {
           'application/json': components['schemas']['Error'];
         };
@@ -10384,11 +10567,112 @@ export interface operations {
       };
     };
   };
+  organizations_learning_cohorts_staff_retrieve: {
+    parameters: {
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
+      path: {
+        cohort_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PaginatedCohortStaff'];
+        };
+      };
+    };
+  };
+  organizations_learning_cohorts_staff_update: {
+    parameters: {
+      path: {
+        cohort_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CohortStaffReplace'];
+        'application/x-www-form-urlencoded': components['schemas']['CohortStaffReplace'];
+        'multipart/form-data': components['schemas']['CohortStaffReplace'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CohortRead'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_cohorts_sync_confirm_create: {
+    parameters: {
+      path: {
+        cohort_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CohortSyncRequest'];
+        'application/x-www-form-urlencoded': components['schemas']['CohortSyncRequest'];
+        'multipart/form-data': components['schemas']['CohortSyncRequest'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CohortSyncPreview'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_cohorts_sync_preview_create: {
+    parameters: {
+      path: {
+        cohort_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CohortSyncRequest'];
+        'application/x-www-form-urlencoded': components['schemas']['CohortSyncRequest'];
+        'multipart/form-data': components['schemas']['CohortSyncRequest'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CohortSyncPreview'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
   learning_enrollments_list: {
     parameters: {
       query?: {
         cohort?: string;
         course?: string;
+        individual?: boolean;
         ordering?: string;
         page?: number;
         page_size?: number;
@@ -10449,6 +10733,33 @@ export interface operations {
         };
       };
       404: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_enrollments_make_individual_create: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['EnrollmentIndividualize'];
+        'application/x-www-form-urlencoded': components['schemas']['EnrollmentIndividualize'];
+        'multipart/form-data': components['schemas']['EnrollmentIndividualize'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['EnrollmentRead'];
+        };
+      };
+      409: {
         content: {
           'application/json': components['schemas']['Error'];
         };

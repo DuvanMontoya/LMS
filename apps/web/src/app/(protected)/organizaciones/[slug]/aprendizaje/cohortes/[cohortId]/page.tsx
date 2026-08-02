@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { CohortActions } from '@/components/learning/learning-admin-actions';
 import { CohortBatchEnrollForm } from '@/components/learning/learning-admin-forms';
+import { CohortRosterSync } from '@/components/learning/cohort-roster-sync';
 import { LearningProgress } from '@/components/learning/learning-progress';
 import { PageHeader } from '@/components/platform/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,11 @@ export default async function CohortDetailPage({
   const { cohortId, slug } = await params;
   const data = await getCohort(slug, cohortId);
   const canManage = data.access.capabilities.includes('learning.cohort.manage');
+  const academicGroup = data.cohort.academic_group_id
+    ? data.options.academicGroups.find(
+        (group) => group.id === data.cohort.academic_group_id,
+      )
+    : undefined;
   return (
     <main className="academic-page" id="contenido-principal">
       <PageHeader
@@ -35,6 +41,7 @@ export default async function CohortDetailPage({
                 cohortId={cohortId}
                 slug={slug}
                 status={data.cohort.status ?? 'active'}
+                version={data.cohort.course_group_version}
               />
             ) : null}
           </>
@@ -43,12 +50,12 @@ export default async function CohortDetailPage({
           { href: `/organizaciones/${slug}`, label: data.organization.name },
           {
             href: `/organizaciones/${slug}/aprendizaje/cohortes`,
-            label: 'Cohortes',
+            label: 'Grupos de curso',
           },
           { label: data.cohort.name },
         ]}
         description={`${data.cohort.course_title} · release ${data.cohort.release_number}`}
-        eyebrow="Cohorte"
+        eyebrow="Grupo de curso"
         title={data.cohort.name}
       />
       <section
@@ -69,10 +76,22 @@ export default async function CohortDetailPage({
       {canManage && data.cohort.status !== 'archived' ? (
         <CohortBatchEnrollForm
           cohortId={cohortId}
+          cohortVersion={data.cohort.course_group_version}
           enrolledEmails={data.progress.results
             .filter((enrollment) => enrollment.status !== 'revoked')
             .map((enrollment) => enrollment.student_email)}
-          members={data.options.members}
+          slug={slug}
+        />
+      ) : null}
+      {canManage &&
+      data.cohort.status !== 'archived' &&
+      data.cohort.roster_mode === 'synced' &&
+      academicGroup ? (
+        <CohortRosterSync
+          academicGroupName={academicGroup.name}
+          academicGroupVersion={academicGroup.lockVersion}
+          cohortId={cohortId}
+          cohortVersion={data.cohort.course_group_version}
           slug={slug}
         />
       ) : null}

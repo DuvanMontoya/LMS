@@ -1165,8 +1165,13 @@ class DeliveryAssignment(NoPhysicalDeleteModel):
             raise ValidationError(
                 {"release_assignment": "La asignación usa otro release."}
             )
-        if self.cohort_id and enrollment.cohort_id != self.cohort_id:
-            raise ValidationError({"cohort": "La matrícula no pertenece a la cohorte."})
+        effective_cohort = enrollment.effective_cohort
+        if self.cohort_id and (
+            effective_cohort is None or effective_cohort.id != self.cohort_id
+        ):
+            raise ValidationError(
+                {"cohort": "La matrícula no pertenece al grupo de curso efectivo."}
+            )
 
 
 class Attempt(NoPhysicalDeleteModel):

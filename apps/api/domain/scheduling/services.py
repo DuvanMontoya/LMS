@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from django.conf import settings
 from django.db import transaction
@@ -13,6 +13,7 @@ from django.utils import timezone
 from domain.courses.choices import CourseStatus
 from domain.courses.models import Course
 from domain.learning.contracts import (
+    actor_has_course_group_staff_scope,
     deactivate_live_session_requirement,
     register_live_session_requirement,
 )
@@ -52,11 +53,18 @@ from .policies import (
 )
 from .recurrence import materialized_windows, rule_until
 
+if TYPE_CHECKING:
+    from domain.learning.models import LearningCohort
+
 HOST_ROLES = frozenset({RoleCode.OWNER, RoleCode.ADMINISTRATOR, RoleCode.INSTRUCTOR})
 
 
 def _validate_host(
-    *, actor: object, organization: Organization, host: Membership
+    *,
+    actor: object,
+    organization: Organization,
+    host: Membership,
+    course_group: LearningCohort | None,
 ) -> None:
     if (
         host.organization_id != organization.id
@@ -69,6 +77,16 @@ def _validate_host(
         actor_member is None or actor_member.id != host.id
     ):
         raise SchedulingAccessDenied("Sólo puedes programar clases propias.")
+    if (
+        course_group is not None
+        and not can_manage_schedule(actor, organization)
+        and not actor_has_course_group_staff_scope(
+            actor=actor, course_group=course_group
+        )
+    ):
+        raise SchedulingAccessDenied(
+            "Sólo el equipo docente del grupo de curso puede programarlo."
+        )
 
 
 @transaction.atomic
@@ -77,6 +95,7 @@ def create_event_series(
     actor: object,
     organization: Organization,
     course: Course | None,
+    course_group: LearningCohort | None = None,
     host_membership: Membership,
     participant_memberships: list[Membership] | None = None,
     title: str,
@@ -96,6 +115,20 @@ def create_event_series(
         or course.status != CourseStatus.ACTIVE
     ):
         raise SchedulingInvalid("El curso no está activo en esta organización.")
+    if course_group is not None and (
+        course is None
+        or course_group.organization_id != organization.id
+        or course_group.course_id != course.id
+    ):
+        raise SchedulingInvalid("El grupo de curso no corresponde al curso activo.")
+    if (
+        course is not None
+        and course_group is None
+        and not can_manage_schedule(actor, organization)
+    ):
+        raise SchedulingAccessDenied(
+            "Selecciona un grupo de curso que tengas asignado."
+        )
     participants = participant_memberships or []
     if course is None and not participants:
         raise SchedulingInvalid(
@@ -133,7 +166,12 @@ def create_event_series(
         if participant.id in participant_ids:
             raise SchedulingInvalid("No repitas participantes invitados.")
         participant_ids.add(participant.id)
-    _validate_host(actor=actor, organization=organization, host=host_membership)
+    _validate_host(
+        actor=actor,
+        organization=organization,
+        host=host_membership,
+        course_group=course_group,
+    )
     windows = materialized_windows(
         first_starts_at=first_starts_at,
         duration_minutes=duration_minutes,
@@ -144,6 +182,7 @@ def create_event_series(
     series = AcademicEventSeries(
         organization=organization,
         course=course,
+        course_group=course_group,
         host_membership=host_membership,
         title=title,
         description=description,
