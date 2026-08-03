@@ -28,15 +28,19 @@ class FakeLiveKitGateway:
         self.permission_changes: list[dict[str, object]] = []
         self.removed: list[str] = []
 
-    def create_room(self, *, room_name: str, metadata: str):
+    def create_room(self, *, room_name: str, metadata: str, **options: object):
         del metadata
+        del options
         self.created_rooms.append(room_name)
         return SimpleNamespace(sid="RM_test")
 
     def close_room(self, *, room_name: str) -> None:
         self.closed_rooms.append(room_name)
 
-    def issue_token(self, *, user_id: object, room_name: str, access) -> str:
+    def issue_token(
+        self, *, user_id: object, room_name: str, access, **options: object
+    ) -> str:
+        del options
         return f"token:{user_id}:{room_name}:{access.role}"
 
     def update_participant_permissions(self, **values: object) -> None:

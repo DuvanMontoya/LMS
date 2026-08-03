@@ -229,6 +229,12 @@ def live_session_detail(
 def _live_session_payload(*, session: LiveSession, actor: object) -> dict[str, Any]:
     occurrence = session.occurrence
     availability = _availability(occurrence, actor)
+    binding = (
+        occurrence.series.course_group_activity.binding_snapshot
+        if occurrence.series.course_group_activity_id
+        else {}
+    )
+    role_is_student = not availability["canStart"] and not availability["canModerate"]
     return {
         "id": str(session.id),
         "title": occurrence.title_override or occurrence.series.title,
@@ -278,6 +284,14 @@ def _live_session_payload(*, session: LiveSession, actor: object) -> dict[str, A
             if occurrence.series.course_group_activity_id
             else occurrence.series.attendance_threshold_minutes
         ),
+        "canPublishAudio": not role_is_student
+        or binding.get("student_audio_enabled", True),
+        "canPublishVideo": not role_is_student
+        or binding.get("student_video_enabled", True),
+        "chatEnabled": binding.get("chat_enabled", False),
+        "recordingMode": binding.get("recording_mode", "off"),
+        "recordingLayout": binding.get("recording_layout", "speaker"),
+        "recordingStatus": session.egress_status,
         "hostName": f"Participante {str(occurrence.series.host_membership.user_id)[:8]}",
         "scheduledStart": occurrence.starts_at,
         "scheduledEnd": occurrence.ends_at,

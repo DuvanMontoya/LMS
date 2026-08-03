@@ -91,6 +91,27 @@ export function useCreateModule(path: RevisionPath) {
   });
 }
 
+export function useConfirmCompletionPolicy(path: RevisionPath) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: components['schemas']['ConfirmCompletionPolicy']) =>
+      requireData(
+        platformBrowserClient.PUT(
+          '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/completion-policy/',
+          { body, params: { path: pathFor(path) } },
+        ),
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: courseKeys.outline(
+          path.slug,
+          path.courseSlug,
+          path.revisionId,
+        ),
+      }),
+  });
+}
+
 export function useCreateUnit(path: RevisionPath) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -238,6 +259,36 @@ export function useCreateLiveClassActivity(path: RevisionPath) {
         platformBrowserClient.POST(
           '/api/v1/organizations/{slug}/scheduling/course-activities/',
           { body, params: { path: { slug: path.slug } } },
+        ),
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: courseKeys.outline(
+          path.slug,
+          path.courseSlug,
+          path.revisionId,
+        ),
+      }),
+  });
+}
+
+export function useUpdateLiveClassActivity(path: RevisionPath) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      activityId,
+      body,
+    }: {
+      activityId: string;
+      body: components['schemas']['LiveClassCourseActivityConfiguration'];
+    }) =>
+      requireData(
+        platformBrowserClient.PUT(
+          '/api/v1/organizations/{slug}/scheduling/course-activities/{activity_id}/binding/',
+          {
+            body,
+            params: { path: { activity_id: activityId, slug: path.slug } },
+          },
         ),
       ),
     onSuccess: () =>

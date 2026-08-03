@@ -65,6 +65,10 @@ services:
           node_ip: 127.0.0.1
         keys:
           ${LIVEKIT_API_KEY:?LIVEKIT_API_KEY is required}: ${LIVEKIT_API_SECRET:?LIVEKIT_API_SECRET is required}
+        redis:
+          address: redis:6379
+          password: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+          db: 4
         webhook:
           api_key: ${LIVEKIT_API_KEY:?LIVEKIT_API_KEY is required}
           urls:
@@ -88,6 +92,50 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  livekit-egress:
+    profiles: ["live"]
+    image: livekit/egress:v1.12.0
+    environment:
+      EGRESS_CONFIG_BODY: |
+        api_key: ${LIVEKIT_API_KEY:?LIVEKIT_API_KEY is required}
+        api_secret: ${LIVEKIT_API_SECRET:?LIVEKIT_API_SECRET is required}
+        ws_url: ws://livekit:7880
+        insecure: true
+        health_port: 8080
+        logging:
+          level: info
+          json: true
+        redis:
+          address: redis:6379
+          password: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+          db: 4
+        backup_storage: /out
+        session_limits:
+          file_output_max_duration: 8h
+    volumes:
+      - livekit_recordings:/out
+    expose:
+      - "8080"
+    depends_on:
+      livekit:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - lms_internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
 
   assessment-worker:
     profiles: ["async"]
@@ -411,6 +459,7 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  livekit_recordings:
   localstack_data:
   clamav_definitions:
   prometheus_data:

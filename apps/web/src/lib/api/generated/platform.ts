@@ -874,6 +874,8 @@ export interface paths {
     post: operations['scheduling_course_activity_create'];
   };
   '/api/v1/organizations/{slug}/scheduling/course-activities/{activity_id}/binding/': {
+    get: operations['scheduling_course_activity_binding_retrieve'];
+    put: operations['scheduling_course_activity_update'];
     post: operations['scheduling_course_activity_binding_create'];
   };
   '/api/v1/organizations/{slug}/scheduling/events/{occurrence_id}/': {
@@ -903,6 +905,12 @@ export interface paths {
   };
   '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/participants/{identity}/permissions/': {
     post: operations['scheduling_live_participant_permissions'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/recording/start/': {
+    post: operations['scheduling_live_recording_start'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/recording/stop/': {
+    post: operations['scheduling_live_recording_stop'];
   };
   '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/start/': {
     post: operations['scheduling_live_session_start'];
@@ -3541,25 +3549,84 @@ export interface components {
     LiveClassActivityBinding: {
       /** Format: uuid */
       activity_id: string;
+      chat_enabled: boolean;
       /** Format: uuid */
       id: string;
+      join_after_minutes: number;
+      join_before_minutes: number;
+      max_participants: number;
       minimum_attendance_minutes: number | null;
       minimum_attended_occurrences: number;
+      recording_layout: string;
+      recording_mode: string;
       revision_lock_version: number;
+      room_departure_timeout_seconds: number;
+      room_empty_timeout_seconds: number;
+      session_mode: string;
+      student_audio_enabled: boolean;
+      student_screen_share_enabled: boolean;
+      student_video_enabled: boolean;
     };
     LiveClassActivityBindingInput: {
       expected_revision_version: number;
       minimum_attendance_minutes?: number | null;
       minimum_attended_occurrences: number;
     };
-    LiveClassCourseActivityCreate: {
+    LiveClassCourseActivityConfiguration: {
+      /** @default true */
+      chat_enabled?: boolean;
       estimated_duration_minutes: number;
       expected_revision_version: number;
+      join_after_minutes: number;
+      join_before_minutes: number;
+      learning_objective_ids: string[];
+      max_participants: number;
+      minimum_attendance_basis_points: number;
+      /** @default speaker */
+      recording_layout?: components['schemas']['RecordingLayoutEnum'];
+      /** @default off */
+      recording_mode?: components['schemas']['RecordingModeEnum'];
+      /** @default true */
+      required?: boolean;
+      room_departure_timeout_seconds: number;
+      room_empty_timeout_seconds: number;
+      session_mode: components['schemas']['SessionModeEnum'];
+      /** @default true */
+      student_audio_enabled?: boolean;
+      /** @default false */
+      student_screen_share_enabled?: boolean;
+      /** @default true */
+      student_video_enabled?: boolean;
+      summary?: string;
+      title: string;
+    };
+    LiveClassCourseActivityCreate: {
+      /** @default true */
+      chat_enabled?: boolean;
+      estimated_duration_minutes: number;
+      expected_revision_version: number;
+      join_after_minutes: number;
+      join_before_minutes: number;
+      learning_objective_ids: string[];
+      max_participants: number;
       minimum_attendance_basis_points: number;
       /** Format: uuid */
       module_id: string;
+      /** @default speaker */
+      recording_layout?: components['schemas']['RecordingLayoutEnum'];
+      /** @default off */
+      recording_mode?: components['schemas']['RecordingModeEnum'];
       /** @default true */
       required?: boolean;
+      room_departure_timeout_seconds: number;
+      room_empty_timeout_seconds: number;
+      session_mode: components['schemas']['SessionModeEnum'];
+      /** @default true */
+      student_audio_enabled?: boolean;
+      /** @default false */
+      student_screen_share_enabled?: boolean;
+      /** @default true */
+      student_video_enabled?: boolean;
       summary?: string;
       title: string;
     };
@@ -3568,6 +3635,10 @@ export interface components {
       session: components['schemas']['LiveSessionSummary'];
       token: string;
     };
+    LiveConnectionRequest: {
+      /** @default false */
+      recording_acknowledged?: boolean;
+    };
     LiveSessionDetail: {
       activity_required: boolean;
       attendanceThresholdMinutes: number | null;
@@ -3575,8 +3646,11 @@ export interface components {
       canEdit: boolean;
       canJoin: boolean;
       canModerate: boolean;
+      canPublishAudio: boolean;
+      canPublishVideo: boolean;
       canShareScreen: boolean;
       canStart: boolean;
+      chatEnabled: boolean;
       countsTowardProgress: boolean;
       course: {
         [key: string]: unknown;
@@ -3591,6 +3665,9 @@ export interface components {
       /** Format: uuid */
       id: string;
       liveStatus: string;
+      recordingLayout: string;
+      recordingMode: string;
+      recordingStatus: string;
       /** Format: date-time */
       scheduledEnd: string;
       /** Format: date-time */
@@ -3602,9 +3679,14 @@ export interface components {
     };
     LiveSessionSummary: {
       canModerate: boolean;
+      canPublishAudio: boolean;
+      canPublishVideo: boolean;
       canShareScreen: boolean;
+      chatEnabled: boolean;
       /** Format: uuid */
       id: string;
+      recordingMode: string;
+      recordingStatus: string;
       role: string;
       /** Format: date-time */
       scheduledEnd: string;
@@ -4606,6 +4688,19 @@ export interface components {
       size_bytes: number;
     };
     /**
+     * @description * `grid` - grid
+     * * `speaker` - speaker
+     * @enum {string}
+     */
+    RecordingLayoutEnum: 'grid' | 'speaker';
+    /**
+     * @description * `off` - off
+     * * `manual` - manual
+     * * `automatic` - automatic
+     * @enum {string}
+     */
+    RecordingModeEnum: 'off' | 'manual' | 'automatic';
+    /**
      * @description * `course` - Tomar un curso
      * * `school_support` - Refuerzo escolar
      * * `exam_preparation` - Preparación para una evaluación
@@ -4986,6 +5081,12 @@ export interface components {
       instructions: string;
       title: string;
     };
+    /**
+     * @description * `interactive` - interactive
+     * * `webinar` - webinar
+     * @enum {string}
+     */
+    SessionModeEnum: 'interactive' | 'webinar';
     SignPart: {
       checksum_sha256: string;
     };
@@ -12611,6 +12712,43 @@ export interface operations {
       };
     };
   };
+  scheduling_course_activity_binding_retrieve: {
+    parameters: {
+      path: {
+        activity_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LiveClassActivityBinding'];
+        };
+      };
+    };
+  };
+  scheduling_course_activity_update: {
+    parameters: {
+      path: {
+        activity_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LiveClassCourseActivityConfiguration'];
+        'application/x-www-form-urlencoded': components['schemas']['LiveClassCourseActivityConfiguration'];
+        'multipart/form-data': components['schemas']['LiveClassCourseActivityConfiguration'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LiveClassActivityBinding'];
+        };
+      };
+    };
+  };
   scheduling_course_activity_binding_create: {
     parameters: {
       path: {
@@ -12792,6 +12930,13 @@ export interface operations {
         slug: string;
       };
     };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['LiveConnectionRequest'];
+        'application/x-www-form-urlencoded': components['schemas']['LiveConnectionRequest'];
+        'multipart/form-data': components['schemas']['LiveConnectionRequest'];
+      };
+    };
     responses: {
       200: {
         content: {
@@ -12854,11 +12999,58 @@ export interface operations {
       };
     };
   };
+  scheduling_live_recording_start: {
+    parameters: {
+      path: {
+        session_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['OperationAccepted'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_live_recording_stop: {
+    parameters: {
+      path: {
+        session_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['OperationAccepted'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
   scheduling_live_session_start: {
     parameters: {
       path: {
         session_id: string;
         slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['LiveConnectionRequest'];
+        'application/x-www-form-urlencoded': components['schemas']['LiveConnectionRequest'];
+        'multipart/form-data': components['schemas']['LiveConnectionRequest'];
       };
     };
     responses: {

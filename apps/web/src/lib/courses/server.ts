@@ -19,6 +19,8 @@ type TransitionList =
   operations['organizations_courses_revisions_transitions_list']['responses'][200]['content']['application/json'];
 type Readiness =
   operations['organizations_courses_revisions_readiness_retrieve']['responses'][200]['content']['application/json'];
+type CompletionPolicy =
+  operations['organizations_courses_revisions_completion_policy_retrieve']['responses'][200]['content']['application/json'];
 type SubjectList =
   operations['organizations_catalog_subjects_list']['responses'][200]['content']['application/json'];
 type ObjectiveList =
@@ -75,21 +77,26 @@ export async function getCourseCreationContext(slug: string) {
       'catalog.teaching_responsibility.manage',
     );
   const client = await createPlatformServerClient();
-  const [subjects, objectives] = await Promise.all([
-    required(
-      client.GET('/api/v1/organizations/{slug}/catalog/subjects/', {
-        params: {
-          path: { slug },
-          query: {
-            status: 'active',
-            ...(canManageTeachingResponsibilities
-              ? {}
-              : { teaching_responsibility: 'mine' }),
+  const allSubjectsRequest = required(
+    client.GET('/api/v1/organizations/{slug}/catalog/subjects/', {
+      params: { path: { slug }, query: { status: 'active' } },
+    }),
+    'No fue posible consultar las asignaturas.',
+  ) as Promise<SubjectList>;
+  const eligibleSubjectsRequest = canManageTeachingResponsibilities
+    ? allSubjectsRequest
+    : (required(
+        client.GET('/api/v1/organizations/{slug}/catalog/subjects/', {
+          params: {
+            path: { slug },
+            query: { status: 'active', teaching_responsibility: 'mine' },
           },
-        },
-      }),
-      'No fue posible consultar las asignaturas.',
-    ) as Promise<SubjectList>,
+        }),
+        'No fue posible consultar tus responsabilidades académicas.',
+      ) as Promise<SubjectList>);
+  const [subjects, allSubjects, objectives] = await Promise.all([
+    eligibleSubjectsRequest,
+    allSubjectsRequest,
     required(
       client.GET('/api/v1/organizations/{slug}/catalog/learning-objectives/', {
         params: { path: { slug }, query: { status: 'active' } },
@@ -97,7 +104,31 @@ export async function getCourseCreationContext(slug: string) {
       'No fue posible consultar los objetivos.',
     ) as Promise<ObjectiveList>,
   ]);
-  return { ...organization, objectives, subjects };
+  const eligibleIds = new Set(subjects.map((subject) => subject.id));
+  const unassignedSubjects = canManageTeachingResponsibilities
+    ? []
+    : allSubjects.filter((subject) => !eligibleIds.has(subject.id));
+  return { ...organization, objectives, subjects, unassignedSubjects };
+}
+
+export async function getCourseCompletionPolicy(
+  slug: string,
+  courseSlug: string,
+  revisionId: string,
+) {
+  const client = await createPlatformServerClient();
+  return (await required(
+    client.GET(
+      '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/completion-policy/',
+      {
+        params: {
+          path: { course_slug: courseSlug, revision_id: revisionId, slug },
+        },
+        cache: 'no-store',
+      },
+    ),
+    'No fue posible consultar la política de finalización.',
+  )) as CompletionPolicy;
 }
 
 export async function getCourseWorkspace(slug: string, courseSlug: string) {

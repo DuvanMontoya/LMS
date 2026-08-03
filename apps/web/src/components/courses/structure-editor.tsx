@@ -24,6 +24,12 @@ import {
   LessonConfiguration,
   type LessonConfigurationInput,
 } from '@/components/courses/lesson-configuration';
+import {
+  AssessmentActivityDialog,
+  type AssessmentVersionOption,
+} from '@/components/courses/assessment-activity-dialog';
+import { LiveClassActivityDialog } from '@/components/courses/live-class-activity-dialog';
+import { CompletionPolicyCard } from '@/components/courses/completion-policy-card';
 import type { CourseTopicOption } from '@/lib/courses/curriculum-topics';
 import type { components } from '@/lib/api/generated/platform';
 import {
@@ -35,21 +41,16 @@ import {
   useReorderActivities,
   useReorderStructure,
   useSetStructureArchived,
+  useUpdateLiveClassActivity,
   useUpdateStructure,
 } from '@/lib/courses/hooks';
 
 type Outline = components['schemas']['Outline'];
 type Objective = components['schemas']['Objective'];
 type Topic = CourseTopicOption;
-type AssessmentVersionOption = {
-  attemptLimit: number | null;
-  description: string;
-  durationMinutes: number | null;
-  id: string;
-  label: string;
-  passBasisPoints: number;
-  title: string;
-};
+type LiveClassBinding = components['schemas']['LiveClassActivityBinding'];
+type LiveClassConfiguration =
+  components['schemas']['LiveClassCourseActivityConfiguration'];
 const contentStatusLabels: Record<string, string> = {
   empty: 'Contenido vacío',
   missing: 'Sin contenido',
@@ -69,11 +70,62 @@ function statusLabel(value: string) {
   );
 }
 
+function liveClassConfiguration(
+  formData: FormData,
+  expectedRevisionVersion: number,
+): LiveClassConfiguration {
+  const duration = Number(formData.get('live-duration'));
+  const thresholdPercent = Number(formData.get('live-threshold'));
+  if (
+    !Number.isFinite(duration) ||
+    duration < 1 ||
+    !Number.isFinite(thresholdPercent) ||
+    thresholdPercent < 1 ||
+    thresholdPercent > 100
+  ) {
+    throw new Error(
+      'Define una duración válida y un umbral de asistencia entre 1 % y 100 %.',
+    );
+  }
+  const learningObjectiveIds = formData.getAll('live-objective').map(String);
+  if (!learningObjectiveIds.length) {
+    throw new Error('Selecciona al menos un objetivo que trabaje esta clase.');
+  }
+  return {
+    chat_enabled: formData.get('live-chat') === 'on',
+    estimated_duration_minutes: duration,
+    expected_revision_version: expectedRevisionVersion,
+    join_after_minutes: Number(formData.get('live-join-after')),
+    join_before_minutes: Number(formData.get('live-join-before')),
+    learning_objective_ids: learningObjectiveIds,
+    max_participants: Number(formData.get('live-max-participants')),
+    minimum_attendance_basis_points: thresholdPercent * 100,
+    recording_layout: String(formData.get('live-recording-layout')) as
+      'grid' | 'speaker',
+    recording_mode: String(formData.get('live-recording-mode')) as
+      'automatic' | 'manual' | 'off',
+    required: formData.get('live-required') === 'on',
+    room_departure_timeout_seconds: Number(
+      formData.get('live-departure-timeout'),
+    ),
+    room_empty_timeout_seconds: Number(formData.get('live-empty-timeout')) * 60,
+    session_mode: String(formData.get('live-session-mode')) as
+      'interactive' | 'webinar',
+    student_audio_enabled: formData.get('live-student-audio') === 'on',
+    student_screen_share_enabled: formData.get('live-student-screen') === 'on',
+    student_video_enabled: formData.get('live-student-video') === 'on',
+    summary: String(formData.get('live-summary') ?? ''),
+    title: String(formData.get('live-title') ?? ''),
+  };
+}
+
 export function StructureEditor({
   assessmentVersions,
   canManageAssessments,
   canManage,
+  completionPolicy,
   courseSlug,
+  liveClassBindings,
   objectives,
   outline,
   slug,
@@ -82,7 +134,9 @@ export function StructureEditor({
   assessmentVersions: AssessmentVersionOption[];
   canManageAssessments: boolean;
   canManage: boolean;
+  completionPolicy: components['schemas']['CourseCompletionPolicy'];
   courseSlug: string;
+  liveClassBindings: LiveClassBinding[];
   objectives: Objective[];
   outline: Outline;
   slug: string;
@@ -101,11 +155,15 @@ export function StructureEditor({
   const createModule = useCreateModule(path);
   const createAssessmentActivity = useCreateAssessmentActivity(path);
   const createLiveClassActivity = useCreateLiveClassActivity(path);
+  const updateLiveClassActivity = useUpdateLiveClassActivity(path);
   const createUnit = useCreateUnit(path);
   const updateStructure = useUpdateStructure(path);
   const reorder = useReorderStructure(path);
   const reorderActivities = useReorderActivities(path);
   const archive = useSetStructureArchived(path);
+  const liveClassBindingByActivityId = new Map(
+    liveClassBindings.map((binding) => [binding.activity_id, binding]),
+  );
 
   function failed(cause: unknown) {
     setError(
@@ -155,36 +213,36 @@ export function StructureEditor({
 
   async function addLiveClass(moduleId: string, formData: FormData) {
     setError('');
-    const duration = Number(formData.get('live-duration'));
-    const thresholdPercent = Number(formData.get('live-threshold'));
-    if (
-      !Number.isFinite(duration) ||
-      duration < 1 ||
-      !Number.isFinite(thresholdPercent) ||
-      thresholdPercent < 1 ||
-      thresholdPercent > 100
-    ) {
-      setError(
-        'Define una duración válida y un umbral de asistencia entre 1 % y 100 %.',
-      );
-      return;
-    }
-    const threshold = thresholdPercent * 100;
     try {
+      const configuration = liveClassConfiguration(formData, version);
       const created = await createLiveClassActivity.mutateAsync({
-        estimated_duration_minutes: duration,
-        expected_revision_version: version,
-        minimum_attendance_basis_points: threshold,
+        ...configuration,
         module_id: moduleId,
-        required: formData.get('live-required') === 'on',
-        summary: String(formData.get('live-summary') ?? ''),
-        title: String(formData.get('live-title') ?? ''),
       });
       setVersion(created.revision_lock_version);
       setMessage('Clase en vivo añadida con su política de asistencia.');
       router.refresh();
+      return true;
     } catch (cause) {
       failed(cause);
+      return false;
+    }
+  }
+
+  async function editLiveClass(activityId: string, formData: FormData) {
+    setError('');
+    try {
+      const updated = await updateLiveClassActivity.mutateAsync({
+        activityId,
+        body: liveClassConfiguration(formData, version),
+      });
+      setVersion(updated.revision_lock_version);
+      setMessage('Clase en vivo y política LiveKit actualizadas.');
+      router.refresh();
+      return true;
+    } catch (cause) {
+      failed(cause);
+      return false;
     }
   }
 
@@ -198,7 +256,7 @@ export function StructureEditor({
     );
     if (!option) {
       setError('Selecciona una versión aprobada de evaluación.');
-      return;
+      return false;
     }
     try {
       const created = await createAssessmentActivity.mutateAsync({
@@ -212,8 +270,10 @@ export function StructureEditor({
         'Evaluación añadida con la duración y el umbral de su versión aprobada.',
       );
       router.refresh();
+      return true;
     } catch (cause) {
       failed(cause);
+      return false;
     }
   }
 
@@ -439,9 +499,15 @@ export function StructureEditor({
         <div className="mt-5 rounded-xl border bg-card p-4 shadow-xs md:flex md:items-end md:justify-between md:gap-6">
           <div className="mb-4 md:mb-0">
             <p className="text-xs font-semibold tracking-wider text-primary uppercase">
-              Primer paso de esta revisión
+              {modules.some((module) => module.status === 'active')
+                ? 'Amplía el recorrido'
+                : 'Primer paso de esta revisión'}
             </p>
-            <h3 className="mt-1 font-semibold">Crea un bloque pedagógico</h3>
+            <h3 className="mt-1 font-semibold">
+              {modules.some((module) => module.status === 'active')
+                ? 'Añade otro bloque pedagógico'
+                : 'Crea un bloque pedagógico'}
+            </h3>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
               Cada módulo reúne una etapa del aprendizaje. Después agregarás las
               actividades en el orden exacto en que las verá el estudiante.
@@ -608,6 +674,10 @@ export function StructureEditor({
                             (unit) => unit.id === activity.lesson_unit_id,
                           )
                         : undefined;
+                      const liveClassBinding =
+                        activity.activity_type === 'live_class'
+                          ? liveClassBindingByActivityId.get(activity.id)
+                          : undefined;
                       return (
                         <li
                           className="flex items-start gap-3 rounded-lg border bg-background p-3 shadow-xs"
@@ -644,6 +714,28 @@ export function StructureEditor({
                               <p className="mt-2 text-sm text-muted-foreground">
                                 {activity.summary}
                               </p>
+                            ) : null}
+                            {activity.activity_type === 'live_class' &&
+                            canManage &&
+                            editable ? (
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <LiveClassActivityDialog
+                                  activity={activity}
+                                  {...(liveClassBinding
+                                    ? { binding: liveClassBinding }
+                                    : {})}
+                                  isSaving={updateLiveClassActivity.isPending}
+                                  objectives={objectives}
+                                  onSubmit={(formData) =>
+                                    editLiveClass(activity.id, formData)
+                                  }
+                                />
+                                {!liveClassBinding ? (
+                                  <span className="text-xs text-amber-700">
+                                    Completa la política LiveKit heredada.
+                                  </span>
+                                ) : null}
+                              </div>
                             ) : null}
                             {lesson ? (
                               <div className="mt-2">
@@ -811,165 +903,23 @@ export function StructureEditor({
                         </Button>
                       </form>
                     </details>
-                    <details className="group rounded-lg border bg-background">
-                      <summary className="flex cursor-pointer list-none items-start gap-3 px-3 py-3 marker:hidden hover:bg-muted/20">
-                        <span className="rounded-md bg-primary/10 p-1.5 text-primary">
-                          <Video className="size-4" />
-                        </span>
-                        <span>
-                          <span className="block text-sm font-semibold">
-                            Añadir clase en vivo
-                          </span>
-                          <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                            Sesión sincrónica y asistencia
-                          </span>
-                        </span>
-                      </summary>
-                      <form
-                        action={(formData) => addLiveClass(module.id, formData)}
-                        className="grid gap-3 border-t p-3"
-                      >
-                        <label className="academic-field">
-                          Título de la clase
-                          <input
-                            className="academic-control"
-                            maxLength={200}
-                            name="live-title"
-                            placeholder="Ej. Taller de integración por partes"
-                            required
-                          />
-                        </label>
-                        <label className="academic-field">
-                          Resumen
-                          <textarea
-                            className="academic-control min-h-20"
-                            maxLength={1200}
-                            name="live-summary"
-                            placeholder="Propósito y dinámica de la sesión"
-                          />
-                        </label>
-                        <div className="grid grid-cols-2 gap-3">
-                          <label className="academic-field">
-                            Duración (min)
-                            <input
-                              className="academic-control"
-                              defaultValue={60}
-                              min={1}
-                              name="live-duration"
-                              required
-                              type="number"
-                            />
-                          </label>
-                          <label className="academic-field">
-                            Asistencia mínima (%)
-                            <input
-                              className="academic-control"
-                              defaultValue={75}
-                              max={100}
-                              min={1}
-                              name="live-threshold"
-                              required
-                              type="number"
-                            />
-                          </label>
-                        </div>
-                        <label className="flex items-center gap-2 text-sm font-medium">
-                          <input
-                            defaultChecked
-                            name="live-required"
-                            type="checkbox"
-                          />
-                          Clase obligatoria
-                        </label>
-                        <Button className="w-fit" type="submit">
-                          <Plus /> Añadir clase
-                        </Button>
-                      </form>
-                    </details>
+                    <LiveClassActivityDialog
+                      isSaving={createLiveClassActivity.isPending}
+                      objectives={objectives}
+                      onSubmit={(formData) => addLiveClass(module.id, formData)}
+                    />
                     {canManageAssessments ? (
-                      <details className="group rounded-lg border bg-background">
-                        <summary className="flex cursor-pointer list-none items-start gap-3 px-3 py-3 marker:hidden hover:bg-muted/20">
-                          <span className="rounded-md bg-primary/10 p-1.5 text-primary">
-                            <ClipboardCheck className="size-4" />
-                          </span>
-                          <span>
-                            <span className="block text-sm font-semibold">
-                              Añadir evaluación
-                            </span>
-                            <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                              Usa una versión aprobada
-                            </span>
-                          </span>
-                        </summary>
-                        <form
-                          action={(formData) =>
-                            addAssessment(module.id, formData)
-                          }
-                          className="grid gap-3 border-t p-3"
-                        >
-                          {assessmentVersions.length ? (
-                            <>
-                              <label className="academic-field">
-                                Evaluación aprobada
-                                <select
-                                  className="academic-control"
-                                  name="assessment-version"
-                                  required
-                                >
-                                  <option value="">
-                                    Selecciona una evaluación
-                                  </option>
-                                  {assessmentVersions.map((option) => (
-                                    <option key={option.id} value={option.id}>
-                                      {option.label} ·{' '}
-                                      {option.durationMinutes
-                                        ? `${option.durationMinutes} min`
-                                        : 'sin tiempo límite'}{' '}
-                                      · aprobación{' '}
-                                      {option.passBasisPoints / 100} % ·{' '}
-                                      {option.attemptLimit
-                                        ? `${option.attemptLimit} intento${option.attemptLimit === 1 ? '' : 's'}`
-                                        : 'intentos sin límite'}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                              <p className="rounded-md bg-muted/30 px-3 py-2 text-xs leading-5 text-muted-foreground">
-                                Título, descripción, duración, intentos y nota
-                                mínima provienen de la versión aprobada. No se
-                                duplican aquí.
-                              </p>
-                              <label className="flex items-center gap-2 text-sm font-medium">
-                                <input
-                                  defaultChecked
-                                  name="assessment-required"
-                                  type="checkbox"
-                                />
-                                Evaluación obligatoria
-                              </label>
-                              <Button className="w-fit" type="submit">
-                                <Plus /> Añadir evaluación
-                              </Button>
-                            </>
-                          ) : (
-                            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-                              <p>No hay versiones aprobadas disponibles.</p>
-                              <Button
-                                asChild
-                                className="mt-3"
-                                size="sm"
-                                variant="outline"
-                              >
-                                <Link
-                                  href={`/organizaciones/${slug}/evaluaciones`}
-                                >
-                                  Gestionar evaluaciones
-                                </Link>
-                              </Button>
-                            </div>
-                          )}
-                        </form>
-                      </details>
+                      <AssessmentActivityDialog
+                        courseObjectiveIds={objectives.map(
+                          (objective) => objective.id,
+                        )}
+                        isSaving={createAssessmentActivity.isPending}
+                        onSubmit={(formData) =>
+                          addAssessment(module.id, formData)
+                        }
+                        options={assessmentVersions}
+                        slug={slug}
+                      />
                     ) : null}
                   </div>
                 ) : null}
@@ -982,6 +932,20 @@ export function StructureEditor({
           Aún no hay módulos. Empieza por definir la estructura del curso.
         </p>
       )}
+      {canManage && editable ? (
+        <CompletionPolicyCard
+          courseSlug={courseSlug}
+          onConfirmed={() => {
+            setVersion((current) => current + 1);
+            setMessage('Política de finalización confirmada.');
+            router.refresh();
+          }}
+          policy={completionPolicy}
+          revisionId={outline.revision.id}
+          revisionVersion={version}
+          slug={slug}
+        />
+      ) : null}
     </section>
   );
 }

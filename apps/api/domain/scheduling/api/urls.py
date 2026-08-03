@@ -24,6 +24,8 @@ urlpatterns = [
     path(SESSION + "start/", views.LiveSessionStartView.as_view()),
     path(SESSION + "join/", views.LiveSessionJoinView.as_view()),
     path(SESSION + "end/", views.LiveSessionEndView.as_view()),
+    path(SESSION + "recording/start/", views.LiveRecordingStartView.as_view()),
+    path(SESSION + "recording/stop/", views.LiveRecordingStopView.as_view()),
     path(SESSION + "attendance/", views.LiveAttendanceView.as_view()),
     path(
         SESSION + "participants/<path:identity>/permissions/",

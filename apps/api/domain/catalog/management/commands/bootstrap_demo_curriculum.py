@@ -1,4 +1,4 @@
-# pyright: reportUnknownArgumentType=false, reportMissingParameterType=false, reportUnusedExpression=false
+# pyright: reportUnknownArgumentType=false, reportUnknownMemberType=false, reportMissingParameterType=false, reportUnusedExpression=false
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
@@ -9,6 +9,7 @@ from domain.catalog.models import (
     Discipline,
     LearningObjective,
     Subject,
+    SubjectTeachingResponsibility,
     Topic,
 )
 from domain.catalog.services import (
@@ -96,8 +97,10 @@ class Command(BaseCommand):
         )
         today = timezone.localdate()
         for subject in (precalculus, differential):
-            responsibility = subject.teaching_responsibilities.filter(
-                membership=author_membership, ended_at__isnull=True
+            responsibility = SubjectTeachingResponsibility.objects.filter(
+                subject=subject,
+                membership=author_membership,
+                ended_at__isnull=True,
             ).first()
             if responsibility and not (
                 responsibility.starts_on <= today

@@ -14,6 +14,8 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/scheduling/api', () => ({
   endLiveSession: vi.fn(),
   enterLiveSession: (...args: unknown[]) => enterLiveSession(...args),
+  startLiveRecording: vi.fn(),
+  stopLiveRecording: vi.fn(),
 }));
 
 const detail: LiveSessionDetail = {
@@ -23,6 +25,8 @@ const detail: LiveSessionDetail = {
   canEdit: false,
   canJoin: true,
   canModerate: false,
+  canPublishAudio: true,
+  canPublishVideo: true,
   canShareScreen: false,
   canStart: false,
   countsTowardProgress: false,
@@ -32,8 +36,12 @@ const detail: LiveSessionDetail = {
   course_group_name: null,
   description: 'Sesión de práctica',
   hostName: 'Participante 00000000',
+  chatEnabled: true,
   id: '00000000-0000-0000-0000-000000000001',
   liveStatus: 'live',
+  recordingLayout: 'speaker',
+  recordingMode: 'off',
+  recordingStatus: 'disabled',
   scheduledEnd: '2026-08-01T16:00:00Z',
   scheduledStart: '2026-08-01T15:00:00Z',
   sessionId: '00000000-0000-0000-0000-000000000001',
@@ -54,6 +62,7 @@ describe('LiveClassroom lobby', () => {
         'institucion',
         detail.id,
         'join',
+        false,
       ),
     );
     expect(screen.getByText('Proveedor no disponible')).toBeInTheDocument();

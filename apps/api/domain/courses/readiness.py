@@ -174,7 +174,7 @@ def revision_readiness_issues(revision: CourseRevision) -> list[ReadinessIssue]:
                 add(
                     "activity_without_learning_objective",
                     activity_path,
-                    "Cada actividad debe cubrir al menos un objetivo del curso.",
+                    f"«{activity.title}» debe trabajar al menos un objetivo del curso.",
                 )
             if not _contiguous(link.position for link in activity_objectives):
                 add(
@@ -288,7 +288,7 @@ def revision_readiness_issues(revision: CourseRevision) -> list[ReadinessIssue]:
         add(
             "completion_policy_confirmation_required",
             "completion_policy",
-            "La política compuesta debe confirmarse antes de aprobar.",
+            "Confirma cómo completarán el curso los estudiantes.",
         )
 
     categories = list(revision.grade_categories.prefetch_related("graded_activities"))

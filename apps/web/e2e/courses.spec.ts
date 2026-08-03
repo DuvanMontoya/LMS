@@ -187,9 +187,7 @@ test('course authoring, conflict, review, approval, roles and axe work end to en
   await lesson
     .getByLabel('Configurar lección «Funciones y representaciones»')
     .click();
-  await lesson
-    .getByRole('checkbox', { name: /^Funciones\b/ })
-    .check();
+  await lesson.getByRole('checkbox', { name: /^Funciones\b/ }).check();
   await lesson.getByRole('checkbox', { name: /OBJ-COURSE-001/ }).check();
   await lesson.getByRole('button', { name: 'Guardar configuración' }).click();
   await expect(

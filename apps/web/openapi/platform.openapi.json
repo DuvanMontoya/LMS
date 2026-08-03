@@ -5344,17 +5344,41 @@
       "LiveClassActivityBinding": {
         "properties": {
           "activity_id": { "format": "uuid", "type": "string" },
+          "chat_enabled": { "type": "boolean" },
           "id": { "format": "uuid", "type": "string" },
+          "join_after_minutes": { "type": "integer" },
+          "join_before_minutes": { "type": "integer" },
+          "max_participants": { "type": "integer" },
           "minimum_attendance_minutes": { "nullable": true, "type": "integer" },
           "minimum_attended_occurrences": { "type": "integer" },
-          "revision_lock_version": { "type": "integer" }
+          "recording_layout": { "type": "string" },
+          "recording_mode": { "type": "string" },
+          "revision_lock_version": { "type": "integer" },
+          "room_departure_timeout_seconds": { "type": "integer" },
+          "room_empty_timeout_seconds": { "type": "integer" },
+          "session_mode": { "type": "string" },
+          "student_audio_enabled": { "type": "boolean" },
+          "student_screen_share_enabled": { "type": "boolean" },
+          "student_video_enabled": { "type": "boolean" }
         },
         "required": [
           "activity_id",
+          "chat_enabled",
           "id",
+          "join_after_minutes",
+          "join_before_minutes",
+          "max_participants",
           "minimum_attendance_minutes",
           "minimum_attended_occurrences",
-          "revision_lock_version"
+          "recording_layout",
+          "recording_mode",
+          "revision_lock_version",
+          "room_departure_timeout_seconds",
+          "room_empty_timeout_seconds",
+          "session_mode",
+          "student_audio_enabled",
+          "student_screen_share_enabled",
+          "student_video_enabled"
         ],
         "type": "object"
       },
@@ -5379,29 +5403,162 @@
         ],
         "type": "object"
       },
-      "LiveClassCourseActivityCreate": {
+      "LiveClassCourseActivityConfiguration": {
         "properties": {
+          "chat_enabled": { "default": true, "type": "boolean" },
           "estimated_duration_minutes": {
             "maximum": 720,
             "minimum": 1,
             "type": "integer"
           },
           "expected_revision_version": { "minimum": 1, "type": "integer" },
+          "join_after_minutes": {
+            "maximum": 120,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "join_before_minutes": {
+            "maximum": 120,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "learning_objective_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array"
+          },
+          "max_participants": {
+            "maximum": 1000,
+            "minimum": 2,
+            "type": "integer"
+          },
           "minimum_attendance_basis_points": {
             "maximum": 10000,
             "minimum": 1,
             "type": "integer"
           },
-          "module_id": { "format": "uuid", "type": "string" },
+          "recording_layout": {
+            "allOf": [{ "$ref": "#/components/schemas/RecordingLayoutEnum" }],
+            "default": "speaker"
+          },
+          "recording_mode": {
+            "allOf": [{ "$ref": "#/components/schemas/RecordingModeEnum" }],
+            "default": "off"
+          },
           "required": { "default": true, "type": "boolean" },
+          "room_departure_timeout_seconds": {
+            "maximum": 600,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "room_empty_timeout_seconds": {
+            "maximum": 3600,
+            "minimum": 60,
+            "type": "integer"
+          },
+          "session_mode": { "$ref": "#/components/schemas/SessionModeEnum" },
+          "student_audio_enabled": { "default": true, "type": "boolean" },
+          "student_screen_share_enabled": {
+            "default": false,
+            "type": "boolean"
+          },
+          "student_video_enabled": { "default": true, "type": "boolean" },
           "summary": { "maxLength": 1200, "type": "string" },
           "title": { "maxLength": 200, "type": "string" }
         },
         "required": [
           "estimated_duration_minutes",
           "expected_revision_version",
+          "join_after_minutes",
+          "join_before_minutes",
+          "learning_objective_ids",
+          "max_participants",
+          "minimum_attendance_basis_points",
+          "room_departure_timeout_seconds",
+          "room_empty_timeout_seconds",
+          "session_mode",
+          "title"
+        ],
+        "type": "object"
+      },
+      "LiveClassCourseActivityCreate": {
+        "properties": {
+          "chat_enabled": { "default": true, "type": "boolean" },
+          "estimated_duration_minutes": {
+            "maximum": 720,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "expected_revision_version": { "minimum": 1, "type": "integer" },
+          "join_after_minutes": {
+            "maximum": 120,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "join_before_minutes": {
+            "maximum": 120,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "learning_objective_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array"
+          },
+          "max_participants": {
+            "maximum": 1000,
+            "minimum": 2,
+            "type": "integer"
+          },
+          "minimum_attendance_basis_points": {
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "module_id": { "format": "uuid", "type": "string" },
+          "recording_layout": {
+            "allOf": [{ "$ref": "#/components/schemas/RecordingLayoutEnum" }],
+            "default": "speaker"
+          },
+          "recording_mode": {
+            "allOf": [{ "$ref": "#/components/schemas/RecordingModeEnum" }],
+            "default": "off"
+          },
+          "required": { "default": true, "type": "boolean" },
+          "room_departure_timeout_seconds": {
+            "maximum": 600,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "room_empty_timeout_seconds": {
+            "maximum": 3600,
+            "minimum": 60,
+            "type": "integer"
+          },
+          "session_mode": { "$ref": "#/components/schemas/SessionModeEnum" },
+          "student_audio_enabled": { "default": true, "type": "boolean" },
+          "student_screen_share_enabled": {
+            "default": false,
+            "type": "boolean"
+          },
+          "student_video_enabled": { "default": true, "type": "boolean" },
+          "summary": { "maxLength": 1200, "type": "string" },
+          "title": { "maxLength": 200, "type": "string" }
+        },
+        "required": [
+          "estimated_duration_minutes",
+          "expected_revision_version",
+          "join_after_minutes",
+          "join_before_minutes",
+          "learning_objective_ids",
+          "max_participants",
           "minimum_attendance_basis_points",
           "module_id",
+          "room_departure_timeout_seconds",
+          "room_empty_timeout_seconds",
+          "session_mode",
           "title"
         ],
         "type": "object"
@@ -5415,6 +5572,12 @@
         "required": ["serverUrl", "session", "token"],
         "type": "object"
       },
+      "LiveConnectionRequest": {
+        "properties": {
+          "recording_acknowledged": { "default": false, "type": "boolean" }
+        },
+        "type": "object"
+      },
       "LiveSessionDetail": {
         "properties": {
           "activity_required": { "type": "boolean" },
@@ -5423,8 +5586,11 @@
           "canEdit": { "type": "boolean" },
           "canJoin": { "type": "boolean" },
           "canModerate": { "type": "boolean" },
+          "canPublishAudio": { "type": "boolean" },
+          "canPublishVideo": { "type": "boolean" },
           "canShareScreen": { "type": "boolean" },
           "canStart": { "type": "boolean" },
+          "chatEnabled": { "type": "boolean" },
           "countsTowardProgress": { "type": "boolean" },
           "course": {
             "additionalProperties": {},
@@ -5446,6 +5612,9 @@
           "hostName": { "type": "string" },
           "id": { "format": "uuid", "type": "string" },
           "liveStatus": { "type": "string" },
+          "recordingLayout": { "type": "string" },
+          "recordingMode": { "type": "string" },
+          "recordingStatus": { "type": "string" },
           "scheduledEnd": { "format": "date-time", "type": "string" },
           "scheduledStart": { "format": "date-time", "type": "string" },
           "sessionId": { "format": "uuid", "type": "string" },
@@ -5459,8 +5628,11 @@
           "canEdit",
           "canJoin",
           "canModerate",
+          "canPublishAudio",
+          "canPublishVideo",
           "canShareScreen",
           "canStart",
+          "chatEnabled",
           "countsTowardProgress",
           "course",
           "course_group_activity_id",
@@ -5470,6 +5642,9 @@
           "hostName",
           "id",
           "liveStatus",
+          "recordingLayout",
+          "recordingMode",
+          "recordingStatus",
           "scheduledEnd",
           "scheduledStart",
           "sessionId",
@@ -5481,8 +5656,13 @@
       "LiveSessionSummary": {
         "properties": {
           "canModerate": { "type": "boolean" },
+          "canPublishAudio": { "type": "boolean" },
+          "canPublishVideo": { "type": "boolean" },
           "canShareScreen": { "type": "boolean" },
+          "chatEnabled": { "type": "boolean" },
           "id": { "format": "uuid", "type": "string" },
+          "recordingMode": { "type": "string" },
+          "recordingStatus": { "type": "string" },
           "role": { "type": "string" },
           "scheduledEnd": { "format": "date-time", "type": "string" },
           "scheduledStart": { "format": "date-time", "type": "string" },
@@ -5491,8 +5671,13 @@
         },
         "required": [
           "canModerate",
+          "canPublishAudio",
+          "canPublishVideo",
           "canShareScreen",
+          "chatEnabled",
           "id",
+          "recordingMode",
+          "recordingStatus",
           "role",
           "scheduledEnd",
           "scheduledStart",
@@ -7519,6 +7704,16 @@
         "required": ["checksum_sha256", "etag", "size_bytes"],
         "type": "object"
       },
+      "RecordingLayoutEnum": {
+        "description": "* `grid` - grid\n* `speaker` - speaker",
+        "enum": ["grid", "speaker"],
+        "type": "string"
+      },
+      "RecordingModeEnum": {
+        "description": "* `off` - off\n* `manual` - manual\n* `automatic` - automatic",
+        "enum": ["off", "manual", "automatic"],
+        "type": "string"
+      },
       "RegistrationReasonEnum": {
         "description": "* `course` - Tomar un curso\n* `school_support` - Refuerzo escolar\n* `exam_preparation` - Preparación para una evaluación\n* `professional_development` - Formación profesional\n* `teaching` - Enseñar o acompañar estudiantes\n* `institutional` - Vinculación institucional\n* `other` - Otro motivo",
         "enum": [
@@ -8369,6 +8564,11 @@
         },
         "required": ["expected_version", "instructions", "title"],
         "type": "object"
+      },
+      "SessionModeEnum": {
+        "description": "* `interactive` - interactive\n* `webinar` - webinar",
+        "enum": ["interactive", "webinar"],
+        "type": "string"
       },
       "SignPart": {
         "properties": {
@@ -24052,6 +24252,37 @@
       }
     },
     "/api/v1/organizations/{slug}/scheduling/course-activities/{activity_id}/binding/": {
+      "get": {
+        "operationId": "scheduling_course_activity_binding_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveClassActivityBinding"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
       "post": {
         "operationId": "scheduling_course_activity_binding_create",
         "parameters": [
@@ -24090,6 +24321,57 @@
         },
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveClassActivityBinding"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "operationId": "scheduling_course_activity_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveClassCourseActivityConfiguration"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveClassCourseActivityConfiguration"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveClassCourseActivityConfiguration"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
@@ -24425,6 +24707,19 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LiveConnectionRequest" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/LiveConnectionRequest" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/LiveConnectionRequest" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -24551,6 +24846,84 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/recording/start/": {
+      "post": {
+        "operationId": "scheduling_live_recording_start",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OperationAccepted" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/recording/stop/": {
+      "post": {
+        "operationId": "scheduling_live_recording_stop",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OperationAccepted" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/start/": {
       "post": {
         "operationId": "scheduling_live_session_start",
@@ -24568,6 +24941,19 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LiveConnectionRequest" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/LiveConnectionRequest" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/LiveConnectionRequest" }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {

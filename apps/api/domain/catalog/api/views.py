@@ -14,6 +14,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.serializers import BaseSerializer
 from rest_framework.views import APIView
 
 from domain.catalog.exceptions import (
@@ -166,7 +167,11 @@ def _uuid_list_query(
         raise ValidationError({name: "Debe contener UUID válidos."}) from error
 
 
-def _windowed_response(request: Request, rows: QuerySet, serializer) -> Response:
+def _windowed_response[WindowModel: Model](
+    request: Request,
+    rows: QuerySet[WindowModel, WindowModel],
+    serializer: type[BaseSerializer],
+) -> Response:
     """Preserve legacy unpaginated reads while allowing bounded directory views."""
 
     if "limit" not in request.query_params and "offset" not in request.query_params:

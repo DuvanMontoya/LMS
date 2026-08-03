@@ -897,6 +897,64 @@ def create_activity(
 
 
 @transaction.atomic
+def update_activity_configuration(
+    *,
+    actor: Any,
+    organization: Organization,
+    activity: CourseActivity,
+    expected_version: int,
+    title: str,
+    summary: str,
+    estimated_duration_minutes: int | None,
+    required: bool,
+    completion_method: ActivityCompletionMethod,
+    minimum_attendance_basis_points: int | None,
+    minimum_grade_basis_points: int | None,
+) -> tuple[CourseActivity, CourseRevision]:
+    _require_manage(actor, organization)
+    locked_activity = (
+        CourseActivity.objects.select_for_update()
+        .select_related("module__revision__course__organization")
+        .get(pk=activity.pk)
+    )
+    revision = _lock_revision(
+        actor=actor,
+        revision=locked_activity.module.revision,
+        organization=organization,
+        expected_version=expected_version,
+    )
+    _require_editable(revision)
+    _require(
+        locked_activity.status == StructureStatus.ACTIVE,
+        CourseStructureInvalid,
+        "La actividad está archivada.",
+    )
+    locked_activity.title = title
+    locked_activity.summary = summary
+    locked_activity.estimated_duration_minutes = estimated_duration_minutes
+    locked_activity.required = required
+    locked_activity.completion_method = completion_method
+    locked_activity.minimum_attendance_basis_points = minimum_attendance_basis_points
+    locked_activity.minimum_grade_basis_points = minimum_grade_basis_points
+    locked_activity.updated_by = actor
+    locked_activity.full_clean()
+    locked_activity.save(
+        update_fields=(
+            "title",
+            "summary",
+            "estimated_duration_minutes",
+            "required",
+            "completion_method",
+            "minimum_attendance_basis_points",
+            "minimum_grade_basis_points",
+            "updated_by",
+            "updated_at",
+        )
+    )
+    return locked_activity, _finish(revision, actor)
+
+
+@transaction.atomic
 def replace_activity_order(
     *,
     actor: Any,

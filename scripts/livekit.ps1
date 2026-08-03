@@ -49,11 +49,11 @@ Import-LocalEnvironment
 
 switch ($Action) {
     'Up' {
-        Invoke-Compose @('up', '--detach', 'livekit')
-        Write-Host 'Self-hosted LiveKit is listening locally on ws://127.0.0.1:7880.'
+        Invoke-Compose @('up', '--detach', 'livekit', 'livekit-egress')
+        Write-Host 'Self-hosted LiveKit and its private recording worker are ready locally.'
     }
-    'Status' { Invoke-Compose @('ps', 'livekit') }
-    'Logs' { Invoke-Compose @('logs', '--tail', '200', 'livekit') }
+    'Status' { Invoke-Compose @('ps', 'livekit', 'livekit-egress') }
+    'Logs' { Invoke-Compose @('logs', '--tail', '200', 'livekit', 'livekit-egress') }
     'Smoke' {
         $deadline = [DateTimeOffset]::UtcNow.AddSeconds(30)
         do {
@@ -68,6 +68,12 @@ switch ($Action) {
         } while ([DateTimeOffset]::UtcNow -lt $deadline)
         & uv run --directory apps/api python -c "import django,uuid; django.setup(); from domain.scheduling.livekit_gateway import LiveKitGateway; g=LiveKitGateway(); name='lk_smoke_'+uuid.uuid4().hex; room=g.create_room(room_name=name, metadata='{}'); assert room.name==name; g.close_room(room_name=name); print('LiveKit Room Service create/list/delete passed.')"
         Assert-LastExitCode 'LiveKit Room Service smoke'
+        $egress = (& docker compose @composeArguments ps --format json livekit-egress | ConvertFrom-Json)
+        Assert-LastExitCode 'LiveKit Egress status'
+        if ($egress.State -ne 'running' -or $egress.Health -ne 'healthy') {
+            throw "LiveKit Egress is not healthy (state=$($egress.State), health=$($egress.Health))."
+        }
+        Write-Host 'LiveKit Egress private recording worker is healthy.'
     }
-    'Down' { Invoke-Compose @('stop', 'livekit') }
+    'Down' { Invoke-Compose @('stop', 'livekit-egress', 'livekit') }
 }

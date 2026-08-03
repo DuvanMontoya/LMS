@@ -393,6 +393,9 @@ OTEL_DEPLOYMENT_ENVIRONMENT = os.environ.get(
 )
 
 REST_FRAMEWORK = {
+    "EXCEPTION_HANDLER": (
+        "config.observability.api_exceptions.json_api_exception_handler"
+    ),
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
     ],

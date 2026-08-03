@@ -90,6 +90,7 @@ function liveAction(
   slug: string,
   sessionId: string,
   action: 'join' | 'start',
+  recordingAcknowledged: boolean,
 ): Promise<LiveConnection> {
   const path =
     action === 'start'
@@ -97,6 +98,7 @@ function liveAction(
       : '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/join/';
   return required(
     platformBrowserClient.POST(path, {
+      body: { recording_acknowledged: recordingAcknowledged },
       params: { path: { slug, session_id: sessionId } },
     }),
   ) as Promise<LiveConnection>;
@@ -106,14 +108,33 @@ export function enterLiveSession(
   slug: string,
   sessionId: string,
   action: 'join' | 'start',
+  recordingAcknowledged = false,
 ) {
-  return liveAction(slug, sessionId, action);
+  return liveAction(slug, sessionId, action, recordingAcknowledged);
 }
 
 export function endLiveSession(slug: string, sessionId: string) {
   return required(
     platformBrowserClient.POST(
       '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/end/',
+      { params: { path: { slug, session_id: sessionId } } },
+    ),
+  );
+}
+
+export function startLiveRecording(slug: string, sessionId: string) {
+  return required(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/recording/start/',
+      { params: { path: { slug, session_id: sessionId } } },
+    ),
+  );
+}
+
+export function stopLiveRecording(slug: string, sessionId: string) {
+  return required(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/recording/stop/',
       { params: { path: { slug, session_id: sessionId } } },
     ),
   );

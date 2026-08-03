@@ -47,12 +47,43 @@ class LiveClassActivityBinding(NoPhysicalDeleteModel):
     )
     minimum_attended_occurrences = models.PositiveSmallIntegerField(default=1)
     minimum_attendance_minutes = models.PositiveSmallIntegerField(null=True, blank=True)
+    session_mode = models.CharField(
+        max_length=16,
+        choices=(("interactive", "Interactive"), ("webinar", "Webinar")),
+        default="interactive",
+    )
+    chat_enabled = models.BooleanField(default=True)
+    student_audio_enabled = models.BooleanField(default=True)
+    student_video_enabled = models.BooleanField(default=True)
+    student_screen_share_enabled = models.BooleanField(default=False)
+    recording_mode = models.CharField(
+        max_length=16,
+        choices=(("off", "Off"), ("manual", "Manual"), ("automatic", "Automatic")),
+        default="off",
+    )
+    recording_layout = models.CharField(
+        max_length=16,
+        choices=(("grid", "Grid"), ("speaker", "Speaker")),
+        default="speaker",
+    )
+    max_participants = models.PositiveSmallIntegerField(default=100)
+    room_empty_timeout_seconds = models.PositiveSmallIntegerField(default=600)
+    room_departure_timeout_seconds = models.PositiveSmallIntegerField(default=30)
+    join_before_minutes = models.PositiveSmallIntegerField(default=15)
+    join_after_minutes = models.PositiveSmallIntegerField(default=15)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="live_class_activity_bindings_created",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        on_delete=models.PROTECT,
+        related_name="live_class_activity_bindings_updated",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [
@@ -64,6 +95,27 @@ class LiveClassActivityBinding(NoPhysicalDeleteModel):
                 condition=Q(minimum_attendance_minutes__isnull=True)
                 | Q(minimum_attendance_minutes__gt=0),
                 name="sched_binding_minutes_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(max_participants__gte=2) & Q(max_participants__lte=1_000),
+                name="sched_binding_max_participants_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(room_empty_timeout_seconds__gte=60)
+                & Q(room_empty_timeout_seconds__lte=3_600),
+                name="sched_binding_empty_timeout_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(room_departure_timeout_seconds__lte=600),
+                name="sched_binding_departure_timeout_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(join_before_minutes__lte=120),
+                name="sched_binding_join_before_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(join_after_minutes__lte=120),
+                name="sched_binding_join_after_range",
             ),
         ]
 
@@ -412,6 +464,32 @@ class LiveSession(NoPhysicalDeleteModel):
 
     def __str__(self) -> str:
         return f"{self.occurrence_id}:{self.status}"
+
+
+class LiveRecordingAcknowledgement(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session = models.ForeignKey(
+        LiveSession,
+        on_delete=models.PROTECT,
+        related_name="recording_acknowledgements",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="live_recording_acknowledgements",
+    )
+    acknowledged_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("session", "user"),
+                name="sched_recording_ack_session_user_unique",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.session_id}:{self.user_id}"
 
 
 class LiveKitWebhookEvent(NoPhysicalDeleteModel):

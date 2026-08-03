@@ -52,22 +52,32 @@ class LiveKitGateway:
         self.config = config or configuration()
 
     def issue_token(
-        self, *, user_id: object, room_name: str, access: LiveAccess
+        self,
+        *,
+        user_id: object,
+        room_name: str,
+        access: LiveAccess,
+        chat_enabled: bool = False,
+        student_audio_enabled: bool = True,
+        student_video_enabled: bool = True,
+        student_screen_share_enabled: bool = False,
     ) -> str:
         publish_sources: list[str] = []
         if access.can_publish:
-            if access.role != "student" or settings.LIVEKIT_STUDENT_CAN_PUBLISH_VIDEO:
+            if access.role != "student" or student_video_enabled:
                 publish_sources.append("camera")
-            if access.role != "student" or settings.LIVEKIT_STUDENT_CAN_PUBLISH_AUDIO:
+            if access.role != "student" or student_audio_enabled:
                 publish_sources.append("microphone")
-        if access.can_share_screen:
+        if access.can_share_screen and (
+            access.role != "student" or student_screen_share_enabled
+        ):
             publish_sources.extend(("screen_share", "screen_share_audio"))
         grants = api.VideoGrants(
             room_join=True,
             room=room_name,
             can_subscribe=True,
             can_publish=bool(publish_sources),
-            can_publish_data=False,
+            can_publish_data=chat_enabled,
             can_publish_sources=publish_sources,
             can_update_own_metadata=False,
         )
@@ -94,7 +104,15 @@ class LiveKitGateway:
         finally:
             await client.aclose()
 
-    def create_room(self, *, room_name: str, metadata: str) -> Any:
+    def create_room(
+        self,
+        *,
+        room_name: str,
+        metadata: str,
+        empty_timeout_seconds: int | None = None,
+        departure_timeout_seconds: int = 30,
+        max_participants: int | None = None,
+    ) -> Any:
         async def operation(client: api.LiveKitAPI):
             existing = await client.room.list_rooms(
                 api.ListRoomsRequest(names=[room_name])
@@ -105,9 +123,13 @@ class LiveKitGateway:
                 return await client.room.create_room(
                     api.CreateRoomRequest(
                         name=room_name,
-                        empty_timeout=self.config.room_empty_timeout_seconds,
-                        departure_timeout=30,
-                        max_participants=self.config.max_participants,
+                        empty_timeout=(
+                            empty_timeout_seconds
+                            or self.config.room_empty_timeout_seconds
+                        ),
+                        departure_timeout=departure_timeout_seconds,
+                        max_participants=max_participants
+                        or self.config.max_participants,
                         metadata=metadata,
                     )
                 )
@@ -139,6 +161,41 @@ class LiveKitGateway:
             async_to_sync(self._with_client)(operation)
         except Exception as error:
             raise LiveKitRejected("LiveKit rechazó el cierre de la sala.") from error
+
+    def start_room_recording(
+        self, *, room_name: str, layout: str, filepath: str
+    ) -> Any:
+        async def operation(client: api.LiveKitAPI):
+            return await client.egress.start_room_composite_egress(
+                api.RoomCompositeEgressRequest(
+                    room_name=room_name,
+                    layout="grid" if layout == "grid" else "speaker-dark",
+                    file_outputs=[
+                        api.EncodedFileOutput(
+                            file_type=api.EncodedFileType.MP4,
+                            filepath=filepath,
+                        )
+                    ],
+                )
+            )
+
+        try:
+            return async_to_sync(self._with_client)(operation)
+        except Exception as error:
+            raise LiveKitRejected("LiveKit Egress rechazó la grabación.") from error
+
+    def stop_recording(self, *, egress_id: str) -> Any:
+        async def operation(client: api.LiveKitAPI):
+            return await client.egress.stop_egress(
+                api.StopEgressRequest(egress_id=egress_id)
+            )
+
+        try:
+            return async_to_sync(self._with_client)(operation)
+        except Exception as error:
+            raise LiveKitRejected(
+                "LiveKit Egress no pudo detener la grabación."
+            ) from error
 
     def list_participants(self, *, room_name: str) -> list[Any]:
         async def operation(client: api.LiveKitAPI):

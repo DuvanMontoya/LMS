@@ -15,6 +15,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from domain.courses.models import Course, CourseActivity, CourseModule
+from domain.courses.policies import (
+    can_manage_course,
+    has_course_academic_responsibility,
+)
 from domain.learning.contracts import course_group_for_scheduling
 from domain.learning.models import CourseGroupActivity
 from domain.organizations.choices import MembershipStatus
@@ -25,9 +29,14 @@ from domain.scheduling.calendar_extensions import external_calendar_events
 from domain.scheduling.course_activities import (
     bind_live_class_activity,
     create_and_bind_live_class_activity,
+    update_live_class_activity,
 )
-from domain.scheduling.exceptions import SchedulingDomainError
-from domain.scheduling.models import AcademicEventOccurrence, LiveSession
+from domain.scheduling.exceptions import SchedulingAccessDenied, SchedulingDomainError
+from domain.scheduling.models import (
+    AcademicEventOccurrence,
+    LiveClassActivityBinding,
+    LiveSession,
+)
 from domain.scheduling.policies import can_create_schedule
 from domain.scheduling.selectors import (
     attendance_summary,
@@ -45,7 +54,9 @@ from domain.scheduling.services import (
     expel_participant,
     join_live_session,
     reschedule_occurrence,
+    start_live_recording,
     start_live_session,
+    stop_live_recording,
 )
 from domain.scheduling.webhooks import receive_and_process_webhook
 
@@ -58,7 +69,9 @@ from .serializers import (
     EventRescheduleSerializer,
     LiveClassActivityBindingInputSerializer,
     LiveClassActivityBindingSerializer,
+    LiveClassCourseActivityConfigurationSerializer,
     LiveClassCourseActivityCreateSerializer,
+    LiveConnectionRequestSerializer,
     LiveConnectionSerializer,
     LiveSessionDetailSerializer,
     LiveSessionListQuerySerializer,
@@ -87,7 +100,57 @@ def _domain_call(operation: Callable[[], Any]) -> Response | Any:
         return _error(error)
 
 
+def _binding_payload(
+    binding: LiveClassActivityBinding, revision_lock_version: int
+) -> dict[str, Any]:
+    return {
+        "id": binding.id,
+        "activity_id": binding.activity_id,
+        "minimum_attended_occurrences": binding.minimum_attended_occurrences,
+        "minimum_attendance_minutes": binding.minimum_attendance_minutes,
+        "session_mode": binding.session_mode,
+        "chat_enabled": binding.chat_enabled,
+        "student_audio_enabled": binding.student_audio_enabled,
+        "student_video_enabled": binding.student_video_enabled,
+        "student_screen_share_enabled": binding.student_screen_share_enabled,
+        "recording_mode": binding.recording_mode,
+        "recording_layout": binding.recording_layout,
+        "max_participants": binding.max_participants,
+        "room_empty_timeout_seconds": binding.room_empty_timeout_seconds,
+        "room_departure_timeout_seconds": binding.room_departure_timeout_seconds,
+        "join_before_minutes": binding.join_before_minutes,
+        "join_after_minutes": binding.join_after_minutes,
+        "revision_lock_version": revision_lock_version,
+    }
+
+
 class LiveClassActivityBindingView(APIView):
+    @extend_schema(
+        operation_id="scheduling_course_activity_binding_retrieve",
+        responses={200: LiveClassActivityBindingSerializer},
+    )
+    def get(self, request: Request, slug: str, activity_id: uuid.UUID) -> Response:
+        organization = _organization(request, slug)
+        binding = get_object_or_404(
+            LiveClassActivityBinding.objects.select_related(
+                "activity__module__revision__course"
+            ),
+            activity_id=activity_id,
+            activity__module__revision__course__organization=organization,
+        )
+        course = binding.activity.module.revision.course
+        if not can_manage_course(
+            request.user, organization
+        ) or not has_course_academic_responsibility(
+            request.user, organization, course=course
+        ):
+            return _error(SchedulingAccessDenied("No puedes consultar esta política."))
+        return Response(
+            LiveClassActivityBindingSerializer(
+                _binding_payload(binding, binding.activity.module.revision.lock_version)
+            ).data
+        )
+
     @extend_schema(
         operation_id="scheduling_course_activity_binding_create",
         request=LiveClassActivityBindingInputSerializer,
@@ -123,15 +186,76 @@ class LiveClassActivityBindingView(APIView):
         binding, revision_lock_version = result
         return Response(
             LiveClassActivityBindingSerializer(
-                {
-                    "id": binding.id,
-                    "activity_id": binding.activity_id,
-                    "minimum_attended_occurrences": binding.minimum_attended_occurrences,
-                    "minimum_attendance_minutes": binding.minimum_attendance_minutes,
-                    "revision_lock_version": revision_lock_version,
-                }
+                _binding_payload(binding, revision_lock_version)
             ).data,
             status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        operation_id="scheduling_course_activity_update",
+        request=LiveClassCourseActivityConfigurationSerializer,
+        responses={200: LiveClassActivityBindingSerializer},
+    )
+    def put(self, request: Request, slug: str, activity_id: uuid.UUID) -> Response:
+        organization = _organization(request, slug)
+        serializer = LiveClassCourseActivityConfigurationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        activity = get_object_or_404(
+            CourseActivity.objects.select_related("module__revision__course"),
+            pk=activity_id,
+            module__revision__course__organization=organization,
+        )
+        result = _domain_call(
+            lambda: update_live_class_activity(
+                actor=request.user,
+                organization=organization,
+                activity=activity,
+                expected_revision_version=serializer.validated_data[
+                    "expected_revision_version"
+                ],
+                title=serializer.validated_data["title"],
+                summary=serializer.validated_data.get("summary", ""),
+                estimated_duration_minutes=serializer.validated_data[
+                    "estimated_duration_minutes"
+                ],
+                required=serializer.validated_data["required"],
+                minimum_attendance_basis_points=serializer.validated_data[
+                    "minimum_attendance_basis_points"
+                ],
+                learning_objective_ids=serializer.validated_data[
+                    "learning_objective_ids"
+                ],
+                session_mode=serializer.validated_data["session_mode"],
+                chat_enabled=serializer.validated_data["chat_enabled"],
+                student_audio_enabled=serializer.validated_data[
+                    "student_audio_enabled"
+                ],
+                student_video_enabled=serializer.validated_data[
+                    "student_video_enabled"
+                ],
+                student_screen_share_enabled=serializer.validated_data[
+                    "student_screen_share_enabled"
+                ],
+                recording_mode=serializer.validated_data["recording_mode"],
+                recording_layout=serializer.validated_data["recording_layout"],
+                max_participants=serializer.validated_data["max_participants"],
+                room_empty_timeout_seconds=serializer.validated_data[
+                    "room_empty_timeout_seconds"
+                ],
+                room_departure_timeout_seconds=serializer.validated_data[
+                    "room_departure_timeout_seconds"
+                ],
+                join_before_minutes=serializer.validated_data["join_before_minutes"],
+                join_after_minutes=serializer.validated_data["join_after_minutes"],
+            )
+        )
+        if isinstance(result, Response):
+            return result
+        binding, _activity, revision_lock_version = result
+        return Response(
+            LiveClassActivityBindingSerializer(
+                _binding_payload(binding, revision_lock_version)
+            ).data
         )
 
 
@@ -167,20 +291,39 @@ class LiveClassCourseActivityCreateView(APIView):
                 minimum_attendance_basis_points=serializer.validated_data[
                     "minimum_attendance_basis_points"
                 ],
+                learning_objective_ids=serializer.validated_data[
+                    "learning_objective_ids"
+                ],
+                session_mode=serializer.validated_data["session_mode"],
+                chat_enabled=serializer.validated_data["chat_enabled"],
+                student_audio_enabled=serializer.validated_data[
+                    "student_audio_enabled"
+                ],
+                student_video_enabled=serializer.validated_data[
+                    "student_video_enabled"
+                ],
+                student_screen_share_enabled=serializer.validated_data[
+                    "student_screen_share_enabled"
+                ],
+                recording_mode=serializer.validated_data["recording_mode"],
+                recording_layout=serializer.validated_data["recording_layout"],
+                max_participants=serializer.validated_data["max_participants"],
+                room_empty_timeout_seconds=serializer.validated_data[
+                    "room_empty_timeout_seconds"
+                ],
+                room_departure_timeout_seconds=serializer.validated_data[
+                    "room_departure_timeout_seconds"
+                ],
+                join_before_minutes=serializer.validated_data["join_before_minutes"],
+                join_after_minutes=serializer.validated_data["join_after_minutes"],
             )
         )
         if isinstance(result, Response):
             return result
-        binding, activity, revision_lock_version = result
+        binding, _activity, revision_lock_version = result
         return Response(
             LiveClassActivityBindingSerializer(
-                {
-                    "id": binding.id,
-                    "activity_id": activity.id,
-                    "minimum_attended_occurrences": binding.minimum_attended_occurrences,
-                    "minimum_attendance_minutes": binding.minimum_attendance_minutes,
-                    "revision_lock_version": revision_lock_version,
-                }
+                _binding_payload(binding, revision_lock_version)
             ).data,
             status=status.HTTP_201_CREATED,
         )
@@ -494,7 +637,7 @@ class LiveSessionListView(APIView):
 class LiveSessionStartView(APIView):
     @extend_schema(
         operation_id="scheduling_live_session_start",
-        request=None,
+        request=LiveConnectionRequestSerializer,
         responses={200: LiveConnectionSerializer, 409: SchedulingErrorSerializer},
     )
     def post(self, request: Request, slug: str, session_id: uuid.UUID) -> Response:
@@ -502,8 +645,16 @@ class LiveSessionStartView(APIView):
         get_object_or_404(
             LiveSession, pk=session_id, occurrence__series__organization=organization
         )
+        serializer = LiveConnectionRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         result = _domain_call(
-            lambda: start_live_session(actor=request.user, session_id=session_id)
+            lambda: start_live_session(
+                actor=request.user,
+                session_id=session_id,
+                recording_acknowledged=serializer.validated_data[
+                    "recording_acknowledged"
+                ],
+            )
         )
         return result if isinstance(result, Response) else Response(result)
 
@@ -511,7 +662,7 @@ class LiveSessionStartView(APIView):
 class LiveSessionJoinView(APIView):
     @extend_schema(
         operation_id="scheduling_live_session_join",
-        request=None,
+        request=LiveConnectionRequestSerializer,
         responses={200: LiveConnectionSerializer, 409: SchedulingErrorSerializer},
     )
     def post(self, request: Request, slug: str, session_id: uuid.UUID) -> Response:
@@ -519,8 +670,16 @@ class LiveSessionJoinView(APIView):
         get_object_or_404(
             LiveSession, pk=session_id, occurrence__series__organization=organization
         )
+        serializer = LiveConnectionRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         result = _domain_call(
-            lambda: join_live_session(actor=request.user, session_id=session_id)
+            lambda: join_live_session(
+                actor=request.user,
+                session_id=session_id,
+                recording_acknowledged=serializer.validated_data[
+                    "recording_acknowledged"
+                ],
+            )
         )
         return result if isinstance(result, Response) else Response(result)
 
@@ -543,6 +702,48 @@ class LiveSessionEndView(APIView):
             result
             if isinstance(result, Response)
             else Response({"status": result.status})
+        )
+
+
+class LiveRecordingStartView(APIView):
+    @extend_schema(
+        operation_id="scheduling_live_recording_start",
+        request=None,
+        responses={200: OperationAcceptedSerializer, 409: SchedulingErrorSerializer},
+    )
+    def post(self, request: Request, slug: str, session_id: uuid.UUID) -> Response:
+        organization = _organization(request, slug)
+        get_object_or_404(
+            LiveSession, pk=session_id, occurrence__series__organization=organization
+        )
+        result = _domain_call(
+            lambda: start_live_recording(actor=request.user, session_id=session_id)
+        )
+        return (
+            result
+            if isinstance(result, Response)
+            else Response({"status": result.egress_status})
+        )
+
+
+class LiveRecordingStopView(APIView):
+    @extend_schema(
+        operation_id="scheduling_live_recording_stop",
+        request=None,
+        responses={200: OperationAcceptedSerializer, 409: SchedulingErrorSerializer},
+    )
+    def post(self, request: Request, slug: str, session_id: uuid.UUID) -> Response:
+        organization = _organization(request, slug)
+        get_object_or_404(
+            LiveSession, pk=session_id, occurrence__series__organization=organization
+        )
+        result = _domain_call(
+            lambda: stop_live_recording(actor=request.user, session_id=session_id)
+        )
+        return (
+            result
+            if isinstance(result, Response)
+            else Response({"status": result.egress_status})
         )
 
 

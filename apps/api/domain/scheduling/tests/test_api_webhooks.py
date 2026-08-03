@@ -11,6 +11,7 @@ from django.utils import timezone
 from livekit import api
 from rest_framework.test import APIClient
 
+from domain.catalog.services import create_learning_objective
 from domain.courses.choices import ActivityCompletionMethod, ActivityType
 from domain.courses.models import CourseActivity
 from domain.courses.services import create_activity, create_module
@@ -29,7 +30,11 @@ from domain.organizations.choices import RoleCode
 from domain.organizations.models import Membership
 from domain.scheduling.choices import EventType, LiveSessionStatus
 from domain.scheduling.livekit_gateway import LiveKitConfiguration, LiveKitGateway
-from domain.scheduling.models import AttendanceSegment, LiveKitWebhookEvent
+from domain.scheduling.models import (
+    AttendanceSegment,
+    LiveClassActivityBinding,
+    LiveKitWebhookEvent,
+)
 from domain.scheduling.services import create_event_series
 from domain.scheduling.webhooks import receive_and_process_webhook
 
@@ -62,7 +67,7 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
     def test_live_activity_is_created_with_its_attendance_policy_atomically(
         self,
     ) -> None:
-        owner, organization, _subject, _objective, _topic, revision = (
+        owner, organization, _subject, objective, _topic, revision = (
             self.course_revision()
         )
         module, revision = create_module(
@@ -79,7 +84,20 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
             "estimated_duration_minutes": 60,
             "expected_revision_version": revision.lock_version,
             "minimum_attendance_basis_points": 7500,
+            "learning_objective_ids": [str(objective.id)],
             "module_id": str(module.id),
+            "session_mode": "interactive",
+            "chat_enabled": True,
+            "student_audio_enabled": True,
+            "student_video_enabled": True,
+            "student_screen_share_enabled": False,
+            "recording_mode": "manual",
+            "recording_layout": "speaker",
+            "max_participants": 100,
+            "room_empty_timeout_seconds": 600,
+            "room_departure_timeout_seconds": 30,
+            "join_before_minutes": 15,
+            "join_after_minutes": 15,
             "required": True,
             "summary": "Resolución guiada.",
             "title": "Tutoría integral",
@@ -90,12 +108,159 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
         self.assertEqual(activity.estimated_duration_minutes, 60)
         self.assertEqual(created.data["minimum_attendance_minutes"], 45)
         self.assertEqual(
-            created.data["revision_lock_version"], revision.lock_version + 2
+            created.data["revision_lock_version"], revision.lock_version + 3
         )
         before = CourseActivity.objects.count()
         conflict = client.post(url, payload, format="json")
         self.assertEqual(conflict.status_code, 409)
         self.assertEqual(CourseActivity.objects.count(), before)
+
+    def test_live_activity_rejects_an_objective_not_aligned_to_the_course(self) -> None:
+        owner, organization, subject, _objective, _topic, revision = (
+            self.course_revision()
+        )
+        foreign_objective = create_learning_objective(
+            actor=owner,
+            organization=organization,
+            subject=subject,
+            code="ALG-02",
+            statement="Resolver sistemas no alineados con este curso.",
+            description="",
+            cognitive_level="apply",
+        )
+        module, revision = create_module(
+            actor=owner,
+            organization=organization,
+            revision=revision,
+            expected_version=revision.lock_version,
+            title="Clases en vivo",
+        )
+        client = APIClient()
+        client.force_authenticate(user=owner)
+        before = CourseActivity.objects.count()
+
+        response = client.post(
+            f"/api/v1/organizations/{organization.slug}/scheduling/course-activities/",
+            {
+                "estimated_duration_minutes": 60,
+                "expected_revision_version": revision.lock_version,
+                "minimum_attendance_basis_points": 7500,
+                "learning_objective_ids": [str(foreign_objective.id)],
+                "module_id": str(module.id),
+                "session_mode": "interactive",
+                "chat_enabled": True,
+                "student_audio_enabled": True,
+                "student_video_enabled": True,
+                "student_screen_share_enabled": False,
+                "recording_mode": "off",
+                "recording_layout": "speaker",
+                "max_participants": 100,
+                "room_empty_timeout_seconds": 600,
+                "room_departure_timeout_seconds": 30,
+                "join_before_minutes": 15,
+                "join_after_minutes": 15,
+                "required": True,
+                "summary": "No debe persistirse.",
+                "title": "Objetivo ajeno",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["code"], "scheduling_invalid")
+        self.assertEqual(CourseActivity.objects.count(), before)
+
+    def test_live_activity_configuration_can_be_reopened_and_updated(self) -> None:
+        owner, organization, _subject, objective, _topic, revision = (
+            self.course_revision()
+        )
+        module, revision = create_module(
+            actor=owner,
+            organization=organization,
+            revision=revision,
+            expected_version=revision.lock_version,
+            title="Clases en vivo",
+        )
+        client = APIClient()
+        client.force_authenticate(user=owner)
+        collection_url = (
+            f"/api/v1/organizations/{organization.slug}/scheduling/course-activities/"
+        )
+        created = client.post(
+            collection_url,
+            {
+                "estimated_duration_minutes": 60,
+                "expected_revision_version": revision.lock_version,
+                "minimum_attendance_basis_points": 7500,
+                "learning_objective_ids": [str(objective.id)],
+                "module_id": str(module.id),
+                "session_mode": "interactive",
+                "chat_enabled": True,
+                "student_audio_enabled": True,
+                "student_video_enabled": True,
+                "student_screen_share_enabled": False,
+                "recording_mode": "manual",
+                "recording_layout": "speaker",
+                "max_participants": 100,
+                "room_empty_timeout_seconds": 600,
+                "room_departure_timeout_seconds": 30,
+                "join_before_minutes": 15,
+                "join_after_minutes": 15,
+                "required": True,
+                "summary": "Configuración inicial.",
+                "title": "Tutoría integral",
+            },
+            format="json",
+        )
+        self.assertEqual(created.status_code, 201)
+        activity_id = created.data["activity_id"]
+        detail_url = f"{collection_url}{activity_id}/binding/"
+
+        detail = client.get(detail_url)
+        self.assertEqual(detail.status_code, 200)
+        self.assertTrue(detail.data["chat_enabled"])
+
+        updated = client.put(
+            detail_url,
+            {
+                "estimated_duration_minutes": 90,
+                "expected_revision_version": created.data["revision_lock_version"],
+                "minimum_attendance_basis_points": 6000,
+                "learning_objective_ids": [str(objective.id)],
+                "session_mode": "webinar",
+                "chat_enabled": False,
+                "student_audio_enabled": False,
+                "student_video_enabled": False,
+                "student_screen_share_enabled": False,
+                "recording_mode": "automatic",
+                "recording_layout": "grid",
+                "max_participants": 80,
+                "room_empty_timeout_seconds": 300,
+                "room_departure_timeout_seconds": 45,
+                "join_before_minutes": 20,
+                "join_after_minutes": 5,
+                "required": False,
+                "summary": "Configuración actualizada.",
+                "title": "Seminario de aplicaciones",
+            },
+            format="json",
+        )
+
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(
+            updated.data["revision_lock_version"],
+            created.data["revision_lock_version"] + 3,
+        )
+        activity = CourseActivity.objects.get(pk=activity_id)
+        binding = LiveClassActivityBinding.objects.get(activity=activity)
+        self.assertEqual(activity.title, "Seminario de aplicaciones")
+        self.assertEqual(activity.estimated_duration_minutes, 90)
+        self.assertFalse(activity.required)
+        self.assertEqual(binding.session_mode, "webinar")
+        self.assertFalse(binding.chat_enabled)
+        self.assertEqual(binding.recording_mode, "automatic")
+        self.assertEqual(binding.minimum_attendance_minutes, 54)
+        self.assertEqual(binding.updated_by, owner)
 
     def test_live_activity_authoring_binds_immutable_attendance_policy(self) -> None:
         owner, organization, _subject, _objective, _topic, revision = (

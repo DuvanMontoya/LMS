@@ -27,6 +27,26 @@ function contentIssueUnitId(path: string): string | undefined {
   return match?.[1];
 }
 
+function issueHref(
+  issue: { code: string; path: string },
+  slug: string,
+  courseSlug: string,
+) {
+  const unitId = contentIssueUnitId(issue.path);
+  if (unitId)
+    return `/organizaciones/${slug}/cursos/${courseSlug}/unidades/${unitId}/contenido`;
+  if (issue.code === 'completion_policy_confirmation_required') {
+    return `/organizaciones/${slug}/cursos/${courseSlug}/estructura#completion-policy-title`;
+  }
+  if (
+    issue.path.startsWith('activities.') ||
+    issue.path.includes('.activities.')
+  ) {
+    return `/organizaciones/${slug}/cursos/${courseSlug}/estructura`;
+  }
+  return undefined;
+}
+
 export function ReviewPanel({
   canApprove,
   canReview,
@@ -111,19 +131,22 @@ export function ReviewPanel({
         </h3>
         {readiness.issues.length ? (
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            {readiness.issues.map((issue) => (
-              <li key={`${issue.code}-${issue.path}`}>
-                {issue.message}{' '}
-                {contentIssueUnitId(issue.path) ? (
-                  <a
-                    className="font-medium text-sky-800 underline"
-                    href={`/organizaciones/${slug}/cursos/${courseSlug}/unidades/${contentIssueUnitId(issue.path)}/contenido`}
-                  >
-                    Abrir unidad
-                  </a>
-                ) : null}
-              </li>
-            ))}
+            {readiness.issues.map((issue) => {
+              const href = issueHref(issue, slug, courseSlug);
+              return (
+                <li key={`${issue.code}-${issue.path}`}>
+                  {issue.message}{' '}
+                  {href ? (
+                    <a
+                      className="font-medium text-sky-800 underline"
+                      href={href}
+                    >
+                      Resolver
+                    </a>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p className="mt-2 text-sm text-muted-foreground">

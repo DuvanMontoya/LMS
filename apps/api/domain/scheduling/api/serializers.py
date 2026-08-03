@@ -17,8 +17,7 @@ class LiveClassActivityBindingInputSerializer(serializers.Serializer):
     )
 
 
-class LiveClassCourseActivityCreateSerializer(serializers.Serializer):
-    module_id = serializers.UUIDField()
+class LiveClassCourseActivityConfigurationSerializer(serializers.Serializer):
     expected_revision_version = serializers.IntegerField(min_value=1)
     title = serializers.CharField(max_length=200)
     summary = serializers.CharField(max_length=1200, required=False, allow_blank=True)
@@ -27,6 +26,33 @@ class LiveClassCourseActivityCreateSerializer(serializers.Serializer):
     minimum_attendance_basis_points = serializers.IntegerField(
         min_value=1, max_value=10_000
     )
+    learning_objective_ids = serializers.ListField(
+        child=serializers.UUIDField(), min_length=1, max_length=100
+    )
+    session_mode = serializers.ChoiceField(choices=("interactive", "webinar"))
+    chat_enabled = serializers.BooleanField(default=True)
+    student_audio_enabled = serializers.BooleanField(default=True)
+    student_video_enabled = serializers.BooleanField(default=True)
+    student_screen_share_enabled = serializers.BooleanField(default=False)
+    recording_mode = serializers.ChoiceField(
+        choices=("off", "manual", "automatic"), default="off"
+    )
+    recording_layout = serializers.ChoiceField(
+        choices=("grid", "speaker"), default="speaker"
+    )
+    max_participants = serializers.IntegerField(min_value=2, max_value=1_000)
+    room_empty_timeout_seconds = serializers.IntegerField(min_value=60, max_value=3_600)
+    room_departure_timeout_seconds = serializers.IntegerField(
+        min_value=0, max_value=600
+    )
+    join_before_minutes = serializers.IntegerField(min_value=0, max_value=120)
+    join_after_minutes = serializers.IntegerField(min_value=0, max_value=120)
+
+
+class LiveClassCourseActivityCreateSerializer(
+    LiveClassCourseActivityConfigurationSerializer
+):
+    module_id = serializers.UUIDField()
 
 
 class LiveClassActivityBindingSerializer(serializers.Serializer):
@@ -34,6 +60,18 @@ class LiveClassActivityBindingSerializer(serializers.Serializer):
     activity_id = serializers.UUIDField()
     minimum_attended_occurrences = serializers.IntegerField()
     minimum_attendance_minutes = serializers.IntegerField(allow_null=True)
+    session_mode = serializers.CharField()
+    chat_enabled = serializers.BooleanField()
+    student_audio_enabled = serializers.BooleanField()
+    student_video_enabled = serializers.BooleanField()
+    student_screen_share_enabled = serializers.BooleanField()
+    recording_mode = serializers.CharField()
+    recording_layout = serializers.CharField()
+    max_participants = serializers.IntegerField()
+    room_empty_timeout_seconds = serializers.IntegerField()
+    room_departure_timeout_seconds = serializers.IntegerField()
+    join_before_minutes = serializers.IntegerField()
+    join_after_minutes = serializers.IntegerField()
     revision_lock_version = serializers.IntegerField()
 
 
@@ -151,12 +189,21 @@ class LiveSessionSummarySerializer(serializers.Serializer):
     role = serializers.CharField()
     canShareScreen = serializers.BooleanField()
     canModerate = serializers.BooleanField()
+    canPublishAudio = serializers.BooleanField()
+    canPublishVideo = serializers.BooleanField()
+    chatEnabled = serializers.BooleanField()
+    recordingMode = serializers.CharField()
+    recordingStatus = serializers.CharField()
 
 
 class LiveConnectionSerializer(serializers.Serializer):
     serverUrl = serializers.CharField()
     token = serializers.CharField()
     session = LiveSessionSummarySerializer()
+
+
+class LiveConnectionRequestSerializer(serializers.Serializer):
+    recording_acknowledged = serializers.BooleanField(default=False)
 
 
 class LiveSessionDetailSerializer(serializers.Serializer):
@@ -180,6 +227,12 @@ class LiveSessionDetailSerializer(serializers.Serializer):
     canStart = serializers.BooleanField()
     canModerate = serializers.BooleanField()
     canShareScreen = serializers.BooleanField()
+    canPublishAudio = serializers.BooleanField()
+    canPublishVideo = serializers.BooleanField()
+    chatEnabled = serializers.BooleanField()
+    recordingMode = serializers.CharField()
+    recordingLayout = serializers.CharField()
+    recordingStatus = serializers.CharField()
     canEdit = serializers.BooleanField()
     canDelete = serializers.BooleanField()
 

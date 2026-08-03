@@ -21,7 +21,10 @@ from domain.courses.policies import (
     can_manage_course,
     has_course_academic_responsibility,
 )
-from domain.courses.services import create_activity
+from domain.courses.services import (
+    create_activity,
+    replace_activity_learning_objectives,
+)
 from domain.organizations.models import Organization
 
 from .exceptions import AssessmentConflict, AssessmentForbidden, AssessmentInvalid
@@ -39,6 +42,27 @@ def create_and_bind_assessment_activity(
     expected_revision_version: int,
     required: bool,
 ) -> tuple[AssessmentActivityBinding, CourseActivity, int]:
+    objectives = [
+        link.objective
+        for link in assessment_version.source_revision.objective_links.select_related(
+            "objective"
+        ).order_by("position", "id")
+    ]
+    aligned_ids = set(
+        module.revision.objective_alignments.values_list(
+            "learning_objective_id", flat=True
+        )
+    )
+    objective_ids = {objective.id for objective in objectives}
+    if not objectives:
+        raise AssessmentInvalid(
+            "La evaluación aprobada no tiene objetivos curriculares verificables."
+        )
+    if not objective_ids <= aligned_ids:
+        raise AssessmentInvalid(
+            "Esta evaluación no es compatible con los objetivos del curso. "
+            "Elige una evaluación alineada o amplía primero la alineación del curso."
+        )
     try:
         activity, revision = create_activity(
             actor=actor,
@@ -60,12 +84,22 @@ def create_and_bind_assessment_activity(
         raise AssessmentForbidden(str(error)) from error
     except CourseDomainError as error:
         raise AssessmentInvalid(str(error)) from error
+    try:
+        aligned_revision = replace_activity_learning_objectives(
+            actor=actor,
+            organization=organization,
+            activity=activity,
+            expected_version=revision.lock_version,
+            learning_objectives=objectives,
+        )
+    except CourseDomainError as error:
+        raise AssessmentInvalid(str(error)) from error
     binding, lock_version = bind_assessment_activity(
         actor=actor,
         organization=organization,
         activity=activity,
         assessment_version=assessment_version,
-        expected_revision_version=revision.lock_version,
+        expected_revision_version=aligned_revision.lock_version,
     )
     return binding, activity, lock_version
 

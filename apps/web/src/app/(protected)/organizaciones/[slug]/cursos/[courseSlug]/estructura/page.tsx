@@ -5,18 +5,32 @@ import { PageHeader } from '@/components/platform/page-header';
 import { StructureEditor } from '@/components/courses/structure-editor';
 import { Button } from '@/components/ui/button';
 import { getApprovedAssessmentVersionOptions } from '@/lib/assessments/server';
-import { getCourseWorkspace } from '@/lib/courses/server';
+import {
+  getCourseCompletionPolicy,
+  getCourseWorkspace,
+} from '@/lib/courses/server';
+import { getLiveClassActivityBindings } from '@/lib/scheduling/server';
 
 export default async function CourseStructurePage({
   params,
 }: Readonly<{ params: Promise<{ courseSlug: string; slug: string }> }>) {
   const { courseSlug, slug } = await params;
   const data = await getCourseWorkspace(slug, courseSlug);
-  const assessmentVersions = data.access.capabilities.includes(
-    'assessment.authoring.manage',
-  )
-    ? await getApprovedAssessmentVersionOptions(slug)
-    : [];
+  const liveActivityIds = data.outline.modules.flatMap((module) =>
+    module.activities
+      .filter((activity) => activity.activity_type === 'live_class')
+      .map((activity) => activity.id),
+  );
+  const [assessmentVersions, completionPolicy, liveClassBindings] =
+    await Promise.all([
+      data.access.capabilities.includes('assessment.authoring.manage')
+        ? getApprovedAssessmentVersionOptions(slug)
+        : [],
+      getCourseCompletionPolicy(slug, courseSlug, data.outline.revision.id),
+      data.access.capabilities.includes('course.authoring.manage')
+        ? getLiveClassActivityBindings(slug, liveActivityIds)
+        : [],
+    ]);
   return (
     <main className="academic-page">
       <PageHeader
@@ -54,7 +68,9 @@ export default async function CourseStructurePage({
             'course.authoring.manage',
           )}
           courseSlug={courseSlug}
+          completionPolicy={completionPolicy}
           key={data.outline.revision.lock_version}
+          liveClassBindings={liveClassBindings}
           objectives={data.unitObjectives}
           outline={data.outline}
           slug={slug}

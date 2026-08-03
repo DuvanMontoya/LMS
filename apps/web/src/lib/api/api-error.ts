@@ -1,7 +1,11 @@
 type ApiErrorRecord = Record<string, unknown>;
 
 function firstMessage(value: unknown): string | undefined {
-  if (typeof value === 'string' && value.trim()) return value.trim();
+  if (typeof value === 'string' && value.trim()) {
+    const message = value.trim();
+    if (/^(?:<!doctype\s+html|<html\b)/i.test(message)) return undefined;
+    return message.length > 800 ? `${message.slice(0, 797)}…` : message;
+  }
   if (Array.isArray(value)) {
     for (const item of value) {
       const message = firstMessage(item);

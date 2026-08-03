@@ -92,6 +92,16 @@ const outline: components['schemas']['Outline'] = {
   subjects: [],
 };
 
+const completionPolicy: components['schemas']['CourseCompletionPolicy'] = {
+  confirmed_at: null,
+  confirmed_by_id: null,
+  lock_version: 1,
+  minimum_attendance_basis_points: null,
+  minimum_grade_basis_points: null,
+  require_required_activities: true,
+  updated_at: '2026-07-29T00:00:00Z',
+};
+
 describe('StructureEditor', () => {
   it('renders an accessible read-only hierarchy with a real content route', () => {
     render(
@@ -100,7 +110,9 @@ describe('StructureEditor', () => {
           assessmentVersions={[]}
           canManageAssessments={false}
           canManage={false}
+          completionPolicy={completionPolicy}
           courseSlug="algebra"
+          liveClassBindings={[]}
           objectives={[]}
           outline={outline}
           slug="institucion"
@@ -130,7 +142,9 @@ describe('StructureEditor', () => {
           assessmentVersions={[]}
           canManageAssessments
           canManage
+          completionPolicy={completionPolicy}
           courseSlug="algebra"
+          liveClassBindings={[]}
           objectives={[]}
           outline={{
             ...outline,
@@ -146,8 +160,12 @@ describe('StructureEditor', () => {
       screen.getByRole('heading', { name: 'Secuencia curricular unificada' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Añadir lección')).toBeInTheDocument();
-    expect(screen.getByText('Añadir clase en vivo')).toBeInTheDocument();
-    expect(screen.getByText('Añadir evaluación')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /clase en vivo/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /evaluación/i }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByText('Contenido y alineación de las lecciones'),
     ).not.toBeInTheDocument();

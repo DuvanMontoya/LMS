@@ -133,9 +133,17 @@ def live_access(
         or not series.participants.filter(membership=membership).exists()
     ):
         return None
+    binding = (
+        series.course_group_activity.binding_snapshot
+        if series.course_group_activity_id
+        else {}
+    )
+    student_audio = binding.get("student_audio_enabled", True)
+    student_video = binding.get("student_video_enabled", True)
+    student_screen = binding.get("student_screen_share_enabled", False)
     return LiveAccess(
         role=AttendanceRole.STUDENT,
-        can_publish=True,
-        can_share_screen=False,
+        can_publish=student_audio or student_video,
+        can_share_screen=student_screen,
         can_moderate=False,
     )

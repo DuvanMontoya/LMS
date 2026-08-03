@@ -21,4 +21,13 @@ describe('API error extraction', () => {
     ).toBe('Escribe un correo electrónico válido.');
     expect(apiErrorMessage(undefined, 'Error neutral')).toBe('Error neutral');
   });
+
+  it('never exposes an HTML error page in the interface', () => {
+    expect(
+      apiErrorMessage(
+        '<!DOCTYPE html><html><title>IntegrityError</title></html>',
+        'No fue posible guardar.',
+      ),
+    ).toBe('No fue posible guardar.');
+  });
 });

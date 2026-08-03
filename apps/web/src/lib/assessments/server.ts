@@ -199,15 +199,23 @@ export async function getApprovedAssessmentVersionOptions(slug: string) {
         ),
         'No fue posible consultar las versiones aprobadas.',
       )) as AssessmentVersion[];
-      return versions.map((version) => ({
-        attemptLimit: version.attempt_limit,
-        description: version.description,
-        durationMinutes: version.time_limit_minutes,
-        id: version.id,
-        label: `${version.title} · versión ${version.number}`,
-        passBasisPoints: version.pass_basis_points,
-        title: version.title,
-      }));
+      return versions.map((version) => {
+        const snapshot = version.public_snapshot as {
+          objectives?: Array<{ id?: string }>;
+        };
+        return {
+          attemptLimit: version.attempt_limit,
+          description: version.description,
+          durationMinutes: version.time_limit_minutes,
+          id: version.id,
+          label: `${version.title} · versión ${version.number}`,
+          objectiveIds: (snapshot.objectives ?? [])
+            .map((objective) => objective.id)
+            .filter((id): id is string => Boolean(id)),
+          passBasisPoints: version.pass_basis_points,
+          title: version.title,
+        };
+      });
     }),
   );
   return options.flat();

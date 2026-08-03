@@ -7,6 +7,8 @@ services:
     image: redis:8.8.1-trixie@sha256:c88d347edef6249a6d2293f926f1eeb48bd40c57cbcd02c07f52e7f1fd2cb46b
   livekit:
     image: livekit/livekit-server:v1.13.1@sha256:2c6869d2d5ff6c9c0166f47be1c92dad6928bfecfa5e4060a6ece48db8accfa3
+  livekit-egress:
+    image: livekit/egress:v1.12.0@sha256:30b3389518c851e6c20e964bba9d5ce89d0bd09b8b0fe0d0d36c9546303c8430
   assessment-worker:
     image: lms-assessment-worker:python-3.13.13
   localstack:

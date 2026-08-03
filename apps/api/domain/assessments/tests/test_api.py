@@ -71,12 +71,53 @@ class AssessmentApiSecurityTests(AssessmentFixtureMixin, TestCase):
             activity.estimated_duration_minutes, version.time_limit_minutes
         )
         self.assertEqual(activity.minimum_grade_basis_points, version.pass_basis_points)
+        self.assertSetEqual(
+            set(
+                activity.objective_alignments.values_list(
+                    "learning_objective_id", flat=True
+                )
+            ),
+            set(
+                version.source_revision.objective_links.values_list(
+                    "objective_id", flat=True
+                )
+            ),
+        )
         self.assertEqual(
-            created.data["revision_lock_version"], revision.lock_version + 2
+            created.data["revision_lock_version"], revision.lock_version + 3
         )
         before = CourseActivity.objects.count()
         conflict = client.post(url, payload, format="json")
         self.assertEqual(conflict.status_code, 409)
+        self.assertEqual(CourseActivity.objects.count(), before)
+
+    def test_incompatible_assessment_is_rejected_before_creating_activity(
+        self,
+    ) -> None:
+        context = self.assessment_context()
+        revision = context["course_revision"]
+        module, revision = create_module(
+            actor=context["owner"],
+            organization=context["organization"],
+            revision=revision,
+            expected_version=revision.lock_version,
+            title="Evaluaciones",
+        )
+        revision.objective_alignments.all().delete()
+        client = APIClient()
+        client.force_authenticate(user=context["owner"])
+        before = CourseActivity.objects.count()
+        response = client.post(
+            f"/api/v1/organizations/{context['organization'].slug}/assessments/course-activities/",
+            {
+                "assessment_version_id": str(context["assessment_version"].id),
+                "expected_revision_version": revision.lock_version,
+                "module_id": str(module.id),
+                "required": True,
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(CourseActivity.objects.count(), before)
 
     def test_approved_assessment_version_binds_once_to_curricular_activity(
