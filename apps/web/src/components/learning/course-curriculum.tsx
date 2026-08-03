@@ -1,6 +1,9 @@
+'use client';
+
 import {
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
   Circle,
   CircleDot,
   ClipboardCheck,
@@ -10,6 +13,7 @@ import {
   Video,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
 
 import type { components } from '@/lib/api/generated/platform';
 
@@ -21,33 +25,43 @@ export function CourseCurriculum({
   modules,
   variant = 'course',
 }: Readonly<{
-  currentUnitId?: string;
-  currentActivityId?: string;
+  currentUnitId?: string | undefined;
+  currentActivityId?: string | undefined;
   modules: readonly LearningModule[];
   variant?: 'course' | 'player';
 }>) {
+  const activeItemRef = useRef<HTMLAnchorElement | null>(null);
+  const hasExplicitCurrent = Boolean(currentActivityId || currentUnitId);
+
+  useEffect(() => {
+    const activeItem = activeItemRef.current;
+    if (!activeItem || !activeItem.offsetParent) return;
+    activeItem.scrollIntoView({ block: 'center' });
+  }, [currentActivityId, currentUnitId]);
+
   return (
     <ol
       className="course-curriculum"
       data-variant={variant}
       aria-label="Contenido del curso"
     >
-      {modules.map((module) => (
-        <li className="course-curriculum__module" key={module.id}>
-          <header>
-            <span>Módulo {module.position}</span>
-            <h3>{module.title}</h3>
-            {variant === 'course' && module.description ? (
-              <p>{module.description}</p>
-            ) : null}
-            <small>{activityCountLabel(module.activities.length)}</small>
-          </header>
+      {modules.map((module) => {
+        const moduleCurrent = module.activities.some((activity) =>
+          hasExplicitCurrent
+            ? activity.id === currentActivityId ||
+              activity.source_activity_id === currentUnitId
+            : activity.is_current,
+        );
+        const completedCount = module.activities.filter((activity) =>
+          ['completed', 'passed', 'waived'].includes(activity.status),
+        ).length;
+        const activityList = (
           <ol>
             {module.activities.map((activity) => {
-              const current =
-                activity.id === currentActivityId ||
-                activity.source_activity_id === currentUnitId ||
-                activity.is_current;
+              const current = hasExplicitCurrent
+                ? activity.id === currentActivityId ||
+                  activity.source_activity_id === currentUnitId
+                : activity.is_current;
               const blocked = activity.status === 'locked';
               const content = (
                 <>
@@ -62,7 +76,11 @@ export function CourseCurriculum({
                     <small className="course-curriculum__kind">
                       <ActivityKind type={activity.type} />
                       {activityTypeLabel(activity.type)}
-                      {activity.required ? ' · Obligatoria' : ' · Opcional'}
+                      {variant === 'course'
+                        ? activity.required
+                          ? ' · Obligatoria'
+                          : ' · Opcional'
+                        : null}
                     </small>
                     {blocked && activity.blocked_reason ? (
                       <small>{activity.blocked_reason}</small>
@@ -92,6 +110,7 @@ export function CourseCurriculum({
                       aria-current={current ? 'step' : undefined}
                       data-current={current ? 'true' : undefined}
                       href={activity.href}
+                      ref={current ? activeItemRef : undefined}
                     >
                       {content}
                     </Link>
@@ -100,8 +119,40 @@ export function CourseCurriculum({
               );
             })}
           </ol>
-        </li>
-      ))}
+        );
+
+        return (
+          <li className="course-curriculum__module" key={module.id}>
+            {variant === 'player' ? (
+              <details open={moduleCurrent}>
+                <summary>
+                  <span className="course-curriculum__module-number">
+                    Módulo {module.position}
+                  </span>
+                  <span className="course-curriculum__module-title">
+                    {module.title}
+                  </span>
+                  <small>
+                    {completedCount}/{module.activities.length}
+                  </small>
+                  <ChevronDown aria-hidden="true" />
+                </summary>
+                {activityList}
+              </details>
+            ) : (
+              <>
+                <header>
+                  <span>Módulo {module.position}</span>
+                  <h3>{module.title}</h3>
+                  {module.description ? <p>{module.description}</p> : null}
+                  <small>{activityCountLabel(module.activities.length)}</small>
+                </header>
+                {activityList}
+              </>
+            )}
+          </li>
+        );
+      })}
     </ol>
   );
 }

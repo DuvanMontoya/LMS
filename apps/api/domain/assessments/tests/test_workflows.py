@@ -34,6 +34,7 @@ from domain.publishing.services import (
     publish_approved_revision,
 )
 
+from ..api.serializers import LearnerDeliverySerializer
 from ..choices import AttemptStatus
 from ..course_activities import bind_assessment_activity
 from ..exceptions import AssessmentConflict, AssessmentInvalid, AttemptExpired
@@ -306,6 +307,18 @@ class AttemptWorkflowTests(AssessmentFixtureMixin, TestCase):
         assignment = delivery.assignments.get(
             release_assignment=enrollment.current_release_assignment
         )
+        learner_payload = LearnerDeliverySerializer(assignment).data
+        version = context["assessment_version"]
+        self.assertEqual(learner_payload["description"], version.description)
+        self.assertEqual(learner_payload["item_count"], version.item_count)
+        self.assertEqual(
+            learner_payload["time_limit_minutes"], version.time_limit_minutes
+        )
+        self.assertEqual(
+            learner_payload["pass_basis_points"], version.pass_basis_points
+        )
+        self.assertNotIn("public_snapshot", learner_payload)
+        self.assertNotIn("grading_snapshot", learner_payload)
         attempt = start_attempt(actor=learner, assignment=assignment)
         item = attempt.items.get()
         attempt, _ = save_response(

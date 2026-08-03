@@ -3422,14 +3422,21 @@ export interface components {
       attempt_limit: number;
       attempts_used: number;
       delivery: components['schemas']['Delivery'];
+      description: string;
+      feedback_mode: string;
       /** Format: uuid */
       id: string;
       /** Format: uuid */
       in_progress_attempt_id: string | null;
+      item_count: number;
       /** Format: uuid */
       latest_attempt_id: string | null;
       latest_attempt_status: string | null;
+      /** Format: decimal */
+      maximum_score: string;
+      pass_basis_points: number;
       status: components['schemas']['AssessmentAssignmentStatus'];
+      time_limit_minutes: number | null;
     };
     /**
      * @description * `available` - Disponible

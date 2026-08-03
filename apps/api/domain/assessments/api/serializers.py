@@ -586,6 +586,29 @@ class LearnerDeliverySerializer(serializers.ModelSerializer):
     attempt_limit = serializers.IntegerField(
         source="delivery.assessment_version.attempt_limit", read_only=True
     )
+    description = serializers.CharField(
+        source="delivery.assessment_version.description", read_only=True
+    )
+    feedback_mode = serializers.CharField(
+        source="delivery.assessment_version.feedback_mode", read_only=True
+    )
+    item_count = serializers.IntegerField(
+        source="delivery.assessment_version.item_count", read_only=True
+    )
+    maximum_score = serializers.DecimalField(
+        source="delivery.assessment_version.maximum_score",
+        max_digits=12,
+        decimal_places=3,
+        read_only=True,
+    )
+    pass_basis_points = serializers.IntegerField(
+        source="delivery.assessment_version.pass_basis_points", read_only=True
+    )
+    time_limit_minutes = serializers.IntegerField(
+        source="delivery.assessment_version.time_limit_minutes",
+        allow_null=True,
+        read_only=True,
+    )
 
     class Meta:
         model = DeliveryAssignment
@@ -595,6 +618,12 @@ class LearnerDeliverySerializer(serializers.ModelSerializer):
             "status",
             "attempts_used",
             "attempt_limit",
+            "description",
+            "feedback_mode",
+            "item_count",
+            "maximum_score",
+            "pass_basis_points",
+            "time_limit_minutes",
             "in_progress_attempt_id",
             "latest_attempt_id",
             "latest_attempt_status",

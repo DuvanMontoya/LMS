@@ -1,27 +1,15 @@
-import {
-  ArrowLeft,
-  ArrowRight,
-  BookOpenText,
-  CalendarClock,
-  ChevronLeft,
-  ClipboardCheck,
-  ListTree,
-  LockKeyhole,
-  PanelLeftClose,
-  UserRound,
-  Video,
-} from 'lucide-react';
-import Link from 'next/link';
+import { LockKeyhole, Video } from 'lucide-react';
 import { redirect } from 'next/navigation';
 
 import { AttemptRunner } from '@/components/assessments/attempt-runner';
-import { LearnerDeliveryList } from '@/components/assessments/learner-deliveries';
-import { CourseCurriculum } from '@/components/learning/course-curriculum';
-import { LearningProgress } from '@/components/learning/learning-progress';
+import { CourseAssessmentBriefing } from '@/components/assessments/course-assessment-briefing';
+import {
+  LearningPlayerNavigation,
+  LearningPlayerShell,
+} from '@/components/learning/learning-player-shell';
 import { LiveClassroom } from '@/components/scheduling/live-classroom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   getAssessmentAttempt,
   getMyAssessmentDeliveries,
@@ -106,125 +94,81 @@ export default async function LearningActivityPage({
   const currentModule = outlineData.outline.modules.find((module) =>
     module.activities.some((item) => item.id === activityId),
   );
-  const totalActivities =
-    outlineData.outline.progress.completion.total_required;
-  const completedActivities =
-    outlineData.outline.progress.completion.completed_required;
+  const previousItem =
+    previous && typeof previous.href === 'string'
+      ? {
+          href: previous.href,
+          title: String(previous.title ?? 'Actividad anterior'),
+        }
+      : null;
+  const nextItem =
+    next && typeof next.href === 'string'
+      ? {
+          href: next.href,
+          title: String(next.title ?? 'Actividad siguiente'),
+        }
+      : null;
+  const stageMode = activeAttempt ? 'active' : 'briefing';
+  const usesDedicatedBriefing =
+    status !== 'locked' &&
+    (type === 'assessment' || (type === 'live_class' && primarySession));
 
   return (
-    <main
-      className="learning-player"
-      data-release-number={data.payload.release_number}
-      id="contenido-principal"
+    <LearningPlayerShell
+      courseTitle={enrollment.course.title}
+      currentActivityId={activityId}
+      outline={outlineData.outline}
+      outlineHref={outlineHref}
+      positionLabel={`Actividad ${Math.max(1, activityNumber + 1)} de ${allActivities.length}`}
+      releaseNumber={data.payload.release_number}
+      stageMode={stageMode}
+      title={title}
     >
-      <header className="learning-player__topbar">
-        <Link
-          aria-label={`Volver a ${enrollment.course.title}`}
-          className="learning-player__brand"
-          href={outlineHref}
+      {activeAttempt ? (
+        <section
+          aria-label={`Intento activo: ${title}`}
+          className="learning-player__active-surface"
+          data-activity-kind="assessment"
         >
-          <span>
-            <BookOpenText />
-          </span>
-          <span>
-            <small>Curso</small>
-            <strong>{enrollment.course.title}</strong>
-          </span>
-        </Link>
-        <div className="learning-player__position">
-          <span>
-            Actividad {Math.max(1, activityNumber + 1)} de{' '}
-            {allActivities.length}
-          </span>
-          <p>{title}</p>
-        </div>
-        <Badge className="learning-player__release" variant="outline">
-          Release {data.payload.release_number}
-        </Badge>
-        <Button asChild size="sm" variant="ghost">
-          <Link
-            aria-label={`Salir del aula y volver a ${enrollment.course.title}`}
-            href={outlineHref}
+          <AttemptRunner
+            initialAttempt={activeAttempt}
+            returnHref={activityHref}
+            slug={slug}
+          />
+        </section>
+      ) : (
+        <>
+          <article
+            className={`learning-player__lesson learning-player__activity${
+              usesDedicatedBriefing
+                ? ' learning-player__activity--dedicated-briefing'
+                : ''
+            }`}
           >
-            <PanelLeftClose />
-            <span className="hidden sm:inline">Salir del aula</span>
-          </Link>
-        </Button>
-      </header>
-
-      <details className="learning-player__mobile-outline">
-        <summary>
-          <ListTree />
-          Contenido del curso
-          <progress
-            aria-label={`${completedActivities} de ${totalActivities} actividades completadas`}
-            max={totalActivities}
-            value={completedActivities}
-          />
-          <span>
-            {completedActivities}/{totalActivities}
-          </span>
-        </summary>
-        <div>
-          <LearningProgress progress={outlineData.outline.progress} />
-          <CourseCurriculum
-            currentActivityId={activityId}
-            modules={outlineData.outline.modules}
-            variant="player"
-          />
-        </div>
-      </details>
-
-      <div className="learning-player__layout">
-        <aside className="learning-player__sidebar">
-          <header>
-            <div>
-              <span>Contenido del curso</span>
-              <small>
-                {completedActivities}/{totalActivities} completadas
-              </small>
-            </div>
-            <LearningProgress progress={outlineData.outline.progress} />
-          </header>
-          <div className="learning-player__curriculum-scroll">
-            <CourseCurriculum
-              currentActivityId={activityId}
-              modules={outlineData.outline.modules}
-              variant="player"
-            />
-          </div>
-          <footer>
-            <Button asChild size="sm" variant="ghost">
-              <Link href={outlineHref}>
-                <ChevronLeft />
-                Vista general del curso
-              </Link>
-            </Button>
-          </footer>
-        </aside>
-
-        <div className="learning-player__stage">
-          <article className="learning-player__lesson learning-player__activity">
-            <header className="learning-player__lesson-heading">
-              <p>
-                {currentModule
-                  ? `Módulo ${currentModule.position} · ${currentModule.title}`
-                  : type === 'assessment'
-                    ? 'Evaluación del curso'
-                    : 'Clase en vivo del curso'}
-              </p>
-              <span className="mt-2 flex flex-wrap items-center gap-2">
-                <Badge variant="outline">
-                  {type === 'assessment' ? 'Evaluación' : 'Clase en vivo'}
-                </Badge>
-                {activity.required ? <Badge>Obligatoria</Badge> : null}
-                <Badge variant="secondary">{activityStatusLabel(status)}</Badge>
-              </span>
-              <h1>{title}</h1>
-              {typeof activity.summary === 'string' && activity.summary ? (
-                <div>{activity.summary}</div>
-              ) : null}
-            </header>
+            {!usesDedicatedBriefing ? (
+              <header className="learning-player__lesson-heading">
+                <p>
+                  {currentModule
+                    ? `Módulo ${currentModule.position} · ${currentModule.title}`
+                    : type === 'assessment'
+                      ? 'Evaluación del curso'
+                      : 'Clase en vivo del curso'}
+                </p>
+                <span className="mt-2 flex flex-wrap items-center gap-2">
+                  <Badge variant="outline">
+                    {type === 'assessment' ? 'Evaluación' : 'Clase en vivo'}
+                  </Badge>
+                  {activity.required ? <Badge>Obligatoria</Badge> : null}
+                  <Badge variant="secondary">
+                    {activityStatusLabel(status)}
+                  </Badge>
+                </span>
+                <h1>{title}</h1>
+                {typeof activity.summary === 'string' && activity.summary ? (
+                  <div>{activity.summary}</div>
+                ) : null}
+              </header>
+            ) : null}
 
             <div className="learning-player__activity-body">
               {status === 'locked' ? (
@@ -238,69 +182,13 @@ export default async function LearningActivityPage({
                   </AlertDescription>
                 </Alert>
               ) : type === 'assessment' ? (
-                activeAttempt ? (
-                  <AttemptRunner
-                    initialAttempt={activeAttempt}
-                    returnHref={activityHref}
-                    slug={slug}
-                  />
-                ) : (
-                  <section aria-labelledby="entrega-evaluacion">
-                    <div className="mb-5 flex items-start gap-3">
-                      <ClipboardCheck className="mt-1 text-primary" />
-                      <div>
-                        <h2
-                          className="text-xl font-semibold"
-                          id="entrega-evaluacion"
-                        >
-                          Resolver evaluación
-                        </h2>
-                        <p className="text-sm text-muted-foreground">
-                          Inicia o continúa el intento sin salir del aula del
-                          curso.
-                        </p>
-                      </div>
-                    </div>
-                    <LearnerDeliveryList
-                      deliveries={matchingDeliveries}
-                      slug={slug}
-                      stayOnHref={activityHref}
-                    />
-                  </section>
-                )
+                <CourseAssessmentBriefing
+                  assignment={matchingDeliveries[0] ?? null}
+                  returnHref={activityHref}
+                  slug={slug}
+                />
               ) : primarySession ? (
-                <section aria-labelledby="aula-en-vivo">
-                  <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <Video className="mt-1 text-primary" />
-                      <div>
-                        <h2 className="text-xl font-semibold" id="aula-en-vivo">
-                          Aula en vivo
-                        </h2>
-                        <p className="text-sm text-muted-foreground">
-                          Entra a LiveKit desde esta actividad; la asistencia y
-                          el progreso permanecen vinculados al grupo.
-                        </p>
-                      </div>
-                    </div>
-                    <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                      <div className="flex items-center gap-2">
-                        <CalendarClock className="size-4 text-primary" />
-                        <dd>
-                          {new Intl.DateTimeFormat('es-CO', {
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          }).format(new Date(primarySession.scheduledStart))}
-                        </dd>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <UserRound className="size-4 text-primary" />
-                        <dd>{primarySession.hostName}</dd>
-                      </div>
-                    </dl>
-                  </div>
-                  <LiveClassroom detail={primarySession} slug={slug} />
-                </section>
+                <LiveClassroom detail={primarySession} slug={slug} />
               ) : (
                 <Alert>
                   <Video />
@@ -313,43 +201,14 @@ export default async function LearningActivityPage({
               )}
             </div>
           </article>
-
-          <nav
-            aria-label="Navegación entre actividades"
-            className="learning-player__navigation"
-          >
-            {previous && typeof previous.href === 'string' ? (
-              <Button
-                asChild
-                className="h-auto justify-start py-3"
-                variant="outline"
-              >
-                <Link href={previous.href}>
-                  <ArrowLeft data-icon="inline-start" />
-                  <span>
-                    <small>Anterior</small>
-                    {String(previous.title ?? 'Actividad anterior')}
-                  </span>
-                </Link>
-              </Button>
-            ) : (
-              <span />
-            )}
-            {next && typeof next.href === 'string' ? (
-              <Button asChild className="h-auto justify-end py-3">
-                <Link href={next.href}>
-                  <span>
-                    <small>Siguiente</small>
-                    {String(next.title ?? 'Actividad siguiente')}
-                  </span>
-                  <ArrowRight data-icon="inline-end" />
-                </Link>
-              </Button>
-            ) : null}
-          </nav>
-        </div>
-      </div>
-    </main>
+          <LearningPlayerNavigation
+            label="Navegación entre actividades"
+            next={nextItem}
+            previous={previousItem}
+          />
+        </>
+      )}
+    </LearningPlayerShell>
   );
 }
 

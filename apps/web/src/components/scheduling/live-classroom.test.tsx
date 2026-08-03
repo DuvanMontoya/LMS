@@ -56,6 +56,15 @@ describe('LiveClassroom lobby', () => {
     );
     render(<LiveClassroom detail={detail} slug="institucion" />);
     expect(enterLiveSession).not.toHaveBeenCalled();
+    expect(screen.getByText('Álgebra en vivo')).toBeInTheDocument();
+    expect(screen.getByText('1 h')).toBeInTheDocument();
+    expect(screen.getByText('Participante 00000000')).toBeInTheDocument();
+    expect(
+      screen.getByText('Asistencia vinculada a esta actividad'),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelector('[data-state="briefing"]'),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /entrar a clase/i }));
     await waitFor(() =>
       expect(enterLiveSession).toHaveBeenCalledWith(

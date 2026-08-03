@@ -1514,3 +1514,41 @@ Siguiente paso:
   idempotencia, intento, progreso y calendario; `makemigrations --check`,
   OpenAPI/cliente y `git diff --check`. Se añadió la migración de integridad
   `assessments.0011`; no se realizó commit, push ni despliegue.
+
+## Reproductor inmersivo, antesala y currículo compacto — 2026-08-03
+
+- Se eliminó la duplicación completa del shell entre lecciones y actividades.
+  `LearningPlayerShell` es ahora el único dueño de cabecera, release, salida,
+  progreso, currículo responsive y escenario; lecciones, clases y evaluaciones
+  sólo aportan su contenido y modo (`document`, `briefing` o `active`).
+- El currículo del reproductor adopta secciones plegables compactas, conteo de
+  progreso por módulo y apertura exclusiva del módulo actual. La ruta explícita
+  tiene prioridad sobre la actividad reanudable del backend, evitando dos
+  resaltados simultáneos, y la actividad visible se centra automáticamente en
+  el scroll. Como referencia de jerarquía se consultaron el reproductor y la
+  lección pública de MasterStudy, además de su documentación oficial de Course
+  Player, el 2026-08-03; no se copiaron estilos, contratos ni código externo.
+- Las evaluaciones muestran una antesala propia con descripción, tiempo,
+  preguntas, intentos, puntaje máximo, umbral y cierre antes de crear el intento.
+  El endpoint del estudiante expone sólo esos metadatos seguros de la versión;
+  no entrega `public_snapshot`, `grading_snapshot`, respuestas esperadas ni
+  semillas. Cuando existe un intento en curso desaparecen la tarjeta y la
+  navegación secundaria: el runner ocupa todo el escenario interno y conserva
+  únicamente la cabecera del curso y el temario.
+- Las clases LiveKit muestran fecha, duración, docente, estado, asistencia,
+  chat, grabación y comprobación opcional de dispositivos antes de entrar. Los
+  estados finalizada, cancelada y fuera de ventana tienen acciones y mensajes
+  explícitos. Tras obtener el token, la sala declara estado activo y ocupa el
+  escenario completo; desaparecen el resumen y anterior/siguiente, pero se
+  mantienen cabecera y currículo.
+- Chrome autenticado comprobó una evaluación sin iniciar (30 minutos, dos
+  preguntas, un intento, 60 %), un Proyecto 1 ya iniciado y una sesión LiveKit
+  real reprogramada e iniciada para la prueba. En escritorio, evaluación y sala
+  usaron un escenario de 1560×825 px sin scroll de documento; la sala mostró
+  participante, chat y controles. A 390×844 px la sala quedó en 390×731 px, sin
+  overflow horizontal ni vertical del documento, después de descontar también
+  la barra móvil del currículo.
+- Evidencia verde: 4/4 pruebas frontend focales, ESLint, TypeScript, Ruff,
+  prueba PostgreSQL del flujo publicación→grupo→entrega→intento→calificación,
+  OpenAPI/cliente sincronizados y `git diff --check`. No se añadieron
+  dependencias ni migraciones y no se realizó commit, push o despliegue.

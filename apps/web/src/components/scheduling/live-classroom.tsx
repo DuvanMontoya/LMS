@@ -17,15 +17,20 @@ import {
 import {
   Camera,
   CameraOff,
+  CalendarClock,
+  Check,
   DoorOpen,
   Loader2,
+  MessageCircle,
   Mic,
   MonitorUp,
   Radio,
+  Timer,
+  UserRound,
 } from 'lucide-react';
 import { Room, RoomEvent, Track } from 'livekit-client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -109,150 +114,208 @@ export function LiveClassroom({
 
   if (connection) {
     return (
-      <ConnectedClassroom
-        audioDeviceId={audioDeviceId}
-        connection={connection}
-        slug={slug}
-        onEnd={
-          detail.canModerate ? () => endLiveSession(slug, detail.id) : undefined
-        }
-        videoDeviceId={videoDeviceId}
-      />
+      <div className="live-class-experience" data-state="active">
+        <ConnectedClassroom
+          audioDeviceId={audioDeviceId}
+          connection={connection}
+          slug={slug}
+          onEnd={
+            detail.canModerate
+              ? () => endLiveSession(slug, detail.id)
+              : undefined
+          }
+          videoDeviceId={videoDeviceId}
+        />
+      </div>
     );
   }
 
   const mayEnter = detail.canStart || detail.canJoin;
   const recordingEnabled = detail.recordingMode !== 'off';
   return (
-    <section className="live-lobby">
-      <div
-        className="live-lobby__preview"
-        aria-label="Vista previa de dispositivos"
-      >
-        {permission === 'ready' ? (
-          <Camera className="size-10" />
-        ) : (
-          <CameraOff className="size-10" />
-        )}
-        <p>
-          {permission === 'ready'
-            ? 'Cámara y micrófono disponibles'
-            : 'Prueba tus dispositivos antes de entrar'}
-        </p>
-      </div>
-      <div className="live-lobby__panel">
-        <span className="live-status" data-status={detail.status}>
-          {statusLabel(detail.status)}
-        </span>
-        <h2>Antes de entrar</h2>
-        <p>
-          El token de acceso se solicita sólo cuando confirmas la entrada y
-          nunca se guarda en el navegador.
-        </p>
-        {error ? (
-          <Alert variant="destructive">
-            <AlertTitle>No fue posible entrar</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-        {permission === 'denied' ? (
-          <Alert>
-            <AlertTitle>Permiso no concedido</AlertTitle>
-            <AlertDescription>
-              Puedes revisar la configuración del navegador y volver a probar.
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        {recordingEnabled ? (
-          <Alert className="border-amber-600/30 bg-amber-500/10">
-            <AlertTitle>Esta clase puede ser grabada</AlertTitle>
-            <AlertDescription>
-              La grabación es privada y su estado se muestra dentro de la sala.
-              El chat es efímero y no forma parte de un historial académico.
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        <div className="grid gap-3">
-          {detail.canPublishAudio ? (
-            <Label>
-              Micrófono
-              <select
-                className="academic-select"
-                value={audioDeviceId}
-                onChange={(event) => setAudioDeviceId(event.target.value)}
-              >
-                {devices.audio.map((device, index) => (
-                  <option key={device.deviceId} value={device.deviceId}>
-                    {device.label || `Micrófono ${index + 1}`}
-                  </option>
-                ))}
-              </select>
-            </Label>
-          ) : null}
-          {detail.canPublishVideo ? (
-            <Label>
-              Cámara
-              <select
-                className="academic-select"
-                value={videoDeviceId}
-                onChange={(event) => setVideoDeviceId(event.target.value)}
-              >
-                {devices.video.map((device, index) => (
-                  <option key={device.deviceId} value={device.deviceId}>
-                    {device.label || `Cámara ${index + 1}`}
-                  </option>
-                ))}
-              </select>
-            </Label>
-          ) : null}
+    <section className="live-class-experience" data-state="briefing">
+      <header className="live-briefing__header">
+        <div>
+          <span className="live-status" data-status={detail.status}>
+            {statusLabel(detail.status)}
+          </span>
+          <p>Clase sincrónica</p>
+          <h2>{detail.title}</h2>
+          {detail.description ? <div>{detail.description}</div> : null}
         </div>
-        {recordingEnabled ? (
-          <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
-            <input
-              className="mt-1"
-              checked={recordingAcknowledged}
-              onChange={(event) =>
-                setRecordingAcknowledged(event.target.checked)
-              }
-              type="checkbox"
-            />
-            <span>
-              Entiendo que la sesión puede grabarse y que veré un indicador
-              cuando la grabación esté activa.
-            </span>
-          </label>
-        ) : null}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => void inspectDevices()}
-            disabled={permission === 'checking'}
-          >
-            {permission === 'checking' ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <Mic />
-            )}{' '}
-            Probar dispositivos
-          </Button>
-          <Button
-            type="button"
-            onClick={() => void enter()}
-            disabled={
-              !mayEnter || busy || (recordingEnabled && !recordingAcknowledged)
-            }
-          >
-            {busy ? <Loader2 className="animate-spin" /> : <DoorOpen />}{' '}
-            {detail.canStart ? 'Iniciar clase' : 'Entrar a clase'}
-          </Button>
-        </div>
-        {!mayEnter ? (
-          <p className="text-sm text-muted-foreground">
-            La clase aún no está disponible o está fuera de su ventana de
-            acceso.
+        <dl className="live-briefing__facts">
+          <LiveFact
+            icon={<CalendarClock />}
+            label="Inicio"
+            value={dateTimeLabel(detail.scheduledStart)}
+          />
+          <LiveFact
+            icon={<Timer />}
+            label="Duración"
+            value={sessionDurationLabel(
+              detail.scheduledStart,
+              detail.scheduledEnd,
+            )}
+          />
+          <LiveFact
+            icon={<UserRound />}
+            label="Docente"
+            value={detail.hostName}
+          />
+        </dl>
+      </header>
+
+      <div className="live-lobby">
+        <div
+          className="live-lobby__preview"
+          aria-label="Vista previa de dispositivos"
+        >
+          <span className="live-lobby__preview-icon">
+            {permission === 'ready' ? <Camera /> : <CameraOff />}
+          </span>
+          <strong>
+            {permission === 'ready'
+              ? 'Tus dispositivos están listos'
+              : 'Prepara cámara y micrófono'}
+          </strong>
+          <p>
+            {permission === 'ready'
+              ? 'Podrás activarlos o silenciarlos dentro de la sala.'
+              : 'La comprobación es opcional y sólo solicita acceso a Chrome cuando la inicias.'}
           </p>
-        ) : null}
+          <ul>
+            <li>
+              <Check /> Asistencia vinculada a esta actividad
+            </li>
+            <li>
+              <MessageCircle />
+              {detail.chatEnabled ? 'Chat habilitado' : 'Chat deshabilitado'}
+            </li>
+            <li>
+              <Radio />
+              {recordingEnabled
+                ? 'Grabación configurada'
+                : 'La sesión no se grabará'}
+            </li>
+          </ul>
+        </div>
+        <div className="live-lobby__panel">
+          <span className="live-status" data-status={detail.status}>
+            {statusLabel(detail.status)}
+          </span>
+          <h2>Antes de entrar</h2>
+          <p>
+            Revisa tus dispositivos y las condiciones de la sesión. El acceso se
+            solicita únicamente cuando confirmas la entrada.
+          </p>
+          {error ? (
+            <Alert variant="destructive">
+              <AlertTitle>No fue posible entrar</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          {permission === 'denied' ? (
+            <Alert>
+              <AlertTitle>Permiso no concedido</AlertTitle>
+              <AlertDescription>
+                Puedes revisar la configuración del navegador y volver a probar.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          {recordingEnabled ? (
+            <Alert className="border-amber-600/30 bg-amber-500/10">
+              <AlertTitle>Esta clase puede ser grabada</AlertTitle>
+              <AlertDescription>
+                La grabación es privada y su estado se muestra dentro de la
+                sala. El chat es efímero y no forma parte de un historial
+                académico.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          <div className="grid gap-3">
+            {detail.canPublishAudio ? (
+              <Label>
+                Micrófono
+                <select
+                  className="academic-select"
+                  value={audioDeviceId}
+                  onChange={(event) => setAudioDeviceId(event.target.value)}
+                >
+                  {devices.audio.map((device, index) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `Micrófono ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </Label>
+            ) : null}
+            {detail.canPublishVideo ? (
+              <Label>
+                Cámara
+                <select
+                  className="academic-select"
+                  value={videoDeviceId}
+                  onChange={(event) => setVideoDeviceId(event.target.value)}
+                >
+                  {devices.video.map((device, index) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `Cámara ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </Label>
+            ) : null}
+          </div>
+          {recordingEnabled ? (
+            <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
+              <input
+                className="mt-1"
+                checked={recordingAcknowledged}
+                onChange={(event) =>
+                  setRecordingAcknowledged(event.target.checked)
+                }
+                type="checkbox"
+              />
+              <span>
+                Entiendo que la sesión puede grabarse y que veré un indicador
+                cuando la grabación esté activa.
+              </span>
+            </label>
+          ) : null}
+          <div className="live-lobby__actions">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void inspectDevices()}
+              disabled={permission === 'checking'}
+            >
+              {permission === 'checking' ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <Mic />
+              )}{' '}
+              Probar dispositivos
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void enter()}
+              disabled={
+                !mayEnter ||
+                busy ||
+                (recordingEnabled && !recordingAcknowledged)
+              }
+            >
+              {busy ? <Loader2 className="animate-spin" /> : <DoorOpen />}{' '}
+              {entryActionLabel(detail, mayEnter)}
+            </Button>
+          </div>
+          {!mayEnter ? (
+            <p className="live-lobby__waiting" role="status">
+              <CalendarClock />
+              {waitingMessage(detail)}
+            </p>
+          ) : null}
+        </div>
       </div>
     </section>
   );
@@ -515,4 +578,54 @@ function statusLabel(status: string) {
       } as Record<string, string>
     )[status] ?? status
   );
+}
+
+function LiveFact({
+  icon,
+  label,
+  value,
+}: Readonly<{ icon: ReactNode; label: string; value: string }>) {
+  return (
+    <div>
+      {icon}
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+}
+
+function dateTimeLabel(value: string) {
+  return new Intl.DateTimeFormat('es-CO', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
+function sessionDurationLabel(start: string, end: string) {
+  const minutes = Math.max(
+    0,
+    Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60_000),
+  );
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `${hours} h ${rest} min` : `${hours} h`;
+}
+
+function entryActionLabel(detail: LiveSessionDetail, mayEnter: boolean) {
+  if (detail.canStart) return 'Iniciar clase';
+  if (detail.canJoin) return 'Entrar a clase';
+  if (detail.status === 'ended') return 'Clase finalizada';
+  if (detail.status === 'cancelled') return 'Clase cancelada';
+  return mayEnter ? 'Entrar a clase' : 'Esperar apertura';
+}
+
+function waitingMessage(detail: LiveSessionDetail) {
+  if (detail.status === 'ended') {
+    return 'La clase ya finalizó. La asistencia registrada permanece vinculada al curso.';
+  }
+  if (detail.status === 'cancelled') {
+    return 'La clase fue cancelada. El docente deberá programar una nueva sesión.';
+  }
+  return `El ingreso todavía no está habilitado. La sesión está programada para ${dateTimeLabel(detail.scheduledStart)}.`;
 }

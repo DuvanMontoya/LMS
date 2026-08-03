@@ -5106,6 +5106,8 @@
             "allOf": [{ "$ref": "#/components/schemas/Delivery" }],
             "readOnly": true
           },
+          "description": { "readOnly": true, "type": "string" },
+          "feedback_mode": { "readOnly": true, "type": "string" },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
           "in_progress_attempt_id": {
             "format": "uuid",
@@ -5113,6 +5115,7 @@
             "readOnly": true,
             "type": "string"
           },
+          "item_count": { "readOnly": true, "type": "integer" },
           "latest_attempt_id": {
             "format": "uuid",
             "nullable": true,
@@ -5124,11 +5127,23 @@
             "readOnly": true,
             "type": "string"
           },
+          "maximum_score": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,9}(?:\\.\\d{0,3})?$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "pass_basis_points": { "readOnly": true, "type": "integer" },
           "status": {
             "allOf": [
               { "$ref": "#/components/schemas/AssessmentAssignmentStatus" }
             ],
             "readOnly": true
+          },
+          "time_limit_minutes": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
           }
         },
         "required": [
@@ -5136,11 +5151,17 @@
           "attempt_limit",
           "attempts_used",
           "delivery",
+          "description",
+          "feedback_mode",
           "id",
           "in_progress_attempt_id",
+          "item_count",
           "latest_attempt_id",
           "latest_attempt_status",
-          "status"
+          "maximum_score",
+          "pass_basis_points",
+          "status",
+          "time_limit_minutes"
         ],
         "type": "object"
       },
