@@ -474,10 +474,27 @@ def learning_unit(enrollment: CourseEnrollment, unit_id: uuid.UUID) -> dict[str,
         f"/organizaciones/{enrollment.organization.slug}/aprender/"
         f"{enrollment.course.slug}"
     )
+    activity_instance_ids = {
+        row.group_activity.source_activity_id: row.group_activity_id
+        for row in ActivityProgress.objects.filter(course_progress=progress).select_related(
+            "group_activity"
+        )
+    }
     for direction in ("previous", "next"):
         target = navigation[direction]
         if isinstance(target, dict):
-            target["href"] = f"{base}/unidades/{target['id']}"
+            source_activity_id = uuid.UUID(target["id"])
+            if target.get("type") == "lesson":
+                target["href"] = f"{base}/unidades/{source_activity_id}"
+            else:
+                activity_instance_id = activity_instance_ids.get(source_activity_id)
+                target["source_activity_id"] = source_activity_id
+                target["id"] = activity_instance_id
+                target["href"] = (
+                    f"{base}/actividades/{activity_instance_id}"
+                    if activity_instance_id
+                    else None
+                )
     navigation["outline"] = base
     return {
         "course": {

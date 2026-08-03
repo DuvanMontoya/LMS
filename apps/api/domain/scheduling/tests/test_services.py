@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import base64
 import json
-from datetime import timedelta
+from datetime import time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 
+from domain.courses.models import CourseActivity
 from domain.learning.choices import AcademicGroupLevel, AcademicGroupRole
+from domain.learning.models import CourseGroupActivity
 from domain.learning.services import (
     confirm_cohort_roster_sync,
     create_academic_group,
@@ -39,6 +41,7 @@ from domain.scheduling.services import (
     create_event_series,
     end_live_session,
     join_live_session,
+    materialize_course_group_live_classes,
     reschedule_occurrence,
     start_live_session,
 )
@@ -47,6 +50,74 @@ from .support import FakeLiveKitGateway, SchedulingFixtureMixin
 
 
 class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
+    def test_materializes_each_pending_live_activity_for_a_course_group(self) -> None:
+        context = self.scheduling_context()
+        cohort = create_cohort(
+            actor=context["owner"],
+            organization=context["organization"],
+            course=context["course"],
+            release=context["enrollment"].current_release_assignment.release,
+            migration_review_required=True,
+            name="Grupo con clase materializable",
+            staff=[
+                {
+                    "membership_id": context["series"].host_membership_id,
+                    "role": "lead_instructor",
+                }
+            ],
+        )
+        # This focused service test uses the legacy no-period fixture while
+        # exercising the active-course-group scheduling contract.
+        cohort.migration_review_required = False
+        cohort.save(update_fields=("migration_review_required",))
+        group_activity = CourseGroupActivity.objects.get(course_group=cohort)
+        CourseActivity.objects.filter(pk=group_activity.source_activity_id).update(
+            estimated_duration_minutes=60
+        )
+        group_activity.migration_review_required = False
+        group_activity.activity_type = EventType.LIVE_CLASS
+        group_activity.title = "Clase materializable"
+        group_activity.summary = "Sesión creada desde la actividad del release."
+        group_activity.completion_policy = {"method": "attendance"}
+        group_activity.binding_snapshot = {
+            "provider": "scheduling",
+            "minimum_attendance_minutes": 30,
+            "chat_enabled": True,
+            "recording_mode": "off",
+        }
+        group_activity.save(
+            update_fields=(
+                "activity_type",
+                "title",
+                "summary",
+                "completion_policy",
+                "binding_snapshot",
+                "migration_review_required",
+            )
+        )
+        scheduled = materialize_course_group_live_classes(
+            actor=context["owner"],
+            organization=context["organization"],
+            course_group=cohort,
+            first_week_starts_on=timezone.localdate(),
+            timezone_name="America/Bogota",
+            slots=[{"weekday": 0, "starts_at": time(8, 0)}],
+        )
+        self.assertEqual(scheduled, {"created_count": 1, "already_scheduled_count": 0})
+        repeated = materialize_course_group_live_classes(
+            actor=context["owner"],
+            organization=context["organization"],
+            course_group=cohort,
+            first_week_starts_on=timezone.localdate(),
+            timezone_name="America/Bogota",
+            slots=[{"weekday": 0, "starts_at": time(8, 0)}],
+        )
+        self.assertEqual(repeated, {"created_count": 0, "already_scheduled_count": 1})
+        series = cohort.scheduled_event_series.get()
+        self.assertEqual(series.course_group_activity.title, "Clase materializable")
+        self.assertTrue(series.activity_progress_contribution)
+        self.assertEqual(series.occurrences.count(), 1)
+
     def test_course_group_session_requires_current_group_assignment(self) -> None:
         context = self.scheduling_context()
         group = create_academic_group(

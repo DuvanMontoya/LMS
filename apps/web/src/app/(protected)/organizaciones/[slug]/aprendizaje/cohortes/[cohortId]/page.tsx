@@ -5,6 +5,7 @@ import { CohortBatchEnrollForm } from '@/components/learning/learning-admin-form
 import { CohortRosterSync } from '@/components/learning/cohort-roster-sync';
 import { LearningProgress } from '@/components/learning/learning-progress';
 import { PageHeader } from '@/components/platform/page-header';
+import { CourseGroupLiveClassScheduler } from '@/components/scheduling/course-group-live-class-scheduler';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +20,7 @@ export default async function CohortDetailPage({
   const { cohortId, slug } = await params;
   const data = await getCohort(slug, cohortId);
   const canManage = data.access.capabilities.includes('learning.cohort.manage');
+  const canSchedule = data.access.capabilities.includes('scheduling.create');
   const academicGroup = data.cohort.academic_group_id
     ? data.options.academicGroups.find(
         (group) => group.id === data.cohort.academic_group_id,
@@ -82,6 +84,9 @@ export default async function CohortDetailPage({
             .map((enrollment) => enrollment.student_email)}
           slug={slug}
         />
+      ) : null}
+      {canSchedule && data.cohort.status !== 'archived' ? (
+        <CourseGroupLiveClassScheduler cohortId={cohortId} slug={slug} />
       ) : null}
       {canManage &&
       data.cohort.status !== 'archived' &&

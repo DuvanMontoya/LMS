@@ -887,6 +887,9 @@ export interface paths {
     put: operations['scheduling_course_activity_update'];
     post: operations['scheduling_course_activity_binding_create'];
   };
+  '/api/v1/organizations/{slug}/scheduling/course-groups/{course_group_id}/live-classes/materialize/': {
+    post: operations['scheduling_course_group_live_classes_materialize'];
+  };
   '/api/v1/organizations/{slug}/scheduling/events/{occurrence_id}/': {
     get: operations['scheduling_calendar_event_retrieve'];
     patch: operations['scheduling_calendar_event_reschedule'];
@@ -2398,6 +2401,11 @@ export interface components {
       source_activity_id: string;
       title: string;
     };
+    CourseGroupLiveClassSlot: {
+      /** Format: time */
+      starts_at: string;
+      weekday: number;
+    };
     /**
      * @description * `active` - Activo
      * * `archived` - Archivado
@@ -3789,6 +3797,16 @@ export interface components {
       evidenced_count: number;
       evidenced_objective_ids: string[];
       total_objectives: number;
+    };
+    MaterializeCourseGroupLiveClasses: {
+      /** Format: date */
+      first_week_starts_on: string;
+      slots: components['schemas']['CourseGroupLiveClassSlot'][];
+      timezone_name: string;
+    };
+    MaterializeCourseGroupLiveClassesResult: {
+      already_scheduled_count: number;
+      created_count: number;
     };
     MemberProfile: {
       address?: string;
@@ -12843,6 +12861,28 @@ export interface operations {
       201: {
         content: {
           'application/json': components['schemas']['LiveClassActivityBinding'];
+        };
+      };
+    };
+  };
+  scheduling_course_group_live_classes_materialize: {
+    parameters: {
+      path: {
+        course_group_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MaterializeCourseGroupLiveClasses'];
+        'application/x-www-form-urlencoded': components['schemas']['MaterializeCourseGroupLiveClasses'];
+        'multipart/form-data': components['schemas']['MaterializeCourseGroupLiveClasses'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MaterializeCourseGroupLiveClassesResult'];
         };
       };
     };

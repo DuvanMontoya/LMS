@@ -16,6 +16,10 @@ urlpatterns = [
         views.LiveClassActivityBindingListView.as_view(),
     ),
     path(
+        BASE + "course-groups/<uuid:course_group_id>/live-classes/materialize/",
+        views.CourseGroupLiveClassMaterializationView.as_view(),
+    ),
+    path(
         BASE + "course-activities/<uuid:activity_id>/binding/",
         views.LiveClassActivityBindingView.as_view(),
     ),

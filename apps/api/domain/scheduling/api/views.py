@@ -20,7 +20,7 @@ from domain.courses.policies import (
     has_course_academic_responsibility,
 )
 from domain.learning.contracts import course_group_for_scheduling
-from domain.learning.models import CourseGroupActivity
+from domain.learning.models import CourseGroupActivity, LearningCohort
 from domain.organizations.choices import MembershipStatus
 from domain.organizations.models import Membership, Organization
 from domain.organizations.policies import active_membership
@@ -53,6 +53,7 @@ from domain.scheduling.services import (
     end_live_session,
     expel_participant,
     join_live_session,
+    materialize_course_group_live_classes,
     reschedule_occurrence,
     start_live_recording,
     start_live_session,
@@ -76,6 +77,8 @@ from .serializers import (
     LiveConnectionSerializer,
     LiveSessionDetailSerializer,
     LiveSessionListQuerySerializer,
+    MaterializeCourseGroupLiveClassesResultSerializer,
+    MaterializeCourseGroupLiveClassesSerializer,
     OperationAcceptedSerializer,
     ParticipantOptionSerializer,
     ParticipantPermissionSerializer,
@@ -159,6 +162,42 @@ class LiveClassActivityBindingListView(APIView):
             _binding_payload(binding, revision.lock_version) for binding in bindings
         ]
         return Response(LiveClassActivityBindingSerializer(payload, many=True).data)
+
+
+class CourseGroupLiveClassMaterializationView(APIView):
+    @extend_schema(
+        operation_id="scheduling_course_group_live_classes_materialize",
+        request=MaterializeCourseGroupLiveClassesSerializer,
+        responses={200: MaterializeCourseGroupLiveClassesResultSerializer},
+    )
+    def post(
+        self, request: Request, slug: str, course_group_id: str
+    ) -> Response:
+        organization = _organization(request, slug)
+        if not can_create_schedule(request.user, organization):
+            return _error(SchedulingAccessDenied("No puedes programar clases."))
+        serializer = MaterializeCourseGroupLiveClassesSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        course_group = get_object_or_404(
+            LearningCohort.objects.select_related("course", "release"),
+            pk=course_group_id,
+            organization=organization,
+        )
+        result = _domain_call(
+            lambda: materialize_course_group_live_classes(
+                actor=request.user,
+                organization=organization,
+                course_group=course_group,
+                first_week_starts_on=serializer.validated_data[
+                    "first_week_starts_on"
+                ],
+                timezone_name=serializer.validated_data["timezone_name"],
+                slots=serializer.validated_data["slots"],
+            )
+        )
+        if isinstance(result, Response):
+            return result
+        return Response(MaterializeCourseGroupLiveClassesResultSerializer(result).data)
 
 
 class LiveClassActivityBindingView(APIView):

@@ -2869,6 +2869,14 @@
         ],
         "type": "object"
       },
+      "CourseGroupLiveClassSlot": {
+        "properties": {
+          "starts_at": { "format": "time", "type": "string" },
+          "weekday": { "maximum": 6, "minimum": 0, "type": "integer" }
+        },
+        "required": ["starts_at", "weekday"],
+        "type": "object"
+      },
       "CourseLifecycleStatus": {
         "description": "* `active` - Activo\n* `archived` - Archivado",
         "enum": ["active", "archived"],
@@ -5865,6 +5873,28 @@
           "evidenced_objective_ids",
           "total_objectives"
         ],
+        "type": "object"
+      },
+      "MaterializeCourseGroupLiveClasses": {
+        "properties": {
+          "first_week_starts_on": { "format": "date", "type": "string" },
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/CourseGroupLiveClassSlot"
+            },
+            "type": "array"
+          },
+          "timezone_name": { "maxLength": 64, "type": "string" }
+        },
+        "required": ["first_week_starts_on", "slots", "timezone_name"],
+        "type": "object"
+      },
+      "MaterializeCourseGroupLiveClassesResult": {
+        "properties": {
+          "already_scheduled_count": { "type": "integer" },
+          "created_count": { "type": "integer" }
+        },
+        "required": ["already_scheduled_count", "created_count"],
         "type": "object"
       },
       "MemberProfile": {
@@ -24509,6 +24539,59 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LiveClassActivityBinding"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/course-groups/{course_group_id}/live-classes/materialize/": {
+      "post": {
+        "operationId": "scheduling_course_group_live_classes_materialize",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_group_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaterializeCourseGroupLiveClasses"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/MaterializeCourseGroupLiveClasses"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/MaterializeCourseGroupLiveClasses"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterializeCourseGroupLiveClassesResult"
                 }
               }
             },

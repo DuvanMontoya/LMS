@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import TYPE_CHECKING, Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.conf import settings
 from django.db import transaction
@@ -274,6 +275,161 @@ def create_event_series(
                     title=title,
                 )
     return series
+
+
+@transaction.atomic
+def materialize_course_group_live_classes(
+    *,
+    actor: object,
+    organization: Organization,
+    course_group: LearningCohort,
+    first_week_starts_on: date,
+    timezone_name: str,
+    slots: list[dict[str, object]],
+) -> dict[str, int]:
+    """Schedule the release-pinned live activities of one course group.
+
+    A course revision defines a LiveKit policy, while the cohort owns the real
+    date, host and occurrence. This operation materializes each pending live
+    activity exactly once instead of leaving a learner-facing activity without
+    a LiveKit room to enter.
+    """
+    from domain.courses.models import CourseActivity
+    from domain.learning.models import CohortStaffAssignment, CourseGroupActivity
+
+    if not can_create_schedule(actor, organization):
+        raise SchedulingAccessDenied("No puedes programar clases del grupo.")
+    if (
+        course_group.organization_id != organization.id
+        or course_group.status != "active"
+        or course_group.migration_review_required
+    ):
+        raise SchedulingInvalid("El grupo de curso no está disponible.")
+    try:
+        zone = ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError as error:
+        raise SchedulingInvalid("La zona horaria no es válida.") from error
+
+    normalized_slots: list[tuple[int, time]] = []
+    seen_slots: set[tuple[int, time]] = set()
+    for slot in slots:
+        weekday = slot.get("weekday")
+        starts_at = slot.get("starts_at")
+        if (
+            not isinstance(weekday, int)
+            or weekday < 0
+            or weekday > 6
+            or not isinstance(starts_at, time)
+        ):
+            raise SchedulingInvalid("Cada horario semanal es inválido.")
+        key = (weekday, starts_at)
+        if key in seen_slots:
+            raise SchedulingInvalid("No repitas el mismo horario semanal.")
+        seen_slots.add(key)
+        normalized_slots.append(key)
+    if not normalized_slots:
+        raise SchedulingInvalid("Define al menos un horario semanal.")
+
+    staff_rows = list(
+        CohortStaffAssignment.objects.select_related("membership__user")
+        .filter(cohort=course_group, ended_at__isnull=True)
+        .order_by("started_at", "id")
+    )
+    host = next(
+        (
+            row.membership
+            for row in staff_rows
+            if row.membership.status == MembershipStatus.ACTIVE
+            and has_capability(
+                row.membership.user, organization, Capability.LIVE_SESSION_HOST
+            )
+        ),
+        None,
+    )
+    if host is None:
+        raise SchedulingInvalid(
+            "Asigna primero un docente activo con capacidad para conducir clases en vivo."
+        )
+
+    live_activities = list(
+        CourseGroupActivity.objects.select_for_update()
+        .filter(
+            course_group=course_group,
+            course_release=course_group.release,
+            activity_type=EventType.LIVE_CLASS,
+            migration_review_required=False,
+        )
+        .order_by("module_position", "position", "id")
+    )
+    if not live_activities:
+        raise SchedulingInvalid("El grupo no tiene clases en vivo en su release.")
+
+    per_module: dict[int, int] = {}
+    for activity in live_activities:
+        per_module[activity.module_position] = (
+            per_module.get(activity.module_position, 0) + 1
+        )
+    max_per_module = max(per_module.values())
+    if len(normalized_slots) < max_per_module:
+        raise SchedulingInvalid(
+            "Define al menos un horario por cada clase en vivo de la semana más cargada."
+        )
+
+    source_durations = {
+        row.id: row.estimated_duration_minutes
+        for row in CourseActivity.objects.filter(
+            pk__in=[activity.source_activity_id for activity in live_activities]
+        ).only("id", "estimated_duration_minutes")
+    }
+    missing_duration = next(
+        (
+            activity.title
+            for activity in live_activities
+            if not source_durations.get(activity.source_activity_id)
+        ),
+        None,
+    )
+    if missing_duration:
+        raise SchedulingInvalid(
+            f"La clase «{missing_duration}» no tiene una duración configurada."
+        )
+
+    week_zero = first_week_starts_on - timedelta(days=first_week_starts_on.weekday())
+    first_module_position = min(per_module)
+    scheduled_by_module: dict[int, int] = {}
+    created_count = 0
+    already_scheduled_count = 0
+    for activity in live_activities:
+        if AcademicEventSeries.objects.filter(course_group_activity=activity).exists():
+            already_scheduled_count += 1
+            continue
+        slot_index = scheduled_by_module.get(activity.module_position, 0)
+        scheduled_by_module[activity.module_position] = slot_index + 1
+        weekday, starts_at = normalized_slots[slot_index]
+        starts_on = week_zero + timedelta(
+            weeks=activity.module_position - first_module_position,
+            days=weekday,
+        )
+        create_event_series(
+            actor=actor,
+            organization=organization,
+            course=course_group.course,
+            course_group=course_group,
+            course_group_activity=activity,
+            host_membership=host,
+            title=activity.title,
+            description=activity.summary,
+            event_type=EventType.LIVE_CLASS,
+            timezone_name=timezone_name,
+            first_starts_at=datetime.combine(starts_on, starts_at, tzinfo=zone),
+            duration_minutes=source_durations[activity.source_activity_id] or 60,
+            contributes_to_activity_progress=True,
+        )
+        created_count += 1
+    return {
+        "created_count": created_count,
+        "already_scheduled_count": already_scheduled_count,
+    }
 
 
 def _scoped_occurrences(

@@ -79,6 +79,30 @@ class LiveClassActivityBindingSerializer(serializers.Serializer):
     revision_lock_version = serializers.IntegerField()
 
 
+class CourseGroupLiveClassSlotSerializer(serializers.Serializer):
+    weekday = serializers.IntegerField(min_value=0, max_value=6)
+    starts_at = serializers.TimeField()
+
+
+class MaterializeCourseGroupLiveClassesSerializer(serializers.Serializer):
+    first_week_starts_on = serializers.DateField()
+    timezone_name = serializers.CharField(max_length=64)
+    slots = CourseGroupLiveClassSlotSerializer(many=True, min_length=1, max_length=12)
+
+    def validate_slots(
+        self, value: list[dict[str, object]]
+    ) -> list[dict[str, object]]:
+        keys = [(row["weekday"], row["starts_at"]) for row in value]
+        if len(keys) != len(set(keys)):
+            raise serializers.ValidationError("No repitas el mismo horario semanal.")
+        return value
+
+
+class MaterializeCourseGroupLiveClassesResultSerializer(serializers.Serializer):
+    created_count = serializers.IntegerField()
+    already_scheduled_count = serializers.IntegerField()
+
+
 class ParticipantOptionSerializer(serializers.Serializer):
     membership_id = serializers.UUIDField()
     display = serializers.CharField()

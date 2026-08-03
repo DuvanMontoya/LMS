@@ -1449,3 +1449,30 @@ Siguiente paso:
   publique medios y LiveKit complete el artefacto. La persistencia de política,
   asistencia, chat y configuración sí quedó comprobada; la captura multimedia
   completa sigue siendo un gate de infraestructura, no un éxito simulado.
+
+## Corrección de sesiones LiveKit en el aula — 2026-08-03
+
+- Se reprodujo el 404 entregado por el estudiante. La URL trataba la actividad
+  fuente `8e10…` de una clase en vivo como si fuera una unidad
+  (`/unidades/{id}`). La navegación de una lección ahora distingue la siguiente
+  actividad del release: una lección conserva `/unidades/{unitId}` y una clase
+  o evaluación usa su instancia materializada `/actividades/{activityId}`.
+- La auditoría de datos descartó una explicación visual: la cohorte activa de
+  MATE-2303 tenía 91 actividades materializadas y 64 políticas LiveKit, pero
+  **cero** `AcademicEventSeries` y `LiveSession`. Una política de autoría no
+  equivale a una sesión de calendario; faltaba el paso que crea la sala real
+  para la sección.
+- Scheduling incorpora una operación transaccional e idempotente de
+  materialización por sección. Exige un docente vigente con capacidad de host,
+  valida zona horaria, duración y suficientes bloques semanales, conserva el
+  binding inmutable del release y genera una serie/sesión por actividad LiveKit.
+  La sección administrativa expone el formulario “Programar clases en vivo”,
+  con semana inicial y cuatro bloques editables; no duplica sesiones ya creadas.
+- Se aplicó la operación al grupo `Ecuaciones Diferenciales Ordinarias` con
+  inicio 2026-08-03: creó 64 sesiones. Chrome, con identidad estudiante,
+  verificó el tab de clases con contador 64, una clase programada el 3 de agosto
+  a las 8:00 a. m. y la ruta de actividad correcta sin 404.
+- Evidencia: prueba focal de materialización e idempotencia y prueba de aula
+  unificada, 2/2 sobre PostgreSQL; Ruff, Pyright, TypeScript y `git diff --check`
+  verdes. OpenAPI y cliente regenerados. No se añadieron dependencias ni
+  migraciones, y no se realizó commit, push ni despliegue.
