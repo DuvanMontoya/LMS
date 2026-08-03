@@ -1,18 +1,20 @@
 import { LockKeyhole, Video } from 'lucide-react';
 import { redirect } from 'next/navigation';
 
-import { AttemptRunner } from '@/components/assessments/attempt-runner';
-import { CourseAssessmentBriefing } from '@/components/assessments/course-assessment-briefing';
 import {
-  LearningPlayerNavigation,
-  LearningPlayerShell,
-} from '@/components/learning/learning-player-shell';
+  AssessmentAttemptTimer,
+  AttemptRunner,
+} from '@/components/assessments/attempt-runner';
+import { CourseAssessmentBriefing } from '@/components/assessments/course-assessment-briefing';
+import { AssessmentResultSummary } from '@/components/assessments/assessment-result-summary';
+import { LearningPlayerShell } from '@/components/learning/learning-player-shell';
 import { LiveClassroom } from '@/components/scheduling/live-classroom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import {
   getAssessmentAttempt,
   getMyAssessmentDeliveries,
+  getAssessmentResult,
 } from '@/lib/assessments/server';
 import {
   getEnrollmentForCourse,
@@ -67,6 +69,15 @@ export default async function LearningActivityPage({
   const activeAttempt = activeAttemptId
     ? (await getAssessmentAttempt(slug, activeAttemptId)).attempt
     : null;
+  const completedAttemptId = matchingDeliveries.find(
+    (assignment) =>
+      assignment.latest_attempt_id &&
+      assignment.latest_attempt_status !== 'in_progress',
+  )?.latest_attempt_id;
+  const completedResult =
+    !activeAttempt && completedAttemptId
+      ? (await getAssessmentResult(slug, completedAttemptId)).result
+      : null;
   const primarySession =
     matchingSessions.find((session) => session.status === 'live') ??
     matchingSessions.find((session) => session.canJoin || session.canStart) ??
@@ -78,11 +89,6 @@ export default async function LearningActivityPage({
     typeof activity.title === 'string'
       ? activity.title
       : 'Actividad curricular';
-  const navigation = record(data.payload.navigation)
-    ? data.payload.navigation
-    : {};
-  const previous = record(navigation.previous) ? navigation.previous : null;
-  const next = record(navigation.next) ? navigation.next : null;
   const outlineHref = `/organizaciones/${slug}/aprender/${courseSlug}`;
   const activityHref = `${outlineHref}/actividades/${activityId}`;
   const allActivities = outlineData.outline.modules.flatMap(
@@ -94,20 +100,6 @@ export default async function LearningActivityPage({
   const currentModule = outlineData.outline.modules.find((module) =>
     module.activities.some((item) => item.id === activityId),
   );
-  const previousItem =
-    previous && typeof previous.href === 'string'
-      ? {
-          href: previous.href,
-          title: String(previous.title ?? 'Actividad anterior'),
-        }
-      : null;
-  const nextItem =
-    next && typeof next.href === 'string'
-      ? {
-          href: next.href,
-          title: String(next.title ?? 'Actividad siguiente'),
-        }
-      : null;
   const stageMode = activeAttempt ? 'active' : 'briefing';
   const usesDedicatedBriefing =
     status !== 'locked' &&
@@ -117,6 +109,11 @@ export default async function LearningActivityPage({
     <LearningPlayerShell
       courseTitle={enrollment.course.title}
       currentActivityId={activityId}
+      headerAccessory={
+        activeAttempt ? (
+          <AssessmentAttemptTimer expiresAt={activeAttempt.expires_at} />
+        ) : null
+      }
       outline={outlineData.outline}
       outlineHref={outlineHref}
       positionLabel={`Actividad ${Math.max(1, activityNumber + 1)} de ${allActivities.length}`}
@@ -182,11 +179,19 @@ export default async function LearningActivityPage({
                   </AlertDescription>
                 </Alert>
               ) : type === 'assessment' ? (
-                <CourseAssessmentBriefing
-                  assignment={matchingDeliveries[0] ?? null}
-                  returnHref={activityHref}
-                  slug={slug}
-                />
+                completedResult && completedAttemptId ? (
+                  <AssessmentResultSummary
+                    attemptId={completedAttemptId}
+                    result={completedResult}
+                    slug={slug}
+                  />
+                ) : (
+                  <CourseAssessmentBriefing
+                    assignment={matchingDeliveries[0] ?? null}
+                    returnHref={activityHref}
+                    slug={slug}
+                  />
+                )
               ) : primarySession ? (
                 <LiveClassroom detail={primarySession} slug={slug} />
               ) : (
@@ -201,11 +206,6 @@ export default async function LearningActivityPage({
               )}
             </div>
           </article>
-          <LearningPlayerNavigation
-            label="Navegación entre actividades"
-            next={nextItem}
-            previous={previousItem}
-          />
         </>
       )}
     </LearningPlayerShell>

@@ -130,30 +130,14 @@ function AssessmentBriefingContent({
         />
       </dl>
 
-      <div className="assessment-briefing__notice">
-        <ShieldCheck />
-        <div>
-          <strong>Tu intento es individual y queda registrado</strong>
-          <p>
-            El cronómetro empieza al pulsar el botón. Si sales, podrás continuar
-            el mismo intento mientras siga vigente y no lo hayas enviado.
-          </p>
-        </div>
-      </div>
-
       <div className="assessment-briefing__action">
-        <div>
-          <strong>
-            {assignment.in_progress_attempt_id
-              ? 'Tienes un intento en curso'
-              : 'Todo listo para comenzar'}
-          </strong>
-          <span>
-            {available
-              ? 'Al entrar, la evaluación ocupará todo el espacio de trabajo.'
-              : 'La evaluación no admite un nuevo intento en este momento.'}
-          </span>
-        </div>
+        <p>
+          {available
+            ? assignment.in_progress_attempt_id
+              ? 'Tu intento conserva las respuestas guardadas y el tiempo restante.'
+              : 'El tiempo comienza al iniciar. Podrás continuar mientras el intento siga vigente.'
+            : 'La evaluación no admite un nuevo intento en este momento.'}
+        </p>
         <Button
           disabled={!available || start.isPending}
           onClick={async () => {

@@ -33,6 +33,22 @@ describe('route security headers', () => {
     );
   });
 
+  it('allows LiveKit media inside the immersive course activity route', () => {
+    process.env.NEXT_PUBLIC_LIVEKIT_URL = 'wss://media.example.test';
+    const response = proxy(
+      authenticatedRequest(
+        '/organizaciones/institucion/aprender/curso/actividades/00000000-0000-0000-0000-000000000001',
+      ),
+    );
+
+    expect(response.headers.get('Permissions-Policy')).toContain(
+      'display-capture=(self)',
+    );
+    expect(response.headers.get('Content-Security-Policy')).toContain(
+      "connect-src 'self' wss://media.example.test",
+    );
+  });
+
   it('denies camera, microphone and display capture on ordinary routes', () => {
     const response = proxy(
       authenticatedRequest('/organizaciones/institucion/calendario'),

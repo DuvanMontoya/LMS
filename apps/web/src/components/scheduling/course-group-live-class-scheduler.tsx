@@ -51,18 +51,21 @@ export function CourseGroupLiveClassScheduler({
     setMessage(null);
     setIsPending(true);
     try {
-      const { data, error: responseError, response } =
-        await platformBrowserClient.POST(
-          '/api/v1/organizations/{slug}/scheduling/course-groups/{course_group_id}/live-classes/materialize/',
-          {
-            body: {
-              first_week_starts_on: firstWeekStartsOn,
-              slots,
-              timezone_name: 'America/Bogota',
-            },
-            params: { path: { course_group_id: cohortId, slug } },
+      const {
+        data,
+        error: responseError,
+        response,
+      } = await platformBrowserClient.POST(
+        '/api/v1/organizations/{slug}/scheduling/course-groups/{course_group_id}/live-classes/materialize/',
+        {
+          body: {
+            first_week_starts_on: firstWeekStartsOn,
+            slots,
+            timezone_name: 'America/Bogota',
           },
-        );
+          params: { path: { course_group_id: cohortId, slug } },
+        },
+      );
       if (!response.ok || !data) {
         const payload =
           responseError && typeof responseError === 'object'
@@ -100,7 +103,10 @@ export function CourseGroupLiveClassScheduler({
   }
 
   return (
-    <section className="academic-panel mt-6 p-5" aria-labelledby="programar-clases">
+    <section
+      className="academic-panel mt-6 p-5"
+      aria-labelledby="programar-clases"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="academic-kicker">Operación de la sección</p>
@@ -179,7 +185,11 @@ export function CourseGroupLiveClassScheduler({
         ) : null}
         <div>
           <Button disabled={isPending} type="submit">
-            {isPending ? <LoaderCircle className="animate-spin" /> : <CalendarPlus />}
+            {isPending ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              <CalendarPlus />
+            )}
             Programar todas las clases pendientes
           </Button>
         </div>

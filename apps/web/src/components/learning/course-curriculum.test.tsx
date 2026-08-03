@@ -66,6 +66,7 @@ describe('CourseCurriculum player', () => {
   it('prioritizes the explicit route and opens only its module', () => {
     const { container } = render(
       <CourseCurriculum
+        accordionName="test-course-modules"
         currentActivityId="activity-two"
         modules={modules}
         variant="player"
@@ -82,5 +83,7 @@ describe('CourseCurriculum player', () => {
     expect(details).toHaveLength(2);
     expect(details[0]).not.toHaveAttribute('open');
     expect(details[1]).toHaveAttribute('open');
+    expect(details[0]).toHaveAttribute('name', 'test-course-modules');
+    expect(screen.queryByText('45 min')).not.toBeInTheDocument();
   });
 });

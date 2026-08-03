@@ -64,8 +64,13 @@ API key firmante. El endpoint exige `application/webhook+json`, cuerpo crudo y
 - Webhook 401: comprobar API key firmante, proxy que preserve cuerpo crudo,
   `Authorization` y que el ID opaco `EV_…` cabe en `event_id`. Webhook 500 deja
   el ledger `failed` para reintento seguro.
-- Sin cámara/micrófono: confirmar que la URL es exactamente `/clases/<uuid>`,
-  HTTPS, `Permissions-Policy` de esa respuesta y permiso del navegador.
+- Sin cámara/micrófono/pantalla: confirmar si la sesión se abrió desde
+  `/clases/<uuid>` o desde la actividad inmersiva
+  `/organizaciones/<slug>/aprender/<curso>/actividades/<uuid>`, HTTPS,
+  `Permissions-Policy` de esa respuesta y permiso del navegador. Ambas rutas
+  deben declarar `camera=(self)`, `microphone=(self)` y
+  `display-capture=(self)`; un grant LiveKit correcto no sustituye la política
+  HTTP del documento que invoca `getUserMedia` o `getDisplayMedia`.
 - Agenda vacía: validar rango menor de 93 días, organización, curso y matrícula
   efectiva; no crear fixtures en producción.
 

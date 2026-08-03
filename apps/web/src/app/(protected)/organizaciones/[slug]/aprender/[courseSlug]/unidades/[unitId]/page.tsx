@@ -73,6 +73,16 @@ export default async function LearningUnitPage({
       <LearningPlayerShell
         courseTitle={enrollment.course.title}
         currentUnitId={unitId}
+        headerActions={
+          <LearningUnitControls
+            compact
+            enrollmentId={enrollment.enrollment_id}
+            progress={data.payload.progress}
+            slug={slug}
+            unitId={unitId}
+            unitStatus={unitStatus}
+          />
+        }
         outline={outlineData.outline}
         outlineHref={outlineHref}
         positionLabel={`Lección ${Math.max(1, unitNumber + 1)} de ${totalUnits}`}
@@ -127,24 +137,6 @@ export default async function LearningUnitPage({
             </details>
           ) : null}
         </article>
-
-        <div className="learning-player__completion">
-          <div>
-            <p className="academic-kicker">Tu progreso</p>
-            <h2>¿Terminaste esta lección?</h2>
-            <p>
-              Registra el avance para mantener sincronizada tu ruta de
-              aprendizaje.
-            </p>
-          </div>
-          <LearningUnitControls
-            enrollmentId={enrollment.enrollment_id}
-            progress={data.payload.progress}
-            slug={slug}
-            unitId={unitId}
-            unitStatus={unitStatus}
-          />
-        </div>
 
         <LearningPlayerNavigation
           label="Navegación entre lecciones"

@@ -280,7 +280,11 @@ export function LiveClassActivityDialog({
                   <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm">
                     <span>Compartir pantalla</span>
                     <input
-                      defaultChecked={binding?.student_screen_share_enabled}
+                      defaultChecked={
+                        binding?.student_screen_share_enabled ??
+                        mode === 'interactive'
+                      }
+                      key={`screen-${mode}`}
                       name="live-student-screen"
                       type="checkbox"
                     />

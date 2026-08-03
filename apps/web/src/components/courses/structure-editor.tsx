@@ -869,7 +869,9 @@ export function StructureEditor({
                                         className="academic-control mt-1.5"
                                         disabled={moveAcrossModules.isPending}
                                         onChange={(event) => {
-                                          if (event.target.value !== module.id) {
+                                          if (
+                                            event.target.value !== module.id
+                                          ) {
                                             void moveActivityToAnotherModule(
                                               activity.id,
                                               event.target.value,

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowDown, ArrowUp, CheckCircle2, Save } from 'lucide-react';
+import { ArrowDown, ArrowUp, CheckCircle2, Save, Timer } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -47,6 +47,34 @@ type Answer =
   | Record<string, string>
   | MathExpressionValue;
 
+export function AssessmentAttemptTimer({
+  expiresAt,
+}: Readonly<{ expiresAt: string | null }>) {
+  const seconds = useRemainingSeconds(expiresAt);
+  return (
+    <div
+      aria-atomic="true"
+      aria-live={
+        seconds !== null && seconds !== undefined && seconds < 300
+          ? 'assertive'
+          : 'polite'
+      }
+      className="assessment-header-timer"
+      role="timer"
+    >
+      <Timer />
+      <span>Tiempo</span>
+      <strong>
+        {seconds === undefined
+          ? 'Calculando…'
+          : seconds === null
+            ? 'Sin límite'
+            : formatDuration(seconds)}
+      </strong>
+    </div>
+  );
+}
+
 export function AttemptRunner({
   initialAttempt,
   returnHref,
@@ -80,7 +108,6 @@ export function AttemptRunner({
     submitAssessmentAttempt(slug, attempt.id, attempt.lock_version),
   );
   const active = attempt.items[activeIndex];
-  const seconds = useRemainingSeconds(attempt.expires_at);
 
   async function saveItem(itemId: string, question: PublicQuestion) {
     try {
@@ -109,25 +136,6 @@ export function AttemptRunner({
   return (
     <div className="assessment-attempt-workspace">
       <aside className="assessment-attempt-sidebar">
-        <div
-          aria-atomic="true"
-          aria-live={
-            seconds !== null && seconds !== undefined && seconds < 300
-              ? 'assertive'
-              : 'polite'
-          }
-          className="assessment-attempt-timer"
-          role="timer"
-        >
-          <span className="text-xs text-muted-foreground">Tiempo restante</span>
-          <strong className="mt-1 block tabular-nums">
-            {seconds === undefined
-              ? 'Calculando…'
-              : seconds === null
-                ? 'Sin límite'
-                : formatDuration(seconds)}
-          </strong>
-        </div>
         <nav
           aria-label="Navegador de preguntas"
           className="assessment-attempt-navigator"

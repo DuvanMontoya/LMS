@@ -334,6 +334,30 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
         self.assertFalse(claims["video"]["canPublishData"])
         self.assertNotIn("screen_share", claims["video"]["canPublishSources"])
 
+    def test_student_token_includes_chat_and_screen_only_when_policy_allows_it(
+        self,
+    ) -> None:
+        gateway = LiveKitGateway(FakeLiveKitGateway().config)
+        token = gateway.issue_token(
+            user_id="00000000-0000-0000-0000-000000000123",
+            room_name="lk_test",
+            access=LiveAccess(
+                role=AttendanceRole.STUDENT,
+                can_publish=True,
+                can_share_screen=True,
+                can_moderate=False,
+            ),
+            chat_enabled=True,
+            student_screen_share_enabled=True,
+        )
+        payload = token.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        claims = json.loads(base64.urlsafe_b64decode(payload))
+
+        self.assertTrue(claims["video"]["canPublishData"])
+        self.assertIn("screen_share", claims["video"]["canPublishSources"])
+        self.assertIn("screen_share_audio", claims["video"]["canPublishSources"])
+
     def test_room_name_is_random_and_not_exposed_until_join(self) -> None:
         context = self.scheduling_context()
         session = context["session"]

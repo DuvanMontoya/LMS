@@ -20,12 +20,14 @@ import {
 } from '@/lib/learning/hooks';
 
 export function LearningUnitControls({
+  compact = false,
   enrollmentId,
   progress,
   slug,
   unitId,
   unitStatus,
 }: Readonly<{
+  compact?: boolean;
   enrollmentId: string;
   progress: components['schemas']['Progress'];
   slug: string;
@@ -82,10 +84,16 @@ export function LearningUnitControls({
   }
 
   return (
-    <div className="grid gap-3">
+    <div className={compact ? 'learning-unit-control--compact' : 'grid gap-3'}>
       <Button
+        aria-label={
+          unitStatus === 'completed'
+            ? 'Marcar unidad como pendiente'
+            : 'Marcar unidad como completada'
+        }
         disabled={mutation.isPending || openMutation.isPending}
         onClick={toggleCompletion}
+        size={compact ? 'sm' : 'default'}
         type="button"
         variant={unitStatus === 'completed' ? 'outline' : 'default'}
       >
@@ -96,16 +104,19 @@ export function LearningUnitControls({
         ) : (
           <CheckCircle2 />
         )}
-        {unitStatus === 'completed'
-          ? 'Marcar unidad como pendiente'
-          : 'Marcar unidad como completada'}
+        {unitStatus === 'completed' ? 'Reabrir' : 'Completar'}
       </Button>
-      {notice ? (
+      {notice && !compact ? (
         <Alert aria-live="polite">
           <AlertCircle />
           <AlertTitle>Estado del progreso</AlertTitle>
           <AlertDescription>{notice}</AlertDescription>
         </Alert>
+      ) : null}
+      {notice && compact ? (
+        <span aria-live="polite" className="sr-only" role="status">
+          {notice}
+        </span>
       ) : null}
     </div>
   );

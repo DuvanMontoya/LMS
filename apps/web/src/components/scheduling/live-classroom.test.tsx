@@ -60,8 +60,12 @@ describe('LiveClassroom lobby', () => {
     expect(screen.getByText('1 h')).toBeInTheDocument();
     expect(screen.getByText('Participante 00000000')).toBeInTheDocument();
     expect(
-      screen.getByText('Asistencia vinculada a esta actividad'),
+      screen.getByText(/cámara, micrófono y pantalla se activan/i),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /probar dispositivos/i }),
+    ).not.toBeInTheDocument();
     expect(
       document.querySelector('[data-state="briefing"]'),
     ).toBeInTheDocument();

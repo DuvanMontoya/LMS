@@ -148,7 +148,7 @@
 ## Separación de gobierno y autoridad académica — en curso 2026-08-02
 
 - **Decisión:** ADR 0038 elimina el supuesto `owner = superadministrador
-  académico`. Owner queda exclusivamente en gobierno institucional;
+académico`. Owner queda exclusivamente en gobierno institucional;
   administrator opera sin autoría ni calificación; author/reviewer aplican
   maker-checker; instructor califica únicamente dentro de alcance asignado.
 - **Implementación verificada:** la matriz backend ya da cero capacidades de
@@ -256,7 +256,7 @@
 - **Operación local:** `livekit/livekit-server:v1.13.1` está fijado por digest
   en el perfil Compose `live`, con señalización/API 7880, RTC/TCP 7881,
   RTC/UDP 7882 y métricas 6789 sólo en loopback. `pnpm livekit:up|status|logs|
-  smoke|down` administra el servicio. Django usa 8010 para no interferir con
+smoke|down` administra el servicio. Django usa 8010 para no interferir con
   otro proyecto que ocupa 8000 y para recibir webhooks desde Docker; la web
   permanece en `http://localhost:3000`.
 - **Implementación web:** calendario mes/semana/agenda, creación de sesiones de
@@ -354,7 +354,7 @@
   en frío de Next antes de cerrar axe, 390 px y los stubs de proveedores. La
   matriz exacta está en `PRODUCT_COMPLETENESS_AUDIT.md`. La configuración
   incorpora además los accesos explícitos `Gestionar personas` y `Registrar
-  estudiante`; los aliases `/configuracion/general` y
+estudiante`; los aliases `/configuracion/general` y
   `/configuracion/miembros` fueron navegados en Chromium y mantienen la misma
   superficie gobernada, sin crear una capa paralela.
 - **Corrección de continuidad, perfiles y control global (2026-08-01):** la
@@ -1552,3 +1552,81 @@ Siguiente paso:
   prueba PostgreSQL del flujo publicación→grupo→entrega→intento→calificación,
   OpenAPI/cliente sincronizados y `git diff --check`. No se añadieron
   dependencias ni migraciones y no se realizó commit, push o despliegue.
+
+## Refinamiento del aula y controles LiveKit operativos — 2026-08-03
+
+- El reproductor usa ahora toda la altura disponible desde el borde superior.
+  La identidad del curso vive una sola vez en el encabezado del temario junto
+  con su progreso; desaparecieron “Vista general del curso”, la segunda marca
+  del curso y la tarjeta inferior redundante de finalización. La acción se
+  redujo a `Completar` junto a `Salir` y las lecciones conservan sólo controles
+  circulares de anterior/siguiente después del contenido.
+- El temario mantiene la identidad clara del sitio: módulos claros, una sola
+  sección abierta por superficie, icono pequeño de tipo en línea con el título,
+  estados completado/en curso con contraste explícito y sin duración ni
+  subtítulo de tipo visibles. Clases y evaluaciones no muestran navegación
+  secundaria que compita con su experiencia principal.
+- El reloj de una evaluación activa pasó a la cabecera fija del aula. La
+  antesala quedó reducida a la información necesaria y, al terminar, puntaje,
+  aprobación y retroalimentación se muestran dentro de la misma actividad en
+  lugar de regresar a una tarjeta deshabilitada o sacar al estudiante del
+  curso.
+- La antesala LiveKit ya no solicita ni enumera cámara o micrófono. Los permisos
+  se piden sólo al activar cada control dentro de la sala. La sala usa el
+  `LayoutContext` oficial para abrir/cerrar un panel de chat propio, accesible y
+  localizado; el envío utiliza el canal de datos real de LiveKit. Compartir
+  pantalla se muestra únicamente cuando la política publicada y el grant del
+  token lo permiten. La ruta inmersiva de actividad incorpora además la política
+  HTTP `display-capture=(self)` y el origen CSP de LiveKit; antes sólo la ruta
+  independiente `/clases/{id}` recibía esos permisos, por lo que Chrome
+  rechazaba la captura aunque el token fuera correcto. Las nuevas actividades
+  interactivas proponen pantalla activada, sin alterar snapshots publicados ni
+  debilitar autorizaciones existentes.
+- Se consultaron el 2026-08-03 la documentación oficial de LiveKit para
+  `ChatToggle`, `TrackToggle`, composición de componentes y permisos de tokens.
+  El backend conserva PostgreSQL como autoridad de política y LiveKit como
+  transporte.
+- Chrome autenticado resolvió de principio a fin el Quiz 1 real de MATE-2303:
+  dos preguntas `single_choice`, guardado por pregunta, confirmación de envío,
+  calificación automática 10/10, 100 % y aprobado dentro del aula. También se
+  reprogramó e inició para prueba el Taller complementario A de la semana 2,
+  cuya política publicada habilita audio, video, pantalla y chat; el estudiante
+  entró a la sala, vio los cuatro controles y envió/recibió el mensaje
+  `Prueba LiveKit: chat operativo` por LiveKit.
+- Evidencia verde: 11/11 pruebas frontend focales; 2/2 regresiones de grants
+  LiveKit sobre PostgreSQL; TypeScript, ESLint, Ruff,
+  `makemigrations --check --dry-run` y `git diff --check`. No se añadieron
+  dependencias ni migraciones y no se realizó commit, push o despliegue.
+
+## Modo enfoque y escenario LiveKit dominante — 2026-08-03
+
+- El temario del aula se puede compactar y expandir desde la cabecera. En modo
+  compacto ocupa 4,5 rem: conserva la identidad del curso, la posición de los
+  módulos y los iconos de las actividades del módulo actual; cada icono expone
+  tipo, título y estado mediante tooltip y nombre accesible. Las lecciones de
+  lectura abren el temario completo; clases en vivo, antesalas, evaluaciones e
+  intentos activos empiezan en modo enfoque.
+- Los controles LiveKit se renderizan una sola vez en la cabecera compartida:
+  micrófono, cámara, pantalla, chat y salida. Se retiraron los iconos duplicados
+  que envolvían los controles oficiales y la salida genérica se oculta cuando
+  la sala aporta su propia desconexión. La cuadrícula dejó de reservar una fila
+  inferior y ocupa todo el escenario restante; el mismo componente conserva
+  sus controles locales en la ruta independiente de calendario.
+- La política HTTP de tiempo real reconoce tanto `/clases/<uuid>` como la ruta
+  inmersiva de actividad. Chrome autenticado abrió el selector nativo de
+  pantalla desde la sala sin el rechazo `display-capture` ni error de
+  dispositivo; se canceló con una recarga después de probar el límite del
+  navegador, sin seleccionar una pantalla del usuario. El grant del estudiante
+  habilitó pantalla y chat según la política publicada.
+- En Taller complementario B se comprobó el ingreso, el escenario dominante,
+  la alternancia del temario, un único grupo de controles y el envío y recepción
+  de un mensaje real. Para la entrega se inició además Taller complementario 01
+  mediante el servicio de dominio: Chrome volvió a entrar como estudiante y
+  recibió exactamente una vez `Validación final: chat LiveKit operativo`. Quiz
+  1 permaneció dentro del mismo reproductor con 10/10, 100 % y aprobado; una
+  lección de lectura conservó el temario expandido por defecto.
+- Evidencia verde: 13/13 pruebas frontend focales y 25/25 pruebas PostgreSQL de
+  scheduling; TypeScript, ESLint y Prettier global; Ruff, ausencia de migraciones
+  nuevas y `git diff --check`; build optimizado de Next.js; smoke de creación,
+  listado y borrado de sala LiveKit y worker privado de egress saludable. No se
+  añadieron dependencias ni migraciones y no se realizó commit, push o despliegue.

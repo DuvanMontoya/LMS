@@ -28,13 +28,18 @@ export function proxy(request: NextRequest) {
     const isLiveClass = /^\/organizaciones\/[^/]+\/clases\/[^/]+\/?$/.test(
       pathname,
     );
+    const isCourseActivity =
+      /^\/organizaciones\/[^/]+\/aprender\/[^/]+\/actividades\/[^/]+\/?$/.test(
+        pathname,
+      );
+    const allowsRealtimeMedia = isLiveClass || isCourseActivity;
     response.headers.set(
       'Permissions-Policy',
-      isLiveClass
+      allowsRealtimeMedia
         ? 'camera=(self), microphone=(self), display-capture=(self), geolocation=()'
         : 'camera=(), microphone=(), display-capture=(), geolocation=()',
     );
-    if (isLiveClass) {
+    if (allowsRealtimeMedia) {
       const isDevelopment = process.env.NODE_ENV === 'development';
       const livekitOrigin = safeLiveKitOrigin(
         process.env.NEXT_PUBLIC_LIVEKIT_URL,

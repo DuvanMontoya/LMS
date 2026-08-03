@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  Chat,
+  ChatEntry,
   ChatToggle,
   DisconnectButton,
   GridLayout,
@@ -11,30 +11,30 @@ import {
   RoomContext,
   StartAudio,
   TrackToggle,
+  formatChatMessageLinks,
+  useChat,
+  useLayoutContext,
   useParticipants,
   useTracks,
 } from '@livekit/components-react';
 import {
-  Camera,
-  CameraOff,
   CalendarClock,
-  Check,
   DoorOpen,
   Loader2,
   MessageCircle,
-  Mic,
-  MonitorUp,
   Radio,
+  Send,
   Timer,
   UserRound,
+  X,
 } from 'lucide-react';
 import { Room, RoomEvent, Track } from 'livekit-client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import {
   endLiveSession,
   enterLiveSession,
@@ -46,22 +46,11 @@ import {
 } from '@/lib/scheduling/api';
 import type { LiveSessionDetail } from '@/lib/scheduling/server';
 
-type DeviceOption = { deviceId: string; label: string };
-
 export function LiveClassroom({
   detail,
   slug,
 }: Readonly<{ detail: LiveSessionDetail; slug: string }>) {
   const [connection, setConnection] = useState<LiveConnection | null>(null);
-  const [devices, setDevices] = useState<{
-    audio: DeviceOption[];
-    video: DeviceOption[];
-  }>({ audio: [], video: [] });
-  const [audioDeviceId, setAudioDeviceId] = useState('');
-  const [videoDeviceId, setVideoDeviceId] = useState('');
-  const [permission, setPermission] = useState<
-    'idle' | 'checking' | 'ready' | 'denied'
-  >('idle');
   const [busy, setBusy] = useState(false);
   const [recordingAcknowledged, setRecordingAcknowledged] = useState(false);
   const [error, setError] = useState('');
@@ -72,26 +61,6 @@ export function LiveClassroom({
     const interval = window.setInterval(() => router.refresh(), 15_000);
     return () => window.clearInterval(interval);
   }, [detail.canStart, detail.status, router]);
-
-  async function inspectDevices() {
-    setPermission('checking');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: detail.canPublishAudio,
-        video: detail.canPublishVideo,
-      });
-      stream.getTracks().forEach((track) => track.stop());
-      const available = await navigator.mediaDevices.enumerateDevices();
-      const audio = available.filter((device) => device.kind === 'audioinput');
-      const video = available.filter((device) => device.kind === 'videoinput');
-      setDevices({ audio, video });
-      setAudioDeviceId(audio[0]?.deviceId ?? '');
-      setVideoDeviceId(video[0]?.deviceId ?? '');
-      setPermission('ready');
-    } catch {
-      setPermission('denied');
-    }
-  }
 
   async function enter() {
     setBusy(true);
@@ -116,7 +85,6 @@ export function LiveClassroom({
     return (
       <div className="live-class-experience" data-state="active">
         <ConnectedClassroom
-          audioDeviceId={audioDeviceId}
           connection={connection}
           slug={slug}
           onEnd={
@@ -124,7 +92,6 @@ export function LiveClassroom({
               ? () => endLiveSession(slug, detail.id)
               : undefined
           }
-          videoDeviceId={videoDeviceId}
         />
       </div>
     );
@@ -166,110 +133,16 @@ export function LiveClassroom({
       </header>
 
       <div className="live-lobby">
-        <div
-          className="live-lobby__preview"
-          aria-label="Vista previa de dispositivos"
-        >
-          <span className="live-lobby__preview-icon">
-            {permission === 'ready' ? <Camera /> : <CameraOff />}
-          </span>
-          <strong>
-            {permission === 'ready'
-              ? 'Tus dispositivos están listos'
-              : 'Prepara cámara y micrófono'}
-          </strong>
-          <p>
-            {permission === 'ready'
-              ? 'Podrás activarlos o silenciarlos dentro de la sala.'
-              : 'La comprobación es opcional y sólo solicita acceso a Chrome cuando la inicias.'}
-          </p>
-          <ul>
-            <li>
-              <Check /> Asistencia vinculada a esta actividad
-            </li>
-            <li>
-              <MessageCircle />
-              {detail.chatEnabled ? 'Chat habilitado' : 'Chat deshabilitado'}
-            </li>
-            <li>
-              <Radio />
-              {recordingEnabled
-                ? 'Grabación configurada'
-                : 'La sesión no se grabará'}
-            </li>
-          </ul>
-        </div>
         <div className="live-lobby__panel">
-          <span className="live-status" data-status={detail.status}>
-            {statusLabel(detail.status)}
-          </span>
-          <h2>Antes de entrar</h2>
-          <p>
-            Revisa tus dispositivos y las condiciones de la sesión. El acceso se
-            solicita únicamente cuando confirmas la entrada.
-          </p>
           {error ? (
             <Alert variant="destructive">
               <AlertTitle>No fue posible entrar</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
-          {permission === 'denied' ? (
-            <Alert>
-              <AlertTitle>Permiso no concedido</AlertTitle>
-              <AlertDescription>
-                Puedes revisar la configuración del navegador y volver a probar.
-              </AlertDescription>
-            </Alert>
-          ) : null}
           {recordingEnabled ? (
-            <Alert className="border-amber-600/30 bg-amber-500/10">
-              <AlertTitle>Esta clase puede ser grabada</AlertTitle>
-              <AlertDescription>
-                La grabación es privada y su estado se muestra dentro de la
-                sala. El chat es efímero y no forma parte de un historial
-                académico.
-              </AlertDescription>
-            </Alert>
-          ) : null}
-          <div className="grid gap-3">
-            {detail.canPublishAudio ? (
-              <Label>
-                Micrófono
-                <select
-                  className="academic-select"
-                  value={audioDeviceId}
-                  onChange={(event) => setAudioDeviceId(event.target.value)}
-                >
-                  {devices.audio.map((device, index) => (
-                    <option key={device.deviceId} value={device.deviceId}>
-                      {device.label || `Micrófono ${index + 1}`}
-                    </option>
-                  ))}
-                </select>
-              </Label>
-            ) : null}
-            {detail.canPublishVideo ? (
-              <Label>
-                Cámara
-                <select
-                  className="academic-select"
-                  value={videoDeviceId}
-                  onChange={(event) => setVideoDeviceId(event.target.value)}
-                >
-                  {devices.video.map((device, index) => (
-                    <option key={device.deviceId} value={device.deviceId}>
-                      {device.label || `Cámara ${index + 1}`}
-                    </option>
-                  ))}
-                </select>
-              </Label>
-            ) : null}
-          </div>
-          {recordingEnabled ? (
-            <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
+            <label className="live-lobby__recording">
               <input
-                className="mt-1"
                 checked={recordingAcknowledged}
                 onChange={(event) =>
                   setRecordingAcknowledged(event.target.checked)
@@ -277,25 +150,17 @@ export function LiveClassroom({
                 type="checkbox"
               />
               <span>
-                Entiendo que la sesión puede grabarse y que veré un indicador
-                cuando la grabación esté activa.
+                Comprendo que esta clase puede grabarse de forma privada.
               </span>
             </label>
           ) : null}
+          <p className="live-lobby__note">
+            Cámara, micrófono y pantalla se activan únicamente desde la sala.
+            {detail.chatEnabled
+              ? ' El chat está disponible en tiempo real.'
+              : ''}
+          </p>
           <div className="live-lobby__actions">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void inspectDevices()}
-              disabled={permission === 'checking'}
-            >
-              {permission === 'checking' ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <Mic />
-              )}{' '}
-              Probar dispositivos
-            </Button>
             <Button
               type="button"
               onClick={() => void enter()}
@@ -322,17 +187,13 @@ export function LiveClassroom({
 }
 
 function ConnectedClassroom({
-  audioDeviceId,
   connection,
   onEnd,
   slug,
-  videoDeviceId,
 }: Readonly<{
-  audioDeviceId: string;
   connection: LiveConnection;
   onEnd?: (() => Promise<unknown>) | undefined;
   slug: string;
-  videoDeviceId: string;
 }>) {
   const room = useMemo(
     () => new Room({ adaptiveStream: true, dynacast: true }),
@@ -343,6 +204,7 @@ function ConnectedClassroom({
   const [recordingStatus, setRecordingStatus] = useState(
     connection.session.recordingStatus,
   );
+  const [controlsHost, setControlsHost] = useState<HTMLElement | null>(null);
   const disconnectTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -361,29 +223,6 @@ function ConnectedClassroom({
             ? caught.message
             : 'No fue posible conectar con LiveKit.',
         );
-        return;
-      }
-      try {
-        const tracks: Promise<unknown>[] = [];
-        if (audioDeviceId && connection.session.canPublishAudio) {
-          tracks.push(
-            room.localParticipant.setMicrophoneEnabled(true, {
-              deviceId: audioDeviceId,
-            }),
-          );
-        }
-        if (videoDeviceId && connection.session.canPublishVideo) {
-          tracks.push(
-            room.localParticipant.setCameraEnabled(true, {
-              deviceId: videoDeviceId,
-            }),
-          );
-        }
-        await Promise.all(tracks);
-      } catch {
-        setMediaError(
-          'Entraste a la sala, pero Chrome no permitió activar cámara o micrófono.',
-        );
       }
     })();
     return () => {
@@ -393,15 +232,98 @@ function ConnectedClassroom({
         disconnectTimer.current = null;
       }, 0);
     };
-  }, [
-    audioDeviceId,
-    connection.session.canPublishAudio,
-    connection.session.canPublishVideo,
-    connection.serverUrl,
-    connection.token,
-    room,
-    videoDeviceId,
-  ]);
+  }, [connection.serverUrl, connection.token, room]);
+
+  useEffect(() => {
+    let mounted = true;
+    queueMicrotask(() => {
+      if (mounted) {
+        setControlsHost(
+          document.getElementById('learning-player-live-controls'),
+        );
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const reportDeviceError = (error: Error) =>
+    setMediaError(
+      error.message ||
+        'Chrome no permitió activar el dispositivo solicitado. Revisa el permiso y vuelve a intentarlo.',
+    );
+
+  const controls = (
+    <div className="live-classroom__controls" aria-label="Controles de clase">
+      {connection.session.canPublishAudio ? (
+        <TrackToggle
+          aria-label="Micrófono"
+          onDeviceError={reportDeviceError}
+          source={Track.Source.Microphone}
+        >
+          <span>Micrófono</span>
+        </TrackToggle>
+      ) : null}
+      {connection.session.canPublishVideo ? (
+        <TrackToggle
+          aria-label="Cámara"
+          onDeviceError={reportDeviceError}
+          source={Track.Source.Camera}
+        >
+          <span>Cámara</span>
+        </TrackToggle>
+      ) : null}
+      {connection.session.canShareScreen ? (
+        <TrackToggle
+          aria-label="Compartir pantalla"
+          onDeviceError={reportDeviceError}
+          source={Track.Source.ScreenShare}
+        >
+          <span>Compartir pantalla</span>
+        </TrackToggle>
+      ) : null}
+      {connection.session.chatEnabled ? (
+        <ChatToggle aria-label="Abrir o cerrar el chat">
+          <MessageCircle />
+          <span>Chat</span>
+        </ChatToggle>
+      ) : null}
+      {connection.session.canModerate &&
+      connection.session.recordingMode !== 'off' ? (
+        recordingStatus === 'active' || recordingStatus === 'starting' ? (
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() =>
+              void stopLiveRecording(slug, connection.session.id).then(
+                (result) => setRecordingStatus(result.status),
+              )
+            }
+          >
+            Detener grabación
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              void startLiveRecording(slug, connection.session.id).then(
+                (result) => setRecordingStatus(result.status),
+              )
+            }
+          >
+            <Radio />
+            Grabar
+          </Button>
+        )
+      ) : null}
+      <DisconnectButton onClick={() => onEnd && void onEnd()}>
+        <DoorOpen />
+        <span>Salir</span>
+      </DisconnectButton>
+    </div>
+  );
 
   return (
     <RoomContext.Provider value={room}>
@@ -431,75 +353,93 @@ function ConnectedClassroom({
               </AlertDescription>
             </Alert>
           ) : null}
-          <ParticipantGrid />
-          {connection.session.chatEnabled ? <Chat /> : null}
+          <ClassroomSurface chatEnabled={connection.session.chatEnabled} />
           {connection.session.canModerate ? (
             <ParticipantPanel sessionId={connection.session.id} slug={slug} />
           ) : null}
           <RoomAudioRenderer />
           <StartAudio label="Activar audio" />
-          <div
-            className="live-classroom__controls"
-            aria-label="Controles de clase"
-          >
-            {connection.session.canPublishAudio ? (
-              <TrackToggle source={Track.Source.Microphone}>
-                <Mic />
-                <span>Micrófono</span>
-              </TrackToggle>
-            ) : null}
-            {connection.session.canPublishVideo ? (
-              <TrackToggle source={Track.Source.Camera}>
-                <Camera />
-                <span>Cámara</span>
-              </TrackToggle>
-            ) : null}
-            {connection.session.canShareScreen ? (
-              <TrackToggle source={Track.Source.ScreenShare}>
-                <MonitorUp />
-                <span>Compartir pantalla</span>
-              </TrackToggle>
-            ) : null}
-            {connection.session.chatEnabled ? (
-              <ChatToggle>Chat</ChatToggle>
-            ) : null}
-            {connection.session.canModerate &&
-            connection.session.recordingMode !== 'off' ? (
-              recordingStatus === 'active' || recordingStatus === 'starting' ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() =>
-                    void stopLiveRecording(slug, connection.session.id).then(
-                      (result) => setRecordingStatus(result.status),
-                    )
-                  }
-                >
-                  Detener grabación
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    void startLiveRecording(slug, connection.session.id).then(
-                      (result) => setRecordingStatus(result.status),
-                    )
-                  }
-                >
-                  <Radio />
-                  Grabar
-                </Button>
-              )
-            ) : null}
-            <DisconnectButton onClick={() => onEnd && void onEnd()}>
-              <DoorOpen />
-              <span>Salir</span>
-            </DisconnectButton>
-          </div>
+          {controlsHost ? createPortal(controls, controlsHost) : controls}
         </section>
       </LayoutContextProvider>
     </RoomContext.Provider>
+  );
+}
+
+function ClassroomSurface({ chatEnabled }: Readonly<{ chatEnabled: boolean }>) {
+  const layout = useLayoutContext();
+  const chatOpen = Boolean(layout.widget.state?.showChat);
+  return (
+    <div className="live-classroom__surface" data-chat-open={chatOpen}>
+      <ParticipantGrid />
+      {chatEnabled && chatOpen ? <ClassroomChat /> : null}
+    </div>
+  );
+}
+
+function ClassroomChat() {
+  const { chatMessages, isSending, send } = useChat();
+  const [message, setMessage] = useState('');
+  const listRef = useRef<HTMLUListElement | null>(null);
+
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [chatMessages]);
+
+  return (
+    <aside className="live-classroom__chat" aria-label="Chat de la clase">
+      <header>
+        <div>
+          <strong>Chat</strong>
+          <span>Mensajes de esta sesión</span>
+        </div>
+        <ChatToggle aria-label="Cerrar chat">
+          <X />
+        </ChatToggle>
+      </header>
+      <ul ref={listRef} aria-live="polite">
+        {chatMessages.length ? (
+          chatMessages.map((entry, index) => (
+            <ChatEntry
+              entry={entry}
+              key={entry.id ?? `${entry.timestamp}-${index}`}
+              messageFormatter={formatChatMessageLinks}
+            />
+          ))
+        ) : (
+          <li className="live-classroom__chat-empty">
+            Aún no hay mensajes. Inicia la conversación con tu grupo.
+          </li>
+        )}
+      </ul>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          const value = message.trim();
+          if (!value || isSending) return;
+          void send(value).then(() => setMessage(''));
+        }}
+      >
+        <label className="sr-only" htmlFor="live-class-message">
+          Mensaje
+        </label>
+        <input
+          autoComplete="off"
+          id="live-class-message"
+          maxLength={1000}
+          onChange={(event) => setMessage(event.target.value)}
+          placeholder="Escribe un mensaje…"
+          value={message}
+        />
+        <button
+          aria-label="Enviar mensaje"
+          disabled={isSending || !message.trim()}
+          type="submit"
+        >
+          <Send />
+        </button>
+      </form>
+    </aside>
   );
 }
 

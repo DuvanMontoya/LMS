@@ -130,7 +130,7 @@ export function AssessmentComposer({
   );
   const [objectiveSubjectId, setObjectiveSubjectId] = useState(
     selectedObjectiveSubjects.size === 1
-      ? [...selectedObjectiveSubjects][0] ?? ''
+      ? ([...selectedObjectiveSubjects][0] ?? '')
       : '',
   );
   const [includeOtherSubjects, setIncludeOtherSubjects] = useState(
@@ -1124,8 +1124,9 @@ function AssessmentItemForm({
   questions: QuestionOption[];
 }>) {
   const router = useRouter();
-  const bankNames = [...new Set(questions.map((question) => question.bankName))]
-    .sort((left, right) => left.localeCompare(right, 'es'));
+  const bankNames = [
+    ...new Set(questions.map((question) => question.bankName)),
+  ].sort((left, right) => left.localeCompare(right, 'es'));
   const [bankName, setBankName] = useState(
     bankNames.length === 1 ? (bankNames[0] ?? '') : '',
   );

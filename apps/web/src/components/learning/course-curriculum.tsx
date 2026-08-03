@@ -9,22 +9,30 @@ import {
   ClipboardCheck,
   Clock3,
   LockKeyhole,
-  PlayCircle,
   Video,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { components } from '@/lib/api/generated/platform';
 
 type LearningModule = components['schemas']['ModuleOutline'];
 
 export function CourseCurriculum({
+  accordionName,
+  compact = false,
   currentActivityId,
   currentUnitId,
   modules,
   variant = 'course',
 }: Readonly<{
+  accordionName?: string;
+  compact?: boolean;
   currentUnitId?: string | undefined;
   currentActivityId?: string | undefined;
   modules: readonly LearningModule[];
@@ -42,6 +50,7 @@ export function CourseCurriculum({
   return (
     <ol
       className="course-curriculum"
+      data-compact={compact}
       data-variant={variant}
       aria-label="Contenido del curso"
     >
@@ -63,57 +72,84 @@ export function CourseCurriculum({
                   activity.source_activity_id === currentUnitId
                 : activity.is_current;
               const blocked = activity.status === 'locked';
+              const accessibleTitle = `${module.position}.${activity.position} ${activity.title}`;
               const content = (
                 <>
                   <ActivityState status={activity.status} />
-                  <span>
-                    <strong>
-                      {module.position}.{activity.position} {activity.title}
-                    </strong>
-                    {variant === 'course' && activity.summary ? (
-                      <small>{activity.summary}</small>
-                    ) : null}
-                    <small className="course-curriculum__kind">
+                  {variant === 'player' ? (
+                    <span className="course-curriculum__item-title">
                       <ActivityKind type={activity.type} />
-                      {activityTypeLabel(activity.type)}
-                      {variant === 'course'
-                        ? activity.required
-                          ? ' · Obligatoria'
-                          : ' · Opcional'
-                        : null}
-                    </small>
-                    {blocked && activity.blocked_reason ? (
-                      <small>{activity.blocked_reason}</small>
-                    ) : null}
-                  </span>
-                  {activity.estimated_duration_minutes ? (
+                      <span className="sr-only">
+                        {activityTypeLabel(activity.type)}:{' '}
+                      </span>
+                      <strong>
+                        {module.position}.{activity.position} {activity.title}
+                      </strong>
+                    </span>
+                  ) : (
+                    <span>
+                      <strong>
+                        {module.position}.{activity.position} {activity.title}
+                      </strong>
+                      {activity.summary ? (
+                        <small>{activity.summary}</small>
+                      ) : null}
+                      <small className="course-curriculum__kind">
+                        <ActivityKind type={activity.type} />
+                        {activityTypeLabel(activity.type)}
+                        {activity.required ? ' · Obligatoria' : ' · Opcional'}
+                      </small>
+                      {blocked && activity.blocked_reason ? (
+                        <small>{activity.blocked_reason}</small>
+                      ) : null}
+                    </span>
+                  )}
+                  {variant === 'course' &&
+                  activity.estimated_duration_minutes ? (
                     <small className="course-curriculum__duration">
                       <Clock3 />
                       {activity.estimated_duration_minutes} min
                     </small>
-                  ) : current ? (
-                    <PlayCircle
-                      aria-hidden="true"
-                      className="course-curriculum__play"
-                    />
                   ) : null}
                 </>
               );
+              const item = blocked ? (
+                <span
+                  aria-label={`${activityTypeLabel(activity.type)}: ${accessibleTitle}. ${activityStatusLabel(activity.status)}`}
+                  aria-disabled="true"
+                  data-current="false"
+                  data-status={activity.status}
+                >
+                  {content}
+                </span>
+              ) : (
+                <Link
+                  aria-current={current ? 'step' : undefined}
+                  aria-label={`${activityTypeLabel(activity.type)}: ${accessibleTitle}. ${activityStatusLabel(activity.status)}`}
+                  data-current={current ? 'true' : undefined}
+                  data-status={activity.status}
+                  href={activity.href}
+                  ref={current ? activeItemRef : undefined}
+                >
+                  {content}
+                </Link>
+              );
               return (
                 <li key={activity.id}>
-                  {blocked ? (
-                    <span aria-disabled="true" data-current="false">
-                      {content}
-                    </span>
+                  {variant === 'player' && compact ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>{item}</TooltipTrigger>
+                      <TooltipContent
+                        className="course-curriculum__tooltip"
+                        side="right"
+                        sideOffset={8}
+                      >
+                        <span>{activityTypeLabel(activity.type)}</span>
+                        <strong>{accessibleTitle}</strong>
+                      </TooltipContent>
+                    </Tooltip>
                   ) : (
-                    <Link
-                      aria-current={current ? 'step' : undefined}
-                      data-current={current ? 'true' : undefined}
-                      href={activity.href}
-                      ref={current ? activeItemRef : undefined}
-                    >
-                      {content}
-                    </Link>
+                    item
                   )}
                 </li>
               );
@@ -124,9 +160,15 @@ export function CourseCurriculum({
         return (
           <li className="course-curriculum__module" key={module.id}>
             {variant === 'player' ? (
-              <details open={moduleCurrent}>
-                <summary>
-                  <span className="course-curriculum__module-number">
+              <details name={accordionName} open={moduleCurrent}>
+                <summary
+                  aria-label={`Módulo ${module.position}: ${module.title}`}
+                  title={compact ? module.title : undefined}
+                >
+                  <span
+                    className="course-curriculum__module-number"
+                    data-module-position={module.position}
+                  >
                     Módulo {module.position}
                   </span>
                   <span className="course-curriculum__module-title">
@@ -204,6 +246,13 @@ function activityTypeLabel(type: string) {
   if (type === 'live_class') return 'Clase en vivo';
   if (type === 'assessment') return 'Evaluación';
   return 'Lección';
+}
+
+function activityStatusLabel(status: string) {
+  if (['completed', 'passed', 'waived'].includes(status)) return 'Completada';
+  if (status === 'locked') return 'Bloqueada';
+  if (status === 'in_progress') return 'En progreso';
+  return 'No iniciada';
 }
 
 function activityCountLabel(count: number) {
