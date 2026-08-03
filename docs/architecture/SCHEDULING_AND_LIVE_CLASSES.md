@@ -45,16 +45,29 @@ flowchart LR
 
 - `/organizaciones/<slug>/calendario` carga el intervalo visible, aborta la
   solicitud anterior al navegar y usa CSS/tema explícito de FullCalendar 7.
-- `/organizaciones/<slug>/clases/<sessionId>` es la única ruta con permisos de
-  cámara, micrófono y captura de pantalla. El token se pide al confirmar entrada
-  y vive sólo en memoria.
+- `/organizaciones/<slug>/clases/<sessionId>` y la actividad inmersiva
+  `/organizaciones/<slug>/aprender/<curso>/actividades/<activityId>` reciben
+  permisos de cámara, micrófono y captura de pantalla. El token se pide al
+  confirmar entrada y vive sólo en memoria.
 - `Room` se instancia una vez por conexión, se desconecta al desmontar y
   LiveKit maneja reconexión de transporte. La pantalla programada refresca su
   estado sin convertir el navegador en autoridad.
+
+## Grabación privada
+
+- ADR 0040 gobierna Egress. La composición `screen_share` usa una plantilla
+  técnica pública, sin sesión del LMS, que sólo renderiza la pantalla
+  compartida y el audio de la sala.
+- La política publicada define modo, composición y resolución predeterminada;
+  `LiveSession` conserva la composición y resolución realmente ejecutadas.
+- Los archivos locales permanecen en el volumen privado de desarrollo. No hay
+  URL pública ni contrato de entrega hasta definir almacenamiento cifrado,
+  retención y autorización institucional para producción.
 
 ## Límites deliberados
 
 No se instalaron FullCalendar Premium/Scheduler, RRULE en el navegador, SDK RTC
 Python, Agents, IA, transcripción, aplicación móvil ni otro proveedor. Egress
-permanece apagado hasta que exista una decisión de almacenamiento, retención,
-privacidad y acceso a grabaciones.
+está habilitado únicamente en desarrollo local con salida privada; no se
+considera listo para producción hasta implementar almacenamiento, retención,
+privacidad y acceso autorizados.

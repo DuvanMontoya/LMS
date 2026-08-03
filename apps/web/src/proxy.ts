@@ -14,6 +14,36 @@ export function proxy(request: NextRequest) {
   const isPublicIdentityRoute =
     pathname.startsWith('/auth/') || isInvitationActivation;
 
+  if (pathname === '/livekit/egress') {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const livekitOrigin = safeLiveKitOrigin(
+      process.env.LIVEKIT_EGRESS_CONNECT_URL ??
+        (isDevelopment
+          ? (request.nextUrl.searchParams.get('url') ?? undefined)
+          : undefined),
+      isDevelopment,
+    );
+    const response = setSensitivePageHeaders(
+      NextResponse.next(),
+      'no-referrer',
+    );
+    response.headers.set(
+      'Content-Security-Policy',
+      [
+        "default-src 'self'",
+        `script-src 'self'${isDevelopment ? " 'unsafe-eval' 'unsafe-inline'" : ''}`,
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: blob:",
+        "media-src 'self' blob:",
+        `connect-src 'self'${livekitOrigin ? ` ${livekitOrigin}` : ''}`,
+        "object-src 'none'",
+        "base-uri 'none'",
+        "frame-ancestors 'none'",
+      ].join('; '),
+    );
+    return response;
+  }
+
   if (isPublicIdentityRoute) {
     return setSensitivePageHeaders(
       NextResponse.next(),
@@ -105,6 +135,7 @@ export const config = {
     '/invitaciones/activar/:path*',
     '/invitaciones/activar-cuenta/:path*',
     '/invitaciones/crear-cuenta/:path*',
+    '/livekit/:path*',
     '/organizaciones/:path*',
   ],
 };

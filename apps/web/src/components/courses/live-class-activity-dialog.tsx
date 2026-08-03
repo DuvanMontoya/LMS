@@ -341,9 +341,9 @@ export function LiveClassActivityDialog({
                     </p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-3 sm:grid-cols-3">
                   <label className="academic-field">
-                    Inicio
+                    Disponibilidad
                     <select
                       className="academic-control"
                       name="live-recording-mode"
@@ -351,29 +351,50 @@ export function LiveClassActivityDialog({
                       value={recording}
                     >
                       <option value="off">No grabar</option>
-                      <option value="manual">Manual por docente</option>
-                      <option value="automatic">Automática al iniciar</option>
+                      <option value="manual">El docente decide en el aula</option>
                     </select>
                   </label>
                   <label className="academic-field">
-                    Composición
+                    Composición sugerida
                     <select
                       className="academic-control"
                       disabled={recording === 'off'}
                       name="live-recording-layout"
-                      defaultValue={binding?.recording_layout ?? 'speaker'}
+                      defaultValue={binding?.recording_layout ?? 'screen_share'}
                     >
+                      <option value="screen_share">
+                        Sólo pantalla compartida
+                      </option>
                       <option value="speaker">Docente activo</option>
                       <option value="grid">Cuadrícula</option>
                     </select>
                   </label>
+                  <label className="academic-field">
+                    Calidad sugerida
+                    <select
+                      className="academic-control"
+                      disabled={recording === 'off'}
+                      name="live-recording-resolution"
+                      defaultValue={binding?.recording_resolution ?? '1080p'}
+                    >
+                      <option value="1080p">1080p · Full HD</option>
+                      <option value="720p">720p · HD</option>
+                    </select>
+                  </label>
                 </div>
                 {recording !== 'off' ? (
-                  <p className="mt-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-950">
-                    Los participantes deberán reconocer el aviso de grabación
-                    antes de conectarse. La grabación no convierte el chat en
-                    historial.
-                  </p>
+                  <div className="mt-3 space-y-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-950">
+                    <p>
+                      Estos valores sólo preparan la selección inicial. El
+                      docente elige en el aula cuándo empezar, la composición
+                      y la calidad de cada grabación.
+                    </p>
+                    <p>
+                      Todos deberán reconocer el aviso antes de conectarse. El
+                      chat no se incorpora al archivo ni se convierte en
+                      historial.
+                    </p>
+                  </div>
                 ) : null}
               </section>
 

@@ -92,7 +92,8 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
             "student_video_enabled": True,
             "student_screen_share_enabled": False,
             "recording_mode": "manual",
-            "recording_layout": "speaker",
+            "recording_layout": "screen_share",
+            "recording_resolution": "1080p",
             "max_participants": 100,
             "room_empty_timeout_seconds": 600,
             "room_departure_timeout_seconds": 30,
@@ -107,6 +108,8 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
         activity = CourseActivity.objects.get(pk=created.data["activity_id"])
         self.assertEqual(activity.estimated_duration_minutes, 60)
         self.assertEqual(created.data["minimum_attendance_minutes"], 45)
+        self.assertEqual(created.data["recording_layout"], "screen_share")
+        self.assertEqual(created.data["recording_resolution"], "1080p")
         self.assertEqual(
             created.data["revision_lock_version"], revision.lock_version + 3
         )
@@ -239,8 +242,9 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
                 "student_audio_enabled": False,
                 "student_video_enabled": False,
                 "student_screen_share_enabled": False,
-                "recording_mode": "automatic",
+                "recording_mode": "manual",
                 "recording_layout": "grid",
+                "recording_resolution": "720p",
                 "max_participants": 80,
                 "room_empty_timeout_seconds": 300,
                 "room_departure_timeout_seconds": 45,
@@ -265,7 +269,9 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
         self.assertFalse(activity.required)
         self.assertEqual(binding.session_mode, "webinar")
         self.assertFalse(binding.chat_enabled)
-        self.assertEqual(binding.recording_mode, "automatic")
+        self.assertEqual(binding.recording_mode, "manual")
+        self.assertEqual(binding.recording_layout, "grid")
+        self.assertEqual(binding.recording_resolution, "720p")
         self.assertEqual(binding.minimum_attendance_minutes, 54)
         self.assertEqual(binding.updated_by, owner)
 

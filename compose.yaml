@@ -62,7 +62,10 @@ services:
           tcp_port: 7881
           udp_port: 7882
           use_external_ip: false
-          node_ip: 127.0.0.1
+          # Browser clients use the published loopback ports while Egress uses
+          # the container-network candidate. Advertising only 127.0.0.1 makes
+          # the recorder call itself and can never establish its PeerConnection.
+          enable_loopback_candidate: true
         keys:
           ${LIVEKIT_API_KEY:?LIVEKIT_API_KEY is required}: ${LIVEKIT_API_SECRET:?LIVEKIT_API_SECRET is required}
         redis:
@@ -96,6 +99,25 @@ services:
       redis:
         condition: service_healthy
 
+  livekit-egress-init:
+    profiles: ["live"]
+    image: livekit/egress:v1.12.0@sha256:30b3389518c851e6c20e964bba9d5ce89d0bd09b8b0fe0d0d36c9546303c8430
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-ec"]
+    command: ["chown 1001:0 /out && chmod 0770 /out"]
+    volumes:
+      - livekit_recordings:/out
+    network_mode: none
+    read_only: true
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+
   livekit-egress:
     profiles: ["live"]
     image: livekit/egress:v1.12.0
@@ -121,6 +143,8 @@ services:
     expose:
       - "8080"
     depends_on:
+      livekit-egress-init:
+        condition: service_completed_successfully
       livekit:
         condition: service_started
       redis:

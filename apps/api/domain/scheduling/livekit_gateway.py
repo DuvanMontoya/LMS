@@ -24,6 +24,7 @@ class LiveKitConfiguration:
     token_ttl_seconds: int
     room_empty_timeout_seconds: int
     max_participants: int
+    egress_template_url: str = ""
 
 
 def configuration() -> LiveKitConfiguration:
@@ -40,6 +41,7 @@ def configuration() -> LiveKitConfiguration:
         token_ttl_seconds=settings.LIVEKIT_TOKEN_TTL_SECONDS,
         room_empty_timeout_seconds=settings.LIVEKIT_ROOM_EMPTY_TIMEOUT_SECONDS,
         max_participants=settings.LIVEKIT_MAX_PARTICIPANTS,
+        egress_template_url=settings.LIVEKIT_EGRESS_TEMPLATE_URL,
     )
 
 
@@ -163,13 +165,40 @@ class LiveKitGateway:
             raise LiveKitRejected("LiveKit rechazó el cierre de la sala.") from error
 
     def start_room_recording(
-        self, *, room_name: str, layout: str, filepath: str
+        self,
+        *,
+        room_name: str,
+        layout: str,
+        resolution: str,
+        filepath: str,
     ) -> Any:
+        if layout == "screen_share" and not self.config.egress_template_url:
+            raise LiveKitUnavailable(
+                "La plantilla privada de grabación de pantalla no está configurada."
+            )
+        preset = (
+            api.EncodingOptionsPreset.H264_1080P_30
+            if resolution == "1080p"
+            else api.EncodingOptionsPreset.H264_720P_30
+        )
+
         async def operation(client: api.LiveKitAPI):
             return await client.egress.start_room_composite_egress(
                 api.RoomCompositeEgressRequest(
                     room_name=room_name,
-                    layout="grid" if layout == "grid" else "speaker-dark",
+                    layout=(
+                        "screen-share"
+                        if layout == "screen_share"
+                        else "grid"
+                        if layout == "grid"
+                        else "speaker-dark"
+                    ),
+                    custom_base_url=(
+                        self.config.egress_template_url
+                        if layout == "screen_share"
+                        else ""
+                    ),
+                    preset=preset,
                     file_outputs=[
                         api.EncodedFileOutput(
                             file_type=api.EncodedFileType.MP4,
@@ -208,6 +237,13 @@ class LiveKitGateway:
             return async_to_sync(self._with_client)(operation)
         except Exception as error:
             raise LiveKitRejected("No fue posible consultar participantes.") from error
+
+    def has_active_screen_share(self, *, room_name: str) -> bool:
+        return any(
+            track.source == api.TrackSource.SCREEN_SHARE and not track.muted
+            for participant in self.list_participants(room_name=room_name)
+            for track in participant.tracks
+        )
 
     def update_participant_permissions(
         self,

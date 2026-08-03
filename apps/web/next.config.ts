@@ -10,7 +10,14 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR ?? '.next',
   // Next dev blocks client assets when the application is opened through the
   // loopback host documented for local review instead of its localhost default.
-  allowedDevOrigins: ['127.0.0.1'],
+  allowedDevOrigins: ['127.0.0.1', 'host.docker.internal'],
+  logging: {
+    incomingRequests: {
+      // Room Composite Egress necessarily appends its scoped recorder token as
+      // a query parameter. Never copy that URL into the development log.
+      ignore: [/^\/livekit\/egress(?:\?|\/|$)/],
+    },
+  },
   // Django's canonical API contract requires terminal slashes. Preserve them
   // before external rewrites so unsafe requests never follow a 301 redirect.
   skipTrailingSlashRedirect: true,
@@ -32,6 +39,20 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        source: '/livekit/egress',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          {
+            key: 'Permissions-Policy',
+            value:
+              'camera=(), microphone=(), display-capture=(), geolocation=()',
+          },
+        ],
+      },
       {
         source: '/auth/:path*',
         headers: [

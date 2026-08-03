@@ -79,7 +79,7 @@ function liveClassConfiguration(
   const duration = Number(formData.get('live-duration'));
   const thresholdPercent = Number(formData.get('live-threshold'));
   const recordingMode = String(formData.get('live-recording-mode')) as
-    'automatic' | 'manual' | 'off';
+    'manual' | 'off';
   if (
     !Number.isFinite(duration) ||
     duration < 1 ||
@@ -108,9 +108,15 @@ function liveClassConfiguration(
     // policy valid even when recording is off and the layout is not editable.
     recording_layout:
       recordingMode === 'off'
-        ? 'speaker'
-        : (String(formData.get('live-recording-layout')) as 'grid' | 'speaker'),
+        ? 'screen_share'
+        : (String(formData.get('live-recording-layout')) as
+            'grid' | 'screen_share' | 'speaker'),
     recording_mode: recordingMode,
+    recording_resolution:
+      recordingMode === 'off'
+        ? '1080p'
+        : (String(formData.get('live-recording-resolution')) as
+            '720p' | '1080p'),
     required: formData.get('live-required') === 'on',
     room_departure_timeout_seconds: Number(
       formData.get('live-departure-timeout'),

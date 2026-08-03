@@ -29,6 +29,7 @@ from .models import (
     AttendanceSegment,
     LiveKitWebhookEvent,
     LiveSession,
+    LiveSessionRecording,
 )
 
 PARTICIPANT_END_EVENTS = frozenset(
@@ -306,8 +307,23 @@ def _process_egress(event: api.WebhookEvent, session: LiveSession) -> None:
         "egress_ended": EgressStatus.ENDED,
     }
     session.egress_id = event.egress_info.egress_id
-    session.egress_status = status_map[event.event]
+    session.egress_status = (
+        EgressStatus.FAILED if event.egress_info.error else status_map[event.event]
+    )
     session.save(update_fields=("egress_id", "egress_status", "updated_at"))
+    recording = LiveSessionRecording.objects.filter(
+        session=session,
+        egress_id=event.egress_info.egress_id,
+    ).first()
+    if recording is None:
+        return
+    recording.status = session.egress_status
+    recording.failure_message = event.egress_info.error or ""
+    update_fields = ["status", "failure_message"]
+    if event.event == "egress_ended":
+        recording.stopped_at = timezone.now()
+        update_fields.append("stopped_at")
+    recording.save(update_fields=update_fields)
 
 
 def _process_domain_event(

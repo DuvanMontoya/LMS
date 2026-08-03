@@ -27,6 +27,9 @@ class FakeLiveKitGateway:
         self.closed_rooms: list[str] = []
         self.permission_changes: list[dict[str, object]] = []
         self.removed: list[str] = []
+        self.recordings: list[dict[str, object]] = []
+        self.stopped_recordings: list[str] = []
+        self.screen_share_active = True
 
     def create_room(self, *, room_name: str, metadata: str, **options: object):
         del metadata
@@ -49,6 +52,18 @@ class FakeLiveKitGateway:
     def remove_participant(self, *, room_name: str, identity: str) -> None:
         del room_name
         self.removed.append(identity)
+
+    def start_room_recording(self, **values: object):
+        self.recordings.append(values)
+        return SimpleNamespace(egress_id="EG_test")
+
+    def stop_recording(self, *, egress_id: str):
+        self.stopped_recordings.append(egress_id)
+        return SimpleNamespace(egress_id=egress_id)
+
+    def has_active_screen_share(self, *, room_name: str) -> bool:
+        del room_name
+        return self.screen_share_active
 
 
 class SchedulingFixtureMixin(LearningFixtureMixin):

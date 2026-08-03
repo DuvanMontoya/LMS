@@ -122,11 +122,22 @@ export function endLiveSession(slug: string, sessionId: string) {
   );
 }
 
-export function startLiveRecording(slug: string, sessionId: string) {
+export function startLiveRecording(
+  slug: string,
+  sessionId: string,
+  recordingLayout: 'grid' | 'screen_share' | 'speaker',
+  recordingResolution: '720p' | '1080p',
+) {
   return required(
     platformBrowserClient.POST(
       '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/recording/start/',
-      { params: { path: { slug, session_id: sessionId } } },
+      {
+        params: { path: { slug, session_id: sessionId } },
+        body: {
+          recording_layout: recordingLayout,
+          recording_resolution: recordingResolution,
+        },
+      },
     ),
   );
 }

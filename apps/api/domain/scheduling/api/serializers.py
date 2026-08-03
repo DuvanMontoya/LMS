@@ -38,11 +38,12 @@ class LiveClassCourseActivityConfigurationSerializer(serializers.Serializer):
     student_audio_enabled = serializers.BooleanField(default=True)
     student_video_enabled = serializers.BooleanField(default=True)
     student_screen_share_enabled = serializers.BooleanField(default=False)
-    recording_mode = serializers.ChoiceField(
-        choices=("off", "manual", "automatic"), default="off"
-    )
+    recording_mode = serializers.ChoiceField(choices=("off", "manual"), default="off")
     recording_layout = serializers.ChoiceField(
-        choices=("grid", "speaker"), default="speaker"
+        choices=("screen_share", "grid", "speaker"), default="screen_share"
+    )
+    recording_resolution = serializers.ChoiceField(
+        choices=("720p", "1080p"), default="1080p"
     )
     max_participants = serializers.IntegerField(min_value=2, max_value=1_000)
     room_empty_timeout_seconds = serializers.IntegerField(min_value=60, max_value=3_600)
@@ -71,6 +72,7 @@ class LiveClassActivityBindingSerializer(serializers.Serializer):
     student_screen_share_enabled = serializers.BooleanField()
     recording_mode = serializers.CharField()
     recording_layout = serializers.CharField()
+    recording_resolution = serializers.CharField()
     max_participants = serializers.IntegerField()
     room_empty_timeout_seconds = serializers.IntegerField()
     room_departure_timeout_seconds = serializers.IntegerField()
@@ -89,9 +91,7 @@ class MaterializeCourseGroupLiveClassesSerializer(serializers.Serializer):
     timezone_name = serializers.CharField(max_length=64)
     slots = CourseGroupLiveClassSlotSerializer(many=True, min_length=1, max_length=12)
 
-    def validate_slots(
-        self, value: list[dict[str, object]]
-    ) -> list[dict[str, object]]:
+    def validate_slots(self, value: list[dict[str, object]]) -> list[dict[str, object]]:
         keys = [(row["weekday"], row["starts_at"]) for row in value]
         if len(keys) != len(set(keys)):
             raise serializers.ValidationError("No repitas el mismo horario semanal.")
@@ -221,6 +221,8 @@ class LiveSessionSummarySerializer(serializers.Serializer):
     canPublishVideo = serializers.BooleanField()
     chatEnabled = serializers.BooleanField()
     recordingMode = serializers.CharField()
+    recordingLayout = serializers.CharField()
+    recordingResolution = serializers.CharField()
     recordingStatus = serializers.CharField()
 
 
@@ -232,6 +234,15 @@ class LiveConnectionSerializer(serializers.Serializer):
 
 class LiveConnectionRequestSerializer(serializers.Serializer):
     recording_acknowledged = serializers.BooleanField(default=False)
+
+
+class LiveRecordingStartSerializer(serializers.Serializer):
+    recording_layout = serializers.ChoiceField(
+        choices=("screen_share", "grid", "speaker")
+    )
+    recording_resolution = serializers.ChoiceField(
+        choices=("720p", "1080p"), default="1080p"
+    )
 
 
 class LiveSessionDetailSerializer(serializers.Serializer):
@@ -260,6 +271,7 @@ class LiveSessionDetailSerializer(serializers.Serializer):
     chatEnabled = serializers.BooleanField()
     recordingMode = serializers.CharField()
     recordingLayout = serializers.CharField()
+    recordingResolution = serializers.CharField()
     recordingStatus = serializers.CharField()
     canEdit = serializers.BooleanField()
     canDelete = serializers.BooleanField()

@@ -43,6 +43,7 @@ from domain.scheduling.services import (
     join_live_session,
     materialize_course_group_live_classes,
     reschedule_occurrence,
+    start_live_recording,
     start_live_session,
 )
 
@@ -83,7 +84,9 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
             "provider": "scheduling",
             "minimum_attendance_minutes": 30,
             "chat_enabled": True,
-            "recording_mode": "off",
+            "recording_mode": "manual",
+            "recording_layout": "screen_share",
+            "recording_resolution": "1080p",
         }
         group_activity.save(
             update_fields=(
@@ -117,6 +120,56 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
         self.assertEqual(series.course_group_activity.title, "Clase materializable")
         self.assertTrue(series.activity_progress_contribution)
         self.assertEqual(series.occurrences.count(), 1)
+        session = series.occurrences.get().live_session
+        session.status = LiveSessionStatus.LIVE
+        session.actual_started_at = timezone.now()
+        session.save(update_fields=("status", "actual_started_at", "updated_at"))
+        gateway = FakeLiveKitGateway()
+        gateway.screen_share_active = False
+        with (
+            self.settings(LIVEKIT_EGRESS_ENABLED=True),
+            self.assertRaisesMessage(
+                SchedulingConflict,
+                "Comparte una pantalla antes de iniciar una grabación de pantalla sola.",
+            ),
+        ):
+            start_live_recording(
+                actor=context["owner"],
+                session_id=session.id,
+                recording_layout="screen_share",
+                recording_resolution="720p",
+                gateway=gateway,
+            )
+        self.assertEqual(gateway.recordings, [])
+        gateway.screen_share_active = True
+        with self.settings(LIVEKIT_EGRESS_ENABLED=True):
+            start_live_recording(
+                actor=context["owner"],
+                session_id=session.id,
+                recording_layout="screen_share",
+                recording_resolution="720p",
+                gateway=gateway,
+            )
+        session.refresh_from_db()
+        self.assertEqual(
+            gateway.recordings,
+            [
+                {
+                    "room_name": session.room_name,
+                    "layout": "screen_share",
+                    "resolution": "720p",
+                    "filepath": gateway.recordings[0]["filepath"],
+                }
+            ],
+        )
+        self.assertTrue(str(gateway.recordings[0]["filepath"]).endswith(".mp4"))
+        self.assertEqual(session.recording_layout, "screen_share")
+        self.assertEqual(session.recording_resolution, "720p")
+        self.assertEqual(session.egress_id, "EG_test")
+        recording = session.recordings.get()
+        self.assertEqual(recording.layout, "screen_share")
+        self.assertEqual(recording.resolution, "720p")
+        self.assertEqual(recording.started_by_id, context["owner"].id)
 
     def test_course_group_session_requires_current_group_assignment(self) -> None:
         context = self.scheduling_context()

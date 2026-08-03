@@ -46,6 +46,7 @@ from .models import (
     AcademicEventSeries,
     LiveRecordingAcknowledgement,
     LiveSession,
+    LiveSessionRecording,
 )
 from .policies import (
     LiveAccess,
@@ -591,7 +592,10 @@ def _live_policy(session: LiveSession) -> dict[str, Any]:
     activity = session.occurrence.series.course_group_activity
     if activity is None or activity.binding_snapshot.get("provider") != "scheduling":
         return {}
-    return activity.binding_snapshot
+    policy = dict(activity.binding_snapshot)
+    if policy.get("recording_mode") == "automatic":
+        policy["recording_mode"] = "manual"
+    return policy
 
 
 def _require_live_access(
@@ -636,6 +640,8 @@ def connection_payload(
             or policy.get("student_video_enabled", True),
             "chatEnabled": policy.get("chat_enabled", False),
             "recordingMode": policy.get("recording_mode", "off"),
+            "recordingLayout": policy.get("recording_layout", "screen_share"),
+            "recordingResolution": policy.get("recording_resolution", "1080p"),
             "recordingStatus": session.egress_status,
         },
     }
@@ -684,12 +690,6 @@ def start_live_session(
                 "updated_at",
             )
         )
-        if policy.get("recording_mode") == "automatic":
-            try:
-                _start_recording(session=session, gateway=adapter)
-            except LiveKitRejected:
-                session.egress_status = EgressStatus.FAILED
-                session.save(update_fields=("egress_status", "updated_at"))
     return connection_payload(
         actor=actor, session=session, access=access, gateway=adapter
     )
@@ -756,6 +756,14 @@ def end_live_session(
             session.egress_status = EgressStatus.ENDED
         except LiveKitRejected:
             session.egress_status = EgressStatus.FAILED
+        LiveSessionRecording.objects.filter(
+            session=session,
+            egress_id=session.egress_id,
+            status__in=(EgressStatus.STARTING, EgressStatus.ACTIVE),
+        ).update(
+            status=session.egress_status,
+            stopped_at=timezone.now(),
+        )
     adapter.close_room(room_name=session.room_name)
     now = timezone.now()
     session.status = LiveSessionStatus.ENDED
@@ -775,7 +783,14 @@ def end_live_session(
     return session
 
 
-def _start_recording(*, session: LiveSession, gateway: LiveKitGateway) -> LiveSession:
+def _start_recording(
+    *,
+    actor: object,
+    session: LiveSession,
+    gateway: LiveKitGateway,
+    recording_layout: str,
+    recording_resolution: str | None = None,
+) -> LiveSession:
     if not settings.LIVEKIT_EGRESS_ENABLED:
         raise SchedulingInvalid("La grabación no está habilitada en este entorno.")
     policy = _live_policy(session)
@@ -785,26 +800,69 @@ def _start_recording(*, session: LiveSession, gateway: LiveKitGateway) -> LiveSe
         raise SchedulingConflict("Inicia la sala antes de grabar.")
     if session.egress_status in {EgressStatus.STARTING, EgressStatus.ACTIVE}:
         return session
+    resolution = recording_resolution or policy.get("recording_resolution", "1080p")
+    if resolution not in {"720p", "1080p"}:
+        raise SchedulingInvalid("Selecciona una resolución de grabación válida.")
+    if recording_layout not in {"screen_share", "grid", "speaker"}:
+        raise SchedulingInvalid("Selecciona una composición de grabación válida.")
+    if recording_layout == "screen_share" and not gateway.has_active_screen_share(
+        room_name=session.room_name
+    ):
+        raise SchedulingConflict(
+            "Comparte una pantalla antes de iniciar una grabación de pantalla sola."
+        )
+    filepath = f"/out/{session.room_name}-{timezone.now():%Y%m%dT%H%M%SZ}.mp4"
     info = gateway.start_room_recording(
         room_name=session.room_name,
-        layout=policy.get("recording_layout", "speaker"),
-        filepath=f"/out/{session.room_name}-{timezone.now():%Y%m%dT%H%M%SZ}.mp4",
+        layout=recording_layout,
+        resolution=resolution,
+        filepath=filepath,
     )
     session.egress_id = getattr(info, "egress_id", "")
     session.egress_status = EgressStatus.STARTING
-    session.save(update_fields=("egress_id", "egress_status", "updated_at"))
+    session.recording_layout = recording_layout
+    session.recording_resolution = resolution
+    LiveSessionRecording.objects.create(
+        session=session,
+        egress_id=session.egress_id,
+        status=EgressStatus.STARTING,
+        layout=recording_layout,
+        resolution=resolution,
+        filepath=filepath,
+        started_by_id=actor.id,
+    )
+    session.save(
+        update_fields=(
+            "egress_id",
+            "egress_status",
+            "recording_layout",
+            "recording_resolution",
+            "updated_at",
+        )
+    )
     return session
 
 
 @transaction.atomic
 def start_live_recording(
-    *, actor: object, session_id: uuid.UUID, gateway: LiveKitGateway | None = None
+    *,
+    actor: object,
+    session_id: uuid.UUID,
+    recording_layout: str,
+    recording_resolution: str | None = None,
+    gateway: LiveKitGateway | None = None,
 ) -> LiveSession:
     session = _session_with_context(session_id, lock=True)
     access = _require_live_access(actor=actor, session=session, now=timezone.now())
     if not access.can_moderate:
         raise SchedulingAccessDenied("No puedes iniciar la grabación.")
-    return _start_recording(session=session, gateway=gateway or LiveKitGateway())
+    return _start_recording(
+        actor=actor,
+        session=session,
+        gateway=gateway or LiveKitGateway(),
+        recording_layout=recording_layout,
+        recording_resolution=recording_resolution,
+    )
 
 
 @transaction.atomic
@@ -823,6 +881,11 @@ def stop_live_recording(
     (gateway or LiveKitGateway()).stop_recording(egress_id=session.egress_id)
     session.egress_status = EgressStatus.ENDED
     session.save(update_fields=("egress_status", "updated_at"))
+    LiveSessionRecording.objects.filter(
+        session=session,
+        egress_id=session.egress_id,
+        status__in=(EgressStatus.STARTING, EgressStatus.ACTIVE),
+    ).update(status=EgressStatus.ENDED, stopped_at=timezone.now())
     return session
 
 

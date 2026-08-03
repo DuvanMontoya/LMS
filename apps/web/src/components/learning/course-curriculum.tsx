@@ -156,6 +156,14 @@ export function CourseCurriculum({
             })}
           </ol>
         );
+        const moduleNumber = (
+          <span
+            className="course-curriculum__module-number"
+            data-module-position={module.position}
+          >
+            Módulo {module.position}
+          </span>
+        );
 
         return (
           <li className="course-curriculum__module" key={module.id}>
@@ -163,14 +171,22 @@ export function CourseCurriculum({
               <details name={accordionName} open={moduleCurrent}>
                 <summary
                   aria-label={`Módulo ${module.position}: ${module.title}`}
-                  title={compact ? module.title : undefined}
                 >
-                  <span
-                    className="course-curriculum__module-number"
-                    data-module-position={module.position}
-                  >
-                    Módulo {module.position}
-                  </span>
+                  {compact ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>{moduleNumber}</TooltipTrigger>
+                      <TooltipContent
+                        className="course-curriculum__tooltip"
+                        side="right"
+                        sideOffset={8}
+                      >
+                        <span>Módulo {module.position}</span>
+                        <strong>{module.title}</strong>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    moduleNumber
+                  )}
                   <span className="course-curriculum__module-title">
                     {module.title}
                   </span>

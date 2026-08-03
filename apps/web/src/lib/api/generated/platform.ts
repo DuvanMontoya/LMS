@@ -3595,6 +3595,7 @@ export interface components {
       minimum_attended_occurrences: number;
       recording_layout: string;
       recording_mode: string;
+      recording_resolution: string;
       revision_lock_version: number;
       room_departure_timeout_seconds: number;
       room_empty_timeout_seconds: number;
@@ -3618,10 +3619,12 @@ export interface components {
       learning_objective_ids: string[];
       max_participants: number;
       minimum_attendance_basis_points: number;
-      /** @default speaker */
+      /** @default screen_share */
       recording_layout?: components['schemas']['RecordingLayoutEnum'];
       /** @default off */
       recording_mode?: components['schemas']['RecordingModeEnum'];
+      /** @default 1080p */
+      recording_resolution?: components['schemas']['RecordingResolutionEnum'];
       /** @default true */
       required?: boolean;
       room_departure_timeout_seconds: number;
@@ -3648,10 +3651,12 @@ export interface components {
       minimum_attendance_basis_points: number;
       /** Format: uuid */
       module_id: string;
-      /** @default speaker */
+      /** @default screen_share */
       recording_layout?: components['schemas']['RecordingLayoutEnum'];
       /** @default off */
       recording_mode?: components['schemas']['RecordingModeEnum'];
+      /** @default 1080p */
+      recording_resolution?: components['schemas']['RecordingResolutionEnum'];
       /** @default true */
       required?: boolean;
       room_departure_timeout_seconds: number;
@@ -3674,6 +3679,11 @@ export interface components {
     LiveConnectionRequest: {
       /** @default false */
       recording_acknowledged?: boolean;
+    };
+    LiveRecordingStart: {
+      recording_layout: components['schemas']['RecordingLayoutEnum'];
+      /** @default 1080p */
+      recording_resolution?: components['schemas']['RecordingResolutionEnum'];
     };
     LiveSessionDetail: {
       activity_required: boolean;
@@ -3703,6 +3713,7 @@ export interface components {
       liveStatus: string;
       recordingLayout: string;
       recordingMode: string;
+      recordingResolution: string;
       recordingStatus: string;
       /** Format: date-time */
       scheduledEnd: string;
@@ -3721,7 +3732,9 @@ export interface components {
       chatEnabled: boolean;
       /** Format: uuid */
       id: string;
+      recordingLayout: string;
       recordingMode: string;
+      recordingResolution: string;
       recordingStatus: string;
       role: string;
       /** Format: date-time */
@@ -4745,18 +4758,24 @@ export interface components {
       size_bytes: number;
     };
     /**
-     * @description * `grid` - grid
+     * @description * `screen_share` - screen_share
+     * * `grid` - grid
      * * `speaker` - speaker
      * @enum {string}
      */
-    RecordingLayoutEnum: 'grid' | 'speaker';
+    RecordingLayoutEnum: 'screen_share' | 'grid' | 'speaker';
     /**
      * @description * `off` - off
      * * `manual` - manual
-     * * `automatic` - automatic
      * @enum {string}
      */
-    RecordingModeEnum: 'off' | 'manual' | 'automatic';
+    RecordingModeEnum: 'off' | 'manual';
+    /**
+     * @description * `720p` - 720p
+     * * `1080p` - 1080p
+     * @enum {string}
+     */
+    RecordingResolutionEnum: '720p' | '1080p';
     /**
      * @description * `course` - Tomar un curso
      * * `school_support` - Refuerzo escolar
@@ -13151,6 +13170,13 @@ export interface operations {
       path: {
         session_id: string;
         slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LiveRecordingStart'];
+        'application/x-www-form-urlencoded': components['schemas']['LiveRecordingStart'];
+        'multipart/form-data': components['schemas']['LiveRecordingStart'];
       };
     };
     responses: {

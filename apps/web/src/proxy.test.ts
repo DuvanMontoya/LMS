@@ -16,6 +16,7 @@ function publicRequest(path: string) {
 describe('route security headers', () => {
   afterEach(() => {
     delete process.env.NEXT_PUBLIC_LIVEKIT_URL;
+    delete process.env.LIVEKIT_EGRESS_CONNECT_URL;
   });
 
   it('allows capture only on a live-class route and pins the LiveKit origin', () => {
@@ -57,6 +58,26 @@ describe('route security headers', () => {
       'camera=(), microphone=(), display-capture=(), geolocation=()',
     );
     expect(response.headers.has('Content-Security-Policy')).toBe(false);
+  });
+
+  it('keeps the Egress renderer public, non-referring and restricted to its configured LiveKit origin', () => {
+    process.env.LIVEKIT_EGRESS_CONNECT_URL = 'wss://media.example.test';
+    const response = proxy(
+      publicRequest('/livekit/egress?token=recorder-token&url=wss://evil.test'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(response.headers.get('Referrer-Policy')).toBe('no-referrer');
+    expect(response.headers.get('Permissions-Policy')).toBe(
+      'camera=(), microphone=(), display-capture=(), geolocation=()',
+    );
+    expect(response.headers.get('Content-Security-Policy')).toContain(
+      "connect-src 'self' wss://media.example.test",
+    );
+    expect(response.headers.get('Content-Security-Policy')).not.toContain(
+      'evil.test',
+    );
   });
 
   it('allows public invitation activation without retaining its bearer token in shared caches or referrers', () => {

@@ -58,13 +58,22 @@ class LiveClassActivityBinding(NoPhysicalDeleteModel):
     student_screen_share_enabled = models.BooleanField(default=False)
     recording_mode = models.CharField(
         max_length=16,
-        choices=(("off", "Off"), ("manual", "Manual"), ("automatic", "Automatic")),
+        choices=(("off", "Off"), ("manual", "Manual")),
         default="off",
     )
     recording_layout = models.CharField(
         max_length=16,
-        choices=(("grid", "Grid"), ("speaker", "Speaker")),
-        default="speaker",
+        choices=(
+            ("screen_share", "Screen share only"),
+            ("grid", "Grid"),
+            ("speaker", "Speaker"),
+        ),
+        default="screen_share",
+    )
+    recording_resolution = models.CharField(
+        max_length=8,
+        choices=(("720p", "720p"), ("1080p", "1080p")),
+        default="1080p",
     )
     max_participants = models.PositiveSmallIntegerField(default=100)
     room_empty_timeout_seconds = models.PositiveSmallIntegerField(default=600)
@@ -418,6 +427,8 @@ class LiveSession(NoPhysicalDeleteModel):
     egress_status = models.CharField(
         max_length=16, choices=EgressStatus.choices, default=EgressStatus.DISABLED
     )
+    recording_layout = models.CharField(max_length=16, blank=True)
+    recording_resolution = models.CharField(max_length=8, blank=True)
     lock_version = models.PositiveIntegerField(default=1, editable=False)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -464,6 +475,52 @@ class LiveSession(NoPhysicalDeleteModel):
 
     def __str__(self) -> str:
         return f"{self.occurrence_id}:{self.status}"
+
+
+class LiveSessionRecording(NoPhysicalDeleteModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session = models.ForeignKey(
+        LiveSession,
+        on_delete=models.PROTECT,
+        related_name="recordings",
+    )
+    egress_id = models.CharField(max_length=128, unique=True)
+    status = models.CharField(
+        max_length=16,
+        choices=EgressStatus.choices,
+        default=EgressStatus.STARTING,
+    )
+    layout = models.CharField(
+        max_length=16,
+        choices=(
+            ("screen_share", "Screen share only"),
+            ("grid", "Grid"),
+            ("speaker", "Speaker"),
+        ),
+    )
+    resolution = models.CharField(
+        max_length=8,
+        choices=(("720p", "720p"), ("1080p", "1080p")),
+    )
+    filepath = models.CharField(max_length=255)
+    failure_message = models.TextField(blank=True)
+    started_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="live_recordings_started",
+    )
+    started_at = models.DateTimeField(auto_now_add=True)
+    stopped_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("started_at", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("session",),
+                condition=Q(status__in=(EgressStatus.STARTING, EgressStatus.ACTIVE)),
+                name="sched_one_active_recording_per_session",
+            )
+        ]
 
 
 class LiveRecordingAcknowledgement(NoPhysicalDeleteModel):

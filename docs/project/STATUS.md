@@ -1630,3 +1630,33 @@ Siguiente paso:
   nuevas y `git diff --check`; build optimizado de Next.js; smoke de creación,
   listado y borrado de sala LiveKit y worker privado de egress saludable. No se
   añadieron dependencias ni migraciones y no se realizó commit, push o despliegue.
+
+## Aula LiveKit nativa, composición y grabación verificable — 2026-08-03
+
+- La sala activa adopta el mismo fondo `slate-950` que usa el escenario de
+  LiveKit (`oklch(0.129 0.042 264.695)`) en reproductor, cabecera y temario. La
+  identidad del LMS permanece, pero ya no se perciben tres superficies
+  incrustadas. `Release N` dejó de renderizarse en cualquier actividad.
+- El temario compacto centra los iconos en una cuadrícula de 36 px, oculta la
+  barra visual sin impedir desplazamiento y unifica módulos y actividades con
+  el mismo tooltip de 75 ms. La sala comienza en modo automático: prioriza una
+  pantalla compartida con tira de participantes y permite cambiar a sólo
+  presentación o mosaico de cámaras sin alterar pistas ni permisos.
+- Cámara y micrófono consultan dispositivos reales, reaccionan a cambios y
+  deshabilitan sólo el control inexistente con una explicación concreta. Si el
+  dispositivo existe, el selector oficial de LiveKit permite elegirlo. No se
+  convierte `NotFoundError` en un falso éxito.
+- ADR 0040 incorpora la grabación `screen_share`: una plantilla Room Composite
+  suscribe únicamente pantalla y conserva audio remoto. Autoría y moderación
+  permiten `1080p` o `720p`; PostgreSQL registra composición y resolución
+  ejecutadas en `LiveSession`. La ruta técnica de Egress es pública para el
+  grabador, pero `no-store`, `no-referrer`, sin permisos de captura y con CSP
+  limitada al origen LiveKit.
+- Se añadió `scheduling.0011` para la resolución de política y los datos de la
+  ejecución. OpenAPI y el cliente tipado incluyen ambos campos y el cuerpo de
+  inicio manual. No se añadieron dependencias: la plantilla sigue el protocolo
+  oficial de señales `START_RECORDING`/`END_RECORDING`.
+- Evidencia actual: `scheduling:check`, Ruff, TypeScript y ESLint verdes; 25/25
+  pruebas PostgreSQL de scheduling y 8/8 pruebas frontend focales. Continúa
+  abierta la inspección final en Chrome y del MP4 real antes de declarar
+  completada la grabación audiovisual.

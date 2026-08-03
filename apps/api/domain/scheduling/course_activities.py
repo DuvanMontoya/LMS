@@ -53,6 +53,7 @@ def create_and_bind_live_class_activity(
     student_screen_share_enabled: bool,
     recording_mode: str,
     recording_layout: str,
+    recording_resolution: str,
     max_participants: int,
     room_empty_timeout_seconds: int,
     room_departure_timeout_seconds: int,
@@ -127,6 +128,7 @@ def create_and_bind_live_class_activity(
         student_screen_share_enabled=student_screen_share_enabled,
         recording_mode=recording_mode,
         recording_layout=recording_layout,
+        recording_resolution=recording_resolution,
         max_participants=max_participants,
         room_empty_timeout_seconds=room_empty_timeout_seconds,
         room_departure_timeout_seconds=room_departure_timeout_seconds,
@@ -156,6 +158,7 @@ def update_live_class_activity(
     student_screen_share_enabled: bool,
     recording_mode: str,
     recording_layout: str,
+    recording_resolution: str,
     max_participants: int,
     room_empty_timeout_seconds: int,
     room_departure_timeout_seconds: int,
@@ -224,6 +227,7 @@ def update_live_class_activity(
         student_screen_share_enabled=student_screen_share_enabled,
         recording_mode=recording_mode,
         recording_layout=recording_layout,
+        recording_resolution=recording_resolution,
         max_participants=max_participants,
         room_empty_timeout_seconds=room_empty_timeout_seconds,
         room_departure_timeout_seconds=room_departure_timeout_seconds,
@@ -248,7 +252,8 @@ def bind_live_class_activity(
     student_video_enabled: bool = True,
     student_screen_share_enabled: bool = False,
     recording_mode: str = "off",
-    recording_layout: str = "speaker",
+    recording_layout: str = "screen_share",
+    recording_resolution: str = "1080p",
     max_participants: int = 100,
     room_empty_timeout_seconds: int = 600,
     room_departure_timeout_seconds: int = 30,
@@ -290,6 +295,7 @@ def bind_live_class_activity(
         student_screen_share_enabled=student_screen_share_enabled,
         recording_mode=recording_mode,
         recording_layout=recording_layout,
+        recording_resolution=recording_resolution,
         max_participants=max_participants,
         room_empty_timeout_seconds=room_empty_timeout_seconds,
         room_departure_timeout_seconds=room_departure_timeout_seconds,
@@ -324,6 +330,7 @@ def update_live_class_binding(
     student_screen_share_enabled: bool,
     recording_mode: str,
     recording_layout: str,
+    recording_resolution: str,
     max_participants: int,
     room_empty_timeout_seconds: int,
     room_departure_timeout_seconds: int,
@@ -367,6 +374,7 @@ def update_live_class_binding(
     binding.student_screen_share_enabled = student_screen_share_enabled
     binding.recording_mode = recording_mode
     binding.recording_layout = recording_layout
+    binding.recording_resolution = recording_resolution
     binding.max_participants = max_participants
     binding.room_empty_timeout_seconds = room_empty_timeout_seconds
     binding.room_departure_timeout_seconds = room_departure_timeout_seconds
@@ -398,6 +406,7 @@ def _upsert_live_class_binding(
     student_screen_share_enabled: bool,
     recording_mode: str,
     recording_layout: str,
+    recording_resolution: str,
     max_participants: int,
     room_empty_timeout_seconds: int,
     room_departure_timeout_seconds: int,
@@ -417,6 +426,7 @@ def _upsert_live_class_binding(
         "student_screen_share_enabled": student_screen_share_enabled,
         "recording_mode": recording_mode,
         "recording_layout": recording_layout,
+        "recording_resolution": recording_resolution,
         "max_participants": max_participants,
         "room_empty_timeout_seconds": room_empty_timeout_seconds,
         "room_departure_timeout_seconds": room_departure_timeout_seconds,
@@ -481,6 +491,7 @@ def snapshot_binding(activity: CourseActivity) -> dict[str, Any]:
         "student_screen_share_enabled": binding.student_screen_share_enabled,
         "recording_mode": binding.recording_mode,
         "recording_layout": binding.recording_layout,
+        "recording_resolution": binding.recording_resolution,
         "max_participants": binding.max_participants,
         "room_empty_timeout_seconds": binding.room_empty_timeout_seconds,
         "room_departure_timeout_seconds": binding.room_departure_timeout_seconds,
@@ -502,6 +513,7 @@ def clone_binding(source: CourseActivity, target: CourseActivity, actor: Any) ->
         student_screen_share_enabled=binding.student_screen_share_enabled,
         recording_mode=binding.recording_mode,
         recording_layout=binding.recording_layout,
+        recording_resolution=binding.recording_resolution,
         max_participants=binding.max_participants,
         room_empty_timeout_seconds=binding.room_empty_timeout_seconds,
         room_departure_timeout_seconds=binding.room_departure_timeout_seconds,

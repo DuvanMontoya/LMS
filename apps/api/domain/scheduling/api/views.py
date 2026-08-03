@@ -75,6 +75,7 @@ from .serializers import (
     LiveClassCourseActivityCreateSerializer,
     LiveConnectionRequestSerializer,
     LiveConnectionSerializer,
+    LiveRecordingStartSerializer,
     LiveSessionDetailSerializer,
     LiveSessionListQuerySerializer,
     MaterializeCourseGroupLiveClassesResultSerializer,
@@ -119,6 +120,7 @@ def _binding_payload(
         "student_screen_share_enabled": binding.student_screen_share_enabled,
         "recording_mode": binding.recording_mode,
         "recording_layout": binding.recording_layout,
+        "recording_resolution": binding.recording_resolution,
         "max_participants": binding.max_participants,
         "room_empty_timeout_seconds": binding.room_empty_timeout_seconds,
         "room_departure_timeout_seconds": binding.room_departure_timeout_seconds,
@@ -170,9 +172,7 @@ class CourseGroupLiveClassMaterializationView(APIView):
         request=MaterializeCourseGroupLiveClassesSerializer,
         responses={200: MaterializeCourseGroupLiveClassesResultSerializer},
     )
-    def post(
-        self, request: Request, slug: str, course_group_id: str
-    ) -> Response:
+    def post(self, request: Request, slug: str, course_group_id: str) -> Response:
         organization = _organization(request, slug)
         if not can_create_schedule(request.user, organization):
             return _error(SchedulingAccessDenied("No puedes programar clases."))
@@ -188,9 +188,7 @@ class CourseGroupLiveClassMaterializationView(APIView):
                 actor=request.user,
                 organization=organization,
                 course_group=course_group,
-                first_week_starts_on=serializer.validated_data[
-                    "first_week_starts_on"
-                ],
+                first_week_starts_on=serializer.validated_data["first_week_starts_on"],
                 timezone_name=serializer.validated_data["timezone_name"],
                 slots=serializer.validated_data["slots"],
             )
@@ -314,6 +312,7 @@ class LiveClassActivityBindingView(APIView):
                 ],
                 recording_mode=serializer.validated_data["recording_mode"],
                 recording_layout=serializer.validated_data["recording_layout"],
+                recording_resolution=serializer.validated_data["recording_resolution"],
                 max_participants=serializer.validated_data["max_participants"],
                 room_empty_timeout_seconds=serializer.validated_data[
                     "room_empty_timeout_seconds"
@@ -383,6 +382,7 @@ class LiveClassCourseActivityCreateView(APIView):
                 ],
                 recording_mode=serializer.validated_data["recording_mode"],
                 recording_layout=serializer.validated_data["recording_layout"],
+                recording_resolution=serializer.validated_data["recording_resolution"],
                 max_participants=serializer.validated_data["max_participants"],
                 room_empty_timeout_seconds=serializer.validated_data[
                     "room_empty_timeout_seconds"
@@ -784,16 +784,23 @@ class LiveSessionEndView(APIView):
 class LiveRecordingStartView(APIView):
     @extend_schema(
         operation_id="scheduling_live_recording_start",
-        request=None,
+        request=LiveRecordingStartSerializer,
         responses={200: OperationAcceptedSerializer, 409: SchedulingErrorSerializer},
     )
     def post(self, request: Request, slug: str, session_id: uuid.UUID) -> Response:
         organization = _organization(request, slug)
+        serializer = LiveRecordingStartSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         get_object_or_404(
             LiveSession, pk=session_id, occurrence__series__organization=organization
         )
         result = _domain_call(
-            lambda: start_live_recording(actor=request.user, session_id=session_id)
+            lambda: start_live_recording(
+                actor=request.user,
+                session_id=session_id,
+                recording_layout=serializer.validated_data["recording_layout"],
+                recording_resolution=serializer.validated_data["recording_resolution"],
+            )
         )
         return (
             result

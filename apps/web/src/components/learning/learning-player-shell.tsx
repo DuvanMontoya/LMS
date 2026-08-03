@@ -14,7 +14,6 @@ import { useState, type ReactNode } from 'react';
 
 import { CourseCurriculum } from '@/components/learning/course-curriculum';
 import { LearningProgress } from '@/components/learning/learning-progress';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -129,9 +128,6 @@ export function LearningPlayerShell({
             <span>{positionLabel}</span>
             <p>{title}</p>
           </div>
-          <Badge className="learning-player__release" variant="outline">
-            Release {releaseNumber}
-          </Badge>
           {headerAccessory ? (
             <div className="learning-player__header-accessory">
               {headerAccessory}

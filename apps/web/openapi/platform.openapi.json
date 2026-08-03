@@ -5394,6 +5394,7 @@
           "minimum_attended_occurrences": { "type": "integer" },
           "recording_layout": { "type": "string" },
           "recording_mode": { "type": "string" },
+          "recording_resolution": { "type": "string" },
           "revision_lock_version": { "type": "integer" },
           "room_departure_timeout_seconds": { "type": "integer" },
           "room_empty_timeout_seconds": { "type": "integer" },
@@ -5413,6 +5414,7 @@
           "minimum_attended_occurrences",
           "recording_layout",
           "recording_mode",
+          "recording_resolution",
           "revision_lock_version",
           "room_departure_timeout_seconds",
           "room_empty_timeout_seconds",
@@ -5481,11 +5483,17 @@
           },
           "recording_layout": {
             "allOf": [{ "$ref": "#/components/schemas/RecordingLayoutEnum" }],
-            "default": "speaker"
+            "default": "screen_share"
           },
           "recording_mode": {
             "allOf": [{ "$ref": "#/components/schemas/RecordingModeEnum" }],
             "default": "off"
+          },
+          "recording_resolution": {
+            "allOf": [
+              { "$ref": "#/components/schemas/RecordingResolutionEnum" }
+            ],
+            "default": "1080p"
           },
           "required": { "default": true, "type": "boolean" },
           "room_departure_timeout_seconds": {
@@ -5561,11 +5569,17 @@
           "module_id": { "format": "uuid", "type": "string" },
           "recording_layout": {
             "allOf": [{ "$ref": "#/components/schemas/RecordingLayoutEnum" }],
-            "default": "speaker"
+            "default": "screen_share"
           },
           "recording_mode": {
             "allOf": [{ "$ref": "#/components/schemas/RecordingModeEnum" }],
             "default": "off"
+          },
+          "recording_resolution": {
+            "allOf": [
+              { "$ref": "#/components/schemas/RecordingResolutionEnum" }
+            ],
+            "default": "1080p"
           },
           "required": { "default": true, "type": "boolean" },
           "room_departure_timeout_seconds": {
@@ -5619,6 +5633,21 @@
         },
         "type": "object"
       },
+      "LiveRecordingStart": {
+        "properties": {
+          "recording_layout": {
+            "$ref": "#/components/schemas/RecordingLayoutEnum"
+          },
+          "recording_resolution": {
+            "allOf": [
+              { "$ref": "#/components/schemas/RecordingResolutionEnum" }
+            ],
+            "default": "1080p"
+          }
+        },
+        "required": ["recording_layout"],
+        "type": "object"
+      },
       "LiveSessionDetail": {
         "properties": {
           "activity_required": { "type": "boolean" },
@@ -5655,6 +5684,7 @@
           "liveStatus": { "type": "string" },
           "recordingLayout": { "type": "string" },
           "recordingMode": { "type": "string" },
+          "recordingResolution": { "type": "string" },
           "recordingStatus": { "type": "string" },
           "scheduledEnd": { "format": "date-time", "type": "string" },
           "scheduledStart": { "format": "date-time", "type": "string" },
@@ -5685,6 +5715,7 @@
           "liveStatus",
           "recordingLayout",
           "recordingMode",
+          "recordingResolution",
           "recordingStatus",
           "scheduledEnd",
           "scheduledStart",
@@ -5702,7 +5733,9 @@
           "canShareScreen": { "type": "boolean" },
           "chatEnabled": { "type": "boolean" },
           "id": { "format": "uuid", "type": "string" },
+          "recordingLayout": { "type": "string" },
           "recordingMode": { "type": "string" },
+          "recordingResolution": { "type": "string" },
           "recordingStatus": { "type": "string" },
           "role": { "type": "string" },
           "scheduledEnd": { "format": "date-time", "type": "string" },
@@ -5717,7 +5750,9 @@
           "canShareScreen",
           "chatEnabled",
           "id",
+          "recordingLayout",
           "recordingMode",
+          "recordingResolution",
           "recordingStatus",
           "role",
           "scheduledEnd",
@@ -7791,13 +7826,18 @@
         "type": "object"
       },
       "RecordingLayoutEnum": {
-        "description": "* `grid` - grid\n* `speaker` - speaker",
-        "enum": ["grid", "speaker"],
+        "description": "* `screen_share` - screen_share\n* `grid` - grid\n* `speaker` - speaker",
+        "enum": ["screen_share", "grid", "speaker"],
         "type": "string"
       },
       "RecordingModeEnum": {
-        "description": "* `off` - off\n* `manual` - manual\n* `automatic` - automatic",
-        "enum": ["off", "manual", "automatic"],
+        "description": "* `off` - off\n* `manual` - manual",
+        "enum": ["off", "manual"],
+        "type": "string"
+      },
+      "RecordingResolutionEnum": {
+        "description": "* `720p` - 720p\n* `1080p` - 1080p",
+        "enum": ["720p", "1080p"],
         "type": "string"
       },
       "RegistrationReasonEnum": {
@@ -25148,6 +25188,20 @@
             "schema": { "type": "string" }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LiveRecordingStart" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/LiveRecordingStart" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/LiveRecordingStart" }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {

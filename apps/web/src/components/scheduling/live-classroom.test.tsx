@@ -41,6 +41,7 @@ const detail: LiveSessionDetail = {
   liveStatus: 'live',
   recordingLayout: 'speaker',
   recordingMode: 'off',
+  recordingResolution: '1080p',
   recordingStatus: 'disabled',
   scheduledEnd: '2026-08-01T16:00:00Z',
   scheduledStart: '2026-08-01T15:00:00Z',
