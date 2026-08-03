@@ -12,7 +12,11 @@ from domain.assets.storage.gateway import (
     ObjectHead,
     PresignedPost,
 )
-from domain.organizations.services import create_organization_with_owner
+from domain.organizations.choices import RoleCode
+from domain.organizations.services import (
+    add_existing_member_with_roles,
+    create_organization_with_owner,
+)
 
 
 def owner_context(suffix: str = "assets"):
@@ -26,7 +30,23 @@ def owner_context(suffix: str = "assets"):
     organization = create_organization_with_owner(
         actor=owner, name=f"Organization {suffix}", slug=f"organization-{suffix}"
     )
-    return owner, organization
+    administrator = get_user_model().objects.create_user(
+        email=f"administrator-{suffix}@example.test",
+        password="CorrectHorseBatteryStaple42!",
+    )
+    EmailAddress.objects.create(
+        user=administrator,
+        email=administrator.email,
+        primary=True,
+        verified=True,
+    )
+    add_existing_member_with_roles(
+        actor=owner,
+        organization=organization,
+        user=administrator,
+        roles={RoleCode.ADMINISTRATOR},
+    )
+    return administrator, organization
 
 
 class FakeStorageGateway:

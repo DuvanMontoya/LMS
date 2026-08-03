@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
@@ -357,7 +358,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
         return revision.number if revision else None
 
     @extend_schema_field(serializers.DateTimeField())
-    def get_updated_at(self, assessment: Assessment):
+    def get_updated_at(self, assessment: Assessment) -> datetime:
         revision = self._latest_revision(assessment)
         return revision.updated_at if revision else assessment.created_at
 

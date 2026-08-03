@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from allauth.account.models import EmailAddress
 from botocore.exceptions import ClientError
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -95,6 +96,12 @@ class AssetManagementCommandTests(TestCase):
         author = get_user_model().objects.create_user(
             email="author@demo.local",
             password="CorrectHorseBatteryStaple42!",
+        )
+        EmailAddress.objects.create(
+            user=author,
+            email=author.email,
+            primary=True,
+            verified=True,
         )
         add_existing_member_with_roles(
             actor=owner,

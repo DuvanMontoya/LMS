@@ -172,7 +172,7 @@ def _validate_prompt_legacy_nodes(prompt: object) -> None:
             legacy_blocks.append({"type": "paragraph", "attrs": {"nodeId": node_id}})
         else:
             legacy_blocks.append(block)
-    legacy = {"type": "doc", "content": legacy_blocks}
+    legacy: Any = {"type": "doc", "content": legacy_blocks}
     errors = sorted(
         validator_for(CONTENT_SCHEMA_V1_ID).iter_errors(legacy),
         key=lambda error: tuple(str(item) for item in error.absolute_path),
