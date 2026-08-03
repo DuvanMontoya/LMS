@@ -5,6 +5,7 @@ import {
   ChatToggle,
   DisconnectButton,
   GridLayout,
+  LayoutContextProvider,
   ParticipantTile,
   RoomAudioRenderer,
   RoomContext,
@@ -331,6 +332,8 @@ function ConnectedClassroom({
     };
   }, [
     audioDeviceId,
+    connection.session.canPublishAudio,
+    connection.session.canPublishVideo,
     connection.serverUrl,
     connection.token,
     room,
@@ -339,97 +342,100 @@ function ConnectedClassroom({
 
   return (
     <RoomContext.Provider value={room}>
-      <section className="live-classroom" data-lk-theme="default">
-        {connectionError ? (
-          <Alert variant="destructive">
-            <AlertTitle>Conexión interrumpida</AlertTitle>
-            <AlertDescription>{connectionError}</AlertDescription>
-          </Alert>
-        ) : null}
-        {mediaError ? (
-          <Alert>
-            <AlertTitle>Dispositivos no disponibles</AlertTitle>
-            <AlertDescription>{mediaError}</AlertDescription>
-          </Alert>
-        ) : null}
-        {recordingStatus === 'active' || recordingStatus === 'starting' ? (
-          <Alert className="border-red-600/30 bg-red-500/10">
-            <Radio className="animate-pulse text-red-700" />
-            <AlertTitle>
-              Grabación {recordingStatus === 'active' ? 'activa' : 'iniciando'}
-            </AlertTitle>
-            <AlertDescription>
-              LiveKit Egress está componiendo esta sala en un archivo privado.
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        <ParticipantGrid />
-        {connection.session.chatEnabled ? <Chat /> : null}
-        {connection.session.canModerate ? (
-          <ParticipantPanel sessionId={connection.session.id} slug={slug} />
-        ) : null}
-        <RoomAudioRenderer />
-        <StartAudio label="Activar audio" />
-        <div
-          className="live-classroom__controls"
-          aria-label="Controles de clase"
-        >
-          {connection.session.canPublishAudio ? (
-            <TrackToggle source={Track.Source.Microphone}>
-              <Mic />
-              <span>Micrófono</span>
-            </TrackToggle>
+      <LayoutContextProvider>
+        <section className="live-classroom" data-lk-theme="default">
+          {connectionError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Conexión interrumpida</AlertTitle>
+              <AlertDescription>{connectionError}</AlertDescription>
+            </Alert>
           ) : null}
-          {connection.session.canPublishVideo ? (
-            <TrackToggle source={Track.Source.Camera}>
-              <Camera />
-              <span>Cámara</span>
-            </TrackToggle>
+          {mediaError ? (
+            <Alert>
+              <AlertTitle>Dispositivos no disponibles</AlertTitle>
+              <AlertDescription>{mediaError}</AlertDescription>
+            </Alert>
           ) : null}
-          {connection.session.canShareScreen ? (
-            <TrackToggle source={Track.Source.ScreenShare}>
-              <MonitorUp />
-              <span>Compartir pantalla</span>
-            </TrackToggle>
+          {recordingStatus === 'active' || recordingStatus === 'starting' ? (
+            <Alert className="border-red-600/30 bg-red-500/10">
+              <Radio className="animate-pulse text-red-700" />
+              <AlertTitle>
+                Grabación{' '}
+                {recordingStatus === 'active' ? 'activa' : 'iniciando'}
+              </AlertTitle>
+              <AlertDescription>
+                LiveKit Egress está componiendo esta sala en un archivo privado.
+              </AlertDescription>
+            </Alert>
           ) : null}
-          {connection.session.chatEnabled ? (
-            <ChatToggle>Chat</ChatToggle>
+          <ParticipantGrid />
+          {connection.session.chatEnabled ? <Chat /> : null}
+          {connection.session.canModerate ? (
+            <ParticipantPanel sessionId={connection.session.id} slug={slug} />
           ) : null}
-          {connection.session.canModerate &&
-          connection.session.recordingMode !== 'off' ? (
-            recordingStatus === 'active' || recordingStatus === 'starting' ? (
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() =>
-                  void stopLiveRecording(slug, connection.session.id).then(
-                    (result) => setRecordingStatus(result.status),
-                  )
-                }
-              >
-                Detener grabación
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  void startLiveRecording(slug, connection.session.id).then(
-                    (result) => setRecordingStatus(result.status),
-                  )
-                }
-              >
-                <Radio />
-                Grabar
-              </Button>
-            )
-          ) : null}
-          <DisconnectButton onClick={() => onEnd && void onEnd()}>
-            <DoorOpen />
-            <span>Salir</span>
-          </DisconnectButton>
-        </div>
-      </section>
+          <RoomAudioRenderer />
+          <StartAudio label="Activar audio" />
+          <div
+            className="live-classroom__controls"
+            aria-label="Controles de clase"
+          >
+            {connection.session.canPublishAudio ? (
+              <TrackToggle source={Track.Source.Microphone}>
+                <Mic />
+                <span>Micrófono</span>
+              </TrackToggle>
+            ) : null}
+            {connection.session.canPublishVideo ? (
+              <TrackToggle source={Track.Source.Camera}>
+                <Camera />
+                <span>Cámara</span>
+              </TrackToggle>
+            ) : null}
+            {connection.session.canShareScreen ? (
+              <TrackToggle source={Track.Source.ScreenShare}>
+                <MonitorUp />
+                <span>Compartir pantalla</span>
+              </TrackToggle>
+            ) : null}
+            {connection.session.chatEnabled ? (
+              <ChatToggle>Chat</ChatToggle>
+            ) : null}
+            {connection.session.canModerate &&
+            connection.session.recordingMode !== 'off' ? (
+              recordingStatus === 'active' || recordingStatus === 'starting' ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() =>
+                    void stopLiveRecording(slug, connection.session.id).then(
+                      (result) => setRecordingStatus(result.status),
+                    )
+                  }
+                >
+                  Detener grabación
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    void startLiveRecording(slug, connection.session.id).then(
+                      (result) => setRecordingStatus(result.status),
+                    )
+                  }
+                >
+                  <Radio />
+                  Grabar
+                </Button>
+              )
+            ) : null}
+            <DisconnectButton onClick={() => onEnd && void onEnd()}>
+              <DoorOpen />
+              <span>Salir</span>
+            </DisconnectButton>
+          </div>
+        </section>
+      </LayoutContextProvider>
     </RoomContext.Provider>
   );
 }

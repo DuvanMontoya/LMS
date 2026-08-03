@@ -37,7 +37,13 @@ from domain.publishing.services import (
 from ..choices import AttemptStatus
 from ..course_activities import bind_assessment_activity
 from ..exceptions import AssessmentConflict, AssessmentInvalid, AttemptExpired
-from ..models import AssessmentVersion, Attempt, AttemptEvent, QuestionVersion
+from ..models import (
+    AssessmentDelivery,
+    AssessmentVersion,
+    Attempt,
+    AttemptEvent,
+    QuestionVersion,
+)
 from ..services import (
     activate_delivery,
     add_assessment_section,
@@ -46,6 +52,7 @@ from ..services import (
     assign_delivery_batch,
     create_assessment_revision_from_version,
     create_delivery,
+    materialize_course_group_assessments,
     reorder_assessment_sections,
     save_response,
     start_attempt,
@@ -269,25 +276,35 @@ class AttemptWorkflowTests(AssessmentFixtureMixin, TestCase):
             activity_type=ActivityType.ASSESSMENT,
         )
         now = timezone.now()
-        delivery = create_delivery(
+        materialized = materialize_course_group_assessments(
             actor=owner,
             organization=organization,
-            assessment_version=context["assessment_version"],
-            name="Parcial de cierre",
-            course_release=result.release,
-            course_group_activity=group_activity,
-            opens_at=now - timedelta(minutes=1),
-            closes_at=now + timedelta(hours=1),
+            course_group=cohort,
         )
-        delivery = activate_delivery(
+        repeated = materialize_course_group_assessments(
             actor=owner,
-            delivery=delivery,
-            expected_version=delivery.lock_version,
+            organization=organization,
+            course_group=cohort,
         )
-        assignment = assign_delivery(
-            actor=owner,
-            delivery=delivery,
-            release_assignment=enrollment.current_release_assignment,
+        self.assertEqual(
+            materialized,
+            {
+                "created_delivery_count": 1,
+                "already_materialized_count": 0,
+                "created_assignment_count": 1,
+                "already_assigned_count": 0,
+            },
+        )
+        self.assertEqual(repeated["created_delivery_count"], 0)
+        self.assertEqual(repeated["already_materialized_count"], 1)
+        self.assertEqual(repeated["created_assignment_count"], 0)
+        self.assertEqual(repeated["already_assigned_count"], 1)
+        delivery = AssessmentDelivery.objects.get(course_group_activity=group_activity)
+        delivery.opens_at = now - timedelta(minutes=1)
+        delivery.closes_at = now + timedelta(hours=1)
+        delivery.save(update_fields=("opens_at", "closes_at", "updated_at"))
+        assignment = delivery.assignments.get(
+            release_assignment=enrollment.current_release_assignment
         )
         attempt = start_attempt(actor=learner, assignment=assignment)
         item = attempt.items.get()

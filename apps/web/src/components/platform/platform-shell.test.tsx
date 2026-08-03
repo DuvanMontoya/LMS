@@ -28,7 +28,11 @@ vi.mock('@/components/auth/logout-button', () => ({
   LogoutButton: () => <button type="button">Cerrar sesión</button>,
 }));
 
-import { isNavigationItemActive, PlatformShell } from './platform-shell';
+import {
+  isImmersiveLearningPath,
+  isNavigationItemActive,
+  PlatformShell,
+} from './platform-shell';
 
 type Role =
   'owner' | 'administrator' | 'author' | 'reviewer' | 'instructor' | 'learner';
@@ -374,5 +378,27 @@ describe('isNavigationItemActive', () => {
         '/organizaciones/academia/aprendizaje/matriculas/enrollment-1',
       ),
     ).toBe(true);
+  });
+});
+
+describe('isImmersiveLearningPath', () => {
+  const base = '/organizaciones/academia';
+
+  it.each([
+    `${base}/aprender/calculo/unidades/unit-1`,
+    `${base}/aprender/calculo/actividades/activity-1`,
+    `${base}/evaluaciones/intentos/attempt-1`,
+  ])('keeps %s free from the global platform chrome', (path) => {
+    expect(isImmersiveLearningPath(path, base)).toBe(true);
+  });
+
+  it.each([
+    `${base}/aprender/calculo`,
+    `${base}/clases`,
+    `${base}/clases/session-1`,
+    `${base}/evaluaciones/asignadas`,
+    `${base}/evaluaciones/intentos/attempt-1/resultado`,
+  ])('keeps %s in the regular platform shell', (path) => {
+    expect(isImmersiveLearningPath(path, base)).toBe(false);
   });
 });

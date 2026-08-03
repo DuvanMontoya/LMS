@@ -158,6 +158,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/assessments/course-activities/{activity_id}/binding/': {
     post: operations['assessment_course_activity_binding_create'];
   };
+  '/api/v1/organizations/{slug}/assessments/course-groups/{course_group_id}/deliveries/materialize/': {
+    post: operations['assessment_course_group_deliveries_materialize'];
+  };
   '/api/v1/organizations/{slug}/assessments/deliveries/': {
     get: operations['assessment_deliveries_list'];
     post: operations['assessment_deliveries_create'];
@@ -3798,6 +3801,12 @@ export interface components {
       evidenced_objective_ids: string[];
       total_objectives: number;
     };
+    MaterializeCourseGroupAssessmentsResult: {
+      already_assigned_count: number;
+      already_materialized_count: number;
+      created_assignment_count: number;
+      created_delivery_count: number;
+    };
     MaterializeCourseGroupLiveClasses: {
       /** Format: date */
       first_week_starts_on: string;
@@ -7271,6 +7280,21 @@ export interface operations {
       201: {
         content: {
           'application/json': components['schemas']['AssessmentActivityBinding'];
+        };
+      };
+    };
+  };
+  assessment_course_group_deliveries_materialize: {
+    parameters: {
+      path: {
+        course_group_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MaterializeCourseGroupAssessmentsResult'];
         };
       };
     };

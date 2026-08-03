@@ -5875,6 +5875,21 @@
         ],
         "type": "object"
       },
+      "MaterializeCourseGroupAssessmentsResult": {
+        "properties": {
+          "already_assigned_count": { "type": "integer" },
+          "already_materialized_count": { "type": "integer" },
+          "created_assignment_count": { "type": "integer" },
+          "created_delivery_count": { "type": "integer" }
+        },
+        "required": [
+          "already_assigned_count",
+          "already_materialized_count",
+          "created_assignment_count",
+          "created_delivery_count"
+        ],
+        "type": "object"
+      },
       "MaterializeCourseGroupLiveClasses": {
         "properties": {
           "first_week_starts_on": { "format": "date", "type": "string" },
@@ -12641,6 +12656,39 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AssessmentActivityBinding"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/course-groups/{course_group_id}/deliveries/materialize/": {
+      "post": {
+        "operationId": "assessment_course_group_deliveries_materialize",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_group_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterializeCourseGroupAssessmentsResult"
                 }
               }
             },

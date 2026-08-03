@@ -99,6 +99,7 @@ from ..services import (
     create_question_bank_version,
     create_question_revision_from_version,
     grade_response_manually,
+    materialize_course_group_assessments,
     reorder_assessment_items,
     reorder_assessment_sections,
     replace_assessment_objectives,
@@ -146,6 +147,7 @@ from .serializers import (
     LearnerDeliverySerializer,
     ManualGradeDecisionSerializer,
     ManualGradeSerializer,
+    MaterializeCourseGroupAssessmentsResultSerializer,
     ObjectiveReplaceSerializer,
     OrderedIdsSerializer,
     PendingManualSerializer,
@@ -1516,6 +1518,35 @@ class AssessmentVersionCreateDraftView(AssessmentVersionDetailView):
         return ApiResponse(
             AssessmentRevisionSerializer(result).data,
             status=status.HTTP_201_CREATED,
+        )
+
+
+class CourseGroupAssessmentMaterializationView(APIView):
+    @extend_schema(
+        operation_id="assessment_course_group_deliveries_materialize",
+        request=None,
+        responses={200: MaterializeCourseGroupAssessmentsResultSerializer},
+    )
+    def post(self, request: Request, slug: str, course_group_id: UUID) -> ApiResponse:
+        organization = _organization(request, slug)
+        _require(can_manage_deliveries(request.user, organization))
+        course_group = get_object_or_404(
+            LearningCohort.objects.select_related("course", "release"),
+            pk=course_group_id,
+            organization=organization,
+        )
+        _require(can_manage_course_group(request.user, course_group))
+        result = _call(
+            lambda: materialize_course_group_assessments(
+                actor=request.user,
+                organization=organization,
+                course_group=course_group,
+            )
+        )
+        if isinstance(result, ApiResponse):
+            return result
+        return ApiResponse(
+            MaterializeCourseGroupAssessmentsResultSerializer(result).data
         )
 
 

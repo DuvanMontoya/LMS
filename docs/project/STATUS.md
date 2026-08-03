@@ -1476,3 +1476,41 @@ Siguiente paso:
   unificada, 2/2 sobre PostgreSQL; Ruff, Pyright, TypeScript y `git diff --check`
   verdes. OpenAPI y cliente regenerados. No se añadieron dependencias ni
   migraciones, y no se realizó commit, push ni despliegue.
+
+## Aula unificada y entregas evaluativas operativas — 2026-08-03
+
+- La verificación anterior se cerró antes de probar el ingreso real. Al entrar
+  desde Chrome se reprodujeron dos defectos distintos: la actividad no usaba el
+  mismo reproductor que una lección y `GridLayout` derribaba React al conectarse
+  porque estaba fuera de `LayoutContextProvider`. El aula LiveKit ahora se
+  renderiza dentro de la actividad del curso, conserva cabecera, progreso,
+  temario, anterior/siguiente y salida del aula, y la cuadrícula, el chat y los
+  controles viven bajo los contextos oficiales de Room y Layout.
+- La ruta independiente `/clases/{sessionId}` permanece para operación de
+  calendario e instructor. Cuando una sesión curricular la abre un estudiante,
+  redirige a su actividad materializada; ya no existe un enlace “Ver detalles”
+  que saque al estudiante del reproductor. Sólo las rutas de unidad, actividad
+  e intento son inmersivas; la navegación institucional conserva su shell.
+- El release MATE-2303 contenía 11 actividades de evaluación aprobadas, pero el
+  grupo tenía cero `AssessmentDelivery` y cero `DeliveryAssignment`. Assessments
+  incorpora una operación transaccional e idempotente por grupo: valida versión
+  y digest del snapshot, crea y activa una única entrega vigente por actividad y
+  asigna únicamente las matrículas activas de ese release. Una restricción
+  parcial de PostgreSQL impide dos entregas vigentes para la misma actividad.
+- La sección administrativa mantiene separados los dos actos operativos:
+  “Programar clases en vivo” configura fechas y bloques; “Activar evaluaciones”
+  materializa entregas y vuelve a ejecutarse de forma segura después de cambios
+  de roster. OpenAPI y el cliente tipado incluyen la nueva operación.
+- Se aplicó la operación al grupo real: 11 entregas activas y 11 asignaciones.
+  En Chrome autenticado como estudiante se comprobó que la clase vive dentro
+  del reproductor, se inició una sala real, se aceptó el aviso de grabación y se
+  conectó a LiveKit mostrando participante, vídeo, chat y controles sin caída.
+  Después se abrió Proyecto 1, se inició un intento real y el enunciado, reloj,
+  respuesta y guardado aparecieron en la misma ruta de actividad con el temario
+  intacto. El intento quedó en curso y no se envió una respuesta ficticia.
+- Evidencia verde: Ruff y Pyright sin hallazgos; ESLint sin errores (se eliminó
+  también la advertencia de dependencias del efecto LiveKit); TypeScript; 19/19
+  pruebas de shell y aula; prueba PostgreSQL focal de materialización,
+  idempotencia, intento, progreso y calendario; `makemigrations --check`,
+  OpenAPI/cliente y `git diff --check`. Se añadió la migración de integridad
+  `assessments.0011`; no se realizó commit, push ni despliegue.

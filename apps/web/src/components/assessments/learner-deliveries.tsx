@@ -20,8 +20,13 @@ import type { LearnerDelivery } from '@/lib/assessments/server';
 
 export function LearnerDeliveryList({
   deliveries,
+  stayOnHref,
   slug,
-}: Readonly<{ deliveries: LearnerDelivery[]; slug: string }>) {
+}: Readonly<{
+  deliveries: LearnerDelivery[];
+  stayOnHref?: string | undefined;
+  slug: string;
+}>) {
   if (!deliveries.length) {
     return (
       <section className="assessment-learner-empty">
@@ -39,7 +44,12 @@ export function LearnerDeliveryList({
   return (
     <ul className="assessment-learner-grid">
       {deliveries.map((assignment) => (
-        <DeliveryCard assignment={assignment} key={assignment.id} slug={slug} />
+        <DeliveryCard
+          assignment={assignment}
+          key={assignment.id}
+          slug={slug}
+          stayOnHref={stayOnHref}
+        />
       ))}
     </ul>
   );
@@ -48,7 +58,12 @@ export function LearnerDeliveryList({
 function DeliveryCard({
   assignment,
   slug,
-}: Readonly<{ assignment: LearnerDelivery; slug: string }>) {
+  stayOnHref,
+}: Readonly<{
+  assignment: LearnerDelivery;
+  slug: string;
+  stayOnHref?: string | undefined;
+}>) {
   const start = useAssessmentMutation(() =>
     startAssessmentAttempt(slug, assignment.id),
   );
@@ -121,9 +136,13 @@ function DeliveryCard({
           onClick={async () => {
             try {
               const attempt = await start.mutateAsync(undefined);
-              window.location.assign(
-                `/organizaciones/${slug}/evaluaciones/intentos/${attempt.id}`,
-              );
+              if (stayOnHref) {
+                window.location.assign(`${stayOnHref}?attempt=${attempt.id}`);
+              } else {
+                window.location.assign(
+                  `/organizaciones/${slug}/evaluaciones/intentos/${attempt.id}`,
+                );
+              }
             } catch {
               // React Query presenta el error debajo de la acción.
             }

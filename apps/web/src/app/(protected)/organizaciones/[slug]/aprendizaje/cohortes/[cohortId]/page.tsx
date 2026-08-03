@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { CourseGroupAssessmentLauncher } from '@/components/assessments/course-group-assessment-launcher';
 import { CohortActions } from '@/components/learning/learning-admin-actions';
 import { CohortBatchEnrollForm } from '@/components/learning/learning-admin-forms';
 import { CohortRosterSync } from '@/components/learning/cohort-roster-sync';
@@ -21,6 +22,9 @@ export default async function CohortDetailPage({
   const data = await getCohort(slug, cohortId);
   const canManage = data.access.capabilities.includes('learning.cohort.manage');
   const canSchedule = data.access.capabilities.includes('scheduling.create');
+  const canActivateAssessments =
+    canManage &&
+    data.access.capabilities.includes('assessment.delivery.manage');
   const academicGroup = data.cohort.academic_group_id
     ? data.options.academicGroups.find(
         (group) => group.id === data.cohort.academic_group_id,
@@ -87,6 +91,9 @@ export default async function CohortDetailPage({
       ) : null}
       {canSchedule && data.cohort.status !== 'archived' ? (
         <CourseGroupLiveClassScheduler cohortId={cohortId} slug={slug} />
+      ) : null}
+      {canActivateAssessments && data.cohort.status !== 'archived' ? (
+        <CourseGroupAssessmentLauncher cohortId={cohortId} slug={slug} />
       ) : null}
       {canManage &&
       data.cohort.status !== 'archived' &&

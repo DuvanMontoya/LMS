@@ -49,8 +49,13 @@ type Answer =
 
 export function AttemptRunner({
   initialAttempt,
+  returnHref,
   slug,
-}: Readonly<{ initialAttempt: AssessmentAttempt; slug: string }>) {
+}: Readonly<{
+  initialAttempt: AssessmentAttempt;
+  returnHref?: string | undefined;
+  slug: string;
+}>) {
   const router = useRouter();
   const [attempt, setAttempt] = useState(initialAttempt);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -156,7 +161,8 @@ export function AttemptRunner({
             try {
               await submit.mutateAsync(undefined);
               router.push(
-                `/organizaciones/${slug}/evaluaciones/intentos/${attempt.id}/resultado`,
+                returnHref ??
+                  `/organizaciones/${slug}/evaluaciones/intentos/${attempt.id}/resultado`,
               );
               router.refresh();
             } catch {

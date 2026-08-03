@@ -1062,6 +1062,12 @@ class AssessmentDelivery(NoPhysicalDeleteModel):
 
     class Meta:
         constraints = [
+            models.UniqueConstraint(
+                fields=["course_group_activity"],
+                condition=Q(course_group_activity__isnull=False)
+                & ~Q(status=DeliveryStatus.WITHDRAWN),
+                name="assess_delivery_one_current_activity",
+            ),
             models.CheckConstraint(
                 condition=Q(lock_version__gt=0),
                 name="assess_delivery_lock_positive",

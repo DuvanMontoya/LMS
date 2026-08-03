@@ -467,6 +467,13 @@ class DeliveryCreateSerializer(StrictInputSerializer):
     closes_at = serializers.DateTimeField(required=False, allow_null=True)
 
 
+class MaterializeCourseGroupAssessmentsResultSerializer(serializers.Serializer):
+    created_delivery_count = serializers.IntegerField()
+    already_materialized_count = serializers.IntegerField()
+    created_assignment_count = serializers.IntegerField()
+    already_assigned_count = serializers.IntegerField()
+
+
 class DeliverySerializer(serializers.ModelSerializer):
     assessment_title = serializers.CharField(
         source="assessment_version.title", read_only=True

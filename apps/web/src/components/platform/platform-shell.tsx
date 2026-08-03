@@ -109,9 +109,7 @@ export function PlatformShell({
     : undefined;
   const learningPlayerActive =
     organizationBase !== undefined &&
-    new RegExp(
-      `^${escapeRegExp(organizationBase)}/aprender/[^/]+/unidades/[^/]+/?$`,
-    ).test(pathname);
+    isImmersiveLearningPath(pathname, organizationBase);
 
   if (learningPlayerActive) {
     return <div className="learning-player-frame">{children}</div>;
@@ -163,6 +161,17 @@ export function PlatformShell({
       </SidebarInset>
     </SidebarProvider>
   );
+}
+
+export function isImmersiveLearningPath(
+  pathname: string,
+  organizationBase: string,
+) {
+  const base = escapeRegExp(organizationBase);
+  return [
+    new RegExp(`^${base}/aprender/[^/]+/(?:unidades|actividades)/[^/]+/?$`),
+    new RegExp(`^${base}/evaluaciones/intentos/[^/]+/?$`),
+  ].some((pattern) => pattern.test(pathname));
 }
 
 function PlatformSidebar({

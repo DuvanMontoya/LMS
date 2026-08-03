@@ -11,14 +11,19 @@ from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import F, Max
 from django.utils import timezone
 
 from domain.catalog.models import LearningObjective
+from domain.courses.choices import ActivityType
 from domain.events.services import record_domain_event
 from domain.learning.access import access_state
 from domain.learning.choices import AccessState, EnrollmentStatus
-from domain.learning.models import EnrollmentReleaseAssignment
+from domain.learning.models import (
+    CourseGroupActivity,
+    EnrollmentReleaseAssignment,
+    LearningCohort,
+)
 from domain.organizations.choices import MembershipStatus
 from domain.organizations.models import Organization
 from domain.publishing.integrity import verify_release
@@ -1482,6 +1487,144 @@ def create_delivery(
     )
     _clean_save(delivery)
     return delivery
+
+
+@transaction.atomic
+def materialize_course_group_assessments(
+    *,
+    actor: object,
+    organization: Organization,
+    course_group: LearningCohort,
+) -> dict[str, int]:
+    """Activate release-pinned assessments for a concrete course group.
+
+    Course authoring owns the immutable assessment binding. This operation
+    creates the delivery-time records and assigns them to the group's current,
+    effective release assignments. It is safe to repeat after roster changes.
+    """
+    if (
+        course_group.organization_id != organization.id
+        or course_group.status != "active"
+        or course_group.migration_review_required
+    ):
+        raise AssessmentInvalid("El grupo de curso no está disponible.")
+
+    activities = list(
+        CourseGroupActivity.objects.select_for_update()
+        .filter(
+            course_group=course_group,
+            course_release=course_group.release,
+            activity_type=ActivityType.ASSESSMENT,
+            migration_review_required=False,
+        )
+        .order_by("module_position", "position", "id")
+    )
+    if not activities:
+        raise AssessmentInvalid("El grupo no tiene evaluaciones en su release.")
+
+    release_assignments = list(
+        EnrollmentReleaseAssignment.objects.select_for_update(of=("self",))
+        .select_related(
+            "enrollment__membership",
+            "enrollment__cohort",
+            "enrollment__current_release_assignment",
+            "release__course",
+        )
+        .filter(
+            release=course_group.release,
+            ended_at__isnull=True,
+            enrollment__cohort=course_group,
+            enrollment__status=EnrollmentStatus.ACTIVE,
+            enrollment__membership__status=MembershipStatus.ACTIVE,
+            enrollment__current_release_assignment=F("pk"),
+        )
+        .order_by("id")
+    )
+
+    version_ids = {
+        activity.binding_snapshot.get("assessment_version_id")
+        for activity in activities
+    }
+    if None in version_ids or any(not isinstance(value, str) for value in version_ids):
+        raise AssessmentInvalid(
+            "Una evaluación del release no tiene una versión aprobada vinculada."
+        )
+    versions = {
+        str(version.id): version
+        for version in AssessmentVersion.objects.filter(
+            id__in=version_ids,
+            assessment__organization=organization,
+        )
+    }
+
+    created_delivery_count = 0
+    already_materialized_count = 0
+    created_assignment_count = 0
+    already_assigned_count = 0
+    for activity in activities:
+        version_id = activity.binding_snapshot["assessment_version_id"]
+        version = versions.get(version_id)
+        if version is None or activity.binding_snapshot.get(
+            "snapshot_digest"
+        ) != version.snapshot_digest:
+            raise AssessmentInvalid(
+                f"La evaluación «{activity.title}» no coincide con el snapshot aprobado."
+            )
+
+        delivery = (
+            AssessmentDelivery.objects.select_for_update()
+            .filter(course_group_activity=activity)
+            .exclude(status=DeliveryStatus.WITHDRAWN)
+            .first()
+        )
+        if delivery is None:
+            delivery = create_delivery(
+                actor=actor,
+                organization=organization,
+                assessment_version=version,
+                name=activity.title,
+                course_release=course_group.release,
+                course_group_activity=activity,
+            )
+            delivery = activate_delivery(
+                actor=actor,
+                delivery=delivery,
+                expected_version=delivery.lock_version,
+            )
+            created_delivery_count += 1
+        else:
+            already_materialized_count += 1
+            if delivery.status == DeliveryStatus.DRAFT:
+                delivery = activate_delivery(
+                    actor=actor,
+                    delivery=delivery,
+                    expected_version=delivery.lock_version,
+                )
+
+        existing_assignment_ids = set(
+            DeliveryAssignment.objects.filter(
+                delivery=delivery,
+                release_assignment__in=release_assignments,
+                status=AssignmentStatus.ACTIVE,
+            ).values_list("release_assignment_id", flat=True)
+        )
+        for release_assignment in release_assignments:
+            if release_assignment.id in existing_assignment_ids:
+                already_assigned_count += 1
+                continue
+            assign_delivery(
+                actor=actor,
+                delivery=delivery,
+                release_assignment=release_assignment,
+            )
+            created_assignment_count += 1
+
+    return {
+        "created_delivery_count": created_delivery_count,
+        "already_materialized_count": already_materialized_count,
+        "created_assignment_count": created_assignment_count,
+        "already_assigned_count": already_assigned_count,
+    }
 
 
 @transaction.atomic

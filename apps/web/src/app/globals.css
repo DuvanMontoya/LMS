@@ -1742,6 +1742,18 @@
     scroll-margin-top: 8rem;
   }
 
+  .learning-player__activity {
+    @apply max-w-6xl;
+  }
+
+  .learning-player__activity-body {
+    @apply px-5 py-6 sm:px-8 sm:py-8 lg:px-10;
+  }
+
+  .learning-player__activity-body .assessment-attempt-workspace {
+    @apply mt-0;
+  }
+
   .learning-player__objectives {
     @apply mx-5 mb-6 overflow-hidden rounded-lg border border-slate-200 bg-slate-50/70 sm:mx-8 sm:mb-8 lg:mx-10;
   }
