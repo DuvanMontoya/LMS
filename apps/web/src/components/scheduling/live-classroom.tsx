@@ -16,6 +16,7 @@ import {
   StartAudio,
   TrackToggle,
   formatChatMessageLinks,
+  isTrackReference,
   useChat,
   useLayoutContext,
   useParticipants,
@@ -35,6 +36,7 @@ import {
   Send,
   Timer,
   UserRound,
+  Users,
   VideoOff,
   X,
 } from 'lucide-react';
@@ -58,6 +60,7 @@ import {
   endLiveSession,
   enterLiveSession,
   changeParticipantPermissions,
+  muteParticipantAudio,
   removeParticipant,
   startLiveRecording,
   stopLiveRecording,
@@ -233,23 +236,40 @@ function ConnectedClassroom({
   >(connection.session.recordingResolution === '720p' ? '720p' : '1080p');
   const [recordingBusy, setRecordingBusy] = useState(false);
   const [recordingError, setRecordingError] = useState('');
+  const [participantsOpen, setParticipantsOpen] = useState(false);
   const [controlsHost, setControlsHost] = useState<HTMLElement | null>(null);
   const [deviceAvailability, setDeviceAvailability] = useState<{
     audio: boolean | null;
     video: boolean | null;
   }>({ audio: null, video: null });
+  const recordingObservedRef = useRef(room.isRecording);
   const disconnectTimer = useRef<number | null>(null);
 
   useEffect(() => {
+    let recordingSyncTimer: number | undefined;
     if (disconnectTimer.current !== null) {
       window.clearTimeout(disconnectTimer.current);
       disconnectTimer.current = null;
     }
     const onDisconnected = () => undefined;
+    const syncRecordingStatus = () =>
+      setRecordingStatus((current) => {
+        const next = reconcileRecordingStatus(
+          current,
+          room.isRecording,
+          recordingObservedRef.current,
+        );
+        recordingObservedRef.current = next.observed;
+        return next.status;
+      });
+    const onRecordingStatusChanged = () => syncRecordingStatus();
     room.on(RoomEvent.Disconnected, onDisconnected);
+    room.on(RoomEvent.RecordingStatusChanged, onRecordingStatusChanged);
     void (async () => {
       try {
         await room.connect(connection.serverUrl, connection.token);
+        syncRecordingStatus();
+        recordingSyncTimer = window.setInterval(syncRecordingStatus, 1_000);
       } catch (caught: unknown) {
         setConnectionError(
           caught instanceof Error
@@ -260,6 +280,10 @@ function ConnectedClassroom({
     })();
     return () => {
       room.off(RoomEvent.Disconnected, onDisconnected);
+      room.off(RoomEvent.RecordingStatusChanged, onRecordingStatusChanged);
+      if (recordingSyncTimer !== undefined) {
+        window.clearInterval(recordingSyncTimer);
+      }
       disconnectTimer.current = window.setTimeout(() => {
         void room.disconnect();
         disconnectTimer.current = null;
@@ -337,6 +361,7 @@ function ConnectedClassroom({
           ) : (
             <TrackToggle
               aria-label="Micrófono"
+              onClick={() => setMediaError('')}
               onDeviceError={(error) => reportDeviceError('audio', error)}
               source={Track.Source.Microphone}
               title="Activar o silenciar micrófono"
@@ -370,6 +395,7 @@ function ConnectedClassroom({
           ) : (
             <TrackToggle
               aria-label="Cámara"
+              onClick={() => setMediaError('')}
               onDeviceError={(error) => reportDeviceError('video', error)}
               source={Track.Source.Camera}
               title="Activar o desactivar cámara"
@@ -391,6 +417,7 @@ function ConnectedClassroom({
       {connection.session.canShareScreen ? (
         <TrackToggle
           aria-label="Compartir pantalla"
+          onClick={() => setMediaError('')}
           onDeviceError={(error) => setMediaError(mediaErrorMessage(error))}
           source={Track.Source.ScreenShare}
         >
@@ -402,6 +429,18 @@ function ConnectedClassroom({
           <MessageCircle />
           <span>Chat</span>
         </ChatToggle>
+      ) : null}
+      {connection.session.canModerate ? (
+        <button
+          aria-label="Abrir o cerrar participantes"
+          aria-pressed={participantsOpen}
+          onClick={() => setParticipantsOpen((current) => !current)}
+          title="Participantes"
+          type="button"
+        >
+          <Users />
+          <span>Participantes</span>
+        </button>
       ) : null}
       <DisconnectButton onClick={() => onEnd && void onEnd()}>
         <DoorOpen />
@@ -436,11 +475,12 @@ function ConnectedClassroom({
             chatEnabled={connection.session.chatEnabled}
             controls={controls}
             controlsHost={controlsHost}
-            recordingControl={(hasScreenShare) =>
+            recordingControl={({ hasCamera, hasScreenShare }) =>
               connection.session.canModerate &&
               connection.session.recordingMode !== 'off' ? (
                 <RecordingControl
                   busy={recordingBusy}
+                  hasCamera={hasCamera}
                   hasScreenShare={hasScreenShare}
                   layout={recordingLayout}
                   onLayoutChange={setRecordingLayout}
@@ -484,11 +524,25 @@ function ConnectedClassroom({
                   resolution={recordingResolution}
                   status={recordingStatus}
                 />
+              ) : recordingStatus === 'active' ||
+                recordingStatus === 'starting' ? (
+                <span
+                  aria-live="polite"
+                  className="live-classroom__recording-indicator"
+                  role="status"
+                >
+                  <Radio />
+                  Grabando
+                </span>
               ) : null
             }
           />
-          {connection.session.canModerate ? (
-            <ParticipantPanel sessionId={connection.session.id} slug={slug} />
+          {connection.session.canModerate && participantsOpen ? (
+            <ParticipantPanel
+              onClose={() => setParticipantsOpen(false)}
+              sessionId={connection.session.id}
+              slug={slug}
+            />
           ) : null}
           <RoomAudioRenderer />
           <StartAudio label="Activar audio" />
@@ -498,8 +552,9 @@ function ConnectedClassroom({
   );
 }
 
-function RecordingControl({
+export function RecordingControl({
   busy,
+  hasCamera,
   hasScreenShare,
   layout,
   onLayoutChange,
@@ -510,6 +565,7 @@ function RecordingControl({
   status,
 }: Readonly<{
   busy: boolean;
+  hasCamera: boolean;
   hasScreenShare: boolean;
   layout: RecordingLayout;
   onLayoutChange: (layout: RecordingLayout) => void;
@@ -528,6 +584,7 @@ function RecordingControl({
     resolution,
   );
   const active = status === 'active' || status === 'starting';
+  const hasVisualTrack = hasCamera || hasScreenShare;
 
   function changeOpen(next: boolean) {
     if (next) {
@@ -562,7 +619,12 @@ function RecordingControl({
   return (
     <Dialog onOpenChange={changeOpen} open={open}>
       <DialogTrigger asChild>
-        <Button size="sm" type="button" variant="outline">
+        <Button
+          className="border-white/10 bg-white/6 text-slate-200 hover:bg-white/10 hover:text-white"
+          size="sm"
+          type="button"
+          variant="outline"
+        >
           <Radio />
           Grabar
         </Button>
@@ -597,6 +659,7 @@ function RecordingControl({
             description="Enfoca automáticamente la presentación o a quien está hablando y conserva a los demás."
             icon={<PanelsTopLeft />}
             label="Enfoque automático"
+            disabled={!hasVisualTrack}
             onSelect={() => setDraftLayout('speaker')}
           />
           <RecordingLayoutOption
@@ -604,9 +667,17 @@ function RecordingControl({
             description="Muestra las cámaras publicadas en un mosaico equilibrado."
             icon={<LayoutGrid />}
             label="Mosaico de participantes"
+            disabled={!hasVisualTrack}
             onSelect={() => setDraftLayout('grid')}
           />
         </fieldset>
+
+        {!hasVisualTrack ? (
+          <p className="text-xs leading-relaxed text-slate-400">
+            Activa una cámara o comparte una pantalla para que la grabación
+            tenga una fuente visual real.
+          </p>
+        ) : null}
 
         <fieldset className="grid gap-2" disabled={busy}>
           <legend className="mb-1 text-xs font-semibold tracking-wide text-slate-400 uppercase">
@@ -639,7 +710,11 @@ function RecordingControl({
 
         <DialogFooter className="border-slate-700 bg-slate-950/60">
           <Button
-            disabled={busy || (draftLayout === 'screen_share' && !hasScreenShare)}
+            disabled={
+              busy ||
+              !hasVisualTrack ||
+              (draftLayout === 'screen_share' && !hasScreenShare)
+            }
             onClick={() =>
               void onStart(draftLayout, draftResolution).then((started) => {
                 if (!started) return;
@@ -699,6 +774,21 @@ function RecordingLayoutOption({
 
 type ClassroomLayoutMode = 'auto' | 'grid' | 'presentation';
 type RecordingLayout = 'grid' | 'screen_share' | 'speaker';
+type RecordingAvailability = { hasCamera: boolean; hasScreenShare: boolean };
+
+export function reconcileRecordingStatus(
+  current: string,
+  isRecording: boolean,
+  observed: boolean,
+): { observed: boolean; status: string } {
+  if (isRecording) return { observed: true, status: 'active' };
+  if (!observed) return { observed: false, status: current };
+  return {
+    observed: false,
+    status:
+      current === 'active' || current === 'starting' ? 'ended' : current,
+  };
+}
 
 function ClassroomSurface({
   chatEnabled,
@@ -709,7 +799,7 @@ function ClassroomSurface({
   chatEnabled: boolean;
   controls: ReactNode;
   controlsHost: HTMLElement | null;
-  recordingControl: (hasScreenShare: boolean) => ReactNode;
+  recordingControl: (availability: RecordingAvailability) => ReactNode;
 }>) {
   const layout = useLayoutContext();
   const chatOpen = Boolean(layout.widget.state?.showChat);
@@ -721,6 +811,7 @@ function ClassroomSurface({
     { source: Track.Source.ScreenShare, withPlaceholder: false },
   ]);
   const hasScreenShare = screenShareTracks.length > 0;
+  const hasCamera = cameraTracks.some(isTrackReference);
   const effectiveLayout =
     layoutMode === 'auto' ? (hasScreenShare ? 'focus' : 'grid') : layoutMode;
   const headerControls = (
@@ -750,7 +841,7 @@ function ClassroomSurface({
           onClick={() => setLayoutMode('grid')}
         />
       </div>
-      {recordingControl(hasScreenShare)}
+      {recordingControl({ hasCamera, hasScreenShare })}
       {controls}
     </div>
   );
@@ -909,52 +1000,124 @@ function ClassroomChat() {
 }
 
 function ParticipantPanel({
+  onClose,
   sessionId,
   slug,
-}: Readonly<{ sessionId: string; slug: string }>) {
+}: Readonly<{ onClose: () => void; sessionId: string; slug: string }>) {
   const participants = useParticipants();
+  const [busyIdentity, setBusyIdentity] = useState('');
+  const [removeIdentity, setRemoveIdentity] = useState('');
+  const [panelError, setPanelError] = useState('');
+
+  async function run(identity: string, operation: () => Promise<unknown>) {
+    setBusyIdentity(identity);
+    setPanelError('');
+    try {
+      await operation();
+    } catch (caught) {
+      setPanelError(errorMessage(caught));
+    } finally {
+      setBusyIdentity('');
+    }
+  }
+
   return (
     <aside className="live-classroom__participants" aria-label="Participantes">
-      <h2>Participantes ({participants.length})</h2>
+      <header>
+        <h2>Participantes ({participants.length})</h2>
+        <button aria-label="Cerrar participantes" onClick={onClose} type="button">
+          <X />
+        </button>
+      </header>
+      {panelError ? <p role="alert">{panelError}</p> : null}
       <ul>
-        {participants.map((participant) => (
-          <li key={participant.identity}>
-            <span>{participant.name || participant.identity}</span>
-            {!participant.isLocal ? (
-              <div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    void changeParticipantPermissions(
-                      slug,
-                      sessionId,
-                      participant.identity,
-                      {
-                        can_publish_audio: false,
-                        can_publish_video: false,
-                        can_share_screen: false,
-                      },
-                    )
-                  }
-                >
-                  Silenciar
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    void removeParticipant(
-                      slug,
-                      sessionId,
-                      participant.identity,
-                    )
-                  }
-                >
-                  Expulsar
-                </button>
-              </div>
-            ) : null}
-          </li>
-        ))}
+        {participants.map((participant) => {
+          const restricted = participant.permissions?.canPublish === false;
+          const microphone = participant.getTrackPublication(
+            Track.Source.Microphone,
+          );
+          const busy = busyIdentity === participant.identity;
+          return (
+            <li key={participant.identity}>
+              <span>{participant.name || 'Participante'}</span>
+              {!participant.isLocal ? (
+                <div>
+                  <button
+                    disabled={busy || !microphone || microphone.isMuted}
+                    onClick={() =>
+                      void run(participant.identity, () =>
+                        muteParticipantAudio(
+                          slug,
+                          sessionId,
+                          participant.identity,
+                        ),
+                      )
+                    }
+                    type="button"
+                  >
+                    Silenciar micrófono
+                  </button>
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      void run(participant.identity, () =>
+                        changeParticipantPermissions(
+                          slug,
+                          sessionId,
+                          participant.identity,
+                          {
+                            can_publish_audio: restricted,
+                            can_publish_video: restricted,
+                            can_share_screen: restricted,
+                          },
+                        ),
+                      )
+                    }
+                    type="button"
+                  >
+                    {restricted ? 'Permitir medios' : 'Restringir medios'}
+                  </button>
+                  {removeIdentity === participant.identity ? (
+                    <>
+                      <button
+                        disabled={busy}
+                        onClick={() => setRemoveIdentity('')}
+                        type="button"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        className="live-classroom__participant-remove"
+                        disabled={busy}
+                        onClick={() =>
+                          void run(participant.identity, () =>
+                            removeParticipant(
+                              slug,
+                              sessionId,
+                              participant.identity,
+                            ),
+                          ).finally(() => setRemoveIdentity(''))
+                        }
+                        type="button"
+                      >
+                        Confirmar expulsión
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className="live-classroom__participant-remove"
+                      disabled={busy}
+                      onClick={() => setRemoveIdentity(participant.identity)}
+                      type="button"
+                    >
+                      Expulsar
+                    </button>
+                  )}
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
     </aside>
   );

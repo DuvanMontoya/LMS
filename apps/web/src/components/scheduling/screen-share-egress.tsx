@@ -27,6 +27,12 @@ export function ScreenShareEgress() {
     console.log('START_RECORDING');
   }, []);
 
+  const endRecording = useCallback(() => {
+    if (!recordingStarted.current) return;
+    console.log('END_RECORDING');
+    recordingStarted.current = false;
+  }, []);
+
   useEffect(() => {
     const credentials = readEgressCredentials();
     if (!credentials) {
@@ -36,11 +42,6 @@ export function ScreenShareEgress() {
     window.history.replaceState(null, '', window.location.pathname);
     let disposed = false;
 
-    const endRecording = () => {
-      if (!recordingStarted.current) return;
-      console.log('END_RECORDING');
-      recordingStarted.current = false;
-    };
     const onDisconnected = () => {
       endRecording();
       if (!disposed) setReady(false);
@@ -54,7 +55,6 @@ export function ScreenShareEgress() {
       .then(() => {
         if (disposed) return;
         setReady(true);
-        startRecording();
       })
       .catch((caught: unknown) => {
         if (disposed) return;
@@ -71,30 +71,56 @@ export function ScreenShareEgress() {
       endRecording();
       void room.disconnect();
     };
-  }, [room, startRecording]);
+  }, [endRecording, room]);
 
   return (
     <main className="screen-share-egress" data-lk-theme="default">
       {error ? <p role="alert">{error}</p> : null}
       <RoomContext.Provider value={room}>
-        {ready ? <ScreenShareRecordingSurface room={room} /> : null}
+        {ready ? (
+          <ScreenShareRecordingSurface
+            onEnded={endRecording}
+            onPlaying={startRecording}
+            room={room}
+          />
+        ) : null}
       </RoomContext.Provider>
     </main>
   );
 }
 
-function ScreenShareRecordingSurface({ room }: Readonly<{ room: Room }>) {
-  const tracks = useTracks(
-    [{ source: Track.Source.ScreenShare, withPlaceholder: false }],
-    { onlySubscribed: true },
-  );
-  if (room.state === ConnectionState.Disconnected) return null;
+export function ScreenShareRecordingSurface({
+  onEnded,
+  onPlaying,
+  room,
+}: Readonly<{
+  onEnded: () => void;
+  onPlaying: () => void;
+  room: Room;
+}>) {
+  const tracks = useTracks([Track.Source.ScreenShare], { room });
+  const playedTrackSid = useRef<string | null>(null);
   const screenShareTrack = tracks.find(isTrackReference);
+
+  useEffect(() => {
+    if (!screenShareTrack && playedTrackSid.current) {
+      playedTrackSid.current = null;
+      onEnded();
+    }
+  }, [onEnded, screenShareTrack]);
+
+  if (room.state === ConnectionState.Disconnected) return null;
   return (
     <>
       {screenShareTrack ? (
         <VideoTrack
+          autoPlay
           className="screen-share-egress__video"
+          onPlaying={() => {
+            playedTrackSid.current = screenShareTrack.publication.trackSid;
+            onPlaying();
+          }}
+          playsInline
           trackRef={screenShareTrack}
         />
       ) : (

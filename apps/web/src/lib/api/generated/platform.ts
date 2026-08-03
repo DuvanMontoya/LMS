@@ -918,6 +918,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/participants/{identity}/': {
     delete: operations['scheduling_live_participant_remove'];
   };
+  '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/participants/{identity}/mute-audio/': {
+    post: operations['scheduling_live_participant_mute_audio'];
+  };
   '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/participants/{identity}/permissions/': {
     post: operations['scheduling_live_participant_permissions'];
   };
@@ -13117,6 +13120,27 @@ export interface operations {
     };
   };
   scheduling_live_participant_remove: {
+    parameters: {
+      path: {
+        identity: string;
+        session_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['OperationAccepted'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['SchedulingError'];
+        };
+      };
+    };
+  };
+  scheduling_live_participant_mute_audio: {
     parameters: {
       path: {
         identity: string;

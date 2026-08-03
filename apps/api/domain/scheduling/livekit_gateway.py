@@ -57,6 +57,7 @@ class LiveKitGateway:
         self,
         *,
         user_id: object,
+        participant_name: str = "Participante",
         room_name: str,
         access: LiveAccess,
         chat_enabled: bool = False,
@@ -86,7 +87,7 @@ class LiveKitGateway:
         token = (
             api.AccessToken(self.config.api_key, self.config.api_secret)
             .with_identity(participant_identity(user_id))
-            .with_name(f"Participante {str(user_id)[:8]}")
+            .with_name(participant_name.strip() or "Participante")
             .with_attributes({"lms.role": access.role})
             .with_grants(grants)
             .with_ttl(timedelta(seconds=self.config.token_ttl_seconds))
@@ -239,11 +240,19 @@ class LiveKitGateway:
             raise LiveKitRejected("No fue posible consultar participantes.") from error
 
     def has_active_screen_share(self, *, room_name: str) -> bool:
-        return any(
-            track.source == api.TrackSource.SCREEN_SHARE and not track.muted
+        return "screen_share" in self.active_visual_sources(room_name=room_name)
+
+    def active_visual_sources(self, *, room_name: str) -> set[str]:
+        source_names = {
+            api.TrackSource.CAMERA: "camera",
+            api.TrackSource.SCREEN_SHARE: "screen_share",
+        }
+        return {
+            source_names[track.source]
             for participant in self.list_participants(room_name=room_name)
             for track in participant.tracks
-        )
+            if track.source in source_names and not track.muted
+        }
 
     def update_participant_permissions(
         self,
@@ -253,6 +262,7 @@ class LiveKitGateway:
         can_publish_audio: bool,
         can_publish_video: bool,
         can_share_screen: bool,
+        chat_enabled: bool,
     ) -> None:
         sources: list[api.TrackSource] = []
         if can_publish_video:
@@ -272,7 +282,7 @@ class LiveKitGateway:
                     permission=api.ParticipantPermission(
                         can_subscribe=True,
                         can_publish=bool(sources),
-                        can_publish_data=False,
+                        can_publish_data=chat_enabled,
                         can_publish_sources=sources,
                         can_update_metadata=False,
                     ),
@@ -283,6 +293,39 @@ class LiveKitGateway:
             async_to_sync(self._with_client)(operation)
         except Exception as error:
             raise LiveKitRejected("No fue posible cambiar los permisos.") from error
+
+    def mute_participant_microphone(self, *, room_name: str, identity: str) -> None:
+        participant = next(
+            (
+                item
+                for item in self.list_participants(room_name=room_name)
+                if item.identity == identity
+            ),
+            None,
+        )
+        track_sids = [
+            track.sid
+            for track in getattr(participant, "tracks", ())
+            if track.source == api.TrackSource.MICROPHONE and not track.muted
+        ]
+        if not track_sids:
+            return
+
+        async def operation(client: api.LiveKitAPI) -> None:
+            for track_sid in track_sids:
+                await client.room.mute_published_track(
+                    api.MuteRoomTrackRequest(
+                        room=room_name,
+                        identity=identity,
+                        track_sid=track_sid,
+                        muted=True,
+                    )
+                )
+
+        try:
+            async_to_sync(self._with_client)(operation)
+        except Exception as error:
+            raise LiveKitRejected("No fue posible silenciar el micrófono.") from error
 
     def remove_participant(self, *, room_name: str, identity: str) -> None:
         async def operation(client: api.LiveKitAPI):

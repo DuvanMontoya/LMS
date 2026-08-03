@@ -616,6 +616,10 @@ def connection_payload(
         "serverUrl": gateway.config.server_url,
         "token": gateway.issue_token(
             user_id=actor.id,
+            participant_name=(
+                actor.get_full_name().strip()  # type: ignore[attr-defined]
+                or "Participante"
+            ),
             room_name=session.room_name,
             access=access,
             chat_enabled=policy.get("chat_enabled", False),
@@ -805,13 +809,20 @@ def _start_recording(
         raise SchedulingInvalid("Selecciona una resolución de grabación válida.")
     if recording_layout not in {"screen_share", "grid", "speaker"}:
         raise SchedulingInvalid("Selecciona una composición de grabación válida.")
-    if recording_layout == "screen_share" and not gateway.has_active_screen_share(
-        room_name=session.room_name
-    ):
+    visual_sources = gateway.active_visual_sources(room_name=session.room_name)
+    if recording_layout == "screen_share" and "screen_share" not in visual_sources:
         raise SchedulingConflict(
             "Comparte una pantalla antes de iniciar una grabación de pantalla sola."
         )
-    filepath = f"/out/{session.room_name}-{timezone.now():%Y%m%dT%H%M%SZ}.mp4"
+    if recording_layout in {"grid", "speaker"} and not visual_sources:
+        raise SchedulingConflict(
+            "Activa al menos una cámara o una pantalla antes de iniciar esta composición."
+        )
+    recording_id = uuid.uuid4()
+    filepath = (
+        f"/out/{session.room_name}-{timezone.now():%Y%m%dT%H%M%SZ}"
+        f"-{recording_id}.mp4"
+    )
     info = gateway.start_room_recording(
         room_name=session.room_name,
         layout=recording_layout,
@@ -823,6 +834,7 @@ def _start_recording(
     session.recording_layout = recording_layout
     session.recording_resolution = resolution
     LiveSessionRecording.objects.create(
+        id=recording_id,
         session=session,
         egress_id=session.egress_id,
         status=EgressStatus.STARTING,
@@ -900,17 +912,76 @@ def change_participant_permissions(
     gateway: LiveKitGateway | None = None,
 ) -> None:
     session = _session_with_context(session_id)
-    access = _require_live_access(actor=actor, session=session, now=timezone.now())
+    now = timezone.now()
+    access = _require_live_access(actor=actor, session=session, now=now)
     if not access.can_moderate:
         raise SchedulingAccessDenied("No puedes moderar participantes.")
-    if not identity.startswith("user:") or len(identity) > 160:
-        raise SchedulingInvalid("La identidad de participante no es válida.")
+    target_access = _participant_access(session=session, identity=identity, at=now)
+    policy = _live_policy(session)
+    is_student = target_access.role == "student"
+    audio_allowed = target_access.can_publish and (
+        not is_student or policy.get("student_audio_enabled", True)
+    )
+    video_allowed = target_access.can_publish and (
+        not is_student or policy.get("student_video_enabled", True)
+    )
+    screen_allowed = target_access.can_share_screen and (
+        not is_student or policy.get("student_screen_share_enabled", False)
+    )
     (gateway or LiveKitGateway()).update_participant_permissions(
         room_name=session.room_name,
         identity=identity,
-        can_publish_audio=can_publish_audio,
-        can_publish_video=can_publish_video,
-        can_share_screen=can_share_screen,
+        can_publish_audio=can_publish_audio and audio_allowed,
+        can_publish_video=can_publish_video and video_allowed,
+        can_share_screen=can_share_screen and screen_allowed,
+        chat_enabled=policy.get("chat_enabled", False),
+    )
+
+
+def _participant_access(
+    *, session: LiveSession, identity: str, at: datetime
+) -> LiveAccess:
+    if not identity.startswith("user:") or len(identity) > 160:
+        raise SchedulingInvalid("La identidad de participante no es válida.")
+    try:
+        user_id = uuid.UUID(identity.removeprefix("user:"))
+    except ValueError as error:
+        raise SchedulingInvalid("La identidad de participante no es válida.") from error
+    membership = (
+        Membership.objects.select_related("user")
+        .filter(
+            organization=session.occurrence.series.organization,
+            user_id=user_id,
+            status=MembershipStatus.ACTIVE,
+        )
+        .first()
+    )
+    target_access = (
+        live_access(actor=membership.user, session=session, at=at)
+        if membership
+        else None
+    )
+    if target_access is None:
+        raise SchedulingAccessDenied("El participante no pertenece a esta sesión.")
+    return target_access
+
+
+def mute_participant_audio(
+    *,
+    actor: object,
+    session_id: uuid.UUID,
+    identity: str,
+    gateway: LiveKitGateway | None = None,
+) -> None:
+    session = _session_with_context(session_id)
+    now = timezone.now()
+    access = _require_live_access(actor=actor, session=session, now=now)
+    if not access.can_moderate:
+        raise SchedulingAccessDenied("No puedes moderar participantes.")
+    _participant_access(session=session, identity=identity, at=now)
+    (gateway or LiveKitGateway()).mute_participant_microphone(
+        room_name=session.room_name,
+        identity=identity,
     )
 
 
@@ -925,8 +996,7 @@ def expel_participant(
     access = _require_live_access(actor=actor, session=session, now=timezone.now())
     if not access.can_moderate:
         raise SchedulingAccessDenied("No puedes expulsar participantes.")
-    if not identity.startswith("user:") or len(identity) > 160:
-        raise SchedulingInvalid("La identidad de participante no es válida.")
+    _participant_access(session=session, identity=identity, at=timezone.now())
     (gateway or LiveKitGateway()).remove_participant(
         room_name=session.room_name, identity=identity
     )

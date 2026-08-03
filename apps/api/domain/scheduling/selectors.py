@@ -28,6 +28,10 @@ from .recurrence import validated_timezone
 MAX_FEED_DAYS = 93
 
 
+def _host_display_name(occurrence: AcademicEventOccurrence) -> str:
+    return occurrence.series.host_membership.user.get_full_name().strip() or "Docente"
+
+
 def occurrences_visible_to_actor(
     *, actor: object, organization: Organization
 ) -> QuerySet[AcademicEventOccurrence]:
@@ -181,7 +185,7 @@ def occurrence_payload(
             ),
             "eventType": occurrence.series.event_type,
             "occurrenceStatus": occurrence.status,
-            "hostName": f"Participante {str(occurrence.series.host_membership.user_id)[:8]}",
+            "hostName": _host_display_name(occurrence),
             "description": occurrence.description_override
             or occurrence.series.description,
             "recurring": bool(occurrence.series.rrule),
@@ -293,7 +297,7 @@ def _live_session_payload(*, session: LiveSession, actor: object) -> dict[str, A
         "recordingLayout": binding.get("recording_layout", "screen_share"),
         "recordingResolution": binding.get("recording_resolution", "1080p"),
         "recordingStatus": session.egress_status,
-        "hostName": f"Participante {str(occurrence.series.host_membership.user_id)[:8]}",
+        "hostName": _host_display_name(occurrence),
         "scheduledStart": occurrence.starts_at,
         "scheduledEnd": occurrence.ends_at,
         "status": session.status,

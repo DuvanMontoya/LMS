@@ -22,6 +22,7 @@ $pythonExecutable = Join-Path $apiDirectory '.venv/Scripts/python.exe'
 $nextExecutable = Join-Path $webDirectory 'node_modules/next/dist/bin/next'
 $apiPort = 8010
 $apiLoopbackOrigin = "http://127.0.0.1:$apiPort"
+$webBindAddress = '0.0.0.0'
 
 function Import-LocalEnvironment {
     if (-not (Test-Path -LiteralPath $environmentFile)) {
@@ -232,7 +233,7 @@ function Start-Development {
         -RedirectStandardError $apiErrorLog
     $webProcess = Start-Process `
         -FilePath 'node.exe' `
-        -ArgumentList @($nextExecutable, 'dev', '--webpack', '--hostname', '127.0.0.1', '--port', '3000') `
+        -ArgumentList @($nextExecutable, 'dev', '--webpack', '--hostname', $webBindAddress, '--port', '3000') `
         -WorkingDirectory $webDirectory `
         -PassThru `
         -WindowStyle Hidden `

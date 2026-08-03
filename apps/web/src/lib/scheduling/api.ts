@@ -165,6 +165,19 @@ export function changeParticipantPermissions(
   );
 }
 
+export function muteParticipantAudio(
+  slug: string,
+  sessionId: string,
+  identity: string,
+) {
+  return required(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/participants/{identity}/mute-audio/',
+      { params: { path: { slug, session_id: sessionId, identity } } },
+    ),
+  );
+}
+
 export function removeParticipant(
   slug: string,
   sessionId: string,

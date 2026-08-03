@@ -40,6 +40,10 @@ urlpatterns = [
         views.LiveParticipantPermissionView.as_view(),
     ),
     path(
+        SESSION + "participants/<path:identity>/mute-audio/",
+        views.LiveParticipantMuteAudioView.as_view(),
+    ),
+    path(
         SESSION + "participants/<path:identity>/",
         views.LiveParticipantRemoveView.as_view(),
     ),

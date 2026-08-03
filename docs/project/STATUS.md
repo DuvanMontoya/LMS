@@ -1653,10 +1653,46 @@ Siguiente paso:
   grabador, pero `no-store`, `no-referrer`, sin permisos de captura y con CSP
   limitada al origen LiveKit.
 - Se añadió `scheduling.0011` para la resolución de política y los datos de la
-  ejecución. OpenAPI y el cliente tipado incluyen ambos campos y el cuerpo de
-  inicio manual. No se añadieron dependencias: la plantilla sigue el protocolo
-  oficial de señales `START_RECORDING`/`END_RECORDING`.
-- Evidencia actual: `scheduling:check`, Ruff, TypeScript y ESLint verdes; 25/25
-  pruebas PostgreSQL de scheduling y 8/8 pruebas frontend focales. Continúa
-  abierta la inspección final en Chrome y del MP4 real antes de declarar
-  completada la grabación audiovisual.
+  ejecución y `scheduling.0012` para eliminar el modo automático y conservar
+  cada segmento en `LiveSessionRecording`. Entrar o iniciar una clase nunca
+  inicia Egress: el docente elige composición y resolución en cada segmento y
+  lo detiene explícitamente. OpenAPI y el cliente tipado exigen ambos campos.
+- El servidor comprueba pistas reales antes de grabar: sólo pantalla requiere
+  `ScreenShare`, y enfoque/mosaico requieren cámara o pantalla. El aula refleja
+  ese contrato, muestra un único control al moderador y un indicador sincronizado
+  a todos los participantes. Cada inicio conserva un registro separado por
+  Egress ID y una ruta MP4 con UUID propio incluso si dos inicios ocurren en el
+  mismo segundo; los webhooks actualizan el segmento exacto.
+- Chrome confirmó la entrada real al aula, cambio a mosaico, publicación de
+  pantalla y disponibilidad de «Sólo presentación». Una primera captura 1080p
+  reveló que la plantilla iniciaba al conectar y grababa la espera; se corrigió
+  para emitir `START_RECORDING` sólo tras `playing` y `END_RECORDING` si
+  desaparece la pista. La regresión automatizada cubre ambos flancos.
+- Evidencia real posterior a la corrección: Egress `EG_SWuHfhg6PLAR`, H.264
+  1920×1080 a 30 fps + AAC, 40,797 s y 10.237.163 bytes; Egress
+  `EG_W5EefJKZBKde`, H.264 1280×720 a 30 fps + AAC, 41,378 s y 6.607.595 bytes.
+  Los fotogramas extraídos muestran únicamente el escritorio compartido, sin
+  cámara, rótulo de participante ni interfaz del aula.
+- La migración `0012` está aplicada en PostgreSQL. Las puertas finales incluyen
+  `scheduling:check`, `web:build`, Ruff, TypeScript y ESLint verdes; 26/26
+  pruebas PostgreSQL de scheduling y 6/6 pruebas frontend focales. La cuenta
+  abierta en Chrome era de estudiante/autor sin capacidad de moderación: no se
+  alteraron roles ni contraseñas para fingir la inspección visual del diálogo
+  docente.
+- El token mantiene `user:<uuid>` como identidad y presenta el nombre
+  institucional autorizado (`Docente Demo` en los datos locales), sin exponer
+  el correo. El panel de participantes ahora aparece sólo bajo demanda y no
+  reduce permanentemente el vídeo. Silenciar usa `MutePublishedTrack`,
+  restringir/restaurar medios queda recortado por rol y política, preserva chat
+  según la sesión, y expulsar exige confirmación. El servidor rechaza identidades
+  que no tengan acceso real a esa sesión.
+- Se corrigió la carrera del indicador: un `isRecording=false` recibido antes
+  de que LiveKit confirme un inicio ya no reemplaza `starting` por un falso
+  estado inactivo. Cámara, micrófono y pantalla limpian el error anterior antes
+  de cada reintento para que un dispositivo recuperado no conserve una alerta
+  obsoleta.
+- El desarrollo web escucha en `0.0.0.0`; `localhost:3000` y
+  `127.0.0.1:3000` alcanzan el mismo proceso sin trasladar cookies ni alterar
+  identidades. La sesión Chrome de estudiante volvió a cargar la actividad
+  programada; la comprobación visual de controles exclusivos de moderador sigue
+  explícitamente pendiente de una sesión con esa capacidad.

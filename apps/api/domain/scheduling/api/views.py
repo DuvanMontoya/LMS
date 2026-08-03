@@ -52,6 +52,7 @@ from domain.scheduling.services import (
     create_event_series,
     end_live_session,
     expel_participant,
+    mute_participant_audio,
     join_live_session,
     materialize_course_group_live_classes,
     reschedule_occurrence,
@@ -856,6 +857,27 @@ class LiveParticipantPermissionView(APIView):
         return (
             result if isinstance(result, Response) else Response({"status": "updated"})
         )
+
+
+class LiveParticipantMuteAudioView(APIView):
+    @extend_schema(
+        operation_id="scheduling_live_participant_mute_audio",
+        request=None,
+        responses={200: OperationAcceptedSerializer, 403: SchedulingErrorSerializer},
+    )
+    def post(
+        self, request: Request, slug: str, session_id: uuid.UUID, identity: str
+    ) -> Response:
+        organization = _organization(request, slug)
+        get_object_or_404(
+            LiveSession, pk=session_id, occurrence__series__organization=organization
+        )
+        result = _domain_call(
+            lambda: mute_participant_audio(
+                actor=request.user, session_id=session_id, identity=identity
+            )
+        )
+        return result if isinstance(result, Response) else Response({"status": "muted"})
 
 
 class LiveParticipantRemoveView(APIView):

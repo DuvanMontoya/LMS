@@ -30,19 +30,37 @@ servicio Egress separado que comparte Redis con LiveKit Server.
   paralelo en cursos.
 - El backend aplica la política al crear la sala y emitir cada token. La UI no
   puede elevar permisos concedidos por Django.
-- Grabación queda desactivada por defecto. Sus modos son manual o automática;
-  sus composiciones son sólo pantalla compartida, docente activo o cuadrícula.
-  Para una política nueva, sólo pantalla es la composición recomendada y
-  `1080p` la resolución predeterminada; el moderador puede escoger `720p` antes
-  de iniciar una grabación manual.
+- El token conserva la identidad seudónima `user:<uuid>`, pero incluye el nombre
+  institucional autorizado para presentarlo en el aula. No incluye correo ni
+  permite que el navegador elija la identidad visible.
+- La moderación usa Room Service: silenciar un micrófono llama
+  `MutePublishedTrack`; expulsar llama `RemoveParticipant`. Una restauración de
+  medios nunca concede más de lo que permiten el rol efectivo y la política de
+  la sesión, y conserva el permiso de datos únicamente cuando el chat está
+  habilitado. No se habilita el unmute remoto.
+- La autoría sólo puede desactivar la grabación o permitir que el docente la
+  controle manualmente en el aula. Entrar o iniciar una sesión nunca inicia
+  Egress. La composición y resolución guardadas en la política son únicamente
+  sugerencias para el diálogo del moderador, no una orden automática.
+- Cada segmento exige una acción explícita del moderador y una selección de
+  composición —sólo pantalla compartida, enfoque automático o cuadrícula— y
+  resolución `1080p` o `720p`. La composición sólo pantalla se rechaza sin una
+  pista `ScreenShare`; enfoque y cuadrícula se rechazan si no existe al menos
+  una cámara o pantalla real. Los placeholders no cuentan como contenido.
 - La composición sólo pantalla usa una plantilla Room Composite propia que
   suscribe exclusivamente pistas `ScreenShare` y usa `RoomAudioRenderer` para
   conservar el audio remoto. Así excluye cámaras sin perder las voces de la
   sala; un Track Egress crudo no satisface ese contrato porque exporta una sola
   pista.
+- La plantilla no emite `START_RECORDING` al conectarse a la sala: espera el
+  evento `playing` del elemento de vídeo de la pantalla compartida. Si esa pista
+  desaparece, emite `END_RECORDING`. De este modo una conexión correcta no puede
+  producir un MP4 de la pantalla de espera.
 - La resolución y composición realmente solicitadas se copian a `LiveSession`
-  al iniciar Egress. No se infieren posteriormente desde la política, que puede
-  cambiar para futuras publicaciones.
+  al iniciar Egress. Cada inicio crea además un `LiveSessionRecording`
+  inmutable en identidad, con actor, Egress ID, ruta privada, estado, inicio y
+  fin. Detener y volver a iniciar crea otro segmento; nunca sobrescribe el
+  anterior ni reconstruye la historia desde la política.
 - Toda persona debe reconocer el aviso antes de recibir un token de una sala
   grabable. `LiveRecordingAcknowledgement` conserva ese reconocimiento por
   usuario y sesión, sin borrado físico.
@@ -54,9 +72,10 @@ servicio Egress separado que comparte Redis con LiveKit Server.
   segundo permite al Chrome headless de Egress establecer WebRTC con el SFU.
   No se fija `node_ip` a loopback porque ese valor cambia de significado dentro
   del contenedor grabador.
-- PostgreSQL conserva estado e identificadores de Egress, pero no rutas de
-  objetos, credenciales ni enlaces firmados. Los webhooks firmados actualizan
-  el estado de la grabación.
+- PostgreSQL conserva el estado académico y el historial de segmentos. Las
+  rutas guardadas son referencias privadas del backend; credenciales, claves de
+  objetos y enlaces firmados no entran en snapshots ni respuestas públicas.
+  Los webhooks firmados reconcilian el segmento correspondiente por Egress ID.
 - El chat se marca explícitamente como efímero. Persistirlo requeriría otra
   decisión de privacidad y un modelo académico propio; no se simula historial.
 - Para producción, la salida debe migrar a almacenamiento privado cifrado con
@@ -73,7 +92,13 @@ servicio Egress separado que comparte Redis con LiveKit Server.
 - Configurar una clase en vivo ya no es un campo de título: la autoría produce
   una política verificable que llega a tokens, Room Service y Egress.
 - La grabación no puede comenzar si el entorno no tiene Egress habilitado, si
-  la actividad la deshabilita o si el actor no modera la sesión.
+  la actividad la deshabilita, si el actor no modera la sesión o si la
+  composición elegida no tiene una fuente visual real.
+- Todos los participantes conectados reciben el estado de grabación de LiveKit
+  y ven un indicador; sólo el moderador obtiene los controles de inicio y fin.
+- La interfaz no interpreta la ausencia inicial de `isRecording` como fin de un
+  inicio solicitado: conserva `starting` hasta observar el estado real del
+  proveedor y sólo entonces puede transicionar a `active` o `ended`.
 - Finalizar una sala intenta detener primero una grabación activa y conserva el
   resultado operativo aunque Egress falle.
 - No se incluyen transcripción, subtítulos automáticos ni almacenamiento de
@@ -85,6 +110,8 @@ servicio Egress separado que comparte Redis con LiveKit Server.
   https://docs.livekit.io/intro/basics/rooms-participants-tracks/rooms/
 - LiveKit, Room service API, 2026-08-02:
   https://docs.livekit.io/reference/other/roomservice-api/
+- LiveKit Python Room Service, `mute_published_track`, 2026-08-03:
+  https://docs.livekit.io/reference/python/livekit/api/room_service.html
 - LiveKit, Participant management, 2026-08-02:
   https://docs.livekit.io/intro/basics/rooms-participants-tracks/participants/
 - LiveKit, Text streams, 2026-08-02:

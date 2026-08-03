@@ -26,10 +26,11 @@ class FakeLiveKitGateway:
         self.created_rooms: list[str] = []
         self.closed_rooms: list[str] = []
         self.permission_changes: list[dict[str, object]] = []
+        self.muted_participants: list[dict[str, str]] = []
         self.removed: list[str] = []
         self.recordings: list[dict[str, object]] = []
         self.stopped_recordings: list[str] = []
-        self.screen_share_active = True
+        self.visual_sources = {"camera", "screen_share"}
 
     def create_room(self, *, room_name: str, metadata: str, **options: object):
         del metadata
@@ -49,13 +50,16 @@ class FakeLiveKitGateway:
     def update_participant_permissions(self, **values: object) -> None:
         self.permission_changes.append(values)
 
+    def mute_participant_microphone(self, **values: str) -> None:
+        self.muted_participants.append(values)
+
     def remove_participant(self, *, room_name: str, identity: str) -> None:
         del room_name
         self.removed.append(identity)
 
     def start_room_recording(self, **values: object):
         self.recordings.append(values)
-        return SimpleNamespace(egress_id="EG_test")
+        return SimpleNamespace(egress_id=f"EG_test_{len(self.recordings)}")
 
     def stop_recording(self, *, egress_id: str):
         self.stopped_recordings.append(egress_id)
@@ -63,7 +67,11 @@ class FakeLiveKitGateway:
 
     def has_active_screen_share(self, *, room_name: str) -> bool:
         del room_name
-        return self.screen_share_active
+        return "screen_share" in self.visual_sources
+
+    def active_visual_sources(self, *, room_name: str) -> set[str]:
+        del room_name
+        return set(self.visual_sources)
 
 
 class SchedulingFixtureMixin(LearningFixtureMixin):

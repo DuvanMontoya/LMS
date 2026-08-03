@@ -38,19 +38,66 @@ from domain.scheduling.livekit_gateway import LiveKitGateway
 from domain.scheduling.policies import LiveAccess
 from domain.scheduling.services import (
     cancel_occurrence,
+    change_participant_permissions,
     create_event_series,
     end_live_session,
     join_live_session,
     materialize_course_group_live_classes,
+    mute_participant_audio,
     reschedule_occurrence,
     start_live_recording,
     start_live_session,
+    stop_live_recording,
 )
 
 from .support import FakeLiveKitGateway, SchedulingFixtureMixin
 
 
 class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
+    def test_moderator_mutes_audio_and_cannot_elevate_session_policy(self) -> None:
+        context = self.scheduling_context()
+        gateway = FakeLiveKitGateway()
+        start_live_session(
+            actor=context["owner"],
+            session_id=context["session"].id,
+            gateway=gateway,
+        )
+        identity = f"user:{context['learner'].id}"
+
+        change_participant_permissions(
+            actor=context["owner"],
+            session_id=context["session"].id,
+            identity=identity,
+            can_publish_audio=True,
+            can_publish_video=True,
+            can_share_screen=True,
+            gateway=gateway,
+        )
+        self.assertEqual(
+            gateway.permission_changes,
+            [
+                {
+                    "room_name": context["session"].room_name,
+                    "identity": identity,
+                    "can_publish_audio": True,
+                    "can_publish_video": True,
+                    "can_share_screen": False,
+                    "chat_enabled": False,
+                }
+            ],
+        )
+
+        mute_participant_audio(
+            actor=context["owner"],
+            session_id=context["session"].id,
+            identity=identity,
+            gateway=gateway,
+        )
+        self.assertEqual(
+            gateway.muted_participants,
+            [{"room_name": context["session"].room_name, "identity": identity}],
+        )
+
     def test_materializes_each_pending_live_activity_for_a_course_group(self) -> None:
         context = self.scheduling_context()
         cohort = create_cohort(
@@ -125,7 +172,7 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
         session.actual_started_at = timezone.now()
         session.save(update_fields=("status", "actual_started_at", "updated_at"))
         gateway = FakeLiveKitGateway()
-        gateway.screen_share_active = False
+        gateway.visual_sources = {"camera"}
         with (
             self.settings(LIVEKIT_EGRESS_ENABLED=True),
             self.assertRaisesMessage(
@@ -141,7 +188,22 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
                 gateway=gateway,
             )
         self.assertEqual(gateway.recordings, [])
-        gateway.screen_share_active = True
+        gateway.visual_sources = set()
+        with (
+            self.settings(LIVEKIT_EGRESS_ENABLED=True),
+            self.assertRaisesMessage(
+                SchedulingConflict,
+                "Activa al menos una cámara o una pantalla antes de iniciar esta composición.",
+            ),
+        ):
+            start_live_recording(
+                actor=context["owner"],
+                session_id=session.id,
+                recording_layout="grid",
+                recording_resolution="720p",
+                gateway=gateway,
+            )
+        gateway.visual_sources = {"screen_share"}
         with self.settings(LIVEKIT_EGRESS_ENABLED=True):
             start_live_recording(
                 actor=context["owner"],
@@ -165,11 +227,36 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
         self.assertTrue(str(gateway.recordings[0]["filepath"]).endswith(".mp4"))
         self.assertEqual(session.recording_layout, "screen_share")
         self.assertEqual(session.recording_resolution, "720p")
-        self.assertEqual(session.egress_id, "EG_test")
-        recording = session.recordings.get()
-        self.assertEqual(recording.layout, "screen_share")
-        self.assertEqual(recording.resolution, "720p")
-        self.assertEqual(recording.started_by_id, context["owner"].id)
+        self.assertEqual(session.egress_id, "EG_test_1")
+        first_recording = session.recordings.get()
+        self.assertEqual(first_recording.layout, "screen_share")
+        self.assertEqual(first_recording.resolution, "720p")
+        self.assertEqual(first_recording.started_by_id, context["owner"].id)
+
+        with self.settings(LIVEKIT_EGRESS_ENABLED=True):
+            stop_live_recording(
+                actor=context["owner"],
+                session_id=session.id,
+                gateway=gateway,
+            )
+            start_live_recording(
+                actor=context["owner"],
+                session_id=session.id,
+                recording_layout="speaker",
+                recording_resolution="1080p",
+                gateway=gateway,
+            )
+
+        session.refresh_from_db()
+        recordings = list(session.recordings.all())
+        self.assertEqual(session.egress_id, "EG_test_2")
+        self.assertEqual(len(recordings), 2)
+        self.assertNotEqual(recordings[0].id, recordings[1].id)
+        self.assertNotEqual(recordings[0].filepath, recordings[1].filepath)
+        self.assertEqual(recordings[0].status, "ended")
+        self.assertIsNotNone(recordings[0].stopped_at)
+        self.assertEqual(recordings[1].layout, "speaker")
+        self.assertEqual(recordings[1].resolution, "1080p")
 
     def test_course_group_session_requires_current_group_assignment(self) -> None:
         context = self.scheduling_context()
@@ -364,12 +451,13 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
         with self.assertRaises(SchedulingAccessDenied):
             join_live_session(actor=outsider, session_id=session.id, gateway=gateway)
 
-    def test_short_lived_token_has_pseudonymous_identity_and_least_privilege(
+    def test_short_lived_token_has_pseudonymous_identity_display_name_and_least_privilege(
         self,
     ) -> None:
         gateway = LiveKitGateway(FakeLiveKitGateway().config)
         token = gateway.issue_token(
             user_id="00000000-0000-0000-0000-000000000123",
+            participant_name="Ada Lovelace",
             room_name="lk_test",
             access=LiveAccess(
                 role=AttendanceRole.STUDENT,
@@ -382,6 +470,7 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
         payload += "=" * (-len(payload) % 4)
         claims = json.loads(base64.urlsafe_b64decode(payload))
         self.assertEqual(claims["sub"], "user:00000000-0000-0000-0000-000000000123")
+        self.assertEqual(claims["name"], "Ada Lovelace")
         self.assertEqual(claims["attributes"]["lms.role"], "student")
         self.assertLessEqual(claims["exp"] - claims["nbf"], 300)
         self.assertFalse(claims["video"]["canPublishData"])

@@ -65,8 +65,26 @@ API key firmante. El endpoint exige `application/webhook+json`, cuerpo crudo y
 6. Para grabación, probar `720p` y `1080p`; con composición `screen_share`,
    verificar con `ffprobe` las dimensiones reales y comprobar visualmente que
    el archivo contiene la pantalla y el audio de la sala, pero ninguna cámara.
-   El estado, la composición y la resolución ejecutadas deben coincidir en
-   `LiveSession`.
+   Extraer además un fotograma posterior al arranque: no aceptar como evidencia
+   un MP4 que sólo muestre «Esperando una pantalla compartida». La señal
+   `START_RECORDING` debe ocurrir después de que el vídeo remoto esté en
+   reproducción.
+   Confirmar primero que entrar a la sala no inicia Egress. Iniciar y detener
+   manualmente dos segmentos con composiciones distintas; el estado actual debe
+   coincidir en `LiveSession` y ambos registros deben permanecer separados en
+   `LiveSessionRecording`.
+7. Verificar que `screen_share` se rechaza sin pantalla y que cuadrícula/enfoque
+   se rechazan sin cámara ni pantalla. El indicador `Grabando` debe aparecer a
+   moderadores y participantes mientras LiveKit reporte la sala grabándose.
+8. Abrir participantes como moderador y comprobar que el panel se superpone
+   sólo bajo demanda. Silenciar debe mutear únicamente la pista de micrófono;
+   restringir/restaurar medios debe respetar rol, política y chat; expulsar debe
+   exigir confirmación. Un usuario ajeno a la sesión debe recibir rechazo sin
+   que se invoque Room Service.
+9. En desarrollo, comprobar `http://localhost:3000` y
+   `http://127.0.0.1:3000`: Next debe escuchar en `0.0.0.0` para que ambos
+   nombres lleguen al mismo proceso. Las cookies siguen siendo propias de cada
+   hostname y nunca se copian para simular una sesión.
 
 ## Diagnóstico
 
@@ -89,6 +107,14 @@ API key firmante. El endpoint exige `application/webhook+json`, cuerpo crudo y
   `LIVEKIT_EGRESS_TEMPLATE_URL`, que esa URL responde sin redirigir a login y
   que `LIVEKIT_EGRESS_CONNECT_URL` coincide con el origen WSS/WS accesible desde
   el contenedor. No cambiar a cuadrícula para ocultar el error.
+- Grabación sin fuente visual: publicar primero la cámara o la pantalla según
+  la composición. No eliminar la validación ni contar placeholders como pistas.
+- MP4 con pantalla de espera pese a existir una pantalla publicada: confirmar
+  que la plantilla espera `playing` antes de `START_RECORDING`; conectarse a la
+  sala no prueba que el vídeo ya esté adjunto y decodificándose.
+- Volumen de salida no escribible: comprobar que `livekit-egress-init` terminó
+  correctamente y que `/out` pertenece a UID `1001`, GID `0`, modo `770`. Egress
+  permanece sin privilegios; no ejecutarlo como root para ocultar permisos.
 - Egress queda en `STARTING` sin señal: revisar el log del grabador y los
   candidatos ICE de LiveKit. El servidor local debe anunciar interfaz interna
   y loopback; un único candidato `127.0.0.1` permite el navegador del host pero

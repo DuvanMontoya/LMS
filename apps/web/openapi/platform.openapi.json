@@ -25112,6 +25112,51 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/participants/{identity}/mute-audio/": {
+      "post": {
+        "operationId": "scheduling_live_participant_mute_audio",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "identity",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OperationAccepted" }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SchedulingError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/participants/{identity}/permissions/": {
       "post": {
         "operationId": "scheduling_live_participant_permissions",
