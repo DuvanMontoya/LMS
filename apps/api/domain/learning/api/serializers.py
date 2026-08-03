@@ -525,6 +525,7 @@ class UnitOutlineSerializer(serializers.Serializer):
     title = serializers.CharField()
     summary = serializers.CharField()
     estimated_duration_minutes = serializers.IntegerField(allow_null=True)
+    lesson_kind = serializers.CharField()
     position = serializers.IntegerField()
     status = serializers.CharField()
     is_current = serializers.BooleanField()

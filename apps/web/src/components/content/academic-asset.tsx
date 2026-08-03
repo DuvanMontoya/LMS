@@ -177,7 +177,25 @@ export function AcademicAsset({
           Tu navegador no puede reproducir este video.
         </video>
       ) : null}
-      {kind === 'document' || kind === 'dataset' ? (
+      {kind === 'document' && source.mime_type === 'application/pdf' ? (
+        <div className="bg-muted/10 p-2 sm:p-4">
+          <iframe
+            className="h-[36rem] w-full rounded border bg-white"
+            src={source.url}
+            title={`Vista previa de ${String(attrs.label ?? 'documento')}`}
+          />
+          <div className="mt-3 flex justify-end">
+            <Button asChild size="sm" variant="outline">
+              <a href={source.url} rel="noreferrer" target="_blank">
+                <Download data-icon="inline-start" />
+                Abrir PDF
+              </a>
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      {kind === 'dataset' ||
+      (kind === 'document' && source.mime_type !== 'application/pdf') ? (
         <div className="flex flex-wrap items-center justify-between gap-4 p-4">
           <div>
             <p className="font-medium">

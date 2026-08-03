@@ -37,14 +37,14 @@ const ACCEPT: Record<AssetKind, string> = {
   audio: '.mp3,.m4a,.mp4,.wav,.ogg',
   caption: '.vtt',
   dataset: '.csv,.json,.txt',
-  document: '.pdf',
+  document: '.pdf,.pptx,.md,.tex',
   image: '.jpg,.jpeg,.png,.webp',
   video: '.mp4,.mov,.webm',
 };
 
 const ASSET_KIND_OPTIONS: readonly { label: string; value: AssetKind }[] = [
   { label: 'Imagen', value: 'image' },
-  { label: 'Documento PDF', value: 'document' },
+  { label: 'Documento, presentación o fuente', value: 'document' },
   { label: 'Audio', value: 'audio' },
   { label: 'Video', value: 'video' },
   { label: 'Dataset', value: 'dataset' },
@@ -67,7 +67,13 @@ const FALLBACK_MIME_BY_EXTENSION: Readonly<
     '.json': 'application/json',
     '.txt': 'text/plain',
   },
-  document: { '.pdf': 'application/pdf' },
+  document: {
+    '.md': 'text/markdown',
+    '.pdf': 'application/pdf',
+    '.pptx':
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    '.tex': 'application/x-tex',
+  },
   image: {
     '.jpeg': 'image/jpeg',
     '.jpg': 'image/jpeg',

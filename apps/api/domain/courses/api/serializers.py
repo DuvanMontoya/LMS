@@ -8,6 +8,7 @@ from ..choices import (
     ActivityCompletionMethod,
     ActivityType,
     AvailabilityRuleType,
+    LessonKind,
     SubjectAlignmentType,
 )
 from ..models import (
@@ -525,6 +526,7 @@ class UnitSerializer(serializers.ModelSerializer):
             "title",
             "summary",
             "estimated_duration_minutes",
+            "lesson_kind",
             "status",
             "position",
             "created_at",
@@ -547,6 +549,11 @@ class UnitCreateSerializer(ExpectedVersionSerializer):
     summary = serializers.CharField(max_length=1200, required=False, allow_blank=True)
     estimated_duration_minutes = serializers.IntegerField(
         min_value=1, required=False, allow_null=True
+    )
+    lesson_kind = serializers.ChoiceField(
+        choices=LessonKind.choices,
+        default=LessonKind.DOCUMENT,
+        required=False,
     )
 
 

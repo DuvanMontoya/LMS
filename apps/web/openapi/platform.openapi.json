@@ -5361,6 +5361,19 @@
         ],
         "type": "object"
       },
+      "LessonKindEnum": {
+        "description": "* `document` - Documento\n* `mediacms_video` - Video MediaCMS\n* `latex_source` - Archivo LaTeX (.tex)\n* `markdown_source` - Archivo Markdown (.md)\n* `pdf` - PDF\n* `slides` - Diapositivas\n* `audio` - Audio",
+        "enum": [
+          "document",
+          "mediacms_video",
+          "latex_source",
+          "markdown_source",
+          "pdf",
+          "slides",
+          "audio"
+        ],
+        "type": "string"
+      },
       "LibraryCourse": {
         "properties": {
           "course_id": { "format": "uuid", "type": "string" },
@@ -6837,6 +6850,7 @@
             "readOnly": true,
             "type": "array"
           },
+          "lesson_kind": { "readOnly": true, "type": "string" },
           "module_id": { "format": "uuid", "readOnly": true, "type": "string" },
           "position": { "nullable": true, "readOnly": true, "type": "integer" },
           "status": { "readOnly": true, "type": "string" },
@@ -6862,6 +6876,7 @@
           "estimated_duration_minutes",
           "id",
           "learning_objectives",
+          "lesson_kind",
           "module_id",
           "position",
           "status",
@@ -7505,6 +7520,7 @@
             "type": "integer"
           },
           "id": { "format": "uuid", "type": "string" },
+          "lesson_kind": { "type": "string" },
           "position": { "minimum": 1, "type": "integer" },
           "summary": { "type": "string" },
           "title": { "type": "string" }
@@ -7512,6 +7528,7 @@
         "required": [
           "estimated_duration_minutes",
           "id",
+          "lesson_kind",
           "position",
           "summary",
           "title"
@@ -9072,6 +9089,7 @@
             "type": "integer"
           },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "lesson_kind": { "readOnly": true, "type": "string" },
           "module_id": { "format": "uuid", "readOnly": true, "type": "string" },
           "position": { "nullable": true, "readOnly": true, "type": "integer" },
           "status": { "readOnly": true, "type": "string" },
@@ -9088,6 +9106,7 @@
           "created_at",
           "estimated_duration_minutes",
           "id",
+          "lesson_kind",
           "module_id",
           "position",
           "status",
@@ -9105,6 +9124,10 @@
             "type": "integer"
           },
           "expected_version": { "minimum": 1, "type": "integer" },
+          "lesson_kind": {
+            "allOf": [{ "$ref": "#/components/schemas/LessonKindEnum" }],
+            "default": "document"
+          },
           "summary": { "maxLength": 1200, "type": "string" },
           "title": { "maxLength": 200, "type": "string" }
         },
@@ -9130,6 +9153,7 @@
             "type": "integer"
           },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "lesson_kind": { "readOnly": true, "type": "string" },
           "lock_version": { "readOnly": true, "type": "integer" },
           "module_id": { "format": "uuid", "readOnly": true, "type": "string" },
           "position": { "nullable": true, "readOnly": true, "type": "integer" },
@@ -9147,6 +9171,7 @@
           "created_at",
           "estimated_duration_minutes",
           "id",
+          "lesson_kind",
           "lock_version",
           "module_id",
           "position",
@@ -9175,6 +9200,7 @@
           "href": { "type": "string" },
           "id": { "format": "uuid", "type": "string" },
           "is_current": { "type": "boolean" },
+          "lesson_kind": { "type": "string" },
           "position": { "type": "integer" },
           "status": { "type": "string" },
           "summary": { "type": "string" },
@@ -9185,6 +9211,7 @@
           "href",
           "id",
           "is_current",
+          "lesson_kind",
           "position",
           "status",
           "summary",

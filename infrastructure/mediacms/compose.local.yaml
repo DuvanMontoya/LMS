@@ -1,0 +1,192 @@
+# Local MediaCMS stack for author-operated video processing. It intentionally
+# does not join lms_internal: Django remains the academic and authorization
+# authority, while MediaCMS is a private local catalogue/transcoder.
+x-mediacms-start: &mediacms_start
+  - /bin/sh
+  - -ec
+  - "sed -i 's/\\r$//' ./deploy/docker/*.sh && exec /bin/bash ./deploy/docker/entrypoint.sh ./deploy/docker/start.sh"
+
+x-mediacms-migrate: &mediacms_migrate
+  - /bin/sh
+  - -ec
+  - "sed -i 's/\\r$//' ./deploy/docker/*.sh && exec /bin/bash ./deploy/docker/entrypoint.sh ./deploy/docker/prestart.sh"
+
+services:
+  db:
+    image: postgres:17.2-alpine@sha256:7e5df973a74872482e320dcbdeb055e178d6f42de0558b083892c50cda833c96
+    environment:
+      POSTGRES_DB: ${MEDIACMS_POSTGRES_DB:?MEDIACMS_POSTGRES_DB is required}
+      POSTGRES_PASSWORD: ${MEDIACMS_POSTGRES_PASSWORD:?MEDIACMS_POSTGRES_PASSWORD is required}
+      POSTGRES_USER: ${MEDIACMS_POSTGRES_USER:?MEDIACMS_POSTGRES_USER is required}
+      TZ: America/Bogota
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    networks: [mediacms_internal]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - mediacms_postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:8.8.1-trixie@sha256:c88d347edef6249a6d2293f926f1eeb48bd40c57cbcd02c07f52e7f1fd2cb46b
+    environment:
+      MEDIACMS_REDIS_PASSWORD: ${MEDIACMS_REDIS_PASSWORD:?MEDIACMS_REDIS_PASSWORD is required}
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${MEDIACMS_REDIS_PASSWORD:?MEDIACMS_REDIS_PASSWORD is required}",
+      ]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "REDISCLI_AUTH=$$MEDIACMS_REDIS_PASSWORD redis-cli --no-auth-warning ping | grep -q PONG",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    networks: [mediacms_internal]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - mediacms_redis:/data
+
+  migrations:
+    build:
+      context: ${MEDIACMS_SOURCE_DIR:?Run pnpm mediacms:init first}
+      dockerfile: Dockerfile
+      target: base
+    image: lms-mediacms:8.1.3-a3fe375
+    command: *mediacms_migrate
+    entrypoint: []
+    environment: &mediacms_environment
+      ADMIN_EMAIL: ${MEDIACMS_ADMIN_EMAIL:?MEDIACMS_ADMIN_EMAIL is required}
+      ADMIN_PASSWORD: ${MEDIACMS_ADMIN_PASSWORD:?MEDIACMS_ADMIN_PASSWORD is required}
+      ADMIN_USER: ${MEDIACMS_ADMIN_USER:?MEDIACMS_ADMIN_USER is required}
+      ENABLE_CELERY_BEAT: "no"
+      ENABLE_CELERY_LONG: "no"
+      ENABLE_CELERY_SHORT: "no"
+      ENABLE_MIGRATIONS: "yes"
+      ENABLE_NGINX: "no"
+      ENABLE_UWSGI: "no"
+      FRONTEND_HOST: http://127.0.0.1:${MEDIACMS_PORT:?MEDIACMS_PORT is required}
+      MEDIACMS_REDIS_PASSWORD: ${MEDIACMS_REDIS_PASSWORD:?MEDIACMS_REDIS_PASSWORD is required}
+      POSTGRES_HOST: db
+      POSTGRES_NAME: ${MEDIACMS_POSTGRES_DB:?MEDIACMS_POSTGRES_DB is required}
+      POSTGRES_PASSWORD: ${MEDIACMS_POSTGRES_PASSWORD:?MEDIACMS_POSTGRES_PASSWORD is required}
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: ${MEDIACMS_POSTGRES_USER:?MEDIACMS_POSTGRES_USER is required}
+      REDIS_LOCATION: redis://:${MEDIACMS_REDIS_PASSWORD:?MEDIACMS_REDIS_PASSWORD is required}@redis:6379/1
+      SECRET_KEY: ${MEDIACMS_SECRET_KEY:?MEDIACMS_SECRET_KEY is required}
+      TZ: America/Bogota
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [mediacms_internal]
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+    volumes: &mediacms_volumes
+      - ./infrastructure/mediacms/local_settings.py:/home/mediacms.io/mediacms/deploy/docker/local_settings.py:ro
+      - ./infrastructure/mediacms/templates/account/login.html:/home/mediacms.io/mediacms/templates/account/login.html:ro
+      - mediacms_media:/home/mediacms.io/mediacms/media_files
+      - mediacms_static:/home/mediacms.io/mediacms/static
+
+  web:
+    image: lms-mediacms:8.1.3-a3fe375
+    command: *mediacms_start
+    entrypoint: []
+    environment:
+      <<: *mediacms_environment
+      ENABLE_MIGRATIONS: "no"
+      ENABLE_NGINX: "yes"
+      ENABLE_UWSGI: "yes"
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "from urllib.request import urlopen; assert urlopen(''http://127.0.0.1/'', timeout=3).status < 500"',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    # The data plane stays internal; this edge network exists only so Docker
+    # can bind the explicitly loopback-only portal port.
+    networks: [mediacms_internal, mediacms_gateway]
+    ports:
+      - "127.0.0.1:${MEDIACMS_PORT:?MEDIACMS_PORT is required}:80"
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    volumes: *mediacms_volumes
+
+  celery-short:
+    image: lms-mediacms:8.1.3-a3fe375
+    command: *mediacms_start
+    entrypoint: []
+    environment:
+      <<: *mediacms_environment
+      ENABLE_CELERY_SHORT: "yes"
+      ENABLE_MIGRATIONS: "no"
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    networks: [mediacms_internal]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    volumes: *mediacms_volumes
+
+  celery-long:
+    image: lms-mediacms:8.1.3-a3fe375
+    command: *mediacms_start
+    entrypoint: []
+    environment:
+      <<: *mediacms_environment
+      ENABLE_CELERY_LONG: "yes"
+      ENABLE_MIGRATIONS: "no"
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    networks: [mediacms_internal]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    volumes: *mediacms_volumes
+
+  celery-beat:
+    image: lms-mediacms:8.1.3-a3fe375
+    command: *mediacms_start
+    entrypoint: []
+    environment:
+      <<: *mediacms_environment
+      ENABLE_CELERY_BEAT: "yes"
+      ENABLE_MIGRATIONS: "no"
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    networks: [mediacms_internal]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    volumes: *mediacms_volumes
+
+networks:
+  mediacms_internal:
+    internal: true
+  mediacms_gateway: {}
+
+volumes:
+  mediacms_media:
+  mediacms_postgres:
+  mediacms_redis:
+  mediacms_static:

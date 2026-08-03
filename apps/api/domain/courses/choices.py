@@ -41,6 +41,16 @@ class ActivityType(models.TextChoices):
     ASSESSMENT = "assessment", "Evaluación"
 
 
+class LessonKind(models.TextChoices):
+    DOCUMENT = "document", "Documento"
+    MEDIACMS_VIDEO = "mediacms_video", "Video MediaCMS"
+    LATEX_SOURCE = "latex_source", "Archivo LaTeX (.tex)"
+    MARKDOWN_SOURCE = "markdown_source", "Archivo Markdown (.md)"
+    PDF = "pdf", "PDF"
+    SLIDES = "slides", "Diapositivas"
+    AUDIO = "audio", "Audio"
+
+
 class ActivityCompletionMethod(models.TextChoices):
     VIEW = "view", "Ver la actividad"
     MANUAL = "manual", "Marcación explícita"

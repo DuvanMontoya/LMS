@@ -134,7 +134,7 @@ export function AssetMedia({
       </figure>
     );
   }
-  if (kind === 'document') {
+  if (kind === 'document' && playback.mime_type === 'application/pdf') {
     return (
       <div className="asset-media-document">
         <iframe src={playback.url} title={`Vista previa de ${name}`} />

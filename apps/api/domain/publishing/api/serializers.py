@@ -81,6 +81,7 @@ class PublishedOutlineUnitSerializer(serializers.Serializer):
     title = serializers.CharField()
     summary = serializers.CharField(allow_blank=True)
     estimated_duration_minutes = serializers.IntegerField(min_value=1, allow_null=True)
+    lesson_kind = serializers.CharField()
     position = serializers.IntegerField(min_value=1)
 
 

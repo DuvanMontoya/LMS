@@ -25,6 +25,7 @@ from .choices import (
     AuthoringStatus,
     AvailabilityRuleType,
     CourseStatus,
+    LessonKind,
     StructureStatus,
     SubjectAlignmentType,
 )
@@ -393,6 +394,12 @@ class CourseUnit(models.Model):
     title = models.CharField(max_length=200)
     summary = models.TextField(max_length=1200, blank=True)
     estimated_duration_minutes = models.PositiveIntegerField(null=True, blank=True)
+    lesson_kind = models.CharField(
+        max_length=20,
+        choices=LessonKind.choices,
+        default=LessonKind.DOCUMENT,
+        editable=False,
+    )
     status = models.CharField(
         max_length=10,
         choices=StructureStatus.choices,

@@ -46,8 +46,8 @@ from .audio import process_audio
 from .captions import process_caption
 from .common import ProcessingResult, calculate_sha256
 from .datasets import process_dataset
+from .documents import process_document
 from .images import process_image
-from .pdf import process_pdf
 from .video import process_video
 
 JOB_LEASE_SECONDS = 60 * 60 * 9
@@ -114,7 +114,11 @@ def _processor(version: AssetVersion) -> Callable[[Path, Path], ProcessingResult
     if version.asset.kind == AssetKind.IMAGE:
         return process_image
     if version.asset.kind == AssetKind.DOCUMENT:
-        return lambda source, _workdir: process_pdf(source)
+        return lambda source, _workdir: process_document(
+            source,
+            declared_mime_type=version.declared_mime_type,
+            declared_extension=version.extension,
+        )
     if version.asset.kind == AssetKind.AUDIO:
         return lambda source, workdir: process_audio(
             source,

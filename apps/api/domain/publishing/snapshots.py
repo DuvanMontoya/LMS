@@ -246,6 +246,7 @@ def build_release_snapshot(
                     "title": unit.title,
                     "summary": unit.summary,
                     "estimated_duration_minutes": unit.estimated_duration_minutes,
+                    "lesson_kind": unit.lesson_kind,
                     "position": unit.position,
                     "topics": topics,
                     "learning_objectives": unit_objectives,
@@ -578,6 +579,11 @@ def release_outline(snapshot: object) -> list[dict[str, Any]]:
                     "title": unit["title"],
                     "summary": unit["summary"],
                     "estimated_duration_minutes": unit["estimated_duration_minutes"],
+                    "lesson_kind": (
+                        unit["lesson_kind"]
+                        if snapshot["schema_version"] >= 4
+                        else "document"
+                    ),
                     "position": unit["position"],
                 }
                 for unit in module["units"]

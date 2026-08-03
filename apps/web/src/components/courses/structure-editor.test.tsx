@@ -59,6 +59,7 @@ const outline: components['schemas']['Outline'] = {
           created_at: '2026-07-29T00:00:00Z',
           estimated_duration_minutes: null,
           id: '00000000-0000-0000-0000-000000000004',
+          lesson_kind: 'document',
           learning_objectives: [],
           module_id: '00000000-0000-0000-0000-000000000003',
           position: 1,

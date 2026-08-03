@@ -16,6 +16,12 @@ MAX_JSON_DEPTH = 32
 MAX_JSON_NODES = 1_000_000
 MAX_CSV_COLUMNS = 500
 MAX_CAPTION_CUES = 100_000
+MAX_SOURCE_DOCUMENT_BYTES = 10 * MIB
+MAX_SOURCE_DOCUMENT_LINES = 200_000
+MAX_PRESENTATION_ARCHIVE_ENTRIES = 10_000
+MAX_PRESENTATION_UNCOMPRESSED_BYTES = 500 * MIB
+MAX_PRESENTATION_COMPRESSION_RATIO = 100
+MAX_PRESENTATION_SLIDES = 2_000
 
 
 @dataclass(frozen=True)
@@ -33,8 +39,18 @@ KIND_LIMITS = {
     ),
     "document": KindLimits(
         100 * MIB,
-        frozenset({"application/pdf"}),
-        frozenset({".pdf"}),
+        frozenset(
+            {
+                "application/pdf",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "application/x-tex",
+                "text/markdown",
+                "text/plain",
+                "text/x-markdown",
+                "text/x-tex",
+            }
+        ),
+        frozenset({".md", ".pdf", ".pptx", ".tex"}),
     ),
     "audio": KindLimits(
         500 * MIB,

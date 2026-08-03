@@ -2,18 +2,22 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Archive,
   ArchiveRestore,
   ArrowRightLeft,
+  AudioLines,
   BookOpenText,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   CircleAlert,
   ClipboardCheck,
+  FileCode2,
+  FileText,
   Plus,
+  Presentation,
   Settings2,
   Video,
 } from 'lucide-react';
@@ -53,6 +57,56 @@ type Topic = CourseTopicOption;
 type LiveClassBinding = components['schemas']['LiveClassActivityBinding'];
 type LiveClassConfiguration =
   components['schemas']['LiveClassCourseActivityConfiguration'];
+type LessonKind =
+  | 'audio'
+  | 'document'
+  | 'latex_source'
+  | 'markdown_source'
+  | 'mediacms_video'
+  | 'pdf'
+  | 'slides';
+
+const lessonKindOptions: readonly {
+  description: string;
+  kind: LessonKind;
+  label: string;
+}[] = [
+  {
+    kind: 'document',
+    label: 'Documento',
+    description: 'Contenido académico y recursos privados.',
+  },
+  {
+    kind: 'mediacms_video',
+    label: 'Video MediaCMS',
+    description: 'Autoría privada; el lanzamiento seguro se prepara aparte.',
+  },
+  {
+    kind: 'latex_source',
+    label: 'LaTeX (.tex)',
+    description: 'Archivo fuente UTF-8; nunca se ejecuta en el servidor.',
+  },
+  {
+    kind: 'markdown_source',
+    label: 'Markdown (.md)',
+    description: 'Archivo fuente UTF-8 y contenido semántico.',
+  },
+  {
+    kind: 'pdf',
+    label: 'PDF',
+    description: 'Documento con vista previa privada y descarga temporal.',
+  },
+  {
+    kind: 'slides',
+    label: 'Diapositivas',
+    description: 'PDF o PPTX validado como recurso privado.',
+  },
+  {
+    kind: 'audio',
+    label: 'Audio',
+    description: 'Reproductor con transcripción obligatoria en contenido.',
+  },
+];
 const contentStatusLabels: Record<string, string> = {
   empty: 'Contenido vacío',
   missing: 'Sin contenido',
@@ -163,6 +217,7 @@ export function StructureEditor({
   const [version, setVersion] = useState(outline.revision.lock_version);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [mediaCmsAuthoringUrl, setMediaCmsAuthoringUrl] = useState('');
   const moduleTitle = useRef<HTMLInputElement>(null);
   const path = { courseSlug, revisionId: outline.revision.id, slug };
   const createModule = useCreateModule(path);
@@ -178,6 +233,17 @@ export function StructureEditor({
   const liveClassBindingByActivityId = new Map(
     liveClassBindings.map((binding) => [binding.activity_id, binding]),
   );
+
+  useEffect(() => {
+    const configured = process.env.NEXT_PUBLIC_MEDIACMS_AUTHORING_URL?.trim();
+    if (configured) {
+      setMediaCmsAuthoringUrl(configured);
+      return;
+    }
+    if (['127.0.0.1', 'localhost'].includes(window.location.hostname)) {
+      setMediaCmsAuthoringUrl('http://127.0.0.1:8091/');
+    }
+  }, []);
 
   function failed(cause: unknown) {
     setError(
@@ -213,6 +279,9 @@ export function StructureEditor({
       await createUnit.mutateAsync({
         body: {
           expected_version: version,
+          lesson_kind: String(
+            formData.get('lesson-kind') ?? 'document',
+          ) as LessonKind,
           title: String(formData.get('unit-title') ?? ''),
         },
         moduleId,
@@ -735,6 +804,11 @@ export function StructureEditor({
                               <Badge className="rounded" variant="outline">
                                 {activityTypeLabel(activity.activity_type)}
                               </Badge>
+                              {lesson ? (
+                                <Badge className="rounded" variant="secondary">
+                                  {lessonKindLabel(lesson.lesson_kind)}
+                                </Badge>
+                              ) : null}
                             </div>
                             <p className="mt-1 text-xs text-muted-foreground">
                               {activity.required ? 'Obligatoria' : 'Opcional'} ·{' '}
@@ -979,9 +1053,55 @@ export function StructureEditor({
                             required
                           />
                         </label>
+                        <fieldset className="grid gap-2">
+                          <legend className="text-sm font-medium">
+                            Modalidad de la lección
+                          </legend>
+                          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                            {lessonKindOptions.map((option) => (
+                              <label
+                                className="cursor-pointer rounded-md border p-2.5 text-sm transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                                key={option.kind}
+                              >
+                                <input
+                                  className="sr-only"
+                                  defaultChecked={option.kind === 'document'}
+                                  name="lesson-kind"
+                                  type="radio"
+                                  value={option.kind}
+                                />
+                                <span className="flex items-center gap-2 font-medium">
+                                  <LessonKindIcon kind={option.kind} />
+                                  {option.label}
+                                </span>
+                                <span className="mt-1 block text-xs leading-4 text-muted-foreground">
+                                  {option.description}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </fieldset>
+                        {mediaCmsAuthoringUrl ? (
+                          <Button
+                            asChild
+                            className="w-fit"
+                            size="sm"
+                            variant="outline"
+                          >
+                            <a
+                              href={mediaCmsAuthoringUrl}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
+                              <Video /> Abrir MediaCMS para autoría de vídeo
+                            </a>
+                          </Button>
+                        ) : null}
                         <p className="text-xs leading-5 text-muted-foreground">
-                          Se crea la lección y su actividad en la secuencia. El
-                          contenido y la alineación se completan después.
+                          Se crea una única lección y su actividad en la
+                          secuencia. La modalidad queda fijada; el contenido y
+                          la alineación se completan después sin crear otra
+                          actividad.
                         </p>
                         <Button className="w-fit" type="submit">
                           <Plus /> Crear lección
@@ -1039,6 +1159,23 @@ function activityTypeLabel(value: string) {
   if (value === 'live_class') return 'Clase en vivo';
   if (value === 'assessment') return 'Evaluación';
   return 'Lección';
+}
+
+function lessonKindLabel(value: string) {
+  return (
+    lessonKindOptions.find((option) => option.kind === value)?.label ?? value
+  );
+}
+
+function LessonKindIcon({ kind }: Readonly<{ kind: LessonKind }>) {
+  const className = 'size-4 text-primary';
+  if (kind === 'audio') return <AudioLines className={className} />;
+  if (kind === 'latex_source' || kind === 'markdown_source') {
+    return <FileCode2 className={className} />;
+  }
+  if (kind === 'mediacms_video') return <Video className={className} />;
+  if (kind === 'slides') return <Presentation className={className} />;
+  return <FileText className={className} />;
 }
 
 function activityCompletionLabel(value: string) {

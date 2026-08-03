@@ -1,5 +1,38 @@
 # Project status
 
+## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
+
+- **Decisión y límites:** ADR 0042 conserva la actividad canónica `lesson` y
+  añade en `CourseUnit` una única modalidad estructural inmutable: Documento,
+  Video MediaCMS, LaTeX (`.tex`), Markdown (`.md`), PDF, Diapositivas o Audio.
+  No se duplican actividades, no se almacenan URLs de entrega y los archivos
+  siguen pasando por `domain.assets`; los snapshots v4 preservan la modalidad
+  sin romper los releases anteriores.
+- **MediaCMS local:** se construyó desde el release oficial exacto v8.1.3
+  (`a3fe375a8302f5b26fac214ef2346dd92fec7361`), con PostgreSQL, Redis con
+  contraseña, workers de colas y persistencia en volúmenes locales. Sólo se
+  expone en `127.0.0.1:8091`, fuera de `lms_internal`; no hay registro público,
+  catálogo público, compartir ni originales. Las credenciales aleatorias
+  quedan únicamente en `.local/mediacms/.env`, ignorado por Git.
+- **Evidencia:** `pnpm mediacms:init`, `mediacms:build`, `mediacms:up` y el
+  smoke final pasaron. Este último verifica PostgreSQL, Redis autenticado,
+  `manage.py check`, superusuario y el cierre efectivo del registro. También
+  pasan migración `courses.0004`, 12 pruebas API de cursos, 3 de snapshots de
+  publicación, 3 de procesadores de assets, checks de cursos/publishing/assets
+  y la generación de contratos de publicación.
+- **Chrome real:** en la sesión del autor se creó el borrador no publicado
+  `validacion-local-de-modalidades-de-leccion` con siete lecciones reales, una
+  por modalidad, y las tarjetas muestran correctamente sus etiquetas. El
+  formulario ofrece los siete selectores y abre `LMS Media Studio` en una nueva
+  pestaña de Chrome; allí se comprobó visualmente el login del portal privado
+  sin enlace de alta pública.
+- **Límite explícito antes de producción:** el lanzamiento de vídeo para
+  estudiantes por LTI/SSO sigue bloqueado correctamente hasta tener HTTPS,
+  issuer, JWKS y client registration verificados. No se simuló ese flujo en
+  HTTP local, no se tocó el VPS/DNS ni la llave SSH, y continúa pendiente la
+  revisión legal de AGPL-3.0 antes de distribuir o exponer una instancia por
+  red.
+
 ## Navegación institucional y secuencia de trabajo — en curso 2026-08-02
 
 - **Creación de cursos protegida y rediseñada (2026-08-02):**
@@ -1696,6 +1729,7 @@ Siguiente paso:
   identidades. La sesión Chrome de estudiante volvió a cargar la actividad
   programada; la comprobación visual de controles exclusivos de moderador sigue
   explícitamente pendiente de una sesión con esa capacidad.
+
 ## Auditoría end-to-end de evaluaciones — en curso 2026-08-03
 
 - Se confirmó que scoring, gradebook y progreso ya están conectados: una nota

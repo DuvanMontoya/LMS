@@ -275,6 +275,13 @@
     "infra:restart": "pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Restart",
     "infra:down": "pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Down",
     "infra:reset": "pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Reset -ConfirmReset",
+    "mediacms:init": "pwsh -NoProfile -File scripts/mediacms.ps1 -Action Init",
+    "mediacms:build": "pwsh -NoProfile -File scripts/mediacms.ps1 -Action Build",
+    "mediacms:up": "pwsh -NoProfile -File scripts/mediacms.ps1 -Action Up",
+    "mediacms:status": "pwsh -NoProfile -File scripts/mediacms.ps1 -Action Status",
+    "mediacms:logs": "pwsh -NoProfile -File scripts/mediacms.ps1 -Action Logs",
+    "mediacms:smoke": "pwsh -NoProfile -File scripts/mediacms.ps1 -Action Smoke",
+    "mediacms:down": "pwsh -NoProfile -File scripts/mediacms.ps1 -Action Down",
     "check": "pnpm run api:check && pnpm run api:migrations:check && pnpm run api:format:check && pnpm run api:lint && pnpm run api:typecheck && pnpm run web:lint && pnpm run web:format:check && pnpm run web:typecheck",
     "test": "pnpm run api:test && pnpm run web:test"
   },

@@ -30,6 +30,7 @@ from .choices import (
     ActivityCompletionMethod,
     ActivityType,
     AuthoringStatus,
+    LessonKind,
     AvailabilityRuleType,
     CourseStatus,
     StructureStatus,
@@ -768,6 +769,7 @@ def create_unit(
     title: str,
     summary: str = "",
     estimated_duration_minutes: int | None = None,
+    lesson_kind: str = LessonKind.DOCUMENT,
 ) -> tuple[CourseUnit, CourseRevision]:
     _require_manage(actor, organization)
     locked_module = (
@@ -798,6 +800,7 @@ def create_unit(
         title=title,
         summary=summary,
         estimated_duration_minutes=estimated_duration_minutes,
+        lesson_kind=lesson_kind,
         position=len(units) + 1,
         created_by=actor,
         updated_by=actor,
@@ -2058,6 +2061,7 @@ def clone_approved_revision_structure(
                 title=source_unit.title,
                 summary=source_unit.summary,
                 estimated_duration_minutes=source_unit.estimated_duration_minutes,
+                lesson_kind=source_unit.lesson_kind,
                 status=StructureStatus.ACTIVE,
                 position=source_unit.position,
                 created_by=actor,

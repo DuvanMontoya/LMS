@@ -3573,6 +3573,24 @@ export interface components {
         [key: string]: unknown;
       };
     };
+    /**
+     * @description * `document` - Documento
+     * * `mediacms_video` - Video MediaCMS
+     * * `latex_source` - Archivo LaTeX (.tex)
+     * * `markdown_source` - Archivo Markdown (.md)
+     * * `pdf` - PDF
+     * * `slides` - Diapositivas
+     * * `audio` - Audio
+     * @enum {string}
+     */
+    LessonKindEnum:
+      | 'document'
+      | 'mediacms_video'
+      | 'latex_source'
+      | 'markdown_source'
+      | 'pdf'
+      | 'slides'
+      | 'audio';
     LibraryCourse: {
       /** Format: uuid */
       course_id: string;
@@ -4285,6 +4303,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       learning_objectives: readonly components['schemas']['UnitObjective'][];
+      lesson_kind: string;
       /** Format: uuid */
       module_id: string;
       position: number | null;
@@ -4622,6 +4641,7 @@ export interface components {
       estimated_duration_minutes: number | null;
       /** Format: uuid */
       id: string;
+      lesson_kind: string;
       position: number;
       summary: string;
       title: string;
@@ -5372,6 +5392,7 @@ export interface components {
       estimated_duration_minutes: number | null;
       /** Format: uuid */
       id: string;
+      lesson_kind: string;
       /** Format: uuid */
       module_id: string;
       position: number | null;
@@ -5384,6 +5405,8 @@ export interface components {
     UnitCreate: {
       estimated_duration_minutes?: number | null;
       expected_version: number;
+      /** @default document */
+      lesson_kind?: components['schemas']['LessonKindEnum'];
       summary?: string;
       title: string;
     };
@@ -5395,6 +5418,7 @@ export interface components {
       estimated_duration_minutes: number | null;
       /** Format: uuid */
       id: string;
+      lesson_kind: string;
       lock_version: number;
       /** Format: uuid */
       module_id: string;
@@ -5417,6 +5441,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       is_current: boolean;
+      lesson_kind: string;
       position: number;
       status: string;
       summary: string;

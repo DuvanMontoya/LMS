@@ -7,7 +7,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from domain.catalog.services import assign_subject_teaching_responsibility
-from domain.courses.choices import AuthoringStatus
+from domain.courses.choices import AuthoringStatus, LessonKind
 from domain.courses.models import CourseRevision
 from domain.courses.services import create_module, create_unit
 from domain.organizations.choices import RoleCode
@@ -17,6 +17,49 @@ from .support import CourseFixtureMixin
 
 
 class CourseApiTests(CourseFixtureMixin, TestCase):
+    def test_lesson_kind_is_validated_immutable_and_exposed_by_outline(self) -> None:
+        owner, organization, _subject, _objective, _topic, revision = (
+            self.course_revision()
+        )
+        client = self.client_for(owner)
+        revision_url = (
+            f"/api/v1/organizations/{organization.slug}/courses/"
+            f"{revision.course.slug}/revisions/{revision.id}/"
+        )
+        module = client.post(
+            f"{revision_url}modules/",
+            {"expected_version": revision.lock_version, "title": "Multimedia"},
+            format="json",
+        )
+        self.assertEqual(module.status_code, 201, module.data)
+        unit = client.post(
+            f"{revision_url}modules/{module.data['id']}/units/",
+            {
+                "expected_version": module.data["lock_version"],
+                "lesson_kind": LessonKind.MEDIACMS_VIDEO,
+                "title": "Video privado",
+            },
+            format="json",
+        )
+        self.assertEqual(unit.status_code, 201, unit.data)
+        self.assertEqual(unit.data["lesson_kind"], LessonKind.MEDIACMS_VIDEO)
+        updated = client.patch(
+            f"{revision_url}units/{unit.data['id']}/",
+            {
+                "expected_version": unit.data["lock_version"],
+                "lesson_kind": LessonKind.AUDIO,
+            },
+            format="json",
+        )
+        self.assertEqual(updated.status_code, 200, updated.data)
+        self.assertEqual(updated.data["lesson_kind"], LessonKind.MEDIACMS_VIDEO)
+        outline = client.get(f"{revision_url}outline/")
+        self.assertEqual(outline.status_code, 200, outline.data)
+        self.assertEqual(
+            outline.data["modules"][0]["units"][0]["lesson_kind"],
+            LessonKind.MEDIACMS_VIDEO,
+        )
+
     def test_patch_unit_saves_information_and_alignment_once(self) -> None:
         owner, organization, _subject, objective, topic, revision = (
             self.course_revision()

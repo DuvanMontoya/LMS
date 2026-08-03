@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from zipfile import ZipFile
 
 from django.test import SimpleTestCase
 from PIL import Image
@@ -10,6 +11,7 @@ from pypdf import PdfWriter
 from domain.assets.exceptions import AssetFormatInvalid
 from domain.assets.processing.captions import process_caption
 from domain.assets.processing.datasets import process_dataset
+from domain.assets.processing.documents import process_document
 from domain.assets.processing.images import process_image
 from domain.assets.processing.pdf import process_pdf
 
@@ -49,6 +51,46 @@ class AssetFormatTests(SimpleTestCase):
             data.write_text('{"safe": true}', encoding="utf-8")
             self.assertEqual(process_dataset(data, "application/json").row_count, 1)
 
+            markdown = root / "guia.md"
+            markdown.write_text(
+                "# Guía\nContenido académico seguro.\n", encoding="utf-8"
+            )
+            self.assertEqual(
+                process_document(
+                    markdown,
+                    declared_mime_type="text/markdown",
+                    declared_extension=".md",
+                ).technical_metadata["line_count"],
+                3,
+            )
+
+            latex = root / "guia.tex"
+            latex.write_text("\\section{Guía}\n", encoding="utf-8")
+            self.assertEqual(
+                process_document(
+                    latex,
+                    declared_mime_type="application/x-tex",
+                    declared_extension=".tex",
+                ).detected_mime_type,
+                "application/x-tex",
+            )
+
+            presentation = root / "clase.pptx"
+            with ZipFile(presentation, "w") as archive:
+                archive.writestr("[Content_Types].xml", "<Types />")
+                archive.writestr("ppt/presentation.xml", "<p:presentation />")
+                archive.writestr("ppt/slides/slide1.xml", "<p:sld />")
+            self.assertEqual(
+                process_document(
+                    presentation,
+                    declared_mime_type=(
+                        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                    ),
+                    declared_extension=".pptx",
+                ).page_count,
+                1,
+            )
+
     def test_script_like_vtt_and_invalid_utf8_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -63,3 +105,11 @@ class AssetFormatTests(SimpleTestCase):
             text.write_bytes(b"\xff\xfe")
             with self.assertRaises(AssetFormatInvalid):
                 process_dataset(text, "text/plain")
+            markdown = root / "unsafe.md"
+            markdown.write_bytes(b"\xff\x00")
+            with self.assertRaises(AssetFormatInvalid):
+                process_document(
+                    markdown,
+                    declared_mime_type="text/markdown",
+                    declared_extension=".md",
+                )

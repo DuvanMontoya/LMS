@@ -37,7 +37,7 @@ def verify_release(release: CourseRelease) -> IntegrityResult:
         if isinstance(release.snapshot, dict)
         else None
     )
-    if release.schema_version not in {1, 2, 3}:
+    if release.schema_version not in {1, 2, 3, 4}:
         add("schema_unsupported", "La versión del schema no está soportada.")
     elif snapshot_version != release.schema_version:
         add("schema_mismatch", "La versión del modelo y el snapshot no coincide.")

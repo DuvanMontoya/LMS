@@ -26,18 +26,19 @@ if (process.argv.slice(2).some((argument) => argument !== '--check')) {
 }
 
 const outputs = [];
-for (const version of [1, 2]) {
+for (const version of [1, 2, 4]) {
   const releaseSourcePath = path.join(
     repositoryRoot,
     'schemas',
     'publication',
     `course-release-v${version}.schema.json`,
   );
+  const contentVersion = Math.min(version, 2);
   const contentSourcePath = path.join(
     repositoryRoot,
     'schemas',
     'content',
-    `unit-document-v${version}.schema.json`,
+    `unit-document-v${contentVersion}.schema.json`,
   );
   const [releaseSource, contentSource] = await Promise.all([
     readFile(releaseSourcePath, 'utf8'),
@@ -60,7 +61,7 @@ for (const version of [1, 2]) {
   ajv.addSchema(contentSchema);
   ajv.compile(releaseSchema);
 
-  const contentReference = `urn:lms:content:unit-document:${version}`;
+  const contentReference = `urn:lms:content:unit-document:${contentVersion}`;
   function resolveContentReference(value) {
     if (Array.isArray(value)) return value.map(resolveContentReference);
     if (value && typeof value === 'object') {
