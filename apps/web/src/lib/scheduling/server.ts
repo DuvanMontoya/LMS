@@ -7,33 +7,23 @@ import { createPlatformServerClient } from '@/lib/api/platform-server-client';
 import { getOrganizationForPage } from '@/lib/organizations/server';
 
 export type LiveSessionDetail = components['schemas']['LiveSessionDetail'];
-export type LiveClassActivityBinding =
-  components['schemas']['LiveClassActivityBinding'];
 
 export async function getLiveClassActivityBindings(
   slug: string,
-  activityIds: string[],
+  revisionId: string,
 ) {
   const client = await createPlatformServerClient();
-  const bindings = await Promise.all(
-    activityIds.map(async (activityId) => {
-      const { data, response } = await client.GET(
-        '/api/v1/organizations/{slug}/scheduling/course-activities/{activity_id}/binding/',
-        {
-          params: { path: { activity_id: activityId, slug } },
-          cache: 'no-store',
-        },
-      );
-      if (response.status === 404 || response.status === 405) return null;
-      if (response.status === 403) notFound();
-      if (!response.ok || !data)
-        throw new Error('No fue posible consultar la política LiveKit.');
-      return data;
-    }),
+  const { data, response } = await client.GET(
+    '/api/v1/organizations/{slug}/scheduling/course-activities/bindings/',
+    {
+      params: { path: { slug }, query: { revision_id: revisionId } },
+      cache: 'no-store',
+    },
   );
-  return bindings.filter(
-    (binding): binding is LiveClassActivityBinding => binding !== null,
-  );
+  if (response.status === 403) notFound();
+  if (!response.ok || !data)
+    throw new Error('No fue posible consultar las políticas LiveKit.');
+  return data;
 }
 
 export async function getSchedulingPage(slug: string) {

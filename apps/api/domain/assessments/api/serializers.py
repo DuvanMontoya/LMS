@@ -175,6 +175,16 @@ class QuestionVersionSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class ApprovedQuestionVersionOptionSerializer(serializers.ModelSerializer):
+    bank_name = serializers.CharField(source="question.bank.name", read_only=True)
+    code = serializers.CharField(source="question.code", read_only=True)
+
+    class Meta:
+        model = QuestionVersion
+        fields = ("id", "number", "type", "public", "bank_name", "code")
+        read_only_fields = fields
+
+
 class QuestionBankVersionSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuestionBankVersion

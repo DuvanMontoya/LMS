@@ -26,6 +26,7 @@ export type AssessmentAttempt = components['schemas']['Attempt'];
 export type AssessmentResult = components['schemas']['AttemptResult'];
 export type PendingManual = components['schemas']['PendingManual'];
 export type LearningObjective = components['schemas']['Objective'];
+export type CatalogSubject = components['schemas']['Subject'];
 export type RegradeJob = components['schemas']['RegradeJob'];
 export type RegradeJobAttempt = components['schemas']['RegradeJobAttempt'];
 export type Gradebook = components['schemas']['Gradebook'];
@@ -319,78 +320,21 @@ async function approvedQuestionVersions(
   client: Awaited<ReturnType<typeof createPlatformServerClient>>,
   slug: string,
 ) {
-  const banks = (await required(
-    client.GET('/api/v1/organizations/{slug}/assessments/question-banks/', {
-      params: { path: { slug } },
-      cache: 'no-store',
-    }),
-    'No fue posible consultar los bancos.',
-  )) as QuestionBankPage;
-  const groups = await Promise.all(
-    banks.results.map(async (bank) => {
-      const questions = (await required(
-        client.GET(
-          '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/',
-          {
-            params: {
-              path: { bank_id: bank.id, slug },
-              query: { page_size: 100 },
-            },
-            cache: 'no-store',
-          },
-        ),
-        'No fue posible consultar las preguntas.',
-      )) as QuestionPage;
-      const versions: {
-        bankName: string;
-        code: string;
-        id: string;
-        number: number;
-        public: QuestionVersion['public'];
-        type: QuestionVersion['type'];
-      }[] = [];
-      const batchSize = 4;
-      for (
-        let start = 0;
-        start < questions.results.length;
-        start += batchSize
-      ) {
-        const batch = await Promise.all(
-          questions.results
-            .slice(start, start + batchSize)
-            .map(async (question) => {
-              const rows = (await required(
-                client.GET(
-                  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/versions/',
-                  {
-                    params: {
-                      path: {
-                        bank_id: bank.id,
-                        question_id: question.id,
-                        slug,
-                      },
-                    },
-                    cache: 'no-store',
-                  },
-                ),
-                'No fue posible consultar las versiones de pregunta.',
-              )) as QuestionVersion[];
-              return rows.map((version) => ({
-                bankName: bank.name,
-                code: question.code,
-                id: version.id,
-                number: version.number,
-                public: version.public,
-                type: version.type,
-              }));
-            }),
-        );
-        versions.push(...batch.flat());
-      }
-      return versions;
-    }),
+  const rows = await required(
+    client.GET(
+      '/api/v1/organizations/{slug}/assessments/approved-question-version-options/',
+      { params: { path: { slug } }, cache: 'no-store' },
+    ),
+    'No fue posible consultar las preguntas aprobadas.',
   );
-  return groups.flat();
+  return rows.map((row) => ({
+    bankName: row.bank_name,
+    code: row.code,
+    id: row.id,
+    number: row.number,
+    public: row.public,
+    type: row.type,
+  }));
 }
 
 export async function getAssessmentWorkspace(
@@ -415,7 +359,7 @@ export async function getAssessmentWorkspace(
     revision_id: assessment.latest_revision_id,
     slug,
   };
-  const [outline, readiness, versions, objectives, questions, pools] =
+  const [outline, readiness, versions, objectives, subjects, questions, pools] =
     await Promise.all([
       required(
         client.GET(
@@ -442,6 +386,16 @@ export async function getAssessmentWorkspace(
         'No fue posible consultar el historial.',
       ) as Promise<AssessmentVersion[]>,
       objectiveOptions(client, slug),
+      required(
+        client.GET('/api/v1/organizations/{slug}/catalog/subjects/', {
+          params: {
+            path: { slug },
+            query: { ordering: 'name', status: 'active' },
+          },
+          cache: 'no-store',
+        }),
+        'No fue posible consultar las asignaturas del ámbito curricular.',
+      ) as Promise<CatalogSubject[]>,
       approvedQuestionVersions(client, slug),
       required(
         client.GET(
@@ -459,6 +413,7 @@ export async function getAssessmentWorkspace(
     pools,
     questions,
     readiness,
+    subjects,
     versions,
   };
 }

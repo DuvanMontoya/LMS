@@ -99,6 +99,10 @@ urlpatterns = [
         BASE + "approved-version-options/",
         views.ApprovedAssessmentVersionOptionsView.as_view(),
     ),
+    path(
+        BASE + "approved-question-version-options/",
+        views.ApprovedQuestionVersionOptionsView.as_view(),
+    ),
     path(BASE, views.AssessmentListCreateView.as_view()),
     path(ASSESSMENT + "versions/", views.AssessmentVersionListView.as_view()),
     path(

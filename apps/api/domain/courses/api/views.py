@@ -77,6 +77,7 @@ from ..services import (
     create_course,
     create_module,
     create_unit,
+    move_activity_to_module,
     replace_activity_availability_rules,
     replace_activity_learning_objectives,
     replace_activity_order,
@@ -117,6 +118,7 @@ from .serializers import (
     ModuleMutationSerializer,
     ModuleSerializer,
     ModuleUpdateSerializer,
+    MoveCourseActivitySerializer,
     MutationResultSerializer,
     OutlineSerializer,
     ReadinessSerializer,
@@ -1007,6 +1009,44 @@ class ActivityDetailView(APIView):
             request, _course(request, organization, course_slug), revision_id
         )
         return Response(CourseActivitySerializer(_activity(revision, activity_id)).data)
+
+
+class MoveActivityView(APIView):
+    @extend_schema(
+        request=MoveCourseActivitySerializer,
+        responses={200: CourseActivityMutationSerializer},
+    )
+    def post(
+        self,
+        request: Request,
+        slug: str,
+        course_slug: str,
+        revision_id: str,
+        activity_id: str,
+    ) -> Response:
+        organization = _organization(request, slug)
+        _require_manage(request, organization)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        serializer = MoveCourseActivitySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            activity, locked = move_activity_to_module(
+                actor=request.user,
+                organization=organization,
+                activity=_activity(revision, activity_id),
+                target_module=_module(
+                    revision, data["target_module_id"], include_archived=False
+                ),
+                expected_version=data["expected_version"],
+            )
+        except CourseDomainError as error:
+            return _domain_error(error)
+        payload = CourseActivitySerializer(activity).data
+        payload["lock_version"] = locked.lock_version
+        return Response(payload)
 
 
 class ActivityObjectiveView(APIView):

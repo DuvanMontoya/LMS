@@ -133,6 +133,10 @@ export interface paths {
   '/api/v1/organizations/{slug}/assessments/analytics/refresh/': {
     post: operations['organizations_assessments_analytics_refresh_create'];
   };
+  '/api/v1/organizations/{slug}/assessments/approved-question-version-options/': {
+    get: operations['assessment_approved_question_version_options_list'];
+    post: operations['assessment_question_revision_create_from_version'];
+  };
   '/api/v1/organizations/{slug}/assessments/approved-version-options/': {
     get: operations['organizations_assessments_approved_version_options_list'];
   };
@@ -273,7 +277,6 @@ export interface paths {
   };
   '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/versions/': {
     get: operations['assessment_question_versions_list'];
-    post: operations['assessment_question_revision_create_from_version'];
   };
   '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/versions/{version_number}/': {
     get: operations['assessment_question_version_retrieve'];
@@ -575,6 +578,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/activities/{activity_id}/learning-objectives/': {
     put: operations['organizations_courses_revisions_activities_learning_objectives_update'];
   };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/activities/{activity_id}/move/': {
+    post: operations['organizations_courses_revisions_activities_move_create'];
+  };
   '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/approve/': {
     post: operations['organizations_courses_revisions_approve_create'];
   };
@@ -872,6 +878,9 @@ export interface paths {
   };
   '/api/v1/organizations/{slug}/scheduling/course-activities/': {
     post: operations['scheduling_course_activity_create'];
+  };
+  '/api/v1/organizations/{slug}/scheduling/course-activities/bindings/': {
+    get: operations['scheduling_course_activity_bindings_list'];
   };
   '/api/v1/organizations/{slug}/scheduling/course-activities/{activity_id}/binding/': {
     get: operations['scheduling_course_activity_binding_retrieve'];
@@ -1270,6 +1279,15 @@ export interface components {
     ApiKeyRotate: {
       api_key: string;
       expected_version: number;
+    };
+    ApprovedQuestionVersionOption: {
+      bank_name: string;
+      code: string;
+      /** Format: uuid */
+      id: string;
+      number: number;
+      public: unknown;
+      type: string;
     };
     Area: {
       description?: string;
@@ -3992,6 +4010,11 @@ export interface components {
       description?: string;
       expected_version: number;
       title?: string;
+    };
+    MoveCourseActivity: {
+      expected_version: number;
+      /** Format: uuid */
+      target_module_id: string;
     };
     MoveTopic: {
       /** @default sorted-child */
@@ -7067,6 +7090,41 @@ export interface operations {
       };
     };
   };
+  assessment_approved_question_version_options_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['ApprovedQuestionVersionOption'][];
+        };
+      };
+    };
+  };
+  assessment_question_revision_create_from_version: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['VersionSource'];
+        'application/x-www-form-urlencoded': components['schemas']['VersionSource'];
+        'multipart/form-data': components['schemas']['VersionSource'];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['QuestionRevision'];
+        };
+      };
+    };
+  };
   organizations_assessments_approved_version_options_list: {
     parameters: {
       path: {
@@ -8059,29 +8117,6 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['QuestionVersion'][];
-        };
-      };
-    };
-  };
-  assessment_question_revision_create_from_version: {
-    parameters: {
-      path: {
-        bank_id: string;
-        question_id: string;
-        slug: string;
-      };
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['VersionSource'];
-        'application/x-www-form-urlencoded': components['schemas']['VersionSource'];
-        'multipart/form-data': components['schemas']['VersionSource'];
-      };
-    };
-    responses: {
-      201: {
-        content: {
-          'application/json': components['schemas']['QuestionRevision'];
         };
       };
     };
@@ -10237,6 +10272,30 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['MutationResult'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_activities_move_create: {
+    parameters: {
+      path: {
+        activity_id: string;
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MoveCourseActivity'];
+        'application/x-www-form-urlencoded': components['schemas']['MoveCourseActivity'];
+        'multipart/form-data': components['schemas']['MoveCourseActivity'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['CourseActivityMutation'];
         };
       };
     };
@@ -12708,6 +12767,23 @@ export interface operations {
       201: {
         content: {
           'application/json': components['schemas']['LiveClassActivityBinding'];
+        };
+      };
+    };
+  };
+  scheduling_course_activity_bindings_list: {
+    parameters: {
+      query: {
+        revision_id: string;
+      };
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LiveClassActivityBinding'][];
         };
       };
     };

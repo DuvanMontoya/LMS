@@ -174,6 +174,36 @@ export function useCreateActivity(path: RevisionPath) {
   });
 }
 
+export function useMoveActivityToModule(path: RevisionPath) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      activityId,
+      body,
+    }: {
+      activityId: string;
+      body: components['schemas']['MoveCourseActivity'];
+    }) =>
+      requireData(
+        platformBrowserClient.POST(
+          '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/activities/{activity_id}/move/',
+          {
+            body,
+            params: { path: { ...pathFor(path), activity_id: activityId } },
+          },
+        ),
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: courseKeys.outline(
+          path.slug,
+          path.courseSlug,
+          path.revisionId,
+        ),
+      }),
+  });
+}
+
 export function useBindActivity(path: RevisionPath) {
   const queryClient = useQueryClient();
   type BindingInput =

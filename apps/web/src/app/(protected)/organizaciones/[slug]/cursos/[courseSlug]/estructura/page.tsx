@@ -16,11 +16,6 @@ export default async function CourseStructurePage({
 }: Readonly<{ params: Promise<{ courseSlug: string; slug: string }> }>) {
   const { courseSlug, slug } = await params;
   const data = await getCourseWorkspace(slug, courseSlug);
-  const liveActivityIds = data.outline.modules.flatMap((module) =>
-    module.activities
-      .filter((activity) => activity.activity_type === 'live_class')
-      .map((activity) => activity.id),
-  );
   const [assessmentVersions, completionPolicy, liveClassBindings] =
     await Promise.all([
       data.access.capabilities.includes('assessment.authoring.manage')
@@ -28,7 +23,7 @@ export default async function CourseStructurePage({
         : [],
       getCourseCompletionPolicy(slug, courseSlug, data.outline.revision.id),
       data.access.capabilities.includes('course.authoring.manage')
-        ? getLiveClassActivityBindings(slug, liveActivityIds)
+        ? getLiveClassActivityBindings(slug, data.outline.revision.id)
         : [],
     ]);
   return (

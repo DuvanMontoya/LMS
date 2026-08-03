@@ -220,6 +220,13 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
         self.assertEqual(detail.status_code, 200)
         self.assertTrue(detail.data["chat_enabled"])
 
+        binding_list = client.get(
+            f"{collection_url}bindings/", {"revision_id": str(revision.id)}
+        )
+        self.assertEqual(binding_list.status_code, 200)
+        self.assertEqual(len(binding_list.data), 1)
+        self.assertEqual(binding_list.data[0]["activity_id"], activity_id)
+
         updated = client.put(
             detail_url,
             {

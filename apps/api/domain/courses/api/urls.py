@@ -57,6 +57,10 @@ urlpatterns = [
         views.ActivityDetailView.as_view(),
     ),
     path(
+        REVISION + "activities/<uuid:activity_id>/move/",
+        views.MoveActivityView.as_view(),
+    ),
+    path(
         REVISION + "activities/<uuid:activity_id>/learning-objectives/",
         views.ActivityObjectiveView.as_view(),
     ),

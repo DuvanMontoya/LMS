@@ -36,6 +36,7 @@ import type {
   AssessmentOutline,
   AssessmentPool,
   AssessmentReadiness,
+  CatalogSubject,
   LearningObjective,
   QuestionVersion,
 } from '@/lib/assessments/server';
@@ -77,6 +78,7 @@ export function AssessmentComposer({
   questions,
   readiness,
   slug,
+  subjects,
 }: Readonly<{
   assessmentSlug: string;
   canApprove: boolean;
@@ -89,6 +91,7 @@ export function AssessmentComposer({
   questions: QuestionOption[];
   readiness: AssessmentReadiness;
   slug: string;
+  subjects: CatalogSubject[];
 }>) {
   const router = useRouter();
   const revision = outline.revision;
@@ -120,6 +123,20 @@ export function AssessmentComposer({
   const [selectedObjectives, setSelectedObjectives] = useState<string[]>(
     outline.objective_ids,
   );
+  const selectedObjectiveSubjects = new Set(
+    objectives
+      .filter((objective) => selectedObjectives.includes(objective.id))
+      .map((objective) => objective.subject_id),
+  );
+  const [objectiveSubjectId, setObjectiveSubjectId] = useState(
+    selectedObjectiveSubjects.size === 1
+      ? [...selectedObjectiveSubjects][0] ?? ''
+      : '',
+  );
+  const [includeOtherSubjects, setIncludeOtherSubjects] = useState(
+    selectedObjectiveSubjects.size > 1,
+  );
+  const [objectiveQuery, setObjectiveQuery] = useState('');
   const [sectionTitle, setSectionTitle] = useState('');
   const [note, setNote] = useState('');
   const metadata = useAssessmentMutation(() =>
@@ -188,6 +205,27 @@ export function AssessmentComposer({
         total + pool.selection_count * Number(pool.points_per_item),
       0,
     );
+  const normalizedObjectiveQuery = objectiveQuery.trim().toLocaleLowerCase();
+  const objectiveSubjects = subjects.filter((subject) =>
+    objectives.some((objective) => objective.subject_id === subject.id),
+  );
+  const visibleObjectives = objectives.filter((objective) => {
+    if (!objectiveSubjectId && !includeOtherSubjects) return false;
+    if (
+      objectiveSubjectId &&
+      !includeOtherSubjects &&
+      objective.subject_id !== objectiveSubjectId
+    ) {
+      return false;
+    }
+    if (!normalizedObjectiveQuery) return true;
+    return `${objective.code} ${objective.statement}`
+      .toLocaleLowerCase()
+      .includes(normalizedObjectiveQuery);
+  });
+  const assessmentObjectives = objectives.filter((objective) =>
+    selectedObjectives.includes(objective.id),
+  );
   return (
     <>
       <section className="assessment-composer-summary">
@@ -388,9 +426,72 @@ export function AssessmentComposer({
               </span>
             </div>
             <div className="assessment-composer-card__body">
+              <div className="grid gap-4 rounded-xl border bg-muted/20 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                <div>
+                  <Label htmlFor="assessment-objective-subject">
+                    Asignatura evaluada
+                  </Label>
+                  <select
+                    className="academic-control mt-1.5"
+                    disabled={!editable}
+                    id="assessment-objective-subject"
+                    onChange={(event) => {
+                      const nextSubjectId = event.target.value;
+                      setObjectiveSubjectId(nextSubjectId);
+                      if (!includeOtherSubjects) {
+                        setSelectedObjectives((current) =>
+                          current.filter((objectiveId) =>
+                            objectives.some(
+                              (objective) =>
+                                objective.id === objectiveId &&
+                                objective.subject_id === nextSubjectId,
+                            ),
+                          ),
+                        );
+                      }
+                    }}
+                    value={objectiveSubjectId}
+                  >
+                    <option value="">Selecciona una asignatura</option>
+                    {objectiveSubjects.map((subject) => (
+                      <option key={subject.id} value={subject.id}>
+                        {subject.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="assessment-objective-search">
+                    Buscar objetivo
+                  </Label>
+                  <Input
+                    className="mt-1.5"
+                    id="assessment-objective-search"
+                    onChange={(event) => setObjectiveQuery(event.target.value)}
+                    placeholder="Código o descripción"
+                    value={objectiveQuery}
+                  />
+                </div>
+                <label className="flex items-start gap-2 text-sm sm:col-span-2">
+                  <input
+                    checked={includeOtherSubjects}
+                    disabled={!editable || !objectiveSubjectId}
+                    onChange={(event) =>
+                      setIncludeOtherSubjects(event.target.checked)
+                    }
+                    type="checkbox"
+                  />
+                  <span>
+                    Incluir objetivos de otras asignaturas
+                    <span className="block text-xs text-muted-foreground">
+                      Úsalo sólo para instrumentos interdisciplinarios.
+                    </span>
+                  </span>
+                </label>
+              </div>
               <fieldset className="assessment-objective-grid">
                 <legend className="sr-only">Objetivos vinculados</legend>
-                {objectives.map((objective) => (
+                {visibleObjectives.map((objective) => (
                   <label
                     data-selected={selectedObjectives.includes(objective.id)}
                     key={objective.id}
@@ -414,6 +515,12 @@ export function AssessmentComposer({
                   </label>
                 ))}
               </fieldset>
+              {!objectiveSubjectId ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Selecciona la asignatura para trabajar con un conjunto breve y
+                  pertinente de objetivos.
+                </p>
+              ) : null}
               {editable ? (
                 <Button
                   className="mt-4"
@@ -487,7 +594,7 @@ export function AssessmentComposer({
                         key={item.id}
                         length={section.items.length}
                         lockVersion={revision.lock_version}
-                        objectives={objectives}
+                        objectives={assessmentObjectives}
                         path={{ ...path, sectionId: section.id }}
                       />
                     ))}
@@ -495,7 +602,7 @@ export function AssessmentComposer({
                   {editable ? (
                     <AssessmentItemForm
                       lockVersion={revision.lock_version}
-                      objectives={objectives}
+                      objectives={assessmentObjectives}
                       path={{ ...path, sectionId: section.id }}
                       questions={questions}
                     />
@@ -1017,6 +1124,12 @@ function AssessmentItemForm({
   questions: QuestionOption[];
 }>) {
   const router = useRouter();
+  const bankNames = [...new Set(questions.map((question) => question.bankName))]
+    .sort((left, right) => left.localeCompare(right, 'es'));
+  const [bankName, setBankName] = useState(
+    bankNames.length === 1 ? (bankNames[0] ?? '') : '',
+  );
+  const [questionQuery, setQuestionQuery] = useState('');
   const [questionVersionId, setQuestionVersionId] = useState('');
   const [points, setPoints] = useState('1.000');
   const [objectiveIds, setObjectiveIds] = useState<string[]>([]);
@@ -1029,8 +1142,43 @@ function AssessmentItemForm({
       required: true,
     }),
   );
+  const normalizedQuestionQuery = questionQuery.trim().toLocaleLowerCase();
+  const visibleQuestions = questions.filter(
+    (question) =>
+      question.bankName === bankName &&
+      (!normalizedQuestionQuery ||
+        question.code.toLocaleLowerCase().includes(normalizedQuestionQuery)),
+  );
   return (
-    <div className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-[minmax(0,1fr)_7rem_auto]">
+    <div className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-[minmax(0,.75fr)_minmax(0,.75fr)_minmax(0,1.25fr)_7rem]">
+      <Label className="sr-only" htmlFor={`bank-${path.sectionId}`}>
+        Banco de preguntas
+      </Label>
+      <select
+        className="h-9 min-w-0 border bg-background px-3 text-sm"
+        id={`bank-${path.sectionId}`}
+        onChange={(event) => {
+          setBankName(event.target.value);
+          setQuestionVersionId('');
+        }}
+        value={bankName}
+      >
+        <option value="">Selecciona un banco</option>
+        {bankNames.map((name) => (
+          <option key={name} value={name}>
+            {name}
+          </option>
+        ))}
+      </select>
+      <Label className="sr-only" htmlFor={`question-search-${path.sectionId}`}>
+        Buscar pregunta por código
+      </Label>
+      <Input
+        id={`question-search-${path.sectionId}`}
+        onChange={(event) => setQuestionQuery(event.target.value)}
+        placeholder="Buscar código"
+        value={questionQuery}
+      />
       <Label className="sr-only" htmlFor={`question-${path.sectionId}`}>
         Pregunta aprobada
       </Label>
@@ -1040,10 +1188,14 @@ function AssessmentItemForm({
         onChange={(event) => setQuestionVersionId(event.target.value)}
         value={questionVersionId}
       >
-        <option value="">Selecciona una pregunta aprobada</option>
-        {questions.map((question) => (
+        <option value="">
+          {bankName
+            ? 'Selecciona una pregunta aprobada'
+            : 'Primero selecciona un banco'}
+        </option>
+        {visibleQuestions.map((question) => (
           <option key={question.id} value={question.id}>
-            {question.bankName} · {question.code} · v{question.number}
+            {question.code} · v{question.number}
           </option>
         ))}
       </select>
@@ -1058,7 +1210,7 @@ function AssessmentItemForm({
         type="number"
         value={points}
       />
-      <fieldset className="sm:col-span-3">
+      <fieldset className="sm:col-span-4">
         <legend className="text-xs font-semibold text-muted-foreground">
           Objetivos del ítem
         </legend>
@@ -1085,7 +1237,7 @@ function AssessmentItemForm({
         </div>
       </fieldset>
       <Button
-        className="sm:col-start-3"
+        className="sm:col-start-4"
         disabled={
           !questionVersionId || !objectiveIds.length || mutation.isPending
         }
@@ -1105,7 +1257,7 @@ function AssessmentItemForm({
       >
         Añadir
       </Button>
-      <div className="sm:col-span-3">
+      <div className="sm:col-span-4">
         <MutationError error={mutation.error} />
       </div>
     </div>

@@ -1409,3 +1409,43 @@ Siguiente paso:
   fixtures/policies preexistentes en varios dominios; la prueba focal de catálogo
   queda verde, pero no se declara la batería global resuelta. No se añadieron
   dependencias ni migraciones y no se realizó commit, push o despliegue.
+
+## Autoría LiveKit, evaluaciones y curso MATE-2303 — 2026-08-02
+
+- La estructura dejó de consultar una política LiveKit por cada actividad. Un
+  endpoint agregado, autorizado por organización, revisión y responsabilidad
+  académica, devuelve en una sola lectura las vinculaciones de la revisión. Los
+  errores distintos de acceso prohibido ya no se convierten en contenido vacío:
+  la página falla de forma explícita si la política no puede consultarse.
+- El compositor de evaluaciones exige primero la asignatura evaluada, limita los
+  objetivos a ese contexto y sólo permite ampliar a otras asignaturas mediante
+  una decisión excepcional visible. El selector de ítems recibe únicamente los
+  objetivos ya elegidos y las versiones aprobadas de preguntas se obtienen con
+  una consulta agregada, sin el recorrido banco-pregunta-versión por cada fila.
+- Las clases en vivo y evaluaciones siguen siendo flujos separados. La política
+  LiveKit puede reabrirse y actualizarse sin recrear la actividad; la evaluación
+  conserva la duración y los intentos de su versión aprobada. Se añadió además
+  un movimiento transaccional de actividades no lectivas entre módulos que
+  preserva identidad, alineaciones y vinculaciones, compacta el módulo de origen
+  y ordena al final del destino. Las lecciones se rechazan porque pertenecen a su
+  unidad semántica.
+- Se construyó desde el programa oficial local el curso
+  `MATE-2303 · Ecuaciones diferenciales (ING)`: 25 temas y 19 subtemas, ocho
+  conceptos, tres objetivos, prerrequisito de Cálculo Integral, 16 módulos y 16
+  guías con documento semántico v1. La secuencia contiene 64 clases LiveKit,
+  16 lecciones y 11 evaluaciones versionadas —tres parciales, tres quizzes,
+  cuatro proyectos con rúbrica y examen final— para 91 actividades ordenadas.
+- Chrome real comprobó las 16 semanas, 91 actividades, 16 contenidos listos y
+  16 lecciones alineadas; movió el Proyecto 1 de la semana 1 a la 2 mediante la
+  nueva operación, confirmó la política compuesta, envió la revisión y un
+  revisor con responsabilidad explícita la aprobó sin bloqueos estructurales.
+  La vista aprobada permanece deliberadamente en solo lectura.
+- Evidencia verde actual: cursos, evaluaciones y scheduling **32 pruebas + 6
+  subpruebas** sobre PostgreSQL; prueba focal de configuración LiveKit; Ruff,
+  Pyright, TypeScript, OpenAPI/cliente de scheduling y `git diff --check`. No se
+  añadieron dependencias ni migraciones y no se realizó commit, push o despliegue.
+- Límite de evidencia: el gateway aceptó la solicitud real de Egress, pero no se
+  declara producido un archivo audiovisual mientras una sesión de navegador no
+  publique medios y LiveKit complete el artefacto. La persistencia de política,
+  asistencia, chat y configuración sí quedó comprobada; la captura multimedia
+  completa sigue siendo un gate de infraestructura, no un éxito simulado.

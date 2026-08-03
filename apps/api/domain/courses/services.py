@@ -990,6 +990,76 @@ def replace_activity_order(
 
 
 @transaction.atomic
+def move_activity_to_module(
+    *,
+    actor: Any,
+    organization: Organization,
+    activity: CourseActivity,
+    target_module: CourseModule,
+    expected_version: int,
+) -> tuple[CourseActivity, CourseRevision]:
+    _require_manage(actor, organization)
+    locked_activity = (
+        CourseActivity.objects.select_for_update()
+        .select_related("module__revision__course__organization")
+        .get(pk=activity.pk)
+    )
+    revision = _lock_revision(
+        actor=actor,
+        revision=locked_activity.module.revision,
+        organization=organization,
+        expected_version=expected_version,
+    )
+    _require_editable(revision)
+    locked_target = CourseModule.objects.select_for_update().get(pk=target_module.pk)
+    _require(
+        locked_target.revision_id == revision.id,
+        CourseStructureInvalid,
+        "El módulo de destino no pertenece a la revisión.",
+    )
+    _require(
+        locked_activity.status == StructureStatus.ACTIVE
+        and locked_target.status == StructureStatus.ACTIVE,
+        CourseStructureInvalid,
+        "La actividad y el módulo de destino deben estar activos.",
+    )
+    _require(
+        locked_activity.activity_type != ActivityType.LESSON,
+        CourseStructureInvalid,
+        "Las lecciones se mueven junto con su unidad.",
+    )
+    _require(
+        locked_activity.module_id != locked_target.id,
+        CourseStructureInvalid,
+        "La actividad ya pertenece a ese módulo.",
+    )
+    source_module_id = locked_activity.module_id
+    source_position = locked_activity.position
+    source_following = list(
+        CourseActivity.objects.select_for_update().filter(
+            module_id=source_module_id,
+            status=StructureStatus.ACTIVE,
+            position__gt=source_position,
+        )
+    )
+    target_count = CourseActivity.objects.select_for_update().filter(
+        module=locked_target, status=StructureStatus.ACTIVE
+    ).count()
+    for row in source_following:
+        row.position = (row.position or 1) - 1
+    if source_following:
+        CourseActivity.objects.bulk_update(source_following, ["position"])
+    locked_activity.module = locked_target
+    locked_activity.position = target_count + 1
+    locked_activity.updated_by = actor
+    locked_activity.full_clean()
+    locked_activity.save(
+        update_fields=("module", "position", "updated_by", "updated_at")
+    )
+    return locked_activity, _finish(revision, actor)
+
+
+@transaction.atomic
 def replace_activity_learning_objectives(
     *,
     actor: Any,

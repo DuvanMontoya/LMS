@@ -35,7 +35,7 @@ from domain.organizations.models import Organization
 from domain.organizations.selectors import organization_visible_to
 from domain.publishing.models import CourseRelease
 
-from ..choices import AuthoringStatus, ResponseStatus
+from ..choices import AuthoringStatus, LifecycleStatus, ResponseStatus
 from ..course_activities import (
     bind_assessment_activity,
     create_and_bind_assessment_activity,
@@ -117,6 +117,7 @@ from ..services import (
 )
 from .filters import AssessmentFilter, DeliveryFilter, QuestionBankFilter
 from .serializers import (
+    ApprovedQuestionVersionOptionSerializer,
     AssessmentActivityBindingInputSerializer,
     AssessmentActivityBindingSerializer,
     AssessmentCourseActivityCreateSerializer,
@@ -636,6 +637,28 @@ class QuestionVersionListView(APIView):
         question = _question(organization, bank_id, question_id)
         return ApiResponse(
             QuestionVersionSerializer(question.versions.all(), many=True).data
+        )
+
+
+class ApprovedQuestionVersionOptionsView(APIView):
+    @extend_schema(
+        operation_id="assessment_approved_question_version_options_list",
+        responses=ApprovedQuestionVersionOptionSerializer(many=True),
+    )
+    def get(self, request: Request, slug: str) -> ApiResponse:
+        organization = _organization(request, slug)
+        _require(can_view_questions(request.user, organization))
+        versions = (
+            QuestionVersion.objects.filter(
+                question__bank__organization=organization,
+                question__bank__status=LifecycleStatus.ACTIVE,
+                question__status=LifecycleStatus.ACTIVE,
+            )
+            .select_related("question__bank")
+            .order_by("question__bank__name", "question__code", "number")
+        )
+        return ApiResponse(
+            ApprovedQuestionVersionOptionSerializer(versions, many=True).data
         )
 
     @extend_schema(

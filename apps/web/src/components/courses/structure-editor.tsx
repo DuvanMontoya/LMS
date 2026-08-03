@@ -6,6 +6,7 @@ import { useRef, useState } from 'react';
 import {
   Archive,
   ArchiveRestore,
+  ArrowRightLeft,
   BookOpenText,
   CheckCircle2,
   ChevronDown,
@@ -38,6 +39,7 @@ import {
   useCreateLiveClassActivity,
   useCreateModule,
   useCreateUnit,
+  useMoveActivityToModule,
   useReorderActivities,
   useReorderStructure,
   useSetStructureArchived,
@@ -76,6 +78,8 @@ function liveClassConfiguration(
 ): LiveClassConfiguration {
   const duration = Number(formData.get('live-duration'));
   const thresholdPercent = Number(formData.get('live-threshold'));
+  const recordingMode = String(formData.get('live-recording-mode')) as
+    'automatic' | 'manual' | 'off';
   if (
     !Number.isFinite(duration) ||
     duration < 1 ||
@@ -100,10 +104,13 @@ function liveClassConfiguration(
     learning_objective_ids: learningObjectiveIds,
     max_participants: Number(formData.get('live-max-participants')),
     minimum_attendance_basis_points: thresholdPercent * 100,
-    recording_layout: String(formData.get('live-recording-layout')) as
-      'grid' | 'speaker',
-    recording_mode: String(formData.get('live-recording-mode')) as
-      'automatic' | 'manual' | 'off',
+    // Disabled controls are omitted from FormData. Keep the persisted room
+    // policy valid even when recording is off and the layout is not editable.
+    recording_layout:
+      recordingMode === 'off'
+        ? 'speaker'
+        : (String(formData.get('live-recording-layout')) as 'grid' | 'speaker'),
+    recording_mode: recordingMode,
     required: formData.get('live-required') === 'on',
     room_departure_timeout_seconds: Number(
       formData.get('live-departure-timeout'),
@@ -157,6 +164,7 @@ export function StructureEditor({
   const createLiveClassActivity = useCreateLiveClassActivity(path);
   const updateLiveClassActivity = useUpdateLiveClassActivity(path);
   const createUnit = useCreateUnit(path);
+  const moveAcrossModules = useMoveActivityToModule(path);
   const updateStructure = useUpdateStructure(path);
   const reorder = useReorderStructure(path);
   const reorderActivities = useReorderActivities(path);
@@ -381,6 +389,27 @@ export function StructureEditor({
       setMessage(
         `«${moving.title}» ahora está en la posición ${target + 1} de la secuencia.`,
       );
+    } catch (cause) {
+      failed(cause);
+    }
+  }
+
+  async function moveActivityToAnotherModule(
+    activityId: string,
+    targetModuleId: string,
+  ) {
+    setError('');
+    try {
+      const result = await moveAcrossModules.mutateAsync({
+        activityId,
+        body: {
+          expected_version: version,
+          target_module_id: targetModuleId,
+        },
+      });
+      setVersion(result.lock_version);
+      setMessage('Actividad movida al final del módulo seleccionado.');
+      router.refresh();
     } catch (cause) {
       failed(cause);
     }
@@ -822,7 +851,55 @@ export function StructureEditor({
                             ) : null}
                           </div>
                           {canManage && editable ? (
-                            <div className="flex shrink-0 gap-1">
+                            <div className="flex shrink-0 items-center gap-1">
+                              {activity.activity_type !== 'lesson' ? (
+                                <details className="relative">
+                                  <summary
+                                    aria-label={`Mover «${activity.title}» a otro módulo`}
+                                    className="flex size-8 cursor-pointer list-none items-center justify-center rounded-md text-muted-foreground marker:hidden hover:bg-muted hover:text-foreground"
+                                    title="Mover a otro módulo"
+                                  >
+                                    <ArrowRightLeft className="size-4" />
+                                  </summary>
+                                  <div className="absolute right-0 z-30 mt-1 w-72 rounded-xl border bg-popover p-3 text-popover-foreground shadow-lg">
+                                    <label className="text-xs font-semibold">
+                                      Mover al final de
+                                      <select
+                                        aria-label={`Módulo de destino para «${activity.title}»`}
+                                        className="academic-control mt-1.5"
+                                        disabled={moveAcrossModules.isPending}
+                                        onChange={(event) => {
+                                          if (event.target.value !== module.id) {
+                                            void moveActivityToAnotherModule(
+                                              activity.id,
+                                              event.target.value,
+                                            );
+                                          }
+                                        }}
+                                        value={module.id}
+                                      >
+                                        {modules
+                                          .filter(
+                                            (candidate) =>
+                                              candidate.status === 'active',
+                                          )
+                                          .map((candidate) => (
+                                            <option
+                                              key={candidate.id}
+                                              value={candidate.id}
+                                            >
+                                              {candidate.title}
+                                            </option>
+                                          ))}
+                                      </select>
+                                    </label>
+                                    <p className="mt-2 text-xs text-muted-foreground">
+                                      Conserva la configuración y la vinculación
+                                      de la actividad.
+                                    </p>
+                                  </div>
+                                </details>
+                              ) : null}
                               <Button
                                 aria-label={`Mover «${activity.title}» una posición arriba`}
                                 disabled={activityIndex === 0}

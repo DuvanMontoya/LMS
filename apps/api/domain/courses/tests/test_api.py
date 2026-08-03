@@ -453,6 +453,86 @@ class CourseApiTests(CourseFixtureMixin, TestCase):
         )
         self.assertIn("units", outline.data["modules"][0])
 
+    def test_non_lesson_activity_moves_between_modules_without_losing_identity(self) -> None:
+        owner, organization, _subject, _objective, _topic, revision = (
+            self.course_revision()
+        )
+        client = self.client_for(owner)
+        revision_url = (
+            f"/api/v1/organizations/{organization.slug}/courses/"
+            f"{revision.course.slug}/revisions/{revision.id}/"
+        )
+        first_module = client.post(
+            f"{revision_url}modules/",
+            {"expected_version": revision.lock_version, "title": "Semana uno"},
+            format="json",
+        )
+        self.assertEqual(first_module.status_code, 201, first_module.data)
+        second_module = client.post(
+            f"{revision_url}modules/",
+            {
+                "expected_version": first_module.data["lock_version"],
+                "title": "Semana dos",
+            },
+            format="json",
+        )
+        self.assertEqual(second_module.status_code, 201, second_module.data)
+        unit = client.post(
+            f"{revision_url}modules/{first_module.data['id']}/units/",
+            {
+                "expected_version": second_module.data["lock_version"],
+                "title": "Lección estable",
+            },
+            format="json",
+        )
+        self.assertEqual(unit.status_code, 201, unit.data)
+        activity = client.post(
+            f"{revision_url}modules/{first_module.data['id']}/activities/",
+            {
+                "expected_version": unit.data["lock_version"],
+                "activity_type": "live_class",
+                "title": "Clase que cambia de semana",
+                "completion_method": "attendance",
+                "minimum_attendance_basis_points": 7500,
+            },
+            format="json",
+        )
+        self.assertEqual(activity.status_code, 201, activity.data)
+
+        moved = client.post(
+            f"{revision_url}activities/{activity.data['id']}/move/",
+            {
+                "expected_version": activity.data["lock_version"],
+                "target_module_id": second_module.data["id"],
+            },
+            format="json",
+        )
+        self.assertEqual(moved.status_code, 200, moved.data)
+        self.assertEqual(moved.data["id"], activity.data["id"])
+        self.assertEqual(moved.data["module_id"], second_module.data["id"])
+        self.assertEqual(moved.data["position"], 1)
+
+        lesson_move = client.post(
+            f"{revision_url}activities/{unit.data['id']}/move/",
+            {
+                "expected_version": moved.data["lock_version"],
+                "target_module_id": second_module.data["id"],
+            },
+            format="json",
+        )
+        self.assertEqual(lesson_move.status_code, 400, lesson_move.data)
+
+        outline = client.get(f"{revision_url}outline/")
+        self.assertEqual(outline.status_code, 200, outline.data)
+        self.assertEqual(
+            [item["title"] for item in outline.data["modules"][0]["activities"]],
+            ["Lección estable"],
+        )
+        self.assertEqual(
+            [item["title"] for item in outline.data["modules"][1]["activities"]],
+            ["Clase que cambia de semana"],
+        )
+
     def test_grading_scheme_weights_assessment_activities_and_rejects_bad_totals(
         self,
     ) -> None:

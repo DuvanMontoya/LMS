@@ -419,6 +419,10 @@ class CourseActivityCreateSerializer(ExpectedVersionSerializer):
         return value
 
 
+class MoveCourseActivitySerializer(ExpectedVersionSerializer):
+    target_module_id = serializers.UUIDField()
+
+
 class ActivityAvailabilityRuleInputSerializer(serializers.Serializer):
     rule_type = serializers.ChoiceField(choices=AvailabilityRuleType.choices)
     prerequisite_activity_id = serializers.UUIDField(required=False, allow_null=True)

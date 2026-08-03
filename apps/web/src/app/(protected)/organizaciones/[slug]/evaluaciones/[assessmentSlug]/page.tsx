@@ -35,6 +35,7 @@ export default async function AssessmentWorkspacePage({
         questions={data.questions}
         readiness={data.readiness}
         slug={slug}
+        subjects={data.subjects}
       />
     </main>
   );

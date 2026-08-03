@@ -582,6 +582,18 @@
         "required": ["api_key", "expected_version"],
         "type": "object"
       },
+      "ApprovedQuestionVersionOption": {
+        "properties": {
+          "bank_name": { "readOnly": true, "type": "string" },
+          "code": { "readOnly": true, "type": "string" },
+          "id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "number": { "readOnly": true, "type": "integer" },
+          "public": { "readOnly": true },
+          "type": { "readOnly": true, "type": "string" }
+        },
+        "required": ["bank_name", "code", "id", "number", "public", "type"],
+        "type": "object"
+      },
       "Area": {
         "properties": {
           "description": { "maxLength": 2000, "type": "string" },
@@ -6236,6 +6248,14 @@
           "title": { "maxLength": 200, "type": "string" }
         },
         "required": ["expected_version"],
+        "type": "object"
+      },
+      "MoveCourseActivity": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "target_module_id": { "format": "uuid", "type": "string" }
+        },
+        "required": ["expected_version", "target_module_id"],
         "type": "object"
       },
       "MoveTopic": {
@@ -12242,6 +12262,73 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/assessments/approved-question-version-options/": {
+      "get": {
+        "operationId": "assessment_approved_question_version_options_list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApprovedQuestionVersionOption"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "post": {
+        "operationId": "assessment_question_revision_create_from_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VersionSource" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/VersionSource" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/VersionSource" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionRevision" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/assessments/approved-version-options/": {
       "get": {
         "operationId": "organizations_assessments_approved_version_options_list",
@@ -14412,55 +14499,6 @@
                   "items": { "$ref": "#/components/schemas/QuestionVersion" },
                   "type": "array"
                 }
-              }
-            },
-            "description": ""
-          }
-        },
-        "security": [{ "cookieAuth": [] }],
-        "tags": ["organizations"]
-      },
-      "post": {
-        "operationId": "assessment_question_revision_create_from_version",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "bank_id",
-            "required": true,
-            "schema": { "type": "string" }
-          },
-          {
-            "in": "path",
-            "name": "question_id",
-            "required": true,
-            "schema": { "format": "uuid", "type": "string" }
-          },
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/VersionSource" }
-            },
-            "application/x-www-form-urlencoded": {
-              "schema": { "$ref": "#/components/schemas/VersionSource" }
-            },
-            "multipart/form-data": {
-              "schema": { "$ref": "#/components/schemas/VersionSource" }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/QuestionRevision" }
               }
             },
             "description": ""
@@ -19051,6 +19089,65 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/MutationResult" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/activities/{activity_id}/move/": {
+      "post": {
+        "operationId": "organizations_courses_revisions_activities_move_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "activity_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MoveCourseActivity" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/MoveCourseActivity" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/MoveCourseActivity" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseActivityMutation"
+                }
               }
             },
             "description": ""
@@ -24241,6 +24338,42 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LiveClassActivityBinding"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/scheduling/course-activities/bindings/": {
+      "get": {
+        "operationId": "scheduling_course_activity_bindings_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LiveClassActivityBinding"
+                  },
+                  "type": "array"
                 }
               }
             },

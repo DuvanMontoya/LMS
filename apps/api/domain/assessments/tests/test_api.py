@@ -541,6 +541,19 @@ class AssessmentApiSecurityTests(AssessmentFixtureMixin, TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    def test_approved_question_options_are_batched_and_tenant_scoped(self) -> None:
+        context = self.assessment_context(with_learning=True)
+        client = APIClient()
+        client.force_authenticate(context["owner"])
+        response = client.get(
+            f"/api/v1/organizations/{context['organization'].slug}/assessments/approved-question-version-options/"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], str(context["question_version"].id))
+        self.assertEqual(response.data[0]["bank_name"], context["bank"].name)
+        self.assertEqual(response.data[0]["code"], context["question"].code)
+
     def test_feedback_modes_expose_none_score_only_or_full_after_grading(
         self,
     ) -> None:

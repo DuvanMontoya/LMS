@@ -14,7 +14,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from domain.courses.models import Course, CourseActivity, CourseModule
+from domain.courses.models import Course, CourseActivity, CourseModule, CourseRevision
 from domain.courses.policies import (
     can_manage_course,
     has_course_academic_responsibility,
@@ -68,6 +68,7 @@ from .serializers import (
     EventCreateSerializer,
     EventRescheduleSerializer,
     LiveClassActivityBindingInputSerializer,
+    LiveClassActivityBindingListQuerySerializer,
     LiveClassActivityBindingSerializer,
     LiveClassCourseActivityConfigurationSerializer,
     LiveClassCourseActivityCreateSerializer,
@@ -122,6 +123,42 @@ def _binding_payload(
         "join_after_minutes": binding.join_after_minutes,
         "revision_lock_version": revision_lock_version,
     }
+
+
+class LiveClassActivityBindingListView(APIView):
+    @extend_schema(
+        operation_id="scheduling_course_activity_bindings_list",
+        parameters=[LiveClassActivityBindingListQuerySerializer],
+        responses={200: LiveClassActivityBindingSerializer(many=True)},
+    )
+    def get(self, request: Request, slug: str) -> Response:
+        organization = _organization(request, slug)
+        serializer = LiveClassActivityBindingListQuerySerializer(
+            data=request.query_params
+        )
+        serializer.is_valid(raise_exception=True)
+        revision = get_object_or_404(
+            CourseRevision.objects.select_related("course"),
+            pk=serializer.validated_data["revision_id"],
+            course__organization=organization,
+        )
+        if not can_manage_course(
+            request.user, organization
+        ) or not has_course_academic_responsibility(
+            request.user, organization, course=revision.course
+        ):
+            return _error(
+                SchedulingAccessDenied("No puedes consultar estas políticas.")
+            )
+        bindings = list(
+            LiveClassActivityBinding.objects.select_related("activity__module")
+            .filter(activity__module__revision=revision)
+            .order_by("activity__module__position", "activity__position", "created_at")
+        )
+        payload = [
+            _binding_payload(binding, revision.lock_version) for binding in bindings
+        ]
+        return Response(LiveClassActivityBindingSerializer(payload, many=True).data)
 
 
 class LiveClassActivityBindingView(APIView):

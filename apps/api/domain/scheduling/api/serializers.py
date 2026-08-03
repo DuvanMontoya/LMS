@@ -17,6 +17,10 @@ class LiveClassActivityBindingInputSerializer(serializers.Serializer):
     )
 
 
+class LiveClassActivityBindingListQuerySerializer(serializers.Serializer):
+    revision_id = serializers.UUIDField()
+
+
 class LiveClassCourseActivityConfigurationSerializer(serializers.Serializer):
     expected_revision_version = serializers.IntegerField(min_value=1)
     title = serializers.CharField(max_length=200)
