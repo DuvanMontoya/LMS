@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock3,
+  Eye,
   Languages,
   Layers3,
   Play,
@@ -21,18 +22,29 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getOptionalEnrollmentForCourse } from '@/lib/learning/server';
 import { formatDuration, languageLabel } from '@/lib/publishing/labels';
 import { getLibraryCourse } from '@/lib/publishing/server';
 
-export default async function LibraryCoursePage({
+type PublishedCoursePageProps = Readonly<{
+  params: Promise<{ courseSlug: string; slug: string }>;
+}>;
+
+export default async function PublishedCourseView({
   params,
-}: Readonly<{ params: Promise<{ courseSlug: string; slug: string }> }>) {
+}: PublishedCoursePageProps) {
   const { courseSlug, slug } = await params;
-  const data = await getLibraryCourse(slug, courseSlug);
+  const [data, enrollment] = await Promise.all([
+    getLibraryCourse(slug, courseSlug),
+    getOptionalEnrollmentForCourse(slug, courseSlug),
+  ]);
+  const courseBase = `/organizaciones/${slug}/cursos/publicados/${courseSlug}`;
   const firstUnit = data.course.outline[0]?.units[0];
-  const firstUnitHref = firstUnit
-    ? `/organizaciones/${slug}/biblioteca/${courseSlug}/unidades/${firstUnit.id}`
-    : undefined;
+  const startHref = enrollment
+    ? `/organizaciones/${slug}/aprender/${courseSlug}`
+    : firstUnit
+      ? `${courseBase}/unidades/${firstUnit.id}`
+      : undefined;
 
   return (
     <main
@@ -43,9 +55,7 @@ export default async function LibraryCoursePage({
         <BreadcrumbList className="min-w-0">
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href={`/organizaciones/${slug}/biblioteca`}>
-                Biblioteca
-              </Link>
+              <Link href={`/organizaciones/${slug}/cursos`}>Cursos</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -59,7 +69,10 @@ export default async function LibraryCoursePage({
 
       <section className="library-course-hero">
         <div className="library-course-hero__content">
-          <p className="academic-kicker">Curso publicado</p>
+          <div className="library-course-hero__meta">
+            <span>Curso publicado</span>
+            <span>Release {data.course.release_number}</span>
+          </div>
           <div className="library-course-hero__subjects">
             {data.subjects.map((subject) => (
               <Badge key={subject.id} variant="outline">
@@ -70,159 +83,135 @@ export default async function LibraryCoursePage({
           <h1>{data.course.title}</h1>
           <p>{data.course.summary}</p>
           <div className="library-course-hero__actions">
-            {firstUnitHref ? (
+            {startHref ? (
               <Button asChild size="lg">
-                <Link href={firstUnitHref}>
-                  <Play />
-                  Comenzar curso
+                <Link href={startHref}>
+                  {enrollment ? <Play /> : <Eye />}
+                  {enrollment
+                    ? 'Continuar aprendizaje'
+                    : 'Vista previa del aula'}
                 </Link>
               </Button>
             ) : null}
             <Button asChild size="lg" variant="outline">
-              <Link href="#contenido-del-curso">Explorar contenido</Link>
+              <Link href="#contenido-del-curso">Ver programa</Link>
             </Button>
           </div>
+          <p className="library-course-hero__start-note">
+            {enrollment
+              ? 'Abrirás tu aula real; el progreso y las actividades quedan vinculados a tu matrícula.'
+              : 'La vista previa reproduce el aula del estudiante sin crear una matrícula ni guardar progreso.'}
+          </p>
         </div>
-        <div aria-hidden="true" className="library-course-hero__visual">
+
+        <div className="library-course-hero__overview">
           <div>
             <BookOpen />
-            <span>{String(data.course.module_count).padStart(2, '0')}</span>
-            <small>Módulos</small>
+            <span>Ruta académica</span>
+            <strong>{data.course.module_count} módulos</strong>
           </div>
-          <span />
-          <span />
+          <dl>
+            <CourseFact
+              icon={<Clock3 />}
+              label="Duración"
+              value={formatDuration(data.course.estimated_duration_minutes)}
+            />
+            <CourseFact
+              icon={<BookOpen />}
+              label="Lecciones"
+              value={String(data.course.unit_count)}
+            />
+            <CourseFact
+              icon={<Languages />}
+              label="Idioma"
+              value={languageLabel(data.course.language_code)}
+            />
+            <CourseFact
+              icon={<Target />}
+              label="Objetivos"
+              value={String(data.objectives.length)}
+            />
+          </dl>
         </div>
       </section>
 
-      <div className="library-course-layout">
-        <div className="library-course-main">
-          {data.course.description ? (
-            <section className="library-course-about">
-              <p className="academic-kicker">Presentación</p>
-              <h2>Acerca de este curso</h2>
-              <p>{data.course.description}</p>
-            </section>
-          ) : null}
+      <div className="library-course-introduction">
+        {data.course.description ? (
+          <section className="library-course-about">
+            <p className="academic-kicker">Presentación</p>
+            <h2>Acerca del curso</h2>
+            <p>{data.course.description}</p>
+          </section>
+        ) : null}
 
-          {data.objectives.length ? (
-            <section className="library-course-objectives">
-              <header>
-                <Target />
-                <div>
-                  <p className="academic-kicker">Resultados esperados</p>
-                  <h2>Lo que aprenderás</h2>
-                </div>
-              </header>
-              <ul>
-                {data.objectives.map((objective) => (
-                  <li key={objective.id}>
-                    <CheckCircle2 />
-                    <span>
-                      <strong>{objective.code}</strong>
-                      {objective.statement}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-
-          <section
-            className="library-course-curriculum"
-            id="contenido-del-curso"
-          >
+        {data.objectives.length ? (
+          <section className="library-course-objectives">
             <header>
+              <Target />
               <div>
-                <p className="academic-kicker">Plan de estudios</p>
-                <h2>Contenido del curso</h2>
-                <p>
-                  {data.course.module_count} módulos · {data.course.unit_count}{' '}
-                  lecciones en el release {data.course.release_number}
-                </p>
+                <p className="academic-kicker">Resultados esperados</p>
+                <h2>Lo que aprenderás</h2>
               </div>
             </header>
-            <div>
-              {data.course.outline.map((module, index) => (
-                <details key={module.id} open={index === 0}>
-                  <summary>
-                    <span>{String(module.position).padStart(2, '0')}</span>
-                    <span>
-                      <strong>{module.title}</strong>
-                      <small>
-                        {module.units.length}{' '}
-                        {module.units.length === 1 ? 'lección' : 'lecciones'}
-                      </small>
-                    </span>
-                    <ChevronDown />
-                  </summary>
-                  {module.description ? <p>{module.description}</p> : null}
-                  <ol>
-                    {module.units.map((unit) => (
-                      <li key={unit.id}>
-                        <Link
-                          href={`/organizaciones/${slug}/biblioteca/${courseSlug}/unidades/${unit.id}`}
-                        >
-                          <span>
-                            {module.position}.{unit.position}
-                          </span>
-                          <span>{unit.title}</span>
-                          <ArrowRight />
-                        </Link>
-                      </li>
-                    ))}
-                  </ol>
-                </details>
+            <ul>
+              {data.objectives.map((objective) => (
+                <li key={objective.id}>
+                  <CheckCircle2 />
+                  <span>
+                    <strong>{objective.code}</strong>
+                    {objective.statement}
+                  </span>
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
-        </div>
-
-        <aside className="library-course-card-sticky">
-          <div className="library-course-card-sticky__cover">
-            <Layers3 />
-            <span>Ruta académica</span>
-            <small>Release {data.course.release_number}</small>
-          </div>
-          <div className="library-course-card-sticky__body">
-            {firstUnitHref ? (
-              <Button asChild className="w-full" size="lg">
-                <Link href={firstUnitHref}>
-                  Comenzar ahora
-                  <ArrowRight data-icon="inline-end" />
-                </Link>
-              </Button>
-            ) : null}
-            <p>Este curso incluye</p>
-            <dl>
-              <CourseFact
-                icon={<Clock3 />}
-                label="Duración estimada"
-                value={formatDuration(data.course.estimated_duration_minutes)}
-              />
-              <CourseFact
-                icon={<Layers3 />}
-                label="Módulos"
-                value={String(data.course.module_count)}
-              />
-              <CourseFact
-                icon={<BookOpen />}
-                label="Lecciones"
-                value={String(data.course.unit_count)}
-              />
-              <CourseFact
-                icon={<Languages />}
-                label="Idioma"
-                value={languageLabel(data.course.language_code)}
-              />
-              <CourseFact
-                icon={<Target />}
-                label="Objetivos"
-                value={String(data.objectives.length)}
-              />
-            </dl>
-          </div>
-        </aside>
+        ) : null}
       </div>
+
+      <section className="library-course-curriculum" id="contenido-del-curso">
+        <header>
+          <div>
+            <p className="academic-kicker">Plan de estudios</p>
+            <h2>Contenido del curso</h2>
+            <p>
+              {data.course.module_count} módulos · {data.course.unit_count}{' '}
+              lecciones · release {data.course.release_number}
+            </p>
+          </div>
+          <Layers3 aria-hidden="true" />
+        </header>
+        <div>
+          {data.course.outline.map((module, index) => (
+            <details key={module.id} open={index === 0}>
+              <summary>
+                <span>{String(module.position).padStart(2, '0')}</span>
+                <span>
+                  <strong>{module.title}</strong>
+                  <small>
+                    {module.units.length}{' '}
+                    {module.units.length === 1 ? 'lección' : 'lecciones'}
+                  </small>
+                </span>
+                <ChevronDown />
+              </summary>
+              {module.description ? <p>{module.description}</p> : null}
+              <ol>
+                {module.units.map((unit) => (
+                  <li key={unit.id}>
+                    <Link href={`${courseBase}/unidades/${unit.id}`}>
+                      <span>
+                        {module.position}.{unit.position}
+                      </span>
+                      <span>{unit.title}</span>
+                      <ArrowRight />
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }

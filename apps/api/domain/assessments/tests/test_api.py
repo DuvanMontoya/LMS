@@ -541,6 +541,40 @@ class AssessmentApiSecurityTests(AssessmentFixtureMixin, TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+    def test_question_library_exposes_public_excerpt_and_safe_full_preview(
+        self,
+    ) -> None:
+        context = self.assessment_context(with_learning=True)
+        client = APIClient()
+        client.force_authenticate(context["owner"])
+        base = (
+            f"/api/v1/organizations/{context['organization'].slug}/assessments/"
+            f"question-banks/{context['bank'].id}/questions/"
+        )
+        listing = client.get(base)
+        self.assertEqual(listing.status_code, 200)
+        row = next(
+            item
+            for item in listing.data["results"]
+            if item["id"] == str(context["question"].id)
+        )
+        self.assertEqual(row["type"], context["question_version"].type)
+        self.assertEqual(row["preview"], context["question_version"].public)
+
+        preview = client.get(f"{base}{context['question'].id}/preview/")
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(preview.data["code"], context["question"].code)
+        self.assertEqual(preview.data["public"], context["question_version"].public)
+        serialized = preview.content.decode("utf-8")
+        for forbidden in ("grading", "correct_option_ids", "rubric"):
+            self.assertNotIn(forbidden, serialized)
+
+        client.force_authenticate(context["learner"])
+        self.assertEqual(
+            client.get(f"{base}{context['question'].id}/preview/").status_code,
+            403,
+        )
+
     def test_approved_question_options_are_batched_and_tenant_scoped(self) -> None:
         context = self.assessment_context(with_learning=True)
         client = APIClient()

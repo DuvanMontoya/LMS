@@ -453,7 +453,9 @@ class CourseApiTests(CourseFixtureMixin, TestCase):
         )
         self.assertIn("units", outline.data["modules"][0])
 
-    def test_non_lesson_activity_moves_between_modules_without_losing_identity(self) -> None:
+    def test_non_lesson_activity_moves_between_modules_without_losing_identity(
+        self,
+    ) -> None:
         owner, organization, _subject, _objective, _topic, revision = (
             self.course_revision()
         )

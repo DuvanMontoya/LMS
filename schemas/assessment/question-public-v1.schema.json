@@ -19,7 +19,7 @@
         "mathematical_expression"
       ]
     },
-    "prompt": { "$ref": "urn:lms:content:unit-document:1" },
+    "prompt": { "$ref": "urn:lms:content:unit-document:2" },
     "options": {
       "type": "array",
       "minItems": 2,
@@ -147,7 +147,21 @@
           "maxLength": 64,
           "pattern": "^[A-Za-z0-9_-]+$"
         },
-        "label": { "type": "string", "minLength": 1, "maxLength": 2000 }
+        "label": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "math_latex": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "media": { "$ref": "#/$defs/choice_media" }
+      },
+      "additionalProperties": false
+    },
+    "choice_media": {
+      "type": "object",
+      "required": ["asset_version_id", "kind", "alt_text"],
+      "properties": {
+        "asset_version_id": { "type": "string", "format": "uuid" },
+        "kind": { "const": "image" },
+        "alt_text": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "caption": { "type": "string", "maxLength": 1000 },
+        "long_description": { "type": "string", "maxLength": 5000 }
       },
       "additionalProperties": false
     }

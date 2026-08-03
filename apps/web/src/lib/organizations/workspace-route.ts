@@ -10,7 +10,7 @@ export function primaryWorkspaceHref(
   if (roles.includes('instructor'))
     return `${base}/aprendizaje/mis-asignaturas`;
   if (roles.includes('author') || roles.includes('reviewer')) {
-    return `${base}/cursos`;
+    return `${base}/cursos/autoria`;
   }
   if (roles.includes('learner')) return `${base}/aprendizaje`;
   return base;

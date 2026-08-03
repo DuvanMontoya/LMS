@@ -1,7 +1,5 @@
-import {
-  BankList,
-  QuestionBankCreateForm,
-} from '@/components/assessments/authoring-forms';
+import { BankList } from '@/components/assessments/authoring-forms';
+import { QuestionBankCreateDialog } from '@/components/assessments/question-bank-create-dialog';
 import { PageHeader } from '@/components/platform/page-header';
 import { getQuestionBanks } from '@/lib/assessments/server';
 
@@ -14,6 +12,7 @@ export default async function QuestionBanksPage({
   return (
     <main className="academic-page" id="contenido-principal">
       <PageHeader
+        actions={canManage ? <QuestionBankCreateDialog slug={slug} /> : null}
         breadcrumbs={[
           { href: `/organizaciones/${slug}`, label: data.organization.name },
           {
@@ -22,11 +21,10 @@ export default async function QuestionBanksPage({
           },
           { label: 'Bancos' },
         ]}
-        description="Preguntas con código estable, revisión editorial y versiones inmutables."
-        eyebrow="Banco institucional"
+        description="Organiza y reutiliza preguntas aprobadas en distintas evaluaciones."
+        eyebrow="Evaluaciones"
         title="Bancos de preguntas"
       />
-      {canManage ? <QuestionBankCreateForm slug={slug} /> : null}
       <BankList banks={data.banks} slug={slug} />
     </main>
   );

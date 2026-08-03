@@ -20,6 +20,8 @@
       ]
     },
     "public": { "$ref": "urn:lms:assessment:question-public:1" },
+    "authoring": { "$ref": "#/$defs/authoring" },
+    "worked_solution": { "$ref": "urn:lms:content:unit-document:2" },
     "grading": {
       "type": "object",
       "properties": {
@@ -188,6 +190,42 @@
     }
   ],
   "$defs": {
+    "authoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "framework": {
+          "enum": ["icfes", "higher_education", "research", "other"]
+        },
+        "difficulty": {
+          "enum": ["foundational", "intermediate", "advanced", "expert"]
+        },
+        "cognitive_process": {
+          "enum": ["understand", "apply", "analyze", "evaluate", "create"]
+        },
+        "estimated_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 240
+        },
+        "tags": {
+          "type": "array",
+          "maxItems": 20,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 80 }
+        },
+        "source_note": { "type": "string", "maxLength": 2000 },
+        "choice_rationales": {
+          "type": "object",
+          "maxProperties": 100,
+          "propertyNames": {
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "additionalProperties": { "type": "string", "maxLength": 3000 }
+        }
+      }
+    },
     "identifier": {
       "type": "string",
       "minLength": 1,

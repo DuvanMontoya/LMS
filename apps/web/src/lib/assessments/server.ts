@@ -248,25 +248,46 @@ export async function getQuestionBanks(slug: string) {
   return { ...organization, banks };
 }
 
+export async function getQuestionBankCreationContext(slug: string) {
+  const organization = await getOrganizationForPage(slug);
+  if (!organization.access.capabilities.includes('assessment.bank.manage')) {
+    notFound();
+  }
+  return organization;
+}
+
 export async function getQuestionBank(slug: string, bankId: string) {
-  const data = await getQuestionBanks(slug);
-  const bank = data.banks.results.find((item) => item.id === bankId);
-  if (!bank) notFound();
+  const organization = await getOrganizationForPage(slug);
+  if (!organization.access.capabilities.includes('assessment.bank.view')) {
+    notFound();
+  }
   const client = await createPlatformServerClient();
-  const questions = (await required(
-    client.GET(
-      '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/',
-      {
-        params: {
-          path: { bank_id: bankId, slug },
-          query: { page_size: 100 },
+  const [bank, questions] = await Promise.all([
+    required(
+      client.GET(
+        '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/',
+        {
+          params: { path: { bank_id: bankId, slug } },
+          cache: 'no-store',
         },
-        cache: 'no-store',
-      },
-    ),
-    'No fue posible consultar las preguntas.',
-  )) as QuestionPage;
-  return { ...data, bank, questions };
+      ),
+      'No fue posible consultar el banco.',
+    ) as Promise<components['schemas']['QuestionBank']>,
+    required(
+      client.GET(
+        '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/',
+        {
+          params: {
+            path: { bank_id: bankId, slug },
+            query: { page_size: 100 },
+          },
+          cache: 'no-store',
+        },
+      ),
+      'No fue posible consultar las preguntas.',
+    ) as Promise<QuestionPage>,
+  ]);
+  return { ...organization, bank, questions };
 }
 
 export async function getQuestionRevision(
@@ -280,24 +301,38 @@ export async function getQuestionRevision(
     notFound();
   }
   const client = await createPlatformServerClient();
-  const revision = (await required(
-    client.GET(
-      '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/revisions/{revision_id}/',
-      {
-        params: {
-          path: {
-            bank_id: bankId,
-            question_id: questionId,
-            revision_id: revisionId,
-            slug,
+  const [question, revision] = await Promise.all([
+    required(
+      client.GET(
+        '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/',
+        {
+          params: {
+            path: { bank_id: bankId, question_id: questionId, slug },
           },
+          cache: 'no-store',
         },
-        cache: 'no-store',
-      },
-    ),
-    'No fue posible consultar la revisión de pregunta.',
-  )) as components['schemas']['QuestionRevision'];
-  return { ...organization, bankId, questionId, revision };
+      ),
+      'No fue posible consultar la pregunta.',
+    ) as Promise<components['schemas']['Question']>,
+    required(
+      client.GET(
+        '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/revisions/{revision_id}/',
+        {
+          params: {
+            path: {
+              bank_id: bankId,
+              question_id: questionId,
+              revision_id: revisionId,
+              slug,
+            },
+          },
+          cache: 'no-store',
+        },
+      ),
+      'No fue posible consultar la revisión de pregunta.',
+    ) as Promise<components['schemas']['QuestionRevision']>,
+  ]);
+  return { ...organization, bankId, question, questionId, revision };
 }
 
 async function objectiveOptions(

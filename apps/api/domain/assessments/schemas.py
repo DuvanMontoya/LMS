@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -19,7 +20,8 @@ from .scoring import normalize_short_text, parse_decimal_text
 CURRENT_ASSESSMENT_SCHEMA_VERSION = 1
 REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
 SCHEMA_ROOT = REPOSITORY_ROOT / "schemas"
-CONTENT_SCHEMA_ID = "urn:lms:content:unit-document:1"
+CONTENT_SCHEMA_V1_ID = "urn:lms:content:unit-document:1"
+CONTENT_SCHEMA_V2_ID = "urn:lms:content:unit-document:2"
 QUESTION_PUBLIC_SCHEMA_ID = "urn:lms:assessment:question-public:1"
 QUESTION_DEFINITION_SCHEMA_ID = "urn:lms:assessment:question-definition:1"
 RESPONSE_SCHEMA_ID = "urn:lms:assessment:response:1"
@@ -29,8 +31,16 @@ MATH_EXPRESSION_RESPONSE_SCHEMA_ID = "urn:lms:assessment:math-expression-respons
 SCORING_POLICY_SCHEMA_ID = "urn:lms:assessment:scoring-policy:2"
 GRADING_REVISION_SCHEMA_ID = "urn:lms:assessment:grading-revision:1"
 
+_CONTROL_CHARACTERS = re.compile(r"[\x00-\x1f\x7f]")
+_UNSAFE_MATH = re.compile(
+    r"(?:\\(?:require|style|class|cssId|htmlClass|htmlId|htmlStyle|href)\b|"
+    r"<\s*/?\s*tex-html\b|javascript\s*:|data\s*:)",
+    re.IGNORECASE,
+)
+
 SCHEMA_PATHS = {
-    CONTENT_SCHEMA_ID: SCHEMA_ROOT / "content" / "unit-document-v1.schema.json",
+    CONTENT_SCHEMA_V1_ID: SCHEMA_ROOT / "content" / "unit-document-v1.schema.json",
+    CONTENT_SCHEMA_V2_ID: SCHEMA_ROOT / "content" / "unit-document-v2.schema.json",
     QUESTION_PUBLIC_SCHEMA_ID: (
         SCHEMA_ROOT / "assessment" / "question-public-v1.schema.json"
     ),
@@ -143,10 +153,81 @@ def _identifiers(items: object) -> list[str]:
     ]
 
 
+def _validate_prompt_legacy_nodes(prompt: object) -> None:
+    copied = deep_json_copy(prompt)
+    if not isinstance(copied, dict) or not isinstance(copied.get("content"), list):
+        return
+    asset_types = {
+        "imageAsset",
+        "audioAsset",
+        "videoAsset",
+        "documentAsset",
+        "datasetAsset",
+    }
+    legacy_blocks: list[object] = []
+    for block in copied["content"]:
+        if isinstance(block, dict) and block.get("type") in asset_types:
+            attrs = block.get("attrs")
+            node_id = attrs.get("nodeId") if isinstance(attrs, dict) else None
+            legacy_blocks.append({"type": "paragraph", "attrs": {"nodeId": node_id}})
+        else:
+            legacy_blocks.append(block)
+    legacy = {"type": "doc", "content": legacy_blocks}
+    errors = sorted(
+        validator_for(CONTENT_SCHEMA_V1_ID).iter_errors(legacy),
+        key=lambda error: tuple(str(item) for item in error.absolute_path),
+    )
+    if errors:
+        raise AssessmentInvalid(
+            "Los nodos semánticos heredados del enunciado son inválidos.",
+            path="definition.public.prompt",
+        )
+
+
+def _validate_definition_math(definition: dict[str, Any]) -> None:
+    public = definition["public"]
+    candidates: list[tuple[str, str]] = []
+    for node in _walk(public.get("prompt")):
+        if node.get("type") not in {"inlineMath", "displayMath"}:
+            continue
+        attrs = node.get("attrs")
+        if isinstance(attrs, dict) and isinstance(attrs.get("latex"), str):
+            candidates.append(("definition.public.prompt", attrs["latex"]))
+    for collection_name in ("options", "left", "right"):
+        collection = public.get(collection_name)
+        if not isinstance(collection, list):
+            continue
+        for index, option in enumerate(collection):
+            if isinstance(option, dict) and isinstance(option.get("math_latex"), str):
+                candidates.append(
+                    (
+                        f"definition.public.{collection_name}.{index}.math_latex",
+                        option["math_latex"],
+                    )
+                )
+    worked_solution = definition.get("worked_solution")
+    if isinstance(worked_solution, dict):
+        for node in _walk(worked_solution):
+            if node.get("type") not in {"inlineMath", "displayMath"}:
+                continue
+            attrs = node.get("attrs")
+            if isinstance(attrs, dict) and isinstance(attrs.get("latex"), str):
+                candidates.append(("definition.worked_solution", attrs["latex"]))
+    for path, latex in candidates:
+        if _CONTROL_CHARACTERS.search(latex) or _UNSAFE_MATH.search(latex):
+            raise AssessmentInvalid(
+                "La fórmula contiene una capacidad no permitida.", path=path
+            )
+
+
 def _validate_definition_semantics(definition: dict[str, Any]) -> None:
     question_type = str(definition["type"])
     public = definition["public"]
     grading = definition["grading"]
+    _validate_prompt_legacy_nodes(public["prompt"])
+    if "worked_solution" in definition:
+        _validate_prompt_legacy_nodes(definition["worked_solution"])
+    _validate_definition_math(definition)
     if public["type"] != question_type:
         raise AssessmentInvalid(
             "El tipo público debe coincidir con el tipo de la pregunta.",
@@ -163,6 +244,15 @@ def _validate_definition_semantics(definition: dict[str, Any]) -> None:
             raise AssessmentInvalid(
                 "Los identificadores de opción deben ser únicos.",
                 path="definition.public.options",
+            )
+        authoring = definition.get("authoring")
+        rationales = (
+            authoring.get("choice_rationales") if isinstance(authoring, dict) else None
+        )
+        if isinstance(rationales, dict) and not set(rationales).issubset(option_ids):
+            raise AssessmentInvalid(
+                "El análisis de distractores sólo puede referenciar opciones existentes.",
+                path="definition.authoring.choice_rationales",
             )
         key = (
             grading["correct_order"]

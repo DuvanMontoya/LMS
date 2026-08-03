@@ -154,7 +154,7 @@ export function AcademicHelpCenter({
           description:
             'Organiza módulos y una única secuencia de lecciones, clases en vivo y evaluaciones. Completa contenido, duración y alineaciones.',
           example: 'Lección 1 → clase en vivo → quiz → lección 2',
-          href: `${base}/cursos`,
+          href: `${base}/cursos/autoria`,
           icon: BookOpenCheck,
           result: 'Recorrido pedagógico completo',
           title: 'Construir la experiencia',
@@ -164,7 +164,7 @@ export function AcademicHelpCenter({
           description:
             'Revisa los bloqueos, aprueba la revisión y publica un release. Aprobar no publica automáticamente.',
           example: 'Revisión R3 aprobada → release R3',
-          href: `${base}/cursos`,
+          href: `${base}/cursos/autoria`,
           icon: LibraryBig,
           result: 'Snapshot inmutable listo',
           title: 'Revisar y publicar',

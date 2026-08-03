@@ -15,7 +15,7 @@ export type QuestionPublicPayloadV1 = {
     | 'ordering'
     | 'matching'
     | 'mathematical_expression';
-  prompt: LMSUnitAcademicDocumentVersion1;
+  prompt: LMSUnitAcademicDocumentVersion2;
   /**
    * @minItems 2
    * @maxItems 100
@@ -109,1159 +109,119 @@ export type QuestionPublicPayloadV1 = {
   response_guidance?: string;
   maximum_latex_length?: number;
 };
-export type BlockNode =
-  | Paragraph
-  | Heading
-  | BulletList
-  | OrderedList
-  | Blockquote
-  | HorizontalRule
-  | PedagogicalBlock
-  | DisplayMath
-  | CodeBlock
-  | Table;
+export type Node =
+  ImageAsset | AudioAsset | VideoAsset | DownloadAsset | LegacyNode;
 export type NodeId = string;
-export type InlineNode = Text | InlineMath | HardBreak;
-export type Mark =
-  | {
-      type: 'bold';
-    }
-  | {
-      type: 'italic';
-    }
-  | {
-      type: 'code';
-    }
-  | {
-      type: 'link';
-      attrs: {
-        href: string;
-        title?: string;
-      };
-    };
-/**
- * @maxItems 5000
- */
-export type InlineContent = InlineNode[];
-export type BlockquoteChildNode =
-  | Paragraph
-  | Heading
-  | BulletList
-  | OrderedList
-  | HorizontalRule
-  | PedagogicalBlock
-  | DisplayMath
-  | CodeBlock
-  | Table;
-export type PedagogicalChildNode =
-  | Paragraph
-  | Heading
-  | BulletList
-  | OrderedList
-  | Blockquote
-  | HorizontalRule
-  | DisplayMath
-  | CodeBlock
-  | Table;
+export type AssetVersionId = string;
+export type PlainText = string;
 
 /**
- * Portable canonical contract for one course unit academic document.
+ * Canonical semantic unit content with immutable academic asset references.
  */
-export interface LMSUnitAcademicDocumentVersion1 {
+export interface LMSUnitAcademicDocumentVersion2 {
   type: 'doc';
   /**
    * @minItems 1
    * @maxItems 1000
    */
-  content: [BlockNode, ...BlockNode[]];
+  content: [Node, ...Node[]];
 }
-export interface Paragraph {
-  type: 'paragraph';
-  attrs: BlockAttrs;
-  content?: InlineContent;
+export interface ImageAsset {
+  type: 'imageAsset';
+  attrs: {
+    [k: string]: any;
+  };
 }
-export interface BlockAttrs {
-  nodeId: NodeId;
+export interface AudioAsset {
+  type: 'audioAsset';
+  attrs: {
+    nodeId: NodeId;
+    assetVersionId: AssetVersionId;
+    title: string;
+    transcript: string;
+    caption: PlainText;
+  };
 }
-export interface Text {
-  type: 'text';
-  text: string;
+export interface VideoAsset {
+  type: 'videoAsset';
+  attrs: {
+    [k: string]: any;
+  };
+}
+export interface DownloadAsset {
+  type: 'documentAsset' | 'datasetAsset';
+  attrs: {
+    nodeId: NodeId;
+    assetVersionId: AssetVersionId;
+    label: string;
+    description: PlainText;
+  };
+}
+export interface LegacyNode {
+  type: string;
+  attrs?: {
+    [k: string]: any;
+  };
+  /**
+   * @maxItems 5000
+   */
+  content?: Node[];
+  text?: string;
   /**
    * @maxItems 4
    */
   marks?:
-    [] | [Mark] | [Mark, Mark] | [Mark, Mark, Mark] | [Mark, Mark, Mark, Mark];
-}
-export interface InlineMath {
-  type: 'inlineMath';
-  attrs: {
-    nodeId: NodeId;
-    latex: string;
-  };
-}
-export interface HardBreak {
-  type: 'hardBreak';
-}
-export interface Heading {
-  type: 'heading';
-  attrs: {
-    nodeId: NodeId;
-    level: 2 | 3 | 4;
-  };
-  content?: InlineContent;
-}
-export interface BulletList {
-  type: 'bulletList';
-  attrs: BlockAttrs;
-  /**
-   * @minItems 1
-   * @maxItems 500
-   */
-  content: [ListItem, ...ListItem[]];
-}
-export interface ListItem {
-  type: 'listItem';
-  attrs: BlockAttrs;
-  /**
-   * @minItems 1
-   * @maxItems 100
-   */
-  content: [
-    Paragraph | Heading | BulletList | OrderedList,
-    ...(Paragraph | Heading | BulletList | OrderedList)[],
-  ];
-}
-export interface OrderedList {
-  type: 'orderedList';
-  attrs: {
-    nodeId: NodeId;
-    start: number;
-  };
-  /**
-   * @minItems 1
-   * @maxItems 500
-   */
-  content: [ListItem, ...ListItem[]];
-}
-export interface Blockquote {
-  type: 'blockquote';
-  attrs: BlockAttrs;
-  /**
-   * @minItems 1
-   * @maxItems 250
-   */
-  content: [BlockquoteChildNode, ...BlockquoteChildNode[]];
-}
-export interface HorizontalRule {
-  type: 'horizontalRule';
-  attrs: BlockAttrs;
-}
-export interface PedagogicalBlock {
-  type: 'pedagogicalBlock';
-  attrs: {
-    nodeId: NodeId;
-    kind:
-      | 'definition'
-      | 'theorem'
-      | 'lemma'
-      | 'proposition'
-      | 'corollary'
-      | 'proof'
-      | 'example'
-      | 'counterexample'
-      | 'remark'
-      | 'warning'
-      | 'summary';
-    title?: string;
-  };
-  /**
-   * @minItems 1
-   * @maxItems 250
-   */
-  content: [PedagogicalChildNode, ...PedagogicalChildNode[]];
-}
-export interface DisplayMath {
-  type: 'displayMath';
-  attrs: {
-    nodeId: NodeId;
-    latex: string;
-    label?: string;
-  };
-}
-export interface CodeBlock {
-  type: 'codeBlock';
-  attrs: {
-    nodeId: NodeId;
-    language:
-      | 'plaintext'
-      | 'python'
-      | 'javascript'
-      | 'typescript'
-      | 'json'
-      | 'sql'
-      | 'latex';
-    code: string;
-    caption?: string;
-  };
-}
-export interface Table {
-  type: 'table';
-  attrs: {
-    nodeId: NodeId;
-    caption: string;
-  };
-  /**
-   * @minItems 1
-   * @maxItems 100
-   */
-  content: [HeaderRow | BodyRow, ...(HeaderRow | BodyRow)[]];
-}
-export interface HeaderRow {
-  type: 'tableRow';
-  attrs: BlockAttrs;
-  /**
-   * @minItems 1
-   * @maxItems 20
-   */
-  content:
-    | [TableHeader]
-    | [TableHeader, TableHeader]
-    | [TableHeader, TableHeader, TableHeader]
-    | [TableHeader, TableHeader, TableHeader, TableHeader]
-    | [TableHeader, TableHeader, TableHeader, TableHeader, TableHeader]
+    | []
     | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
+        {
+          [k: string]: any;
+        },
       ]
     | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
+        {
+          [k: string]: any;
+        },
+        {
+          [k: string]: any;
+        },
       ]
     | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
+        {
+          [k: string]: any;
+        },
+        {
+          [k: string]: any;
+        },
+        {
+          [k: string]: any;
+        },
       ]
     | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-      ]
-    | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-      ]
-    | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-      ]
-    | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-      ]
-    | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-      ]
-    | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-      ]
-    | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-      ]
-    | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-      ]
-    | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-      ]
-    | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-      ]
-    | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-      ]
-    | [
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
-        TableHeader,
+        {
+          [k: string]: any;
+        },
+        {
+          [k: string]: any;
+        },
+        {
+          [k: string]: any;
+        },
+        {
+          [k: string]: any;
+        },
       ];
-}
-export interface TableHeader {
-  type: 'tableHeader';
-  attrs: {
-    nodeId: NodeId;
-    colspan: 1;
-    rowspan: 1;
-    colwidth: null;
-  };
-  /**
-   * @minItems 1
-   * @maxItems 20
-   */
-  content:
-    | [Paragraph]
-    | [Paragraph, Paragraph]
-    | [Paragraph, Paragraph, Paragraph]
-    | [Paragraph, Paragraph, Paragraph, Paragraph]
-    | [Paragraph, Paragraph, Paragraph, Paragraph, Paragraph]
-    | [Paragraph, Paragraph, Paragraph, Paragraph, Paragraph, Paragraph]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ];
-}
-export interface BodyRow {
-  type: 'tableRow';
-  attrs: BlockAttrs;
-  /**
-   * @minItems 1
-   * @maxItems 20
-   */
-  content:
-    | [TableCell]
-    | [TableCell, TableCell]
-    | [TableCell, TableCell, TableCell]
-    | [TableCell, TableCell, TableCell, TableCell]
-    | [TableCell, TableCell, TableCell, TableCell, TableCell]
-    | [TableCell, TableCell, TableCell, TableCell, TableCell, TableCell]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ]
-    | [
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-        TableCell,
-      ];
-}
-export interface TableCell {
-  type: 'tableCell';
-  attrs: {
-    nodeId: NodeId;
-    colspan: 1;
-    rowspan: 1;
-    colwidth: null;
-  };
-  /**
-   * @minItems 1
-   * @maxItems 20
-   */
-  content:
-    | [Paragraph]
-    | [Paragraph, Paragraph]
-    | [Paragraph, Paragraph, Paragraph]
-    | [Paragraph, Paragraph, Paragraph, Paragraph]
-    | [Paragraph, Paragraph, Paragraph, Paragraph, Paragraph]
-    | [Paragraph, Paragraph, Paragraph, Paragraph, Paragraph, Paragraph]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ]
-    | [
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-        Paragraph,
-      ];
+  [k: string]: any;
 }
 export interface Option {
   id: string;
   label: string;
+  math_latex?: string;
+  media?: ChoiceMedia;
+}
+export interface ChoiceMedia {
+  asset_version_id: string;
+  kind: 'image';
+  alt_text: string;
+  caption?: string;
+  long_description?: string;
 }

@@ -31,9 +31,9 @@ vi.mock('@livekit/components-react', () => ({
   isTrackReference: (value: unknown) =>
     Boolean(
       value &&
-        typeof value === 'object' &&
-        'publication' in value &&
-        value.publication,
+      typeof value === 'object' &&
+      'publication' in value &&
+      value.publication,
     ),
   useTracks: () => visibleTracks,
 }));
@@ -65,7 +65,9 @@ describe('ScreenShareRecordingSurface', () => {
       />,
     );
 
-    expect(screen.getByText('Esperando una pantalla compartida…')).toBeVisible();
+    expect(
+      screen.getByText('Esperando una pantalla compartida…'),
+    ).toBeVisible();
     expect(onPlaying).not.toHaveBeenCalled();
 
     visibleTracks = [screenTrack()];

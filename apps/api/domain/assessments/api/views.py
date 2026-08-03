@@ -5,7 +5,7 @@ from collections.abc import Callable
 from typing import Any
 from uuid import UUID
 
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -35,6 +35,7 @@ from domain.organizations.models import Organization
 from domain.organizations.selectors import organization_visible_to
 from domain.publishing.models import CourseRelease
 
+from ..assets import assessment_asset_descriptors, question_asset_descriptors
 from ..choices import AuthoringStatus, LifecycleStatus, ResponseStatus
 from ..course_activities import (
     bind_assessment_activity,
@@ -121,6 +122,8 @@ from .serializers import (
     ApprovedQuestionVersionOptionSerializer,
     AssessmentActivityBindingInputSerializer,
     AssessmentActivityBindingSerializer,
+    AssessmentAssetAccessResponseSerializer,
+    AssessmentAssetAccessSerializer,
     AssessmentCourseActivityCreateSerializer,
     AssessmentCreateSerializer,
     AssessmentExpectedVersionSerializer,
@@ -158,6 +161,7 @@ from .serializers import (
     QuestionBankVersionSerializer,
     QuestionCreateSerializer,
     QuestionPageSerializer,
+    QuestionPreviewSerializer,
     QuestionRevisionSerializer,
     QuestionRevisionUpdateSerializer,
     QuestionSerializer,
@@ -442,7 +446,20 @@ class QuestionListCreateView(APIView):
         organization = _organization(request, slug)
         _require(can_view_questions(request.user, organization))
         bank = _bank(organization, bank_id)
-        queryset = bank.questions.order_by("code", "id")
+        queryset = bank.questions.prefetch_related(
+            Prefetch(
+                "revisions",
+                queryset=QuestionRevision.objects.exclude(status="approved").order_by(
+                    "-number"
+                ),
+                to_attr="_assessment_open_revisions",
+            ),
+            Prefetch(
+                "versions",
+                queryset=QuestionVersion.objects.order_by("-number"),
+                to_attr="_assessment_versions",
+            ),
+        ).order_by("code", "id")
         return _paginate(request, queryset, QuestionSerializer, self)
 
     @extend_schema(
@@ -487,6 +504,51 @@ class QuestionDetailView(APIView):
         return ApiResponse(
             QuestionSerializer(_question(organization, bank_id, question_id)).data
         )
+
+
+class QuestionPreviewView(APIView):
+    @extend_schema(
+        operation_id="assessment_question_preview",
+        responses=QuestionPreviewSerializer,
+    )
+    def get(
+        self, request: Request, slug: str, bank_id: str, question_id: str
+    ) -> ApiResponse:
+        organization = _organization(request, slug)
+        _require(can_view_questions(request.user, organization))
+        question = _question(organization, bank_id, question_id)
+        revision = (
+            question.revisions.exclude(status="approved").order_by("-number").first()
+        )
+        version = None if revision else question.versions.order_by("-number").first()
+        source = revision or version
+        if source is None:
+            return ApiResponse(
+                {
+                    "code": "question_preview_unavailable",
+                    "detail": "La pregunta todavía no tiene contenido para previsualizar.",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        public = source.definition.get("public") if revision else version.public
+        if not isinstance(public, dict):
+            return ApiResponse(
+                {
+                    "code": "question_preview_invalid",
+                    "detail": "La vista pública de la pregunta no es válida.",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        payload = {
+            "assets": question_asset_descriptors(
+                question=question,
+                public=public,
+            ),
+            "code": question.code,
+            "public": public,
+            "type": source.type,
+        }
+        return ApiResponse(QuestionPreviewSerializer(payload).data)
 
 
 class QuestionRevisionDetailView(APIView):
@@ -825,9 +887,22 @@ class AssessmentListCreateView(APIView):
     def get(self, request: Request, slug: str) -> ApiResponse:
         organization = _organization(request, slug)
         _require(can_view_authoring(request.user, organization))
-        queryset = AssessmentFilter(
-            request.query_params, assessments_for(organization)
-        ).qs.distinct()
+        queryset = (
+            AssessmentFilter(request.query_params, assessments_for(organization))
+            .qs.distinct()
+            .prefetch_related(
+                Prefetch(
+                    "revisions",
+                    queryset=AssessmentRevision.objects.order_by("-number"),
+                    to_attr="_latest_revisions",
+                ),
+                Prefetch(
+                    "versions",
+                    queryset=AssessmentVersion.objects.order_by("-number"),
+                    to_attr="_latest_versions",
+                ),
+            )
+        )
         return _paginate(request, queryset, AssessmentSerializer, self)
 
     @extend_schema(
@@ -1909,6 +1984,33 @@ class AttemptDetailView(APIView):
             pk=attempt_id,
         )
         return ApiResponse(AttemptSerializer(attempt).data)
+
+
+class AttemptAssetAccessView(APIView):
+    @extend_schema(
+        operation_id="assessment_attempt_asset_access",
+        request=AssessmentAssetAccessSerializer,
+        responses={200: AssessmentAssetAccessResponseSerializer},
+    )
+    def post(self, request: Request, slug: str, attempt_id: UUID) -> ApiResponse:
+        organization = _organization(request, slug)
+        attempt = get_object_or_404(
+            learner_attempts(actor=request.user, organization=organization)
+            .prefetch_related("items")
+            .select_related("delivery_assignment__delivery"),
+            pk=attempt_id,
+        )
+        serializer = AssessmentAssetAccessSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = _call(
+            lambda: {
+                "assets": assessment_asset_descriptors(
+                    attempt=attempt,
+                    requested_ids=tuple(serializer.validated_data["asset_version_ids"]),
+                )
+            }
+        )
+        return result if isinstance(result, ApiResponse) else ApiResponse(result)
 
 
 class SaveResponseView(APIView):

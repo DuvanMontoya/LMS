@@ -40,7 +40,7 @@ export default async function PublicationPage({
         }
         breadcrumbs={[
           { href: `/organizaciones/${slug}`, label: data.organization.name },
-          { href: `/organizaciones/${slug}/cursos`, label: 'Cursos' },
+          { href: `/organizaciones/${slug}/cursos/autoria`, label: 'Autoría' },
           {
             href: `/organizaciones/${slug}/cursos/${courseSlug}`,
             label: courseSlug,

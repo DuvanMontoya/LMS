@@ -476,9 +476,9 @@ def learning_unit(enrollment: CourseEnrollment, unit_id: uuid.UUID) -> dict[str,
     )
     activity_instance_ids = {
         row.group_activity.source_activity_id: row.group_activity_id
-        for row in ActivityProgress.objects.filter(course_progress=progress).select_related(
-            "group_activity"
-        )
+        for row in ActivityProgress.objects.filter(
+            course_progress=progress
+        ).select_related("group_activity")
     }
     for direction in ("previous", "next"):
         target = navigation[direction]

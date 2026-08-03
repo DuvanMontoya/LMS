@@ -210,6 +210,37 @@ export async function getEnrollmentForCourse(slug: string, courseSlug: string) {
   return { ...data, enrollment };
 }
 
+/**
+ * Resolves an effective learner enrollment without turning a published-course
+ * preview into a learner-only route. Authors and reviewers can therefore use
+ * the immutable release reader, while an enrolled learner is sent to the
+ * canonical learning workspace that owns progress and activity state.
+ */
+export async function getOptionalEnrollmentForCourse(
+  slug: string,
+  courseSlug: string,
+) {
+  const organization = await getOrganizationForPage(slug);
+  if (!organization.access.capabilities.includes('assessment.attempt')) {
+    return null;
+  }
+
+  const client = await createPlatformServerClient();
+  const { data, response } = await client.GET(
+    '/api/v1/organizations/{slug}/learning/me/',
+    {
+      params: { path: { slug } },
+      cache: 'no-store',
+    },
+  );
+  if (!response.ok || !data) return null;
+
+  const matches = (data as MyLearning[]).filter(
+    (enrollment) => enrollment.course.slug === courseSlug,
+  );
+  return matches.length === 1 ? matches[0] : null;
+}
+
 export async function getCohorts(slug: string, query: CohortQuery = {}) {
   const organization = await getOrganizationForPage(slug);
   if (!organization.access.capabilities.includes('learning.cohort.view')) {

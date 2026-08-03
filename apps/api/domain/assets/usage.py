@@ -18,12 +18,15 @@ def register_asset_usage_provider(name: str, provider: UsageProvider) -> None:
 def collect_asset_usage(*, asset_id: uuid.UUID) -> dict[str, Any]:
     content_versions: list[dict[str, Any]] = []
     releases: list[dict[str, Any]] = []
+    assessment_versions: list[dict[str, Any]] = []
     for provider in _providers.values():
         payload = provider(asset_id)
         content_versions.extend(payload.get("content_versions", []))
         releases.extend(payload.get("releases", []))
+        assessment_versions.extend(payload.get("assessment_versions", []))
     return {
         "content_versions": content_versions,
         "releases": releases,
-        "current_reference_count": len(content_versions),
+        "assessment_versions": assessment_versions,
+        "current_reference_count": len(content_versions) + len(assessment_versions),
     }

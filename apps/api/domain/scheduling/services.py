@@ -820,8 +820,7 @@ def _start_recording(
         )
     recording_id = uuid.uuid4()
     filepath = (
-        f"/out/{session.room_name}-{timezone.now():%Y%m%dT%H%M%SZ}"
-        f"-{recording_id}.mp4"
+        f"/out/{session.room_name}-{timezone.now():%Y%m%dT%H%M%SZ}-{recording_id}.mp4"
     )
     info = gateway.start_room_recording(
         room_name=session.room_name,

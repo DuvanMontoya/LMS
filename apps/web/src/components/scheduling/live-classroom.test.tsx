@@ -115,9 +115,7 @@ describe('RecordingControl', () => {
       screen.getByRole('radio', { name: /mosaico de participantes/i }),
     ).toBeChecked();
     fireEvent.click(screen.getByRole('radio', { name: /720p/i }));
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Iniciar grabación' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar grabación' }));
     await waitFor(() => expect(onStart).toHaveBeenCalledWith('grid', '720p'));
   });
 
@@ -141,9 +139,7 @@ describe('RecordingControl', () => {
     fireEvent.click(
       screen.getByRole('radio', { name: /pantalla compartida sola/i }),
     );
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Iniciar grabación' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar grabación' }));
     await waitFor(() =>
       expect(onStart).toHaveBeenCalledWith('screen_share', '1080p'),
     );

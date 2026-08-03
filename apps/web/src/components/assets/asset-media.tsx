@@ -134,6 +134,19 @@ export function AssetMedia({
       </figure>
     );
   }
+  if (kind === 'document') {
+    return (
+      <div className="asset-media-document">
+        <iframe src={playback.url} title={`Vista previa de ${name}`} />
+        <Button asChild size="sm" variant="outline">
+          <a href={playback.url} rel="noreferrer" target="_blank">
+            <Download data-icon="inline-start" />
+            Abrir PDF en otra pestaña
+          </a>
+        </Button>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4">
       <div>

@@ -1042,9 +1042,11 @@ def move_activity_to_module(
             position__gt=source_position,
         )
     )
-    target_count = CourseActivity.objects.select_for_update().filter(
-        module=locked_target, status=StructureStatus.ACTIVE
-    ).count()
+    target_count = (
+        CourseActivity.objects.select_for_update()
+        .filter(module=locked_target, status=StructureStatus.ACTIVE)
+        .count()
+    )
     for row in source_following:
         row.position = (row.position or 1) - 1
     if source_following:

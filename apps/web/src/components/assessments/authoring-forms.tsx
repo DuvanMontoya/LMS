@@ -2,22 +2,12 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  ArrowDown,
   ArrowRight,
-  ArrowUp,
   BookOpenCheck,
-  CheckCircle2,
-  ClipboardCheck,
-  Code2,
   Database,
-  Eye,
-  FileCheck2,
   GitPullRequest,
-  Layers3,
-  LockKeyhole,
-  MessageSquareText,
-  ShieldCheck,
-  Sparkles,
+  Search,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -25,25 +15,30 @@ import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
-import { MathExpressionField } from '@/components/assessments/math-expression-field';
+import { QuestionPreviewDialog } from '@/components/assessments/question-preview-dialog';
+import type { QuestionChoiceDraft } from '@/components/assessments/question-choice-editor';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   createAssessment,
-  createQuestion,
   createQuestionBank,
+  createQuestionRevisionFromVersion,
   transitionQuestionRevision,
   updateQuestionBank,
-  updateQuestionRevision,
   useAssessmentMutation,
 } from '@/lib/assessments/hooks';
 import type { QuestionBankPage, QuestionPage } from '@/lib/assessments/server';
+import type { LMSUnitAcademicDocumentVersion2 } from '@/lib/content/generated/unit-document-v2';
 
 const assessmentSchema = z.object({
   attempt_limit: z.number().int().positive().max(20),
   description: z.string().trim().max(5000),
+  feedback_mode: z.enum(['none', 'score_only', 'full_after_grading']),
+  instructions: z.string().trim().max(5000),
   pass_percent: z.number().min(0).max(100),
+  shuffle_items: z.boolean(),
+  shuffle_sections: z.boolean(),
   slug: z
     .string()
     .trim()
@@ -53,16 +48,27 @@ const assessmentSchema = z.object({
 });
 type AssessmentValues = z.infer<typeof assessmentSchema>;
 
+function stableSlug(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+}
+
 export function AssessmentCreateForm({ slug }: Readonly<{ slug: string }>) {
   const router = useRouter();
   const mutation = useAssessmentMutation((values: AssessmentValues) =>
     createAssessment(slug, {
       attempt_limit: values.attempt_limit,
       description: values.description,
-      feedback_mode: 'full_after_grading',
+      feedback_mode: values.feedback_mode,
+      instructions: values.instructions,
       pass_basis_points: Math.round(values.pass_percent * 100),
-      shuffle_items: false,
-      shuffle_sections: false,
+      shuffle_items: values.shuffle_items,
+      shuffle_sections: values.shuffle_sections,
       slug: values.slug,
       time_limit_minutes: values.time_limit_minutes,
       title: values.title,
@@ -72,13 +78,26 @@ export function AssessmentCreateForm({ slug }: Readonly<{ slug: string }>) {
     defaultValues: {
       attempt_limit: 2,
       description: '',
+      feedback_mode: 'full_after_grading',
+      instructions: '',
       pass_percent: 60,
+      shuffle_items: false,
+      shuffle_sections: false,
       slug: '',
       time_limit_minutes: 45,
       title: '',
     },
     resolver: zodResolver(assessmentSchema),
   });
+  const [slugEdited, setSlugEdited] = useState(false);
+  const watchedTitle = useWatch({ control: form.control, name: 'title' });
+  useEffect(() => {
+    if (!slugEdited) {
+      form.setValue('slug', stableSlug(watchedTitle), {
+        shouldValidate: form.formState.isSubmitted,
+      });
+    }
+  }, [form, slugEdited, watchedTitle]);
   async function submit(values: AssessmentValues) {
     try {
       const parsed = assessmentSchema.parse(values);
@@ -90,157 +109,131 @@ export function AssessmentCreateForm({ slug }: Readonly<{ slug: string }>) {
     }
   }
   return (
-    <div className="assessment-studio-grid mt-6">
-      <form
-        className="assessment-workbench"
-        noValidate
-        onSubmit={form.handleSubmit(submit)}
-      >
-        <BuilderSection
-          description="Define una identidad reconocible. El slug será la referencia estable en URLs y API."
-          icon={<Layers3 />}
-          number="01"
-          title="Identidad del instrumento"
+    <form
+      className="assessment-create-form"
+      noValidate
+      onSubmit={form.handleSubmit(submit)}
+    >
+      <div className="assessment-create-form__identity">
+        <Field
+          error={form.formState.errors.title?.message}
+          label="Título"
+          name="assessment-title"
         >
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field
-              error={form.formState.errors.title?.message}
-              label="Título de la evaluación"
-              name="assessment-title"
-            >
-              <Input
-                id="assessment-title"
-                placeholder="Ej. Diagnóstico de cálculo diferencial"
-                {...form.register('title')}
-              />
-            </Field>
-            <Field
-              error={form.formState.errors.slug?.message}
-              hint="Identificador permanente, en minúsculas."
-              label="Slug"
-              name="assessment-slug"
-            >
-              <Input
-                id="assessment-slug"
-                placeholder="diagnostico-calculo"
-                {...form.register('slug')}
-              />
-            </Field>
-            <div className="sm:col-span-2">
-              <Field label="Propósito y alcance" name="assessment-description">
-                <Textarea
-                  className="min-h-28"
-                  id="assessment-description"
-                  placeholder="Explica qué evidencia recoge el instrumento y para qué población está diseñado."
-                  {...form.register('description')}
-                />
-              </Field>
-            </div>
-          </div>
-        </BuilderSection>
-        <BuilderSection
-          description="Configura límites operativos. Podrás refinarlos antes de enviar la revisión."
-          icon={<ShieldCheck />}
-          number="02"
-          title="Política de aplicación"
-        >
-          <div className="grid gap-5 sm:grid-cols-3">
-            <Field label="Duración" name="assessment-time">
-              <Input
-                id="assessment-time"
-                min={1}
-                type="number"
-                {...form.register('time_limit_minutes', {
-                  valueAsNumber: true,
-                })}
-              />
-              <p className="assessment-control-suffix">minutos</p>
-            </Field>
-            <Field label="Oportunidades" name="assessment-attempts">
-              <Input
-                id="assessment-attempts"
-                min={1}
-                type="number"
-                {...form.register('attempt_limit', { valueAsNumber: true })}
-              />
-              <p className="assessment-control-suffix">intentos</p>
-            </Field>
-            <Field
-              hint="Porcentaje mínimo para aprobar."
-              label="Umbral de aprobación"
-              name="assessment-pass"
-            >
-              <Input
-                id="assessment-pass"
-                max={100}
-                min={0}
-                step="0.01"
-                type="number"
-                {...form.register('pass_percent', {
-                  valueAsNumber: true,
-                })}
-              />
-              <p className="assessment-control-suffix">%</p>
-            </Field>
-          </div>
-        </BuilderSection>
-        <div className="assessment-workbench-footer">
-          <div>
-            <p className="font-medium">Se creará como borrador editable</p>
-            <p className="text-xs text-muted-foreground">
-              Ninguna evaluación se entrega hasta aprobar una versión y activar
-              una entrega.
-            </p>
-          </div>
-          <SubmitState
-            error={mutation.error}
-            label="Crear y abrir compositor"
-            pending={mutation.isPending}
+          <Input
+            autoFocus
+            id="assessment-title"
+            placeholder="Ej. Parcial de análisis funcional"
+            {...form.register('title')}
           />
+        </Field>
+        <Field label="Propósito" name="assessment-description">
+          <Textarea
+            className="min-h-24"
+            id="assessment-description"
+            placeholder="Qué evidencia recoge, para quién y en qué momento del curso."
+            {...form.register('description')}
+          />
+        </Field>
+        <Field
+          label="Instrucciones para el estudiante"
+          name="assessment-instructions"
+        >
+          <Textarea
+            className="min-h-20"
+            id="assessment-instructions"
+            placeholder="Condiciones de presentación, materiales permitidos y criterios generales."
+            {...form.register('instructions')}
+          />
+        </Field>
+      </div>
+      <fieldset className="assessment-create-form__policy">
+        <legend>Aplicación y retroalimentación</legend>
+        <div className="assessment-create-form__numbers">
+          <Field label="Duración" name="assessment-time">
+            <Input
+              id="assessment-time"
+              min={1}
+              type="number"
+              {...form.register('time_limit_minutes', { valueAsNumber: true })}
+            />
+            <p className="assessment-control-suffix">min</p>
+          </Field>
+          <Field label="Intentos" name="assessment-attempts">
+            <Input
+              id="assessment-attempts"
+              min={1}
+              type="number"
+              {...form.register('attempt_limit', { valueAsNumber: true })}
+            />
+          </Field>
+          <Field label="Aprobación" name="assessment-pass">
+            <Input
+              id="assessment-pass"
+              max={100}
+              min={0}
+              step="0.01"
+              type="number"
+              {...form.register('pass_percent', { valueAsNumber: true })}
+            />
+            <p className="assessment-control-suffix">%</p>
+          </Field>
         </div>
-      </form>
-      <aside className="assessment-context-rail">
-        <p className="assessment-rail-kicker">Ruta de trabajo</p>
-        <h2 className="assessment-rail-title">
-          De la intención a una versión auditable
-        </h2>
-        <ol className="assessment-step-list">
-          {[
-            ['1', 'Crear identidad', 'Título, propósito y política inicial.'],
-            [
-              '2',
-              'Diseñar composición',
-              'Objetivos, secciones y preguntas aprobadas.',
-            ],
-            [
-              '3',
-              'Revisar y aprobar',
-              'Readiness, trazabilidad y snapshot inmutable.',
-            ],
-            [
-              '4',
-              'Programar entrega',
-              'Ventana, release y población asignada.',
-            ],
-          ].map(([step, title, description]) => (
-            <li key={step}>
-              <span>{step}</span>
-              <div>
-                <strong>{title}</strong>
-                <p>{description}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-        <div className="assessment-assurance">
-          <ShieldCheck />
-          <p>
-            Guardado explícito, control de concurrencia y separación de claves
-            de calificación.
+        <Field label="Resultados visibles" name="assessment-feedback">
+          <select
+            className="academic-control"
+            id="assessment-feedback"
+            {...form.register('feedback_mode')}
+          >
+            <option value="full_after_grading">
+              Puntaje y retroalimentación al calificar
+            </option>
+            <option value="score_only">Solo puntaje</option>
+            <option value="none">Sin resultados visibles</option>
+          </select>
+        </Field>
+        <div className="assessment-create-form__checks">
+          <label>
+            <input type="checkbox" {...form.register('shuffle_sections')} />
+            Mezclar secciones en cada intento
+          </label>
+          <label>
+            <input type="checkbox" {...form.register('shuffle_items')} />
+            Mezclar preguntas dentro de cada sección
+          </label>
+        </div>
+        <details className="assessment-create-form__advanced">
+          <summary>Identificador avanzado</summary>
+          <Field
+            error={form.formState.errors.slug?.message}
+            hint="Se genera automáticamente; edítalo solo si necesitas una referencia específica."
+            label="Identificador estable"
+            name="assessment-slug"
+          >
+            <Input
+              id="assessment-slug"
+              placeholder="parcial-analisis-funcional"
+              {...form.register('slug', {
+                onChange: () => setSlugEdited(true),
+              })}
+            />
+          </Field>
+        </details>
+      </fieldset>
+      <div className="assessment-workbench-footer">
+        <div>
+          <p className="font-medium">Borrador listo para componer</p>
+          <p className="text-xs text-muted-foreground">
+            Al crearla entrarás directamente a objetivos, secciones y preguntas.
           </p>
         </div>
-      </aside>
-    </div>
+        <SubmitState
+          error={mutation.error}
+          label="Crear evaluación"
+          pending={mutation.isPending}
+        />
+      </div>
+    </form>
   );
 }
 
@@ -254,7 +247,10 @@ const bankSchema = z.object({
 });
 type BankValues = z.infer<typeof bankSchema>;
 
-export function QuestionBankCreateForm({ slug }: Readonly<{ slug: string }>) {
+export function QuestionBankCreateForm({
+  onCreated,
+  slug,
+}: Readonly<{ onCreated?: (bankId: string) => void; slug: string }>) {
   const router = useRouter();
   const mutation = useAssessmentMutation((values: BankValues) =>
     createQuestionBank(slug, values),
@@ -263,58 +259,83 @@ export function QuestionBankCreateForm({ slug }: Readonly<{ slug: string }>) {
     defaultValues: { description: '', name: '', slug: '' },
     resolver: zodResolver(bankSchema),
   });
+  const [slugEdited, setSlugEdited] = useState(false);
+  const watchedName = useWatch({ control: form.control, name: 'name' });
+  useEffect(() => {
+    if (!slugEdited) {
+      form.setValue('slug', stableSlug(watchedName), {
+        shouldValidate: form.formState.isSubmitted,
+      });
+    }
+  }, [form, slugEdited, watchedName]);
   async function submit(values: BankValues) {
     try {
-      await mutation.mutateAsync(bankSchema.parse(values));
-      form.reset();
-      router.refresh();
+      const bank = await mutation.mutateAsync(bankSchema.parse(values));
+      if (onCreated) {
+        form.reset();
+        onCreated(bank.id);
+      } else {
+        router.push(`/organizaciones/${slug}/evaluaciones/bancos/${bank.id}`);
+        router.refresh();
+      }
     } catch {
       // React Query conserva y presenta el error en el formulario.
     }
   }
   return (
     <form
-      className="assessment-inline-creator"
+      className="assessment-bank-create-form"
       noValidate
       onSubmit={form.handleSubmit(submit)}
     >
-      <div className="assessment-inline-creator__intro">
-        <span className="assessment-icon-box">
-          <ClipboardCheck />
-        </span>
-        <div>
-          <h2>Crear banco institucional</h2>
-          <p>Separa preguntas por disciplina, propósito o equipo editorial.</p>
-        </div>
-      </div>
       <Field
         error={form.formState.errors.name?.message}
         label="Nombre del banco"
         name="bank-name"
       >
         <Input
+          autoFocus
           id="bank-name"
-          placeholder="Ej. Fundamentos de estadística"
+          placeholder="Ej. Problemas de análisis real"
           {...form.register('name')}
         />
       </Field>
       <Field
-        error={form.formState.errors.slug?.message}
-        label="Slug"
-        name="bank-slug"
+        hint="Indica disciplina, nivel, audiencia y criterio de reutilización."
+        label="Propósito y alcance"
+        name="bank-description"
       >
-        <Input
-          id="bank-slug"
-          placeholder="fundamentos-estadistica"
-          {...form.register('slug')}
+        <Textarea
+          className="min-h-32 text-base leading-7"
+          id="bank-description"
+          placeholder="Ej. Preguntas de análisis real para cursos de maestría y doctorado, revisadas por el equipo de matemáticas puras."
+          {...form.register('description')}
         />
       </Field>
-      <div className="assessment-inline-creator__description">
-        <Field label="Descripción" name="bank-description">
-          <Textarea id="bank-description" {...form.register('description')} />
+      <details className="assessment-create-form__advanced">
+        <summary>Identificador avanzado</summary>
+        <Field
+          error={form.formState.errors.slug?.message}
+          hint="Se genera automáticamente y permanece estable."
+          label="Identificador"
+          name="bank-slug"
+        >
+          <Input
+            className="font-mono"
+            id="bank-slug"
+            placeholder="problemas-analisis-real"
+            {...form.register('slug', { onChange: () => setSlugEdited(true) })}
+          />
         </Field>
-      </div>
-      <div className="assessment-inline-creator__action">
+      </details>
+      <div className="assessment-workbench-footer">
+        <div>
+          <p className="font-medium">Colección privada y reutilizable</p>
+          <p className="text-xs text-muted-foreground">
+            Al crearla entrarás a su inventario; ninguna pregunta se publica
+            automáticamente.
+          </p>
+        </div>
         <SubmitState
           error={mutation.error}
           label="Crear banco"
@@ -407,9 +428,7 @@ export const QUESTION_TYPES = [
   ['matching', 'Emparejamiento'],
   ['mathematical_expression', 'Expresión matemática'],
 ] as const;
-type QuestionType = (typeof QUESTION_TYPES)[number][0];
-
-const questionSchema = z
+export const questionSchema = z
   .object({
     accepted: z.string(),
     code: z
@@ -425,10 +444,15 @@ const questionSchema = z
     allowedSymbols: z.string(),
     mathAssumptions: z.string(),
     mathLatex: z.string().max(4096),
+    promptMath: z.string().max(12000),
     mathStrategy: z.enum(['structural', 'symbolic_common_domain']),
     options: z.string(),
     prompt: z.string().trim().min(1, 'Escribe el enunciado.').max(5000),
+    responseGuidance: z.string().max(1000).optional(),
+    responsePlaceholder: z.string().max(240).optional(),
+    caseSensitive: z.boolean().optional(),
     tolerance: z.string(),
+    unit: z.string().max(80).optional(),
     type: z.enum([
       'single_choice',
       'multiple_choice',
@@ -634,9 +658,39 @@ const questionSchema = z
       }
     }
   });
-type QuestionValues = z.infer<typeof questionSchema>;
+export type QuestionValues = z.infer<typeof questionSchema>;
 
-function promptDocument(text: string) {
+type ChoiceMedia = {
+  alt_text: string;
+  asset_version_id: string;
+  caption?: string;
+  kind: 'image';
+  long_description?: string;
+};
+
+type QuestionMediaSelection = {
+  authoring?: {
+    choice_rationales?: Readonly<Record<string, string>>;
+    cognitive_process: string;
+    difficulty: string;
+    estimated_minutes: number;
+    framework: string;
+    source_note?: string;
+    tags?: readonly string[];
+  };
+  choices?: readonly QuestionChoiceDraft[];
+  optionMath?: Readonly<Record<string, string>>;
+  optionMedia?: Readonly<Record<string, ChoiceMedia>>;
+  promptDocument?: LMSUnitAcademicDocumentVersion2;
+  promptNodes?: readonly Record<string, unknown>[];
+  workedSolution?: LMSUnitAcademicDocumentVersion2;
+};
+
+function promptDocument(
+  text: string,
+  nodes: readonly Record<string, unknown>[] = [],
+  mathLatex = '',
+) {
   return {
     content: [
       {
@@ -644,6 +698,15 @@ function promptDocument(text: string) {
         content: [{ text, type: 'text' }],
         type: 'paragraph',
       },
+      ...(mathLatex.trim()
+        ? [
+            {
+              attrs: { nodeId: crypto.randomUUID(), latex: mathLatex.trim() },
+              type: 'displayMath',
+            },
+          ]
+        : []),
+      ...nodes,
     ],
     type: 'doc',
   };
@@ -663,19 +726,39 @@ function commaValues(value: string) {
     .filter(Boolean);
 }
 
-export function buildQuestionDefinition(values: QuestionValues) {
+export function buildQuestionDefinition(
+  values: QuestionValues,
+  media: QuestionMediaSelection = {},
+) {
   const type = values.type;
   const publicPayload: Record<string, unknown> = {
-    prompt: promptDocument(values.prompt),
+    prompt:
+      media.promptDocument ??
+      promptDocument(values.prompt, media.promptNodes, values.promptMath),
     schema_version: 1,
     type,
   };
   let grading: Record<string, unknown>;
   const optionLabels = lines(values.options);
-  const options = optionLabels.map((label, index) => ({
-    id: `o${index + 1}`,
-    label,
-  }));
+  const sourceOptions =
+    media.choices ??
+    optionLabels.map((label, index) => ({
+      id: `o${index + 1}`,
+      label,
+      mathLatex: media.optionMath?.[`o${index + 1}`] ?? '',
+      media: media.optionMedia?.[`o${index + 1}`],
+    }));
+  const options = sourceOptions.map((source, index) => {
+    const id = source.id || `o${index + 1}`;
+    const optionMedia = source.media;
+    const optionMath = source.mathLatex.trim();
+    return {
+      id,
+      label: source.label.trim(),
+      ...(optionMath ? { math_latex: optionMath } : {}),
+      ...(optionMedia ? { media: optionMedia } : {}),
+    };
+  });
   if (['single_choice', 'multiple_choice', 'ordering'].includes(type)) {
     publicPayload.options = options;
   }
@@ -693,16 +776,23 @@ export function buildQuestionDefinition(values: QuestionValues) {
     publicPayload.false_label = 'Falso';
     grading = { correct_boolean: values.accepted.trim() === 'true' };
   } else if (type === 'numeric') {
+    if (values.unit?.trim()) publicPayload.unit = values.unit.trim();
+    if (values.responsePlaceholder?.trim())
+      publicPayload.response_placeholder = values.responsePlaceholder.trim();
     grading = {
       correct_value: values.accepted.trim(),
       tolerance: values.tolerance.trim() || '0',
     };
   } else if (type === 'short_text') {
+    if (values.responsePlaceholder?.trim())
+      publicPayload.response_placeholder = values.responsePlaceholder.trim();
     grading = {
       accepted_answers: lines(values.accepted),
-      case_sensitive: false,
+      case_sensitive: values.caseSensitive ?? false,
     };
   } else if (type === 'long_text') {
+    if (values.responsePlaceholder?.trim())
+      publicPayload.response_placeholder = values.responsePlaceholder.trim();
     grading = {
       manual_required: true,
       rubric: values.accepted.trim(),
@@ -754,6 +844,7 @@ export function buildQuestionDefinition(values: QuestionValues) {
     publicPayload.allowed_symbols = allowedSymbols;
     publicPayload.allowed_functions = allowedFunctions;
     publicPayload.response_guidance =
+      values.responseGuidance?.trim() ||
       'Escribe una expresión equivalente usando únicamente los símbolos y funciones indicados.';
     publicPayload.maximum_latex_length = 4096;
     grading = {
@@ -765,6 +856,7 @@ export function buildQuestionDefinition(values: QuestionValues) {
     };
   }
   return {
+    ...(media.authoring ? { authoring: media.authoring } : {}),
     feedback: {
       correct: values.feedbackCorrect,
       general: values.feedbackGeneral,
@@ -774,739 +866,13 @@ export function buildQuestionDefinition(values: QuestionValues) {
     public: publicPayload,
     schema_version: 1,
     type,
+    ...(media.workedSolution ? { worked_solution: media.workedSolution } : {}),
   };
 }
 
-export function QuestionCreateForm({
-  bankId,
-  slug,
-}: Readonly<{ bankId: string; slug: string }>) {
-  const mutation = useAssessmentMutation((values: QuestionValues) =>
-    createQuestion(slug, bankId, {
-      code: values.code,
-      definition: buildQuestionDefinition(values),
-      type: values.type,
-    }),
-  );
-  const form = useForm<QuestionValues>({
-    defaultValues: {
-      accepted: 'o1',
-      code: '',
-      feedbackCorrect: 'Respuesta correcta.',
-      feedbackGeneral: 'Revisa el objetivo asociado.',
-      feedbackIncorrect: 'Revisa tu procedimiento.',
-      allowedFunctions: '',
-      allowedSymbols: 'x',
-      mathAssumptions: 'x:real',
-      mathLatex: '',
-      mathStrategy: 'structural',
-      options: 'Primera opción\nSegunda opción',
-      prompt: '',
-      tolerance: '0',
-      type: 'single_choice',
-    },
-    resolver: zodResolver(questionSchema),
-  });
-  const selectedType = useWatch({ control: form.control, name: 'type' });
-  const watchedPrompt = useWatch({ control: form.control, name: 'prompt' });
-  const watchedCode = useWatch({ control: form.control, name: 'code' });
-  const watchedOptions = useWatch({ control: form.control, name: 'options' });
-  const watchedAccepted = useWatch({
-    control: form.control,
-    name: 'accepted',
-  });
-  const watchedAllowedFunctions = useWatch({
-    control: form.control,
-    name: 'allowedFunctions',
-  });
-  const watchedAllowedSymbols = useWatch({
-    control: form.control,
-    name: 'allowedSymbols',
-  });
-  const watchedMathLatex = useWatch({
-    control: form.control,
-    name: 'mathLatex',
-  });
-  const previewOptions = lines(watchedOptions);
-  useEffect(() => {
-    const optionIds = previewOptions.map((_, index) => `o${index + 1}`);
-    const acceptedIds = watchedAccepted
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
-    let normalized: string | undefined;
-    if (
-      selectedType === 'ordering' &&
-      (acceptedIds.length !== optionIds.length ||
-        acceptedIds.some((id) => !optionIds.includes(id)))
-    ) {
-      normalized = optionIds.join(',');
-    } else if (selectedType === 'matching' && optionIds.length % 2 === 0) {
-      const midpoint = optionIds.length / 2;
-      const defaultPairs = Array.from(
-        { length: midpoint },
-        (_, index) => `l${index + 1}:r${index + 1}`,
-      ).join(',');
-      const validPairs =
-        acceptedIds.length === midpoint &&
-        acceptedIds.every((pair) => /^l[1-9][0-9]*:r[1-9][0-9]*$/.test(pair));
-      if (!validPairs) normalized = defaultPairs;
-    } else if (
-      ['single_choice', 'multiple_choice'].includes(selectedType) &&
-      (!acceptedIds.length || acceptedIds.some((id) => !optionIds.includes(id)))
-    ) {
-      normalized = optionIds[0] ?? '';
-    } else if (
-      selectedType === 'true_false' &&
-      !['true', 'false'].includes(watchedAccepted)
-    ) {
-      normalized = 'true';
-    }
-    if (normalized !== undefined && normalized !== watchedAccepted) {
-      form.setValue('accepted', normalized, { shouldDirty: true });
-    }
-  }, [form, previewOptions, selectedType, watchedAccepted]);
-  const selectedTypeLabel =
-    QUESTION_TYPES.find(([value]) => value === selectedType)?.[1] ??
-    selectedType;
-  async function submit(values: QuestionValues) {
-    try {
-      const revision = await mutation.mutateAsync(questionSchema.parse(values));
-      window.location.assign(
-        `/organizaciones/${slug}/evaluaciones/bancos/${bankId}/preguntas/${revision.question_id}/revisiones/${revision.id}`,
-      );
-    } catch {
-      // React Query conserva y presenta el error en el formulario.
-    }
-  }
-  return (
-    <div className="assessment-studio-grid mt-5">
-      <form
-        className="assessment-workbench"
-        noValidate
-        onSubmit={form.handleSubmit(submit)}
-      >
-        <BuilderSection
-          description="El código permanece estable aunque la pregunta acumule revisiones y versiones."
-          icon={<Sparkles />}
-          number="01"
-          title="Identidad y formato"
-        >
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field
-              error={form.formState.errors.code?.message}
-              label="Código estable"
-              name="question-code"
-            >
-              <Input
-                id="question-code"
-                placeholder="MAT-DER-001"
-                {...form.register('code')}
-              />
-            </Field>
-            <Field label="Tipo de interacción" name="question-type">
-              <select
-                className="academic-control"
-                id="question-type"
-                {...form.register('type')}
-              >
-                {QUESTION_TYPES.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-          <div className="assessment-type-note">
-            <ClipboardCheck />
-            <div>
-              <strong>{selectedTypeLabel}</strong>
-              <p>{typeDescription(selectedType)}</p>
-            </div>
-          </div>
-        </BuilderSection>
-        <BuilderSection
-          description="Redacta una consigna autónoma. La estructura semántica se construye y valida automáticamente."
-          icon={<MessageSquareText />}
-          number="02"
-          title="Contenido de la pregunta"
-        >
-          <Field
-            error={form.formState.errors.prompt?.message}
-            label="Enunciado"
-            name="question-prompt"
-          >
-            <Textarea
-              className="min-h-32 text-base leading-7"
-              id="question-prompt"
-              placeholder="Formula la situación, incluye los datos necesarios y especifica qué debe responder el estudiante."
-              {...form.register('prompt')}
-            />
-          </Field>
-          {[
-            'single_choice',
-            'multiple_choice',
-            'ordering',
-            'matching',
-          ].includes(selectedType) ? (
-            <Field
-              error={form.formState.errors.options?.message}
-              hint={
-                selectedType === 'matching'
-                  ? 'Usa un número par: la primera mitad será la columna izquierda y la segunda, la derecha.'
-                  : 'Una opción por línea. La interfaz asigna IDs o1, o2, o3…'
-              }
-              label={
-                selectedType === 'matching'
-                  ? 'Elementos de ambas columnas'
-                  : 'Opciones de respuesta'
-              }
-              name="question-options"
-            >
-              <Textarea
-                className="min-h-36 font-mono text-sm"
-                id="question-options"
-                {...form.register('options')}
-              />
-            </Field>
-          ) : null}
-          {selectedType === 'mathematical_expression' ? (
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field
-                error={form.formState.errors.allowedSymbols?.message}
-                hint="Entre 1 y 10 nombres separados por comas."
-                label="Símbolos permitidos"
-                name="question-math-symbols"
-              >
-                <Input
-                  id="question-math-symbols"
-                  placeholder="x, y"
-                  {...form.register('allowedSymbols')}
-                />
-              </Field>
-              <Field
-                error={form.formState.errors.allowedFunctions?.message}
-                hint="Sin, Cos, Tan, Exp, Ln, Log y Abs."
-                label="Funciones permitidas"
-                name="question-math-functions"
-              >
-                <Input
-                  id="question-math-functions"
-                  placeholder="Sin, Cos"
-                  {...form.register('allowedFunctions')}
-                />
-              </Field>
-              <Field
-                error={form.formState.errors.mathAssumptions?.message}
-                hint="Formato símbolo:supuesto; separa entradas con comas."
-                label="Supuestos simbólicos"
-                name="question-math-assumptions"
-              >
-                <Input
-                  id="question-math-assumptions"
-                  placeholder="x:real, y:positive"
-                  {...form.register('mathAssumptions')}
-                />
-              </Field>
-              <Field
-                label="Estrategia de equivalencia"
-                name="question-math-strategy"
-              >
-                <select
-                  className="academic-control"
-                  id="question-math-strategy"
-                  {...form.register('mathStrategy')}
-                >
-                  <option value="structural">Estructural canónica</option>
-                  <option value="symbolic_common_domain">
-                    Simbólica en dominio común
-                  </option>
-                </select>
-              </Field>
-            </div>
-          ) : null}
-        </BuilderSection>
-        <BuilderSection
-          description="La clave queda en el snapshot secreto y nunca viaja al navegador del learner."
-          icon={<ShieldCheck />}
-          number="03"
-          title="Calificación y feedback"
-        >
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div className={selectedType === 'numeric' ? '' : 'sm:col-span-2'}>
-              <Field
-                error={
-                  selectedType === 'mathematical_expression'
-                    ? (form.formState.errors.mathLatex?.message ??
-                      form.formState.errors.accepted?.message)
-                    : form.formState.errors.accepted?.message
-                }
-                hint={answerHint(selectedType)}
-                label={
-                  selectedType === 'long_text'
-                    ? 'Rúbrica interna'
-                    : 'Clave de respuesta'
-                }
-                name="question-answer"
-              >
-                {selectedType === 'true_false' ? (
-                  <select
-                    className="academic-control"
-                    id="question-answer"
-                    {...form.register('accepted')}
-                  >
-                    <option value="true">Verdadero</option>
-                    <option value="false">Falso</option>
-                  </select>
-                ) : ['single_choice', 'multiple_choice'].includes(
-                    selectedType,
-                  ) ? (
-                  <ChoiceAnswerKey
-                    accepted={watchedAccepted}
-                    multiple={selectedType === 'multiple_choice'}
-                    onChange={(value) =>
-                      form.setValue('accepted', value, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      })
-                    }
-                    options={previewOptions}
-                  />
-                ) : selectedType === 'ordering' ? (
-                  <OrderingAnswerKey
-                    accepted={watchedAccepted}
-                    onChange={(value) =>
-                      form.setValue('accepted', value, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      })
-                    }
-                    options={previewOptions}
-                  />
-                ) : selectedType === 'matching' ? (
-                  <MatchingAnswerKey
-                    accepted={watchedAccepted}
-                    onChange={(value) =>
-                      form.setValue('accepted', value, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      })
-                    }
-                    options={previewOptions}
-                  />
-                ) : selectedType === 'mathematical_expression' ? (
-                  <MathExpressionField
-                    allowedFunctions={commaValues(watchedAllowedFunctions)}
-                    allowedSymbols={commaValues(watchedAllowedSymbols)}
-                    label="Expresión esperada"
-                    onChange={(value) => {
-                      form.setValue('mathLatex', value?.latex ?? '', {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      });
-                      form.setValue(
-                        'accepted',
-                        value ? JSON.stringify(value.mathjson) : '',
-                        {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        },
-                      );
-                    }}
-                    value={{
-                      latex: watchedMathLatex,
-                      mathjson: (() => {
-                        try {
-                          return JSON.parse(watchedAccepted);
-                        } catch {
-                          return '';
-                        }
-                      })(),
-                    }}
-                  />
-                ) : (
-                  <Textarea
-                    className="min-h-24"
-                    id="question-answer"
-                    {...form.register('accepted')}
-                  />
-                )}
-              </Field>
-            </div>
-            {selectedType === 'numeric' ? (
-              <Field
-                error={form.formState.errors.tolerance?.message}
-                hint="Diferencia máxima aceptada respecto al valor exacto."
-                label="Tolerancia absoluta"
-                name="question-tolerance"
-              >
-                <Input
-                  id="question-tolerance"
-                  inputMode="decimal"
-                  {...form.register('tolerance')}
-                />
-              </Field>
-            ) : null}
-          </div>
-          {['multiple_choice', 'ordering', 'matching'].includes(
-            selectedType,
-          ) ? (
-            <p className="assessment-type-note">
-              Esta interacción admite crédito parcial determinista cuando la
-              revisión de política de calificación lo habilita. La clave
-              editorial sigue siendo completa y secreta.
-            </p>
-          ) : null}
-          <details className="assessment-feedback-panel">
-            <summary>Personalizar retroalimentación</summary>
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
-              <Field label="Respuesta correcta" name="feedback-correct">
-                <Textarea
-                  id="feedback-correct"
-                  {...form.register('feedbackCorrect')}
-                />
-              </Field>
-              <Field label="Respuesta incorrecta" name="feedback-incorrect">
-                <Textarea
-                  id="feedback-incorrect"
-                  {...form.register('feedbackIncorrect')}
-                />
-              </Field>
-              <Field label="Orientación general" name="feedback-general">
-                <Textarea
-                  id="feedback-general"
-                  {...form.register('feedbackGeneral')}
-                />
-              </Field>
-            </div>
-          </details>
-        </BuilderSection>
-        <div className="assessment-workbench-footer">
-          <div>
-            <p className="font-medium">Borrador sujeto a workflow editorial</p>
-            <p className="text-xs text-muted-foreground">
-              Crear no aprueba ni publica; conserva separación entre autoría y
-              revisión.
-            </p>
-          </div>
-          <SubmitState
-            error={mutation.error}
-            label="Crear borrador de pregunta"
-            pending={mutation.isPending}
-          />
-        </div>
-      </form>
-      <aside className="assessment-preview-rail">
-        <div className="assessment-preview-rail__header">
-          <span>Vista previa del learner</span>
-          <strong>{selectedTypeLabel}</strong>
-        </div>
-        <div className="assessment-question-preview">
-          <p className="assessment-question-preview__meta">
-            Pregunta sin puntaje asignado
-          </p>
-          <h3>
-            {watchedPrompt.trim() ||
-              'El enunciado aparecerá aquí mientras escribes.'}
-          </h3>
-          {[
-            'single_choice',
-            'multiple_choice',
-            'ordering',
-            'matching',
-          ].includes(selectedType) && previewOptions.length ? (
-            <ol>
-              {previewOptions.map((option, index) => (
-                <li key={`${option}-${index}`}>
-                  <span>{String.fromCharCode(65 + index)}</span>
-                  {option}
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <div className="assessment-preview-answer">
-              {selectedType === 'long_text'
-                ? 'Área de respuesta extensa'
-                : selectedType === 'numeric'
-                  ? 'Campo de respuesta numérica'
-                  : selectedType === 'mathematical_expression'
-                    ? watchedMathLatex.trim() ||
-                      'Editor matemático con vista LaTeX'
-                    : 'Campo de respuesta'}
-            </div>
-          )}
-        </div>
-        <div className="assessment-quality-list">
-          <p className="assessment-rail-kicker">Control de calidad</p>
-          <ul>
-            <QualityItem
-              label="Código estable"
-              ready={!form.formState.errors.code && !!watchedCode.trim()}
-            />
-            <QualityItem
-              label="Enunciado completo"
-              ready={watchedPrompt.trim().length >= 10}
-            />
-            <QualityItem
-              label="Clave configurada"
-              ready={
-                watchedAccepted.trim().length > 0 &&
-                (selectedType !== 'mathematical_expression' ||
-                  watchedMathLatex.trim().length > 0)
-              }
-            />
-            <QualityItem
-              label="Contrato validado antes de enviar"
-              ready={form.formState.isValid}
-            />
-          </ul>
-        </div>
-      </aside>
-    </div>
-  );
-}
-
-function OrderingAnswerKey({
-  accepted,
-  onChange,
-  options,
-}: Readonly<{
-  accepted: string;
-  onChange: (value: string) => void;
-  options: readonly string[];
-}>) {
-  const byId = new Map(
-    options.map((option, index) => [`o${index + 1}`, option]),
-  );
-  const requested = accepted
-    .split(',')
-    .map((item) => item.trim())
-    .filter((id) => byId.has(id));
-  const order = [
-    ...new Set([...requested, ...options.map((_, index) => `o${index + 1}`)]),
-  ];
-  function move(index: number, direction: -1 | 1) {
-    const target = index + direction;
-    if (target < 0 || target >= order.length) return;
-    const next = [...order];
-    [next[index], next[target]] = [next[target]!, next[index]!];
-    onChange(next.join(','));
-  }
-  return (
-    <ol className="assessment-order-key" id="question-answer">
-      {order.map((id, index) => (
-        <li key={id}>
-          <span>{index + 1}</span>
-          <strong>{byId.get(id)}</strong>
-          <div>
-            <Button
-              aria-label={`Subir ${byId.get(id)}`}
-              disabled={index === 0}
-              onClick={() => move(index, -1)}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <ArrowUp />
-            </Button>
-            <Button
-              aria-label={`Bajar ${byId.get(id)}`}
-              disabled={index === order.length - 1}
-              onClick={() => move(index, 1)}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <ArrowDown />
-            </Button>
-          </div>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function MatchingAnswerKey({
-  accepted,
-  onChange,
-  options,
-}: Readonly<{
-  accepted: string;
-  onChange: (value: string) => void;
-  options: readonly string[];
-}>) {
-  const midpoint = Math.floor(options.length / 2);
-  const left = options.slice(0, midpoint);
-  const right = options.slice(midpoint);
-  const pairs = new Map(
-    accepted
-      .split(',')
-      .map((pair) => pair.trim().split(':'))
-      .filter(
-        (pair): pair is [string, string] =>
-          pair.length === 2 && Boolean(pair[0]) && Boolean(pair[1]),
-      ),
-  );
-  function select(leftIndex: number, rightId: string) {
-    const next = new Map(pairs);
-    next.set(`l${leftIndex + 1}`, rightId);
-    onChange(
-      left
-        .map(
-          (_, index) =>
-            `l${index + 1}:${next.get(`l${index + 1}`) ?? `r${index + 1}`}`,
-        )
-        .join(','),
-    );
-  }
-  if (options.length % 2 !== 0) {
-    return (
-      <div className="assessment-answer-key-empty" id="question-answer">
-        Agrega el mismo número de elementos para ambas columnas.
-      </div>
-    );
-  }
-  return (
-    <div className="assessment-matching-key" id="question-answer">
-      {left.map((label, index) => (
-        <div key={`l${index + 1}`}>
-          <strong>{label}</strong>
-          <ArrowRight />
-          <Label className="sr-only" htmlFor={`match-answer-${index}`}>
-            Correspondencia para {label}
-          </Label>
-          <select
-            className="academic-control"
-            id={`match-answer-${index}`}
-            onChange={(event) => select(index, event.target.value)}
-            value={pairs.get(`l${index + 1}`) ?? `r${index + 1}`}
-          >
-            {right.map((rightLabel, rightIndex) => (
-              <option key={`r${rightIndex + 1}`} value={`r${rightIndex + 1}`}>
-                {rightLabel}
-              </option>
-            ))}
-          </select>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ChoiceAnswerKey({
-  accepted,
-  multiple,
-  onChange,
-  options,
-}: Readonly<{
-  accepted: string;
-  multiple: boolean;
-  onChange: (value: string) => void;
-  options: readonly string[];
-}>) {
-  const selected = new Set(
-    accepted
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean),
-  );
-  if (!options.length) {
-    return (
-      <div className="assessment-answer-key-empty" id="question-answer">
-        Agrega opciones para configurar la respuesta correcta.
-      </div>
-    );
-  }
-  return (
-    <fieldset className="assessment-answer-key" id="question-answer">
-      <legend className="sr-only">Clave de respuesta</legend>
-      {options.map((option, index) => {
-        const optionId = `o${index + 1}`;
-        const checked = selected.has(optionId);
-        return (
-          <label
-            className="assessment-answer-key__option"
-            data-selected={checked}
-            key={`${optionId}-${option}`}
-          >
-            <input
-              aria-label={`Marcar ${option} como correcta`}
-              checked={checked}
-              name="question-correct-answer"
-              onChange={() => {
-                if (!multiple) {
-                  onChange(optionId);
-                  return;
-                }
-                const next = new Set(selected);
-                if (checked) next.delete(optionId);
-                else next.add(optionId);
-                onChange(
-                  options
-                    .map((_, optionIndex) => `o${optionIndex + 1}`)
-                    .filter((id) => next.has(id))
-                    .join(','),
-                );
-              }}
-              type={multiple ? 'checkbox' : 'radio'}
-            />
-            <span className="assessment-answer-key__letter">
-              {String.fromCharCode(65 + index)}
-            </span>
-            <span>{option}</span>
-            <small>{checked ? 'Correcta' : 'Marcar'}</small>
-          </label>
-        );
-      })}
-    </fieldset>
-  );
-}
-
-function typeDescription(type: QuestionType) {
-  const descriptions: Record<QuestionType, string> = {
-    long_text:
-      'Respuesta abierta con decisión humana, rúbrica y correcciones append-only.',
-    matching:
-      'Relación explícita entre dos conjuntos; se valida cobertura de la columna izquierda.',
-    mathematical_expression:
-      'Expresión segura: el navegador construye MathJSON y el servidor valida y califica sin evaluar texto.',
-    multiple_choice:
-      'Una o más opciones correctas; la política puede otorgar crédito parcial sin producir puntajes negativos.',
-    numeric:
-      'Comparación Decimal determinista con tolerancia absoluta controlada.',
-    ordering:
-      'Secuencia completa con crédito parcial opcional por posición o pares adyacentes.',
-    short_text:
-      'Comparación normalizada contra una lista de respuestas aceptadas.',
-    single_choice:
-      'Una sola respuesta correcta entre opciones mutuamente excluyentes.',
-    true_false: 'Decisión binaria con etiquetas claras para el estudiante.',
-  };
-  return descriptions[type];
-}
-
-function answerHint(type: QuestionType) {
-  const hints: Record<QuestionType, string> = {
-    long_text: 'Sólo será visible para quien califica.',
-    matching: 'Selecciona una correspondencia para cada elemento.',
-    mathematical_expression:
-      'Construye la respuesta esperada; se guardan LaTeX canónico y MathJSON estructurado.',
-    multiple_choice:
-      'Marca todas las opciones que deben considerarse correctas.',
-    numeric: 'Decimal sin exponente; admite punto o coma no ambiguos.',
-    ordering: 'Organiza las opciones en la secuencia correcta.',
-    short_text: 'Una respuesta aceptada por línea.',
-    single_choice: 'Marca la única opción correcta.',
-    true_false: 'Selecciona el valor correcto.',
-  };
-  return hints[type];
-}
-
-export function QuestionRevisionEditor({
+export function QuestionRevisionWorkflow({
   bankId,
   canApprove,
-  canManage,
   canReview,
   canSubmit,
   questionId,
@@ -1515,250 +881,90 @@ export function QuestionRevisionEditor({
 }: Readonly<{
   bankId: string;
   canApprove: boolean;
-  canManage: boolean;
   canReview: boolean;
   canSubmit: boolean;
   questionId: string;
-  revision: {
-    definition: unknown;
-    id: string;
-    lock_version: number;
-    status: string;
-    type: string;
-  };
+  revision: { id: string; lock_version: number; status: string };
   slug: string;
 }>) {
   const router = useRouter();
-  const [source, setSource] = useState(
-    JSON.stringify(revision.definition, null, 2),
-  );
   const [message, setMessage] = useState('');
-  const path = {
-    bankId,
-    questionId,
-    revisionId: revision.id,
-    slug,
-  };
-  const save = useAssessmentMutation(async () => {
-    let definition: unknown;
-    try {
-      definition = JSON.parse(source);
-    } catch {
-      throw new Error('El JSON no es válido.');
-    }
-    return updateQuestionRevision(path, {
-      definition,
-      expected_version: revision.lock_version,
-    });
-  });
   const transition = useAssessmentMutation(
     (action: 'approve' | 'request-changes' | 'submit-review') =>
-      transitionQuestionRevision(path, action, {
-        expected_version: revision.lock_version,
-        note: message,
-      }),
+      transitionQuestionRevision(
+        { bankId, questionId, revisionId: revision.id, slug },
+        action,
+        {
+          expected_version: revision.lock_version,
+          note: message,
+        },
+      ),
   );
-  async function finish(operation: Promise<unknown>) {
+  async function submitTransition(
+    action: 'approve' | 'request-changes' | 'submit-review',
+  ) {
     try {
-      await operation;
+      await transition.mutateAsync(action);
       router.refresh();
     } catch {
-      // React Query conserva y presenta el error junto al editor.
+      // React Query conserva el error visible en este panel.
     }
   }
-  const editable =
-    canManage &&
-    (revision.status === 'draft' || revision.status === 'changes_requested');
-  const preview = questionPreviewFromDefinition(source);
   return (
-    <div className="assessment-revision-studio mt-6">
-      <section className="assessment-revision-editor">
-        <header>
-          <span className="assessment-icon-box">
-            <Code2 />
-          </span>
-          <div>
-            <p className="assessment-rail-kicker">Contrato canónico</p>
-            <h2>Definición semántica avanzada</h2>
-            <p>
-              Tipo {revision.type} · revisión {revision.status} · guardado
-              explícito
-            </p>
-          </div>
-          {editable ? (
-            <Button
-              disabled={save.isPending}
-              onClick={() => finish(save.mutateAsync(undefined))}
-              type="button"
-            >
-              Guardar contrato
-            </Button>
-          ) : (
-            <span className="assessment-status" data-status={revision.status}>
-              {statusLabel(revision.status)}
-            </span>
-          )}
-        </header>
-        <div className="assessment-revision-editor__body">
-          <div className="assessment-revision-notice">
-            <LockKeyhole />
-            <p>
-              Las claves y rúbricas permanecen en el payload privado. La vista
-              del learner recibe únicamente el snapshot público.
-            </p>
-          </div>
-          <details className="assessment-code-disclosure">
-            <summary>Contrato técnico · editar JSON Schema v1</summary>
-            <Label className="sr-only" htmlFor="question-definition">
-              JSON semántico
-            </Label>
-            <Textarea
-              aria-describedby="question-definition-help"
-              className="min-h-[34rem] font-mono text-xs leading-5"
-              disabled={!editable}
-              id="question-definition"
-              onChange={(event) => setSource(event.target.value)}
-              spellCheck={false}
-              value={source}
-            />
-          </details>
-          <p
-            className="text-xs leading-5 text-muted-foreground"
-            id="question-definition-help"
-          >
-            El contrato se valida por Draft 2020-12 y después por invariantes de
-            negocio. Los errores se informan con su ruta exacta.
-          </p>
-          <MutationError error={save.error} />
+    <section className="assessment-revision-workflow assessment-revision-workflow--wide">
+      <header>
+        <GitPullRequest />
+        <div>
+          <p>Estado editorial</p>
+          <h2>{statusLabel(revision.status)}</h2>
         </div>
-      </section>
-      <aside className="assessment-revision-rail">
-        <section className="assessment-revision-preview">
-          <header>
-            <Eye />
-            <div>
-              <p>Vista pública</p>
-              <h2>Experiencia del estudiante</h2>
-            </div>
-          </header>
-          <article>
-            <span>{questionInteractionLabel(preview.type)}</span>
-            <h3 className="whitespace-pre-line">
-              {preview.prompt || 'Enunciado no disponible'}
-            </h3>
-            {preview.options.length ? (
-              <ol>
-                {preview.options.map((option, index) => (
-                  <li key={`${option}-${index}`}>
-                    <span>{String.fromCharCode(65 + index)}</span>
-                    {option}
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <div>Campo de respuesta del estudiante</div>
-            )}
-          </article>
-        </section>
-        <section className="assessment-revision-workflow">
-          <header>
-            <GitPullRequest />
-            <div>
-              <p>Gobierno editorial</p>
-              <h2>Transición de revisión</h2>
-            </div>
-          </header>
-          <Label htmlFor="question-transition-note">Nota para el equipo</Label>
+      </header>
+      <div className="assessment-revision-workflow__wide-body">
+        <div>
+          <Label htmlFor="question-transition-note-wide">
+            Nota para el equipo
+          </Label>
           <Textarea
-            id="question-transition-note"
+            id="question-transition-note-wide"
             onChange={(event) => setMessage(event.target.value)}
             placeholder="Documenta evidencia, cambios solicitados o criterio de aprobación."
             value={message}
           />
-          <div className="grid gap-2">
-            {canSubmit &&
-            ['draft', 'changes_requested'].includes(revision.status) ? (
-              <Button
-                disabled={transition.isPending}
-                onClick={() => finish(transition.mutateAsync('submit-review'))}
-                type="button"
-              >
-                Enviar a revisión
-              </Button>
-            ) : null}
-            {canReview && revision.status === 'in_review' ? (
-              <Button
-                disabled={transition.isPending}
-                onClick={() =>
-                  finish(transition.mutateAsync('request-changes'))
-                }
-                type="button"
-                variant="outline"
-              >
-                Solicitar cambios
-              </Button>
-            ) : null}
-            {canApprove && revision.status === 'in_review' ? (
-              <Button
-                disabled={transition.isPending}
-                onClick={() => finish(transition.mutateAsync('approve'))}
-                type="button"
-              >
-                Aprobar y crear versión
-              </Button>
-            ) : null}
-          </div>
-          <MutationError error={transition.error} />
-        </section>
-      </aside>
-    </div>
-  );
-}
-
-function questionPreviewFromDefinition(source: string) {
-  try {
-    const definition = JSON.parse(source) as {
-      public?: {
-        options?: { label?: string }[];
-        prompt?: {
-          content?: { content?: { text?: string }[] }[];
-        };
-        type?: string;
-      };
-      type?: string;
-    };
-    const prompt = (definition.public?.prompt?.content ?? [])
-      .map((block) =>
-        (block.content ?? []).map((node) => node.text ?? '').join(''),
-      )
-      .filter(Boolean)
-      .join('\n')
-      .trim();
-    return {
-      options: (definition.public?.options ?? []).map(
-        (option) => option.label ?? '',
-      ),
-      prompt,
-      type: definition.public?.type ?? definition.type ?? 'Pregunta',
-    };
-  } catch {
-    return { options: [] as string[], prompt: '', type: 'JSON inválido' };
-  }
-}
-
-function questionInteractionLabel(type: string) {
-  return (
-    {
-      long_text: 'Respuesta extensa',
-      matching: 'Emparejamiento',
-      mathematical_expression: 'Expresión matemática',
-      multiple_choice: 'Selección múltiple',
-      numeric: 'Respuesta numérica',
-      ordering: 'Ordenamiento',
-      short_text: 'Respuesta corta',
-      single_choice: 'Selección única',
-      true_false: 'Verdadero o falso',
-    }[type] ?? type
+        </div>
+        <div className="assessment-revision-workflow__actions">
+          {canSubmit &&
+          ['draft', 'changes_requested'].includes(revision.status) ? (
+            <Button
+              disabled={transition.isPending}
+              onClick={() => void submitTransition('submit-review')}
+              type="button"
+            >
+              Enviar a revisión
+            </Button>
+          ) : null}
+          {canReview && revision.status === 'in_review' ? (
+            <Button
+              disabled={transition.isPending}
+              onClick={() => void submitTransition('request-changes')}
+              type="button"
+              variant="outline"
+            >
+              Solicitar cambios
+            </Button>
+          ) : null}
+          {canApprove && revision.status === 'in_review' ? (
+            <Button
+              disabled={transition.isPending}
+              onClick={() => void submitTransition('approve')}
+              type="button"
+            >
+              Aprobar y crear versión
+            </Button>
+          ) : null}
+        </div>
+      </div>
+      <MutationError error={transition.error} />
+    </section>
   );
 }
 
@@ -1766,45 +972,84 @@ export function BankList({
   banks,
   slug,
 }: Readonly<{ banks: QuestionBankPage; slug: string }>) {
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState<'active' | 'all' | 'archived'>('active');
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const visibleBanks = banks.results.filter(
+    (bank) =>
+      (status === 'all' || bank.status === status) &&
+      (!normalizedQuery ||
+        `${bank.name} ${bank.slug} ${bank.description}`
+          .toLocaleLowerCase()
+          .includes(normalizedQuery)),
+  );
   return (
-    <section className="assessment-collection">
-      <header className="assessment-collection__header">
-        <div>
-          <p className="assessment-rail-kicker">Inventario editorial</p>
-          <h2>Bancos disponibles</h2>
+    <section className="assessment-bank-library">
+      <div className="assessment-bank-library__toolbar">
+        <label>
+          <Search />
+          <span className="sr-only">Buscar banco</span>
+          <Input
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar bancos…"
+            value={query}
+          />
+        </label>
+        <div aria-label="Filtrar bancos" role="group">
+          <SlidersHorizontal aria-hidden="true" />
+          {(
+            [
+              ['active', 'Activos'],
+              ['archived', 'Archivados'],
+              ['all', 'Todos'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              aria-pressed={status === value}
+              data-active={status === value}
+              key={value}
+              onClick={() => setStatus(value)}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
         </div>
-        <span>{banks.count} registros</span>
-      </header>
-      {banks.results.length ? (
-        <ul className="assessment-card-grid">
-          {banks.results.map((bank) => (
-            <li className="assessment-resource-card" key={bank.id}>
-              <div className="assessment-resource-card__top">
-                <span className="assessment-icon-box">
-                  <Database />
-                </span>
+        <span className="assessment-library-count">
+          {visibleBanks.length} de {banks.count}
+        </span>
+      </div>
+      {visibleBanks.length ? (
+        <ul className="assessment-resource-list">
+          {visibleBanks.map((bank) => (
+            <li key={bank.id}>
+              <span className="assessment-resource-list__icon">
+                <Database />
+              </span>
+              <div className="assessment-resource-list__body">
+                <h3>{bank.name}</h3>
+                <p>{bank.description || 'Sin descripción.'}</p>
+              </div>
+              <div className="assessment-resource-list__meta">
                 <span className="assessment-status" data-status={bank.status}>
                   {bank.status === 'active' ? 'Activo' : 'Archivado'}
                 </span>
-              </div>
-              <div className="assessment-resource-card__body">
-                <p className="assessment-resource-card__code">/{bank.slug}</p>
-                <h3>{bank.name}</h3>
-                <p>
-                  {bank.description ||
-                    'Banco institucional sin descripción editorial.'}
-                </p>
+                <small>
+                  {new Intl.DateTimeFormat('es-CO', {
+                    dateStyle: 'medium',
+                  }).format(new Date(bank.updated_at))}
+                </small>
               </div>
               <Button
                 asChild
-                className="w-full justify-between"
-                variant="outline"
+                aria-label={`Abrir ${bank.name}`}
+                size="icon-sm"
+                variant="ghost"
               >
                 <a
                   href={`/organizaciones/${slug}/evaluaciones/bancos/${bank.id}`}
                 >
-                  Abrir espacio de autoría
-                  <ArrowRight data-icon="inline-end" />
+                  <ArrowRight />
                 </a>
               </Button>
             </li>
@@ -1813,8 +1058,8 @@ export function BankList({
       ) : (
         <div className="assessment-empty">
           <Database />
-          <h3>Aún no hay bancos de preguntas</h3>
-          <p>Crea el primero para iniciar el flujo editorial.</p>
+          <h3>No hay bancos con este filtro</h3>
+          <p>Ajusta la búsqueda o consulta otro estado editorial.</p>
         </div>
       )}
     </section>
@@ -1830,29 +1075,75 @@ export function QuestionList({
   questions: QuestionPage;
   slug: string;
 }>) {
+  const router = useRouter();
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState<'all' | 'approved' | 'open'>('all');
+  const createRevision = useAssessmentMutation(
+    (question: { id: string; version: number }) =>
+      createQuestionRevisionFromVersion(
+        slug,
+        bankId,
+        question.id,
+        question.version,
+      ),
+  );
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const visibleQuestions = questions.results.filter(
+    (question) =>
+      (!normalizedQuery ||
+        `${question.code} ${questionPreviewText(question.preview)} ${questionTypeLabel(question.type)}`
+          .toLocaleLowerCase()
+          .includes(normalizedQuery)) &&
+      (status === 'all' ||
+        (status === 'open' && Boolean(question.open_revision_id)) ||
+        (status === 'approved' &&
+          Boolean(question.latest_version_number) &&
+          !question.open_revision_id)),
+  );
   return (
-    <section className="assessment-collection mt-6">
-      <header className="assessment-collection__header">
-        <div>
-          <p className="assessment-rail-kicker">Contenido del banco</p>
-          <h2>Preguntas y revisiones</h2>
+    <section className="assessment-question-library">
+      <div className="assessment-question-library__toolbar">
+        <label>
+          <Search />
+          <span className="sr-only">Buscar pregunta por código</span>
+          <Input
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar por contenido, tipo o código…"
+            value={query}
+          />
+        </label>
+        <div aria-label="Filtrar preguntas" role="group">
+          <SlidersHorizontal aria-hidden="true" />
+          {(
+            [
+              ['all', 'Todas'],
+              ['open', 'En trabajo'],
+              ['approved', 'Aprobadas'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              aria-pressed={status === value}
+              data-active={status === value}
+              key={value}
+              onClick={() => setStatus(value)}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
         </div>
-        <span>{questions.count} preguntas</span>
-      </header>
-      {questions.results.length ? (
+        <span className="assessment-library-count">
+          {visibleQuestions.length} de {questions.count}
+        </span>
+      </div>
+      {visibleQuestions.length ? (
         <ul className="assessment-question-list">
-          {questions.results.map((question) => (
-            <li key={question.id}>
-              <span className="assessment-question-list__icon">
-                {question.latest_version_number ? (
-                  <FileCheck2 />
-                ) : (
-                  <BookOpenCheck />
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3>{question.code}</h3>
+          {visibleQuestions.map((question) => {
+            const excerpt = questionPreviewText(question.preview);
+            return (
+              <li key={question.id}>
+                <div className="assessment-question-list__topline">
+                  <span>{questionTypeLabel(question.type)}</span>
                   <span
                     className="assessment-status"
                     data-status={question.open_revision_status ?? 'approved'}
@@ -1865,39 +1156,108 @@ export function QuestionList({
                     )}
                   </span>
                 </div>
-                <p>
-                  Versión aprobada{' '}
-                  {question.latest_version_number
-                    ? `v${question.latest_version_number}`
-                    : 'pendiente'}
+                <p className="assessment-question-list__code">
+                  {question.code}
                 </p>
-              </div>
-              {question.open_revision_id ? (
-                <Button asChild variant="outline">
-                  <a
-                    href={`/organizaciones/${slug}/evaluaciones/bancos/${bankId}/preguntas/${question.id}/revisiones/${question.open_revision_id}`}
-                  >
-                    Continuar revisión
-                    <ArrowRight data-icon="inline-end" />
-                  </a>
-                </Button>
-              ) : (
-                <span className="assessment-question-list__locked">
-                  Snapshot aprobado
-                </span>
-              )}
-            </li>
-          ))}
+                <h3>{excerpt || 'Pregunta sin enunciado disponible'}</h3>
+                <div className="assessment-question-list__version">
+                  <span>
+                    {question.latest_version_number
+                      ? `Versión ${question.latest_version_number}`
+                      : 'Sin versión aprobada'}
+                  </span>
+                  {question.open_revision_id ? (
+                    <span>Revisión abierta</span>
+                  ) : null}
+                </div>
+                <div className="assessment-question-list__actions">
+                  <QuestionPreviewDialog
+                    bankId={bankId}
+                    code={question.code}
+                    questionId={question.id}
+                    slug={slug}
+                  />
+                  {question.open_revision_id ? (
+                    <Button asChild size="sm" variant="outline">
+                      <a
+                        href={`/organizaciones/${slug}/evaluaciones/bancos/${bankId}/preguntas/${question.id}/revisiones/${question.open_revision_id}`}
+                      >
+                        Editar <ArrowRight data-icon="inline-end" />
+                      </a>
+                    </Button>
+                  ) : question.latest_version_number ? (
+                    <Button
+                      disabled={createRevision.isPending}
+                      onClick={async () => {
+                        try {
+                          const revision = await createRevision.mutateAsync({
+                            id: question.id,
+                            version: question.latest_version_number!,
+                          });
+                          router.push(
+                            `/organizaciones/${slug}/evaluaciones/bancos/${bankId}/preguntas/${question.id}/revisiones/${revision.id}`,
+                          );
+                        } catch {
+                          // React Query conserva el error para el panel.
+                        }
+                      }}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      Nueva revisión
+                    </Button>
+                  ) : (
+                    <span className="assessment-question-list__locked">
+                      Sin contenido editable
+                    </span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <div className="assessment-empty">
           <BookOpenCheck />
-          <h3>Este banco aún no contiene preguntas</h3>
-          <p>Usa el compositor para crear el primer borrador.</p>
+          <h3>No hay preguntas con este filtro</h3>
+          <p>
+            Ajusta la búsqueda o inicia una nueva pregunta desde el encabezado.
+          </p>
         </div>
       )}
+      <MutationError error={createRevision.error} />
     </section>
   );
+}
+
+function questionPreviewText(preview: Record<string, unknown> | null) {
+  if (!preview) return '';
+  const fragments: string[] = [];
+  const pending: unknown[] = [preview.prompt];
+  while (pending.length && fragments.join(' ').length < 320) {
+    const current = pending.shift();
+    if (Array.isArray(current)) {
+      pending.unshift(...current);
+      continue;
+    }
+    if (!current || typeof current !== 'object') continue;
+    const node = current as Record<string, unknown>;
+    if (typeof node.text === 'string') fragments.push(node.text);
+    const attrs = node.attrs;
+    if (attrs && typeof attrs === 'object') {
+      const latex = (attrs as Record<string, unknown>).latex;
+      if (typeof latex === 'string') fragments.push(`$${latex}$`);
+      const altText = (attrs as Record<string, unknown>).altText;
+      if (typeof altText === 'string') fragments.push(altText);
+    }
+    if (Array.isArray(node.content)) pending.push(...node.content);
+  }
+  return fragments.join(' ').replace(/\s+/g, ' ').trim().slice(0, 260);
+}
+
+function questionTypeLabel(type: string | null) {
+  return QUESTION_TYPES.find(([value]) => value === type)?.[1] ?? 'Pregunta';
 }
 
 function statusLabel(status: string) {
@@ -1935,46 +1295,6 @@ export function Field({
         </p>
       ) : null}
     </div>
-  );
-}
-
-function BuilderSection({
-  children,
-  description,
-  icon,
-  number,
-  title,
-}: Readonly<{
-  children: React.ReactNode;
-  description: string;
-  icon: React.ReactNode;
-  number: string;
-  title: string;
-}>) {
-  return (
-    <section className="assessment-builder-section">
-      <header className="assessment-builder-section__header">
-        <span className="assessment-builder-section__number">{number}</span>
-        <span className="assessment-icon-box">{icon}</span>
-        <div>
-          <h2>{title}</h2>
-          <p>{description}</p>
-        </div>
-      </header>
-      <div className="assessment-builder-section__body">{children}</div>
-    </section>
-  );
-}
-
-function QualityItem({
-  label,
-  ready,
-}: Readonly<{ label: string; ready: boolean }>) {
-  return (
-    <li data-ready={ready}>
-      <CheckCircle2 />
-      <span>{label}</span>
-    </li>
   );
 }
 

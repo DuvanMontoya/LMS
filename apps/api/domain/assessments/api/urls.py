@@ -27,6 +27,7 @@ urlpatterns = [
     path(BANK + "archive/", views.QuestionBankArchiveView.as_view()),
     path(BANK + "questions/", views.QuestionListCreateView.as_view()),
     path(QUESTION, views.QuestionDetailView.as_view()),
+    path(QUESTION + "preview/", views.QuestionPreviewView.as_view()),
     path(BANK + "versions/", views.QuestionBankVersionListCreateView.as_view()),
     path(
         BANK + "versions/<int:version_number>/",
@@ -81,6 +82,10 @@ urlpatterns = [
         views.StartAttemptView.as_view(),
     ),
     path(BASE + "attempts/<uuid:attempt_id>/", views.AttemptDetailView.as_view()),
+    path(
+        BASE + "attempts/<uuid:attempt_id>/assets/access/",
+        views.AttemptAssetAccessView.as_view(),
+    ),
     path(
         BASE + "attempts/<uuid:attempt_id>/responses/<uuid:attempt_item_id>/",
         views.SaveResponseView.as_view(),

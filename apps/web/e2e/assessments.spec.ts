@@ -14,6 +14,11 @@ async function login(page: Page, email: string, next: string) {
   await expect(page).toHaveURL(next, { timeout: 45_000 });
 }
 
+async function switchUser(page: Page, email: string, next: string) {
+  await page.context().clearCookies();
+  await login(page, email, next);
+}
+
 async function expectAccessible(page: Page) {
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
@@ -92,7 +97,7 @@ test('assessment phase 13: authoring, delivery, attempt, conflict, manual gradin
 }) => {
   test.setTimeout(420_000);
   const authoringPath = `/organizaciones/${slug}/evaluaciones`;
-  await login(page, 'owner@organizations.e2e.test', authoringPath);
+  await login(page, 'author@organizations.e2e.test', authoringPath);
   await expect(
     page.getByRole('heading', { name: 'Evaluaciones', exact: true }),
   ).toBeVisible();
@@ -105,49 +110,44 @@ test('assessment phase 13: authoring, delivery, attempt, conflict, manual gradin
     .getByRole('heading', { name: 'Banco E2E de assessments' })
     .locator('..')
     .locator('..')
-    .getByRole('link', { name: 'Abrir espacio de autoría' })
+    .getByRole('link', { name: 'Explorar banco' })
     .click();
   await expect(page.getByText('ASSESS-E2E-001')).toBeVisible();
   await expect(page.getByText('ASSESS-E2E-008')).toBeVisible();
 
-  await page.goto(`/organizaciones/${slug}/evaluaciones/bancos`);
+  await page.goto(`/organizaciones/${slug}/evaluaciones/bancos/nuevo`);
   const browserBankName = 'Banco creado por navegador E2E';
   await page.getByLabel('Nombre del banco').fill(browserBankName);
   await page.getByLabel('Slug').fill('banco-creado-navegador-e2e');
   await page
     .getByLabel('Descripción')
     .fill('Valida creación, errores inline y navegación editorial real.');
-  await page.getByRole('button', { name: 'Crear banco' }).click();
+  await page.getByRole('button', { name: 'Crear y abrir banco' }).click();
   await expect(
     page.getByRole('heading', { name: browserBankName }),
   ).toBeVisible();
-  await page
-    .getByRole('heading', { name: browserBankName })
-    .locator('..')
-    .locator('..')
-    .getByRole('link', { name: 'Abrir espacio de autoría' })
-    .click();
-
-  await page
-    .getByRole('button', { name: 'Crear borrador de pregunta' })
-    .click();
-  await expect(page.getByRole('alert')).toContainText([
+  await page.getByRole('link', { name: 'Nueva pregunta' }).click();
+  await page.getByRole('button', { name: 'Crear revisión' }).first().click();
+  await expect(page.getByRole('alert')).toContainText(
     'Asigna un código estable.',
-    'Escribe el enunciado.',
-  ]);
+  );
   await expect(page.getByText('Runtime Error')).toHaveCount(0);
   await page.getByLabel('Código estable').fill('BROWSER-E2E-001');
   await page
-    .getByLabel('Enunciado')
+    .getByRole('textbox', { name: 'Contexto y enunciado de la pregunta' })
     .fill('¿Qué porcentaje representa 30 de un total de 120?');
-  await page.getByLabel('Opciones de respuesta').fill('20 %\n25 %\n30 %\n40 %');
-  await page.getByRole('radio', { name: 'Marcar 25 % como correcta' }).check();
-  await expect(
-    page.locator('.assessment-question-preview li').filter({ hasText: '25 %' }),
-  ).toBeVisible();
+  for (const [index, value] of ['20 %', '25 %', '30 %', '40 %'].entries()) {
+    await page.getByLabel(`Texto de la opción ${index + 1}`).fill(value);
+  }
   await page
-    .getByRole('button', { name: 'Crear borrador de pregunta' })
+    .locator('.assessment-choice-list > li')
+    .filter({ hasText: '25 %' })
+    .getByRole('button', { name: 'Marcar como correcta' })
     .click();
+  await expect(
+    page.locator('.assessment-live-preview li').filter({ hasText: '25 %' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Crear revisión' }).first().click();
   await expect(page.getByText('BROWSER-E2E-001')).toBeVisible();
   await expect(page.getByText('Runtime Error')).toHaveCount(0);
 
@@ -172,7 +172,11 @@ test('assessment phase 13: authoring, delivery, attempt, conflict, manual gradin
   await expect(page.getByText('Arquitectura del instrumento')).toBeVisible();
   await expect(page.getByText('Runtime Error')).toHaveCount(0);
 
-  await page.goto(`/organizaciones/${slug}/evaluaciones/entregas`);
+  await switchUser(
+    page,
+    'administrator@organizations.e2e.test',
+    `/organizaciones/${slug}/evaluaciones/entregas`,
+  );
   await expect(page.getByText('Entrega E2E activa')).toBeVisible();
   await expectAccessible(page);
 
@@ -316,8 +320,14 @@ test('assessment phase 13: authoring, delivery, attempt, conflict, manual gradin
   await student.getByRole('button', { name: 'Subir Tercera opción' }).click();
   await saveAndNext(student);
 
-  await student.getByLabel('Derivada').selectOption('r1');
-  await student.getByLabel('Integral').selectOption('r2');
+  await student
+    .getByRole('group', { name: /Derivada/ })
+    .getByRole('radio', { name: /Tasa de cambio/ })
+    .check();
+  await student
+    .getByRole('group', { name: /Integral/ })
+    .getByRole('radio', { name: /Acumulación/ })
+    .check();
   await student.getByRole('button', { name: 'Guardar respuesta' }).click();
   await expect(student.getByText('Guardada', { exact: true })).toBeVisible();
   await student.getByRole('button', { name: 'Enviar intento' }).click();
@@ -329,7 +339,11 @@ test('assessment phase 13: authoring, delivery, attempt, conflict, manual gradin
   ).toBeVisible({ timeout: 20_000 });
   await expectAccessible(student);
 
-  await page.goto(`/organizaciones/${slug}/evaluaciones/calificacion-manual`);
+  await switchUser(
+    page,
+    'instructor@organizations.e2e.test',
+    `/organizaciones/${slug}/evaluaciones/calificacion-manual`,
+  );
   await expect(page.getByText('La derivada representa')).toBeVisible();
   await page.getByLabel(/Puntaje/).fill('1.000');
   await page.getByLabel('Feedback').fill('Argumento claro y suficiente.');
@@ -421,7 +435,7 @@ test('assessment phase 14: safe math, pools, async grading, regrading, gradebook
 }) => {
   test.setTimeout(420_000);
   const assessmentPath = `/organizaciones/${slug}/evaluaciones/assessment-avanzado-e2e`;
-  await login(page, 'owner@organizations.e2e.test', assessmentPath);
+  await login(page, 'author@organizations.e2e.test', assessmentPath);
   await expect(
     page.getByRole('heading', { name: 'Assessment avanzado E2E' }),
   ).toBeVisible();
@@ -437,7 +451,7 @@ test('assessment phase 14: safe math, pools, async grading, regrading, gradebook
     .getByRole('heading', { name: 'Banco E2E avanzado' })
     .locator('..')
     .locator('..')
-    .getByRole('link', { name: 'Abrir espacio de autoría' })
+    .getByRole('link', { name: 'Explorar banco' })
     .click();
   await expect(page).toHaveURL(/\/evaluaciones\/bancos\/[0-9a-f-]+$/, {
     timeout: 30_000,
@@ -445,22 +459,21 @@ test('assessment phase 14: safe math, pools, async grading, regrading, gradebook
   // Next dev can expose the streamed form before React has hydrated it.
   // Let hydration own the controls before changing the dynamic question type.
   await page.waitForTimeout(1_500);
+  await page.getByRole('link', { name: 'Nueva pregunta' }).click();
   await page.getByLabel('Código estable').fill('ADV-BROWSER-MATH-001');
-  await page
-    .getByLabel('Tipo de interacción')
-    .selectOption('mathematical_expression');
+  await page.getByRole('button', { name: /Expresión matemática/ }).click();
   await expect(page.getByLabel('Símbolos permitidos')).toBeVisible({
     timeout: 30_000,
   });
   await page
-    .getByLabel('Enunciado')
+    .getByRole('textbox', { name: 'Contexto y enunciado de la pregunta' })
     .fill('Escribe una expresión equivalente a x más uno.');
   await page.getByLabel('Símbolos permitidos').fill('x');
-  await page.getByLabel('Supuestos simbólicos').fill('x:real');
+  await page.getByLabel('Hipótesis sobre símbolos').fill('x:real');
   await page
-    .getByLabel('Estrategia de equivalencia')
+    .getByLabel('Criterio de equivalencia')
     .selectOption('symbolic_common_domain');
-  const authorMathField = page.locator('math-field').first();
+  const authorMathField = page.locator('math-field:visible').first();
   await expect(authorMathField).toBeVisible();
   await authorMathField.evaluate((field) => {
     const mathField = field as HTMLElement & { value: string };
@@ -469,17 +482,10 @@ test('assessment phase 14: safe math, pools, async grading, regrading, gradebook
   });
   await expect(
     page
-      .locator('.assessment-quality-list li[data-ready="true"]')
-      .filter({ hasText: 'Clave configurada' }),
+      .locator('.assessment-studio-quality > div[data-ready="true"]')
+      .filter({ hasText: 'Clave o rúbrica definida' }),
   ).toBeVisible();
-  await expect(
-    page
-      .locator('.assessment-quality-list li[data-ready="true"]')
-      .filter({ hasText: 'Contrato validado antes de enviar' }),
-  ).toBeVisible();
-  await page
-    .getByRole('button', { name: 'Crear borrador de pregunta' })
-    .click();
+  await page.getByRole('button', { name: 'Crear revisión' }).first().click();
   await expect(page).toHaveURL(
     /\/evaluaciones\/bancos\/[0-9a-f-]+\/preguntas\/[0-9a-f-]+\/revisiones\/[0-9a-f-]+$/,
     { timeout: 30_000 },
@@ -489,6 +495,8 @@ test('assessment phase 14: safe math, pools, async grading, regrading, gradebook
   });
   await page.waitForTimeout(1_500);
   await page.getByRole('button', { name: 'Enviar a revisión' }).click();
+  const revisionPath = new URL(page.url()).pathname;
+  await switchUser(page, 'reviewer@organizations.e2e.test', revisionPath);
   await expect(
     page.getByRole('button', { name: 'Aprobar y crear versión' }),
   ).toBeVisible({ timeout: 15_000 });
@@ -497,7 +505,11 @@ test('assessment phase 14: safe math, pools, async grading, regrading, gradebook
     timeout: 15_000,
   });
 
-  await page.goto(`/organizaciones/${slug}/evaluaciones/gradebooks`);
+  await switchUser(
+    page,
+    'instructor@organizations.e2e.test',
+    `/organizaciones/${slug}/evaluaciones/gradebooks`,
+  );
   await page.getByLabel('Release del curso').selectOption({ index: 1 });
   await page.getByRole('button', { name: 'Crear libro' }).click();
   await expect(
@@ -570,8 +582,14 @@ test('assessment phase 14: safe math, pools, async grading, regrading, gradebook
   await saveAndNext(student);
   await student.getByRole('button', { name: 'Subir Tercera opción' }).click();
   await saveAndNext(student);
-  await student.getByLabel('Derivada').selectOption('r1');
-  await student.getByLabel('Integral').selectOption('r1');
+  await student
+    .getByRole('group', { name: /Derivada/ })
+    .getByRole('radio', { name: /Tasa de cambio/ })
+    .check();
+  await student
+    .getByRole('group', { name: /Integral/ })
+    .getByRole('radio', { name: /Tasa de cambio/ })
+    .check();
   await saveAndNext(student);
   const learnerMathField = student.locator('math-field').first();
   await expect(learnerMathField).toBeVisible();

@@ -98,6 +98,10 @@ switch ($Action) {
         Invoke-Django @('sqlmigrate', 'assessments', '0006')
         Invoke-Django @('sqlmigrate', 'assessments', '0007')
         Invoke-Django @('sqlmigrate', 'assessments', '0008')
+        Invoke-Django @('sqlmigrate', 'assessments', '0009')
+        Invoke-Django @('sqlmigrate', 'assessments', '0010')
+        Invoke-Django @('sqlmigrate', 'assessments', '0011')
+        Invoke-Django @('sqlmigrate', 'assessments', '0012')
         Invoke-Django @('makemigrations', '--check', '--dry-run')
     }
     'Schema' { Invoke-Django @('spectacular', '--validate', '--fail-on-warn') }

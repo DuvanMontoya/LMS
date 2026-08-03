@@ -8,6 +8,7 @@ from .models import (
     AnalyticsRefreshJob,
     Assessment,
     AssessmentAnalyticsSnapshot,
+    AssessmentAssetReference,
     AssessmentDelivery,
     AssessmentGradingPolicy,
     AssessmentGradingRevision,
@@ -34,21 +35,6 @@ from .models import (
     Response,
 )
 
-for model in (
-    QuestionBank,
-    Question,
-    QuestionVersion,
-    QuestionBankVersion,
-    Assessment,
-    AssessmentVersion,
-    AssessmentDelivery,
-    DeliveryAssignment,
-    Attempt,
-    Response,
-    ManualGradeDecision,
-):
-    admin.site.register(model)
-
 
 class ReadOnlyAssessmentAdmin(admin.ModelAdmin):
     actions = None
@@ -68,6 +54,18 @@ class ReadOnlyAssessmentAdmin(admin.ModelAdmin):
 
 
 for model in (
+    QuestionBank,
+    Question,
+    QuestionVersion,
+    QuestionBankVersion,
+    Assessment,
+    AssessmentVersion,
+    AssessmentDelivery,
+    DeliveryAssignment,
+    Attempt,
+    Response,
+    ManualGradeDecision,
+    AssessmentAssetReference,
     AssessmentItemPool,
     AssessmentGradingPolicy,
     AssessmentGradingRevision,

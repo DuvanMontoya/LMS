@@ -261,6 +261,7 @@ class AssetAccessDescriptorSerializer(serializers.Serializer):
 class AssetUsageSerializer(serializers.Serializer):
     content_versions = serializers.ListField(child=serializers.JSONField())
     releases = serializers.ListField(child=serializers.JSONField())
+    assessment_versions = serializers.ListField(child=serializers.JSONField())
     current_reference_count = serializers.IntegerField(min_value=0)
 
 

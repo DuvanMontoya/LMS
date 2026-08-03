@@ -5,6 +5,7 @@ class AssessmentsConfig(AppConfig):
     name = "domain.assessments"
 
     def ready(self) -> None:
+        from domain.assets.usage import register_asset_usage_provider
         from domain.courses.activity_extensions import register_activity_provider
         from domain.courses.choices import ActivityType
         from domain.courses.readiness import register_readiness_provider
@@ -16,6 +17,7 @@ class AssessmentsConfig(AppConfig):
             readiness_issues,
             snapshot_binding,
         )
+        from .usage import assessment_asset_usage
 
         register_activity_provider(
             ActivityType.ASSESSMENT,
@@ -24,3 +26,4 @@ class AssessmentsConfig(AppConfig):
         )
         register_readiness_provider("assessments.activities", readiness_issues)
         register_calendar_provider("assessments.windows", assessment_calendar_events)
+        register_asset_usage_provider("assessments", assessment_asset_usage)

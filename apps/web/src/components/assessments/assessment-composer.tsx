@@ -5,12 +5,13 @@ import {
   FileCheck2,
   ListChecks,
   Save,
+  Search,
   Settings2,
   ShieldCheck,
   Target,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -230,12 +231,8 @@ export function AssessmentComposer({
     <>
       <section className="assessment-composer-summary">
         <div>
-          <p className="assessment-rail-kicker">Revisión activa</p>
-          <h2>Arquitectura del instrumento</h2>
-          <p>
-            Cada cambio permanece en la revisión {revision.number} hasta que el
-            workflow produzca un snapshot aprobado.
-          </p>
+          <p>Revisión {revision.number}</p>
+          <h2>{revision.title}</h2>
         </div>
         <dl>
           <div>
@@ -256,10 +253,10 @@ export function AssessmentComposer({
           </div>
         </dl>
       </section>
-      <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="mt-4 space-y-4">
         <div className="space-y-5">
-          <section className="assessment-composer-card">
-            <div className="assessment-composer-card__header">
+          <details className="assessment-composer-card assessment-composer-settings">
+            <summary className="assessment-composer-card__header">
               <div>
                 <span className="assessment-icon-box">
                   <Settings2 />
@@ -276,7 +273,7 @@ export function AssessmentComposer({
               >
                 {revisionStatusLabel(revision.status)}
               </Badge>
-            </div>
+            </summary>
             <div className="assessment-composer-card__body">
               <Label htmlFor="assessment-editor-title">Título</Label>
               <Input
@@ -402,7 +399,7 @@ export function AssessmentComposer({
               ) : null}
               <MutationError error={metadata.error} />
             </div>
-          </section>
+          </details>
 
           <section className="assessment-composer-card">
             <div className="assessment-composer-card__header">
@@ -1046,38 +1043,112 @@ function QuestionCandidatePicker({
   onChange: (ids: string[]) => void;
   questions: QuestionOption[];
 }>) {
+  const [query, setQuery] = useState('');
+  const [type, setType] = useState('all');
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const types = useMemo(
+    () => [...new Set(questions.map((question) => question.type))].sort(),
+    [questions],
+  );
+  const visibleQuestions = useMemo(
+    () =>
+      questions.filter((question) => {
+        if (type !== 'all' && question.type !== type) return false;
+        if (!normalizedQuery) return true;
+        return `${question.code} ${question.bankName} ${question.type} ${publicQuestionExcerpt(question.public)}`
+          .toLocaleLowerCase()
+          .includes(normalizedQuery);
+      }),
+    [normalizedQuery, questions, type],
+  );
   return (
-    <fieldset className="assessment-objective-grid">
-      <legend className="mb-2 text-sm font-medium">
-        Preguntas candidatas aprobadas
-      </legend>
-      {questions.map((question) => {
-        const checked = candidateIds.includes(question.id);
-        return (
-          <label data-selected={checked} key={question.id}>
-            <input
-              checked={checked}
-              disabled={lockedIds.includes(question.id)}
-              onChange={(event) =>
-                onChange(
-                  event.target.checked
-                    ? [...candidateIds, question.id]
-                    : candidateIds.filter((id) => id !== question.id),
-                )
-              }
-              type="checkbox"
-            />
-            <span className="min-w-0">
-              <strong>{question.code}</strong>
-              <span>
-                {question.bankName} · {question.type} · v{question.number}
+    <fieldset className="assessment-candidate-picker">
+      <legend>Preguntas candidatas</legend>
+      <div className="assessment-candidate-picker__toolbar">
+        <label>
+          <Search aria-hidden="true" />
+          <Input
+            aria-label="Buscar pregunta candidata"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Código, banco o contenido…"
+            value={query}
+          />
+        </label>
+        <select
+          aria-label="Filtrar por tipo de pregunta"
+          className="academic-control"
+          onChange={(event) => setType(event.target.value)}
+          value={type}
+        >
+          <option value="all">Todos los tipos</option>
+          {types.map((candidateType) => (
+            <option key={candidateType} value={candidateType}>
+              {questionTypeLabel(candidateType)}
+            </option>
+          ))}
+        </select>
+        <span>{candidateIds.length} seleccionadas</span>
+      </div>
+      <div className="assessment-candidate-picker__list">
+        {visibleQuestions.map((question) => {
+          const checked = candidateIds.includes(question.id);
+          const excerpt = publicQuestionExcerpt(question.public);
+          return (
+            <label data-selected={checked} key={question.id}>
+              <input
+                checked={checked}
+                disabled={lockedIds.includes(question.id)}
+                onChange={(event) =>
+                  onChange(
+                    event.target.checked
+                      ? [...candidateIds, question.id]
+                      : candidateIds.filter((id) => id !== question.id),
+                  )
+                }
+                type="checkbox"
+              />
+              <span className="min-w-0">
+                <strong>{question.code}</strong>
+                <span>
+                  {questionTypeLabel(question.type)} · {question.bankName} · v
+                  {question.number}
+                </span>
+                {excerpt ? <small>{excerpt}</small> : null}
               </span>
-            </span>
-          </label>
-        );
-      })}
+            </label>
+          );
+        })}
+        {!visibleQuestions.length ? (
+          <p>No hay preguntas aprobadas que coincidan con el filtro.</p>
+        ) : null}
+      </div>
     </fieldset>
   );
+}
+
+function publicQuestionExcerpt(value: unknown) {
+  const root =
+    value && typeof value === 'object'
+      ? (value as Record<string, unknown>)
+      : {};
+  const prompt = root.prompt;
+  const pieces: string[] = [];
+  const stack: unknown[] = [prompt];
+  while (stack.length && pieces.join(' ').length < 220) {
+    const current = stack.pop();
+    if (!current || typeof current !== 'object' || Array.isArray(current))
+      continue;
+    const node = current as Record<string, unknown>;
+    if (typeof node.text === 'string') pieces.push(node.text);
+    if (node.attrs && typeof node.attrs === 'object') {
+      const attrs = node.attrs as Record<string, unknown>;
+      if (typeof attrs.latex === 'string') pieces.push(attrs.latex);
+      if (typeof attrs.altText === 'string') pieces.push(attrs.altText);
+    }
+    if (Array.isArray(node.content)) stack.push(...node.content.toReversed());
+  }
+  const text = pieces.join(' ').replace(/\s+/g, ' ').trim();
+  return text.length > 180 ? `${text.slice(0, 177)}…` : text;
 }
 
 function revisionStatusLabel(status: string) {

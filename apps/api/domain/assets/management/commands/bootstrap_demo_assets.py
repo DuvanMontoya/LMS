@@ -16,20 +16,23 @@ from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from botocore.client import BaseClient
+from botocore.exceptions import BotoCoreError, ClientError
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from PIL import Image, ImageDraw
 from pypdf import PdfWriter
 
 from domain.assets.choices import AssetKind, AssetVersionStatus
 from domain.assets.models import Asset
+from domain.assets.policies import can_upload_asset
 from domain.assets.storage.boto3_gateway import build_s3_client
 from domain.assets.uploads.services import (
     complete_asset_upload,
     initialize_asset_upload,
 )
-from domain.organizations.models import Organization
+from domain.organizations.choices import MembershipStatus
+from domain.organizations.models import Membership, Organization
 
 if TYPE_CHECKING:
     from domain.identity.models import User
@@ -202,25 +205,46 @@ class Command(BaseCommand):
         if not settings.DEBUG:
             raise CommandError("Los assets demo sólo se permiten con DEBUG=True.")
         organization = Organization.objects.filter(slug="organizacion-demo").first()
-        actor = get_user_model().objects.filter(email="owner@demo.local").first()
-        if organization is None or actor is None:
+        if organization is None:
             raise CommandError(
                 "Ejecuta primero pnpm demo:organizations para crear el contexto demo."
+            )
+        actor = self._find_upload_actor(organization)
+        if actor is None:
+            raise CommandError(
+                "La organización demo no tiene un miembro activo autorizado para "
+                "cargar recursos."
             )
 
         created = 0
         skipped = 0
+        client = build_s3_client(settings.ASSET_S3_INTERNAL_ENDPOINT or None)
         with tempfile.TemporaryDirectory(prefix="lms-demo-assets-") as directory:
             root = Path(directory)
             for specification in DEMO_ASSETS:
-                if Asset.objects.filter(
-                    organization=organization,
-                    name=specification.name,
-                    current_version__status=AssetVersionStatus.READY,
-                ).exists():
+                current_asset = (
+                    Asset.objects.filter(
+                        organization=organization,
+                        name=specification.name,
+                        current_version__status=AssetVersionStatus.READY,
+                    )
+                    .select_related("current_version")
+                    .first()
+                )
+                if current_asset is not None and self._object_is_available(
+                    client=client,
+                    asset=current_asset,
+                ):
                     skipped += 1
                     self.stdout.write(f"SKIP {specification.name}: ya está listo.")
                     continue
+                if current_asset is not None:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"REPAIR {specification.name}: el objeto actual no existe; "
+                            "se creará una nueva versión."
+                        )
+                    )
                 self._create_and_process(
                     specification=specification,
                     root=root,
@@ -235,6 +259,42 @@ class Command(BaseCommand):
                 f"Assets demo listos: creados={created}, omitidos={skipped}."
             )
         )
+
+    @staticmethod
+    def _find_upload_actor(organization: Organization) -> User | None:
+        memberships = list(
+            Membership.objects.filter(
+                organization=organization,
+                status=MembershipStatus.ACTIVE.value,
+            ).select_related("user")
+        )
+        preferred_emails = ("author@demo.local", "administrator@demo.local")
+        memberships.sort(
+            key=lambda membership: (
+                preferred_emails.index(membership.user.email)
+                if membership.user.email in preferred_emails
+                else len(preferred_emails),
+                membership.user.email,
+            )
+        )
+        for membership in memberships:
+            if can_upload_asset(membership.user, organization):
+                return membership.user
+        return None
+
+    @staticmethod
+    def _object_is_available(*, client: BaseClient, asset: Asset) -> bool:
+        version = asset.current_version
+        if version is None or not version.storage_bucket or not version.storage_key:
+            return False
+        try:
+            response = client.head_object(
+                Bucket=version.storage_bucket,
+                Key=version.storage_key,
+            )
+        except (BotoCoreError, ClientError):
+            return False
+        return int(response.get("ContentLength", -1)) == version.size_bytes
 
     def _create_and_process(
         self,

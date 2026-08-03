@@ -1,11 +1,9 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { CurriculumCreateActions } from '@/components/catalog/curriculum-create-actions';
 import { CurriculumExplorer } from '@/components/catalog/curriculum-explorer';
 import { CurriculumWorkspaceNav } from '@/components/catalog/curriculum-workspace-nav';
 import { PageHeader } from '@/components/platform/page-header';
-import { Button } from '@/components/ui/button';
 import { createPlatformServerClient } from '@/lib/api/platform-server-client';
 import { getOrganizationForPage } from '@/lib/organizations/server';
 
@@ -40,23 +38,8 @@ export default async function CurriculumPage({
   ]);
   const canManage = access.capabilities.includes('catalog.manage');
   return (
-    <main className="academic-page">
+    <main className="academic-page curriculum-page" id="contenido-principal">
       <PageHeader
-        actions={
-          <nav aria-label="Herramientas de currículo" className="flex gap-2">
-            {[
-              ['Conceptos', 'conceptos'],
-              ['Objetivos', 'objetivos'],
-              ['Prerrequisitos', 'prerrequisitos'],
-            ].map(([label, route]) => (
-              <Button asChild key={route} size="sm" variant="outline">
-                <Link href={`/organizaciones/${slug}/curriculo/${route}`}>
-                  {label}
-                </Link>
-              </Button>
-            ))}
-          </nav>
-        }
         breadcrumbs={[
           { href: `/organizaciones/${slug}`, label: organization.name },
           { label: 'Currículo' },

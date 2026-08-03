@@ -280,10 +280,13 @@ function PlatformSidebar({
             capabilities.has('catalog.teaching_responsibility.manage'),
         },
         {
-          href: `${organizationBase}/cursos`,
+          activePrefixes: [`${organizationBase}/cursos/`],
+          exact: true,
+          href: capabilities.has('course.published.view')
+            ? `${organizationBase}/cursos`
+            : `${organizationBase}/cursos/autoria`,
           icon: BookOpenCheck,
-          label:
-            teachingWorkspace && !contentWorkspace ? 'Mis cursos' : 'Cursos',
+          label: 'Cursos',
           visible:
             (institutionOperations || contentWorkspace || teachingWorkspace) &&
             (capabilities.has('course.authoring.view') ||
@@ -320,14 +323,6 @@ function PlatformSidebar({
           visible:
             (institutionOperations || contentWorkspace || teachingWorkspace) &&
             capabilities.has('asset.library.view'),
-        },
-        {
-          href: `${organizationBase}/biblioteca`,
-          icon: LibraryBig,
-          label: 'Biblioteca',
-          visible:
-            (institutionOperations || contentWorkspace || teachingWorkspace) &&
-            capabilities.has('course.published.view'),
         },
       ]
     : [];

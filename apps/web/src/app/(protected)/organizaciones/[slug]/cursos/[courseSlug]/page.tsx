@@ -1,10 +1,25 @@
+import {
+  ArrowRight,
+  BookOpenCheck,
+  Eye,
+  FileCheck2,
+  Layers3,
+  ListTree,
+  Send,
+} from 'lucide-react';
 import Link from 'next/link';
-import { ArrowRight, FileCheck2, ListTree, Send } from 'lucide-react';
 
 import { AlignmentEditor } from '@/components/courses/alignment-editor';
 import { CourseMetadataForm } from '@/components/courses/course-metadata-form';
 import { ReviewPanel } from '@/components/courses/review-panel';
-import { PageHeader } from '@/components/platform/page-header';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { courseStatusLabel } from '@/lib/courses/labels';
@@ -17,133 +32,174 @@ export default async function CourseWorkspacePage({
   const data = await getCourseWorkspace(slug, courseSlug);
   const capabilities = data.access.capabilities;
   const canManage = capabilities.includes('course.authoring.manage');
+  const units = data.outline.modules.flatMap((module) => module.units);
+  const readyUnits = units.filter(
+    (unit) => unit.content_status === 'ready',
+  ).length;
+
   return (
-    <main className="academic-page">
-      <PageHeader
-        actions={
-          <nav aria-label="Secciones del curso" className="flex gap-2">
-            <Button asChild size="sm" variant="outline">
-              <Link
-                href={`/organizaciones/${slug}/cursos/${courseSlug}/estructura`}
-              >
-                <ListTree data-icon="inline-start" />
-                Estructura
+    <main className="academic-page course-workspace" id="contenido-principal">
+      <Breadcrumb className="min-w-0 overflow-hidden">
+        <BreadcrumbList className="min-w-0">
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/organizaciones/${slug}/cursos/autoria`}>
+                Autoría
               </Link>
-            </Button>
-            {capabilities.includes('course.release.history.view') ? (
-              <Button asChild size="sm" variant="outline">
-                <Link
-                  href={`/organizaciones/${slug}/cursos/${courseSlug}/publicacion`}
-                >
-                  <Send data-icon="inline-start" />
-                  Publicación
-                </Link>
-              </Button>
-            ) : null}
-            {data.canAuthor ? (
-              <Button asChild size="sm" variant="outline">
-                <Link
-                  href={`/organizaciones/${slug}/cursos/${courseSlug}/revision`}
-                >
-                  <FileCheck2 data-icon="inline-start" />
-                  Revisión
-                </Link>
-              </Button>
-            ) : null}
-          </nav>
-        }
-        breadcrumbs={[
-          { href: `/organizaciones/${slug}`, label: data.organization.name },
-          { href: `/organizaciones/${slug}/cursos`, label: 'Cursos' },
-          { label: data.revision.title },
-        ]}
-        description={
-          data.canAuthor
-            ? data.revision.summary
-            : 'Consulta la estructura académica aprobada para tus responsabilidades docentes.'
-        }
-        eyebrow={data.canAuthor ? 'Espacio de autoría' : 'Curso asignado'}
-        title={data.revision.title}
-      />
-      <dl className="mt-5 grid border-y sm:grid-cols-2 lg:grid-cols-4">
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem className="min-w-0">
+            <BreadcrumbPage className="truncate">
+              {data.revision.title}
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <section className="course-workspace__hero">
+        <div>
+          <div className="course-workspace__eyebrow">
+            <span>
+              {data.canAuthor ? 'Espacio de autoría' : 'Curso asignado'}
+            </span>
+            <Badge variant="secondary">
+              {courseStatusLabel(data.revision.authoring_status)}
+            </Badge>
+          </div>
+          <h1>{data.revision.title}</h1>
+          <p>
+            {data.canAuthor
+              ? data.revision.summary
+              : 'Consulta la estructura académica aprobada para tus responsabilidades docentes.'}
+          </p>
+        </div>
+        {capabilities.includes('course.published.view') ? (
+          <Button asChild>
+            <Link
+              href={`/organizaciones/${slug}/cursos/publicados/${courseSlug}`}
+            >
+              <Eye />
+              Vista publicada
+            </Link>
+          </Button>
+        ) : null}
+      </section>
+
+      <nav aria-label="Secciones del curso" className="course-workspace__nav">
+        <Link
+          aria-current="page"
+          href={`/organizaciones/${slug}/cursos/${courseSlug}`}
+        >
+          <BookOpenCheck />
+          Resumen
+        </Link>
+        <Link href={`/organizaciones/${slug}/cursos/${courseSlug}/estructura`}>
+          <ListTree />
+          Estructura
+        </Link>
+        {capabilities.includes('course.release.history.view') ? (
+          <Link
+            href={`/organizaciones/${slug}/cursos/${courseSlug}/publicacion`}
+          >
+            <Send />
+            Publicación
+          </Link>
+        ) : null}
+        {data.canAuthor ? (
+          <Link href={`/organizaciones/${slug}/cursos/${courseSlug}/revision`}>
+            <FileCheck2 />
+            Revisión
+          </Link>
+        ) : null}
+      </nav>
+
+      <dl className="course-workspace__facts">
         <CourseFact
-          label="Estado del curso"
+          label="Curso"
           value={courseStatusLabel(data.course.status)}
         />
+        <CourseFact label="Revisión" value={`Número ${data.revision.number}`} />
         <CourseFact
-          badge
-          label="Estado de autoría"
-          value={courseStatusLabel(data.revision.authoring_status)}
+          label="Programa"
+          value={`${data.outline.modules.length} módulos · ${units.length} unidades`}
         />
         <CourseFact
-          label="Revisión estructural"
-          value={`Número ${data.revision.number}`}
-        />
-        <CourseFact
-          label="Estructura"
-          value={`${data.outline.modules.length} módulos`}
+          label="Contenido listo"
+          value={`${readyUnits} de ${units.length} unidades`}
         />
       </dl>
+
       {data.canAuthor && data.readiness ? (
         <>
-          <CourseMetadataForm
-            canManage={canManage}
-            courseSlug={courseSlug}
-            key={data.revision.lock_version}
-            revision={data.revision}
-            slug={slug}
-          />
-          <div className="mt-7 grid gap-6 lg:grid-cols-2">
-            <AlignmentEditor
+          <div className="course-workspace__metadata">
+            <CourseMetadataForm
               canManage={canManage}
               courseSlug={courseSlug}
-              objectives={data.objectives}
-              outline={data.outline}
-              slug={slug}
-              subjects={data.subjects}
-            />
-            <ReviewPanel
-              canApprove={capabilities.includes('course.authoring.approve')}
-              canReview={capabilities.includes('course.authoring.review')}
-              canSubmit={capabilities.includes('course.authoring.submit')}
-              courseSlug={courseSlug}
-              readiness={data.readiness}
+              key={data.revision.lock_version}
               revision={data.revision}
               slug={slug}
             />
           </div>
+          <div className="course-workspace__governance">
+            <div className="course-workspace__panel">
+              <AlignmentEditor
+                canManage={canManage}
+                courseSlug={courseSlug}
+                objectives={data.objectives}
+                outline={data.outline}
+                slug={slug}
+                subjects={data.subjects}
+              />
+            </div>
+            <div className="course-workspace__panel">
+              <ReviewPanel
+                canApprove={capabilities.includes('course.authoring.approve')}
+                canReview={capabilities.includes('course.authoring.review')}
+                canSubmit={capabilities.includes('course.authoring.submit')}
+                courseSlug={courseSlug}
+                readiness={data.readiness}
+                revision={data.revision}
+                slug={slug}
+              />
+            </div>
+          </div>
         </>
       ) : null}
-      <section className="mt-7 border-y">
-        <header className="border-b px-5 py-4">
-          <h2 className="font-semibold">Estructura del curso</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {data.outline.modules.length} módulos en la revisión actual.
-          </p>
+
+      <section className="course-workspace__structure">
+        <header>
+          <div>
+            <p className="academic-kicker">Programa actual</p>
+            <h2>Estructura del curso</h2>
+            <p>
+              Abre una unidad para editar su documento académico, recursos y
+              actividades.
+            </p>
+          </div>
+          <span>
+            <Layers3 />
+            {data.outline.modules.length} módulos
+          </span>
         </header>
-        <ol className="divide-y">
+        <ol>
           {data.outline.modules.map((module) => (
-            <li
-              className="grid lg:grid-cols-[17rem_minmax(0,1fr)]"
-              key={module.id}
-            >
-              <div className="border-b bg-muted/15 px-5 py-4 lg:border-r lg:border-b-0">
-                <span className="text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase">
-                  Módulo
-                </span>
-                <strong className="mt-1 block text-sm">{module.title}</strong>
-              </div>
-              <ul className="divide-y text-sm">
+            <li key={module.id}>
+              <header>
+                <span>{String(module.position).padStart(2, '0')}</span>
+                <div>
+                  <small>Módulo {module.position}</small>
+                  <strong>{module.title}</strong>
+                </div>
+              </header>
+              <ul>
                 {module.units.map((unit) => (
-                  <li
-                    className="flex flex-wrap items-center gap-3 px-5 py-3 hover:bg-muted/20"
-                    key={unit.id}
-                  >
-                    <span className="min-w-0 flex-1 font-medium">
+                  <li key={unit.id}>
+                    <span className="course-workspace__unit-title">
                       {unit.title}
                     </span>
                     <Badge
-                      className="rounded"
+                      className="course-workspace__unit-status"
                       variant={
                         unit.content_status === 'ready'
                           ? 'secondary'
@@ -157,17 +213,12 @@ export default async function CourseWorkspacePage({
                           : 'Sin contenido'}
                     </Badge>
                     {data.canAuthor ? (
-                      <Button
-                        asChild
-                        className="ml-auto"
-                        size="xs"
-                        variant="ghost"
-                      >
+                      <Button asChild size="icon-xs" variant="ghost">
                         <Link
+                          aria-label={`Abrir ${unit.title}`}
                           href={`/organizaciones/${slug}/cursos/${courseSlug}/unidades/${unit.id}/contenido`}
                         >
-                          Abrir
-                          <ArrowRight data-icon="inline-end" />
+                          <ArrowRight />
                         </Link>
                       </Button>
                     ) : null}
@@ -178,46 +229,35 @@ export default async function CourseWorkspacePage({
           ))}
         </ol>
       </section>
-      {data.canAuthor ? (
-        <section className="mt-7 border-t pt-5">
-          <h2 className="text-sm font-semibold">Historial de transiciones</h2>
-          <ol className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+
+      {data.canAuthor && data.transitions.length ? (
+        <details className="course-workspace__history">
+          <summary>
+            Historial de la revisión · {data.transitions.length} movimientos
+          </summary>
+          <ol>
             {data.transitions.map((transition) => (
-              <li
-                className="border-l-2 border-primary pl-3 text-sm"
-                key={transition.id}
-              >
-                <strong>{courseStatusLabel(transition.to_status)}</strong> por{' '}
-                {transition.actor_display}
-                {transition.note ? (
-                  <p className="text-foreground/80">{transition.note}</p>
-                ) : null}
+              <li key={transition.id}>
+                <strong>{courseStatusLabel(transition.to_status)}</strong>
+                <span>por {transition.actor_display}</span>
+                {transition.note ? <p>{transition.note}</p> : null}
               </li>
             ))}
           </ol>
-        </section>
+        </details>
       ) : null}
     </main>
   );
 }
 
 function CourseFact({
-  badge = false,
   label,
   value,
-}: Readonly<{ badge?: boolean; label: string; value: string }>) {
+}: Readonly<{ label: string; value: string }>) {
   return (
-    <div className="border-b px-5 py-4 last:border-b-0 sm:border-r sm:nth-[2n]:border-r-0 lg:border-b-0 lg:nth-[2n]:border-r lg:last:border-r-0">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-sm font-semibold">
-        {badge ? (
-          <Badge className="rounded" variant="secondary">
-            {value}
-          </Badge>
-        ) : (
-          value
-        )}
-      </dd>
+    <div>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
     </div>
   );
 }

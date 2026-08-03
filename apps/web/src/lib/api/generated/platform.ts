@@ -143,6 +143,9 @@ export interface paths {
   '/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/': {
     get: operations['assessment_attempt_retrieve'];
   };
+  '/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/assets/access/': {
+    post: operations['assessment_attempt_asset_access'];
+  };
   '/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/responses/{attempt_item_id}/': {
     put: operations['assessment_responses_save'];
   };
@@ -261,6 +264,9 @@ export interface paths {
   };
   '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/': {
     get: operations['assessment_question_retrieve'];
+  };
+  '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/preview/': {
+    get: operations['assessment_question_preview'];
   };
   '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/revisions/{revision_id}/': {
     get: operations['assessment_question_revision_retrieve'];
@@ -1309,9 +1315,11 @@ export interface components {
     Assessment: {
       /** Format: date-time */
       archived_at: string | null;
+      attempt_limit: number | null;
       authoring_status: string;
       /** Format: date-time */
       created_at: string;
+      description: string;
       /** Format: uuid */
       id: string;
       latest_revision_id: string | null;
@@ -1319,7 +1327,10 @@ export interface components {
       latest_version_number: number | null;
       slug: string;
       status: components['schemas']['CourseLifecycleStatus'];
+      time_limit_minutes: number | null;
       title: string;
+      /** Format: date-time */
+      updated_at: string;
     };
     AssessmentActivityBinding: {
       /** Format: uuid */
@@ -1334,6 +1345,12 @@ export interface components {
       /** Format: uuid */
       assessment_version_id: string;
       expected_revision_version: number;
+    };
+    AssessmentAssetAccess: {
+      asset_version_ids: string[];
+    };
+    AssessmentAssetAccessResponse: {
+      assets: components['schemas']['AssetAccessDescriptor'][];
     };
     /**
      * @description * `active` - Activa
@@ -1713,6 +1730,7 @@ export interface components {
       | 'expired'
       | 'failed';
     AssetUsage: {
+      assessment_versions: unknown[];
       content_versions: unknown[];
       current_reference_count: number;
       releases: unknown[];
@@ -1841,6 +1859,7 @@ export interface components {
     Attempt: {
       /** Format: uuid */
       assessment_version_id: string;
+      assets: readonly components['schemas']['AssetAccessDescriptor'][];
       attempt_number: number;
       /** Format: uuid */
       delivery_assignment_id: string;
@@ -4624,7 +4643,11 @@ export interface components {
       latest_version_number: number | null;
       open_revision_id: string | null;
       open_revision_status: string | null;
+      preview: {
+        [key: string]: unknown;
+      } | null;
       status: components['schemas']['CourseLifecycleStatus'];
+      type: string | null;
     };
     QuestionBank: {
       /** Format: date-time */
@@ -4685,6 +4708,12 @@ export interface components {
       /** Format: uri */
       previous: string | null;
       results: components['schemas']['Question'][];
+    };
+    QuestionPreview: {
+      assets: components['schemas']['AssetAccessDescriptor'][];
+      code: string;
+      public: unknown;
+      type: string;
     };
     QuestionRevision: {
       /** Format: uuid */
@@ -7210,6 +7239,28 @@ export interface operations {
       };
     };
   };
+  assessment_attempt_asset_access: {
+    parameters: {
+      path: {
+        attempt_id: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssessmentAssetAccess'];
+        'application/x-www-form-urlencoded': components['schemas']['AssessmentAssetAccess'];
+        'multipart/form-data': components['schemas']['AssessmentAssetAccess'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['AssessmentAssetAccessResponse'];
+        };
+      };
+    };
+  };
   assessment_responses_save: {
     parameters: {
       path: {
@@ -8035,6 +8086,22 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['Question'];
+        };
+      };
+    };
+  };
+  assessment_question_preview: {
+    parameters: {
+      path: {
+        bank_id: string;
+        question_id: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['QuestionPreview'];
         };
       };
     };

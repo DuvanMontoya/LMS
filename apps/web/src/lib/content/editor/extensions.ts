@@ -1,4 +1,10 @@
-import { Mark, mergeAttributes, Node, type Extensions } from '@tiptap/core';
+import {
+  Mark,
+  mergeAttributes,
+  Node,
+  nodeInputRule,
+  type Extensions,
+} from '@tiptap/core';
 import {
   Table,
   TableCell,
@@ -146,6 +152,18 @@ export const InlineMath = Node.create({
       HTMLAttributes.latex,
     ];
   },
+  addInputRules() {
+    return [
+      nodeInputRule({
+        find: /(?<![\\$])\$(?!\$)[^$\n]+\$$/,
+        getAttributes: (match) => ({
+          latex: match[0].slice(1, -1),
+          nodeId: crypto.randomUUID(),
+        }),
+        type: this.type,
+      }),
+    ];
+  },
 });
 
 export const DisplayMath = Node.create({
@@ -167,6 +185,18 @@ export const DisplayMath = Node.create({
       'div',
       mergeAttributes(HTMLAttributes, { 'data-display-math': '' }),
       HTMLAttributes.latex,
+    ];
+  },
+  addInputRules() {
+    return [
+      nodeInputRule({
+        find: /^\$\$(?!\$).+\$\$$/,
+        getAttributes: (match) => ({
+          latex: match[0].slice(2, -2),
+          nodeId: crypto.randomUUID(),
+        }),
+        type: this.type,
+      }),
     ];
   },
 });

@@ -14,17 +14,24 @@ type RefreshContext = {
   unitId: string;
 };
 
+type AssessmentRefreshContext = {
+  attemptId: string;
+  slug: string;
+};
+
 function item(descriptor: AssetAccessDescriptor, roles: readonly string[]) {
   return descriptor.variants.find((variant) => roles.includes(variant.role));
 }
 
 export function AcademicAsset({
+  assessmentRefreshContext,
   attrs,
   captionDescriptor,
   descriptor: initialDescriptor,
   kind,
   refreshContext,
 }: Readonly<{
+  assessmentRefreshContext?: AssessmentRefreshContext;
   attrs: Record<string, unknown>;
   captionDescriptor?: AssetAccessDescriptor;
   descriptor?: AssetAccessDescriptor;
@@ -36,7 +43,7 @@ export function AcademicAsset({
   const [error, setError] = useState('');
   const assetVersionId = String(attrs.assetVersionId ?? '');
   async function refresh() {
-    if (!refreshContext || refreshed) {
+    if ((!refreshContext && !assessmentRefreshContext) || refreshed) {
       setError(
         'La URL temporal expiró. Recarga la unidad para intentarlo de nuevo.',
       );
@@ -49,21 +56,35 @@ export function AcademicAsset({
         ? [attrs.captionsAssetVersionId]
         : []),
     ];
-    const { data, response } = await platformBrowserClient.POST(
-      '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/assets/access/',
-      {
-        body: {
-          asset_version_ids: ids,
-          unit_id: refreshContext.unitId,
-        },
-        params: {
-          path: {
-            enrollment_id: refreshContext.enrollmentId,
-            slug: refreshContext.slug,
+    const result = assessmentRefreshContext
+      ? await platformBrowserClient.POST(
+          '/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/assets/access/',
+          {
+            body: { asset_version_ids: ids },
+            params: {
+              path: {
+                attempt_id: assessmentRefreshContext.attemptId,
+                slug: assessmentRefreshContext.slug,
+              },
+            },
           },
-        },
-      },
-    );
+        )
+      : await platformBrowserClient.POST(
+          '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/assets/access/',
+          {
+            body: {
+              asset_version_ids: ids,
+              unit_id: refreshContext!.unitId,
+            },
+            params: {
+              path: {
+                enrollment_id: refreshContext!.enrollmentId,
+                slug: refreshContext!.slug,
+              },
+            },
+          },
+        );
+    const { data, response } = result;
     if (!response.ok || !data) {
       setError('No fue posible renovar el acceso temporal.');
       return;

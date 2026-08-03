@@ -31,6 +31,8 @@ export type QuestionDefinitionV1 = {
     | 'matching'
     | 'mathematical_expression';
   public: QuestionPublicPayloadV1;
+  authoring?: Authoring;
+  worked_solution?: LMSUnitAcademicDocumentVersion2;
   grading: {
     /**
      * @minItems 1
@@ -142,6 +144,321 @@ export type QuestionDefinitionV1 = {
 export type QuestionPublicPayloadV1 = {
   [k: string]: any;
 };
+export type Node =
+  ImageAsset | AudioAsset | VideoAsset | DownloadAsset | LegacyNode;
+export type NodeId = string;
+export type AssetVersionId = string;
+export type PlainText = string;
 export type Identifier = string;
 export type Decimal = string;
 export type NonNegativeDecimal = string;
+
+export interface Authoring {
+  framework?: 'icfes' | 'higher_education' | 'research' | 'other';
+  difficulty?: 'foundational' | 'intermediate' | 'advanced' | 'expert';
+  cognitive_process?:
+    'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';
+  estimated_minutes?: number;
+  /**
+   * @maxItems 20
+   */
+  tags?:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+      ];
+  source_note?: string;
+  choice_rationales?: {
+    [k: string]: string;
+  };
+}
+/**
+ * Canonical semantic unit content with immutable academic asset references.
+ */
+export interface LMSUnitAcademicDocumentVersion2 {
+  type: 'doc';
+  /**
+   * @minItems 1
+   * @maxItems 1000
+   */
+  content: [Node, ...Node[]];
+}
+export interface ImageAsset {
+  type: 'imageAsset';
+  attrs: {
+    [k: string]: any;
+  };
+}
+export interface AudioAsset {
+  type: 'audioAsset';
+  attrs: {
+    nodeId: NodeId;
+    assetVersionId: AssetVersionId;
+    title: string;
+    transcript: string;
+    caption: PlainText;
+  };
+}
+export interface VideoAsset {
+  type: 'videoAsset';
+  attrs: {
+    [k: string]: any;
+  };
+}
+export interface DownloadAsset {
+  type: 'documentAsset' | 'datasetAsset';
+  attrs: {
+    nodeId: NodeId;
+    assetVersionId: AssetVersionId;
+    label: string;
+    description: PlainText;
+  };
+}
+export interface LegacyNode {
+  type: string;
+  attrs?: {
+    [k: string]: any;
+  };
+  /**
+   * @maxItems 5000
+   */
+  content?: Node[];
+  text?: string;
+  /**
+   * @maxItems 4
+   */
+  marks?:
+    | []
+    | [
+        {
+          [k: string]: any;
+        },
+      ]
+    | [
+        {
+          [k: string]: any;
+        },
+        {
+          [k: string]: any;
+        },
+      ]
+    | [
+        {
+          [k: string]: any;
+        },
+        {
+          [k: string]: any;
+        },
+        {
+          [k: string]: any;
+        },
+      ]
+    | [
+        {
+          [k: string]: any;
+        },
+        {
+          [k: string]: any;
+        },
+        {
+          [k: string]: any;
+        },
+        {
+          [k: string]: any;
+        },
+      ];
+  [k: string]: any;
+}

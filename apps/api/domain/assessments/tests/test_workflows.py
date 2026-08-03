@@ -519,6 +519,38 @@ class AttemptWorkflowTests(AssessmentFixtureMixin, TestCase):
         self.assertEqual(submitted.status, AttemptStatus.GRADED)
         self.assertEqual(submitted.total_score, Decimal("0.000"))
 
+    def test_start_finalizes_stale_attempt_before_opening_the_next_one(self) -> None:
+        context = self.assessment_context(with_learning=True)
+        delivery = create_delivery(
+            actor=context["owner"],
+            organization=context["organization"],
+            assessment_version=context["assessment_version"],
+            name="Entrega con recuperación de expiración",
+            course_release=context["release"],
+            migration_review_required=True,
+        )
+        delivery = activate_delivery(
+            actor=context["owner"],
+            delivery=delivery,
+            expected_version=delivery.lock_version,
+        )
+        assignment = assign_delivery(
+            actor=context["owner"],
+            delivery=delivery,
+            release_assignment=context["enrollment"].current_release_assignment,
+        )
+        first = start_attempt(actor=context["learner"], assignment=assignment)
+        Attempt.objects.filter(pk=first.pk).update(
+            expires_at=timezone.now() - timedelta(seconds=1)
+        )
+
+        second = start_attempt(actor=context["learner"], assignment=assignment)
+
+        first.refresh_from_db()
+        self.assertEqual(first.status, AttemptStatus.GRADED)
+        self.assertEqual(second.attempt_number, 2)
+        self.assertEqual(second.status, AttemptStatus.IN_PROGRESS)
+
 
 class DatabaseImmutabilityTests(AssessmentFixtureMixin, TransactionTestCase):
     reset_sequences = True

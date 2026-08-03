@@ -1,11 +1,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Images, Search } from 'lucide-react';
-import Link from 'next/link';
+import { FolderOpen, ImagePlus, Search, Upload } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { AssetPreview } from '@/components/assets/asset-preview';
+import { AssetUploadForm } from '@/components/assets/asset-upload-form';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,7 +25,7 @@ import { assetKindLabel, formatBytes } from '@/lib/assets/labels';
 
 type AssetKind = components['schemas']['AssetKind'];
 type AssetSummary = components['schemas']['AssetSummary'];
-type InsertableKind = Exclude<AssetKind, 'caption'>;
+export type InsertableAssetKind = Exclude<AssetKind, 'caption'>;
 
 async function listAssets(slug: string): Promise<AssetSummary[]> {
   const { data, error, response } = await platformBrowserClient.GET(
@@ -38,21 +38,30 @@ async function listAssets(slug: string): Promise<AssetSummary[]> {
     },
   );
   if (!response.ok || !data)
-    throw new Error(
-      apiErrorMessage(error, 'No fue posible abrir la biblioteca.'),
-    );
+    throw new Error(apiErrorMessage(error, 'No fue posible abrir Recursos.'));
   return data as unknown as AssetSummary[];
 }
 
 export function AssetPickerDialog({
+  allowDecorative = true,
+  allowedKinds = ['image', 'audio', 'video', 'document', 'dataset'],
+  iconOnly = false,
   onInsert,
   slug,
+  triggerLabel = 'Imagen o recurso',
 }: Readonly<{
+  allowDecorative?: boolean;
+  allowedKinds?: readonly InsertableAssetKind[];
+  iconOnly?: boolean;
   onInsert: (node: Record<string, unknown>) => void;
   slug: string;
+  triggerLabel?: string;
 }>) {
   const [open, setOpen] = useState(false);
-  const [kind, setKind] = useState<InsertableKind>('image');
+  const [source, setSource] = useState<'computer' | 'resources'>('computer');
+  const [kind, setKind] = useState<InsertableAssetKind>(
+    allowedKinds[0] ?? 'image',
+  );
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState('');
   const [altText, setAltText] = useState('');
@@ -85,6 +94,7 @@ export function AssetPickerDialog({
       asset.kind === 'caption' && asset.current_version?.status === 'ready',
   );
   const selected = candidates.find((asset) => asset.id === selectedId);
+
   function insert() {
     const versionId = selected?.current_version?.id;
     if (!selected || !versionId) return;
@@ -93,9 +103,9 @@ export function AssetPickerDialog({
       kind === 'image'
         ? {
             ...common,
-            altText: decorative ? '' : altText.trim(),
+            altText: allowDecorative && decorative ? '' : altText.trim(),
             caption: caption.trim(),
-            decorative,
+            decorative: allowDecorative && decorative,
             displaySize: 'large',
           }
         : kind === 'audio'
@@ -134,10 +144,11 @@ export function AssetPickerDialog({
     });
     setOpen(false);
   }
+
   const accessibilityValid =
     selected &&
     (kind === 'image'
-      ? decorative || Boolean(altText.trim())
+      ? (allowDecorative && decorative) || Boolean(altText.trim())
       : kind === 'audio'
         ? Boolean(title.trim() && transcript.trim())
         : kind === 'video'
@@ -145,224 +156,286 @@ export function AssetPickerDialog({
               title.trim() && transcript.trim() && (silent || captionVersionId),
             )
           : Boolean(label.trim()));
+
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
-        <Button size="sm" type="button" variant="ghost">
-          <Images />
-          Recurso
+        <Button
+          aria-label={iconOnly ? triggerLabel : undefined}
+          size={iconOnly ? 'icon-sm' : 'sm'}
+          type="button"
+          variant="ghost"
+        >
+          <ImagePlus />
+          {iconOnly ? null : triggerLabel}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Insertar recurso académico</DialogTitle>
+          <DialogTitle>Añadir archivo</DialogTitle>
           <DialogDescription>
-            Elige una versión lista. La referencia quedará fijada y no cambiará
-            cuando exista una versión más reciente.
+            Sube uno desde este equipo o reutiliza una versión lista de
+            Recursos.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 md:grid-cols-[1fr_1.15fr]">
-          <div>
-            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
-              <div className="space-y-1.5">
-                <Label htmlFor="picker-kind">Tipo</Label>
-                <select
-                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-                  id="picker-kind"
-                  onChange={(event) => {
-                    setKind(event.target.value as InsertableKind);
-                    setSelectedId('');
-                  }}
-                  value={kind}
-                >
-                  <option value="image">Imagen</option>
-                  <option value="audio">Audio</option>
-                  <option value="video">Video</option>
-                  <option value="document">Documento</option>
-                  <option value="dataset">Dataset</option>
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="picker-search">Buscar</Label>
-                <div className="relative">
-                  <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+
+        <div
+          aria-label="Origen del archivo"
+          className="asset-picker-source"
+          role="tablist"
+        >
+          <button
+            aria-selected={source === 'computer'}
+            data-active={source === 'computer'}
+            onClick={() => setSource('computer')}
+            role="tab"
+            type="button"
+          >
+            <Upload /> Desde mi equipo
+          </button>
+          <button
+            aria-selected={source === 'resources'}
+            data-active={source === 'resources'}
+            onClick={() => setSource('resources')}
+            role="tab"
+            type="button"
+          >
+            <FolderOpen /> Recursos
+          </button>
+        </div>
+
+        {source === 'computer' ? (
+          <AssetUploadForm
+            allowedKinds={allowedKinds}
+            compact
+            onReady={(assetId, uploadedKind) => {
+              setKind(uploadedKind as InsertableAssetKind);
+              setSelectedId(assetId);
+              setSource('resources');
+              void query.refetch();
+            }}
+            slug={slug}
+          />
+        ) : (
+          <div className="asset-picker-layout">
+            <section className="asset-picker-browser">
+              <div className="asset-picker-filters">
+                <label>
+                  <span className="sr-only">Tipo</span>
+                  <select
+                    className="academic-control"
+                    onChange={(event) => {
+                      setKind(event.target.value as InsertableAssetKind);
+                      setSelectedId('');
+                    }}
+                    value={kind}
+                  >
+                    {allowedKinds.map((value) => (
+                      <option key={value} value={value}>
+                        {assetKindLabel(value)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="relative">
+                  <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <span className="sr-only">Buscar en Recursos</span>
                   <Input
                     className="pl-9"
-                    id="picker-search"
                     onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Buscar en Recursos"
                     value={search}
                   />
-                </div>
+                </label>
               </div>
-            </div>
-            <div
-              aria-label={`Recursos listos de tipo ${assetKindLabel(kind)}`}
-              className="mt-3 max-h-72 space-y-2 overflow-y-auto"
-              role="listbox"
-            >
-              {candidates.map((asset) => (
-                <button
-                  aria-selected={selectedId === asset.id}
-                  className="grid w-full grid-cols-[4rem_1fr] gap-3 rounded-md border p-2 text-left aria-selected:border-primary aria-selected:bg-primary/5"
-                  key={asset.id}
-                  onClick={() => {
-                    setSelectedId(asset.id);
-                    setTitle(asset.name);
-                    setLabel(asset.name);
-                  }}
-                  role="option"
-                  type="button"
-                >
-                  <span className="h-12 overflow-hidden rounded">
-                    <AssetPreview
-                      assetId={asset.id}
-                      kind={asset.kind}
-                      name={asset.name}
-                      slug={slug}
-                      versionId={asset.current_version?.id}
-                    />
-                  </span>
-                  <span className="min-w-0">
-                    <strong className="block truncate">{asset.name}</strong>
-                    <small className="text-muted-foreground">
-                      v{asset.current_version?.number} ·{' '}
-                      {formatBytes(asset.current_version?.size_bytes)}
-                    </small>
-                  </span>
-                </button>
-              ))}
-              {!query.isPending && !candidates.length ? (
-                <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                  No hay versiones listas.{' '}
-                  <Link
-                    className="underline"
-                    href={`/organizaciones/${slug}/recursos/nuevo`}
-                    target="_blank"
-                  >
-                    Cargar en otra pestaña
-                  </Link>
+              {query.isLoading ? (
+                <p className="asset-picker-empty">Cargando recursos…</p>
+              ) : query.error ? (
+                <p className="asset-picker-error">
+                  {query.error instanceof Error
+                    ? query.error.message
+                    : 'No fue posible cargar Recursos.'}
                 </p>
-              ) : null}
-            </div>
+              ) : candidates.length ? (
+                <ul className="asset-picker-results">
+                  {candidates.map((asset) => (
+                    <li key={asset.id}>
+                      <button
+                        aria-pressed={selectedId === asset.id}
+                        data-active={selectedId === asset.id}
+                        onClick={() => setSelectedId(asset.id)}
+                        type="button"
+                      >
+                        <span className="asset-picker-results__preview">
+                          <AssetPreview
+                            assetId={asset.id}
+                            kind={asset.kind}
+                            name={asset.name}
+                            slug={slug}
+                            versionId={asset.current_version?.id}
+                          />
+                        </span>
+                        <span>
+                          <strong>{asset.name}</strong>
+                          <small>
+                            v{asset.current_version?.number} ·{' '}
+                            {formatBytes(asset.current_version?.size_bytes)}
+                          </small>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="asset-picker-empty">
+                  No hay archivos listos con este filtro.
+                </p>
+              )}
+            </section>
+
+            <section className="asset-picker-metadata">
+              <h3>{selected ? selected.name : 'Selecciona un archivo'}</h3>
+              {selected ? (
+                <>
+                  {kind === 'image' ? (
+                    <>
+                      {allowDecorative ? (
+                        <label className="flex items-center gap-2 text-sm">
+                          <input
+                            checked={decorative}
+                            onChange={(event) =>
+                              setDecorative(event.target.checked)
+                            }
+                            type="checkbox"
+                          />
+                          Imagen decorativa
+                        </label>
+                      ) : null}
+                      {!decorative || !allowDecorative ? (
+                        <div className="space-y-1.5">
+                          <Label htmlFor="picker-alt">Texto alternativo</Label>
+                          <Input
+                            id="picker-alt"
+                            maxLength={500}
+                            onChange={(event) => setAltText(event.target.value)}
+                            value={altText}
+                          />
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
+                  {kind === 'audio' || kind === 'video' ? (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="picker-title">Título accesible</Label>
+                        <Input
+                          id="picker-title"
+                          onChange={(event) => setTitle(event.target.value)}
+                          value={title}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="picker-transcript">Transcripción</Label>
+                        <textarea
+                          className="academic-control min-h-28"
+                          id="picker-transcript"
+                          onChange={(event) =>
+                            setTranscript(event.target.value)
+                          }
+                          value={transcript}
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                  {kind === 'video' ? (
+                    <>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          checked={silent}
+                          onChange={(event) => setSilent(event.target.checked)}
+                          type="checkbox"
+                        />
+                        Video sin audio
+                      </label>
+                      {!silent ? (
+                        <div className="space-y-1.5">
+                          <Label htmlFor="picker-captions">
+                            Subtítulos WebVTT
+                          </Label>
+                          <select
+                            className="academic-control"
+                            id="picker-captions"
+                            onChange={(event) =>
+                              setCaptionVersionId(event.target.value)
+                            }
+                            value={captionVersionId}
+                          >
+                            <option value="">Selecciona una versión</option>
+                            {captions.map((asset) => (
+                              <option
+                                key={asset.id}
+                                value={asset.current_version?.id}
+                              >
+                                {asset.name} · v{asset.current_version?.number}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
+                  {kind === 'document' || kind === 'dataset' ? (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="picker-label">Texto del enlace</Label>
+                        <Input
+                          id="picker-label"
+                          maxLength={300}
+                          onChange={(event) => setLabel(event.target.value)}
+                          value={label}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="picker-description">Descripción</Label>
+                        <Input
+                          id="picker-description"
+                          onChange={(event) =>
+                            setDescription(event.target.value)
+                          }
+                          value={description}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="picker-caption">Pie del recurso</Label>
+                      <Input
+                        id="picker-caption"
+                        onChange={(event) => setCaption(event.target.value)}
+                        value={caption}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p>
+                  Elige un recurso para completar sus datos de accesibilidad.
+                </p>
+              )}
+            </section>
           </div>
-          <div className="space-y-3 rounded-md border bg-muted/20 p-3">
-            <p className="font-medium">Accesibilidad y presentación</p>
-            {kind === 'image' ? (
-              <>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    checked={decorative}
-                    onChange={(event) => setDecorative(event.target.checked)}
-                    type="checkbox"
-                  />
-                  Es decorativa
-                </label>
-                <div className="space-y-1.5">
-                  <Label htmlFor="picker-alt">Texto alternativo</Label>
-                  <Input
-                    disabled={decorative}
-                    id="picker-alt"
-                    maxLength={500}
-                    onChange={(event) => setAltText(event.target.value)}
-                    required={!decorative}
-                    value={altText}
-                  />
-                </div>
-              </>
-            ) : null}
-            {kind === 'audio' || kind === 'video' ? (
-              <>
-                <div className="space-y-1.5">
-                  <Label htmlFor="picker-title">Título</Label>
-                  <Input
-                    id="picker-title"
-                    maxLength={300}
-                    onChange={(event) => setTitle(event.target.value)}
-                    value={title}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="picker-transcript">Transcripción</Label>
-                  <textarea
-                    className="min-h-28 w-full rounded-md border bg-background px-3 py-2"
-                    id="picker-transcript"
-                    onChange={(event) => setTranscript(event.target.value)}
-                    value={transcript}
-                  />
-                </div>
-              </>
-            ) : null}
-            {kind === 'video' ? (
-              <>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    checked={silent}
-                    onChange={(event) => setSilent(event.target.checked)}
-                    type="checkbox"
-                  />
-                  Video sin audio
-                </label>
-                {!silent ? (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="picker-captions">Subtítulos WebVTT</Label>
-                    <select
-                      className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-                      id="picker-captions"
-                      onChange={(event) =>
-                        setCaptionVersionId(event.target.value)
-                      }
-                      value={captionVersionId}
-                    >
-                      <option value="">Selecciona una versión</option>
-                      {captions.map((asset) => (
-                        <option
-                          key={asset.id}
-                          value={asset.current_version?.id}
-                        >
-                          {asset.name} · v{asset.current_version?.number}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-            {kind === 'document' || kind === 'dataset' ? (
-              <>
-                <div className="space-y-1.5">
-                  <Label htmlFor="picker-label">Texto del enlace</Label>
-                  <Input
-                    id="picker-label"
-                    maxLength={300}
-                    onChange={(event) => setLabel(event.target.value)}
-                    value={label}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="picker-description">Descripción</Label>
-                  <Input
-                    id="picker-description"
-                    onChange={(event) => setDescription(event.target.value)}
-                    value={description}
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="space-y-1.5">
-                <Label htmlFor="picker-caption">Pie de recurso</Label>
-                <Input
-                  id="picker-caption"
-                  onChange={(event) => setCaption(event.target.value)}
-                  value={caption}
-                />
-              </div>
-            )}
-          </div>
-        </div>
+        )}
+
         <DialogFooter showCloseButton>
-          <Button disabled={!accessibilityValid} onClick={insert} type="button">
-            Insertar versión seleccionada
-          </Button>
+          {source === 'resources' ? (
+            <Button
+              disabled={!accessibilityValid}
+              onClick={insert}
+              type="button"
+            >
+              Añadir al contenido
+            </Button>
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>

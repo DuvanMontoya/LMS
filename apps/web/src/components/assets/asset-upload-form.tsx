@@ -42,6 +42,15 @@ const ACCEPT: Record<AssetKind, string> = {
   video: '.mp4,.mov,.webm',
 };
 
+const ASSET_KIND_OPTIONS: readonly { label: string; value: AssetKind }[] = [
+  { label: 'Imagen', value: 'image' },
+  { label: 'Documento PDF', value: 'document' },
+  { label: 'Audio', value: 'audio' },
+  { label: 'Video', value: 'video' },
+  { label: 'Dataset', value: 'dataset' },
+  { label: 'Subtítulos WebVTT', value: 'caption' },
+];
+
 const FALLBACK_MIME_BY_EXTENSION: Readonly<
   Record<AssetKind, Readonly<Record<string, string>>>
 > = {
@@ -83,8 +92,20 @@ function declaredMimeType(file: File, kind: AssetKind): string {
   );
 }
 
-export function AssetUploadForm({ slug }: Readonly<{ slug: string }>) {
-  const [kind, setKind] = useState<AssetKind>('image');
+export function AssetUploadForm({
+  allowedKinds = ASSET_KIND_OPTIONS.map(({ value }) => value),
+  compact = false,
+  onReady,
+  readyActionLabel = 'Usar este archivo',
+  slug,
+}: Readonly<{
+  allowedKinds?: readonly AssetKind[];
+  compact?: boolean;
+  onReady?: (assetId: string, kind: AssetKind) => void;
+  readyActionLabel?: string;
+  slug: string;
+}>) {
+  const [kind, setKind] = useState<AssetKind>(allowedKinds[0] ?? 'image');
   const [stage, setStage] = useState<UploadStage>('idle');
   const [loaded, setLoaded] = useState(0);
   const [size, setSize] = useState(0);
@@ -113,11 +134,12 @@ export function AssetUploadForm({ slug }: Readonly<{ slug: string }>) {
     ['completed', 'completed_with_errors', 'failed'].includes(
       currentJob.status ?? '',
     );
-  if (terminal && stage === 'processing') {
-    queueMicrotask(() =>
-      setStage(currentJob.status === 'completed' ? 'ready' : 'error'),
-    );
-  }
+  const visibleStage: UploadStage =
+    stage === 'processing' && terminal
+      ? currentJob?.status === 'completed'
+        ? 'ready'
+        : 'error'
+      : stage;
 
   function register(xhr: XMLHttpRequest) {
     activeRequests.current.add(xhr);
@@ -194,7 +216,7 @@ export function AssetUploadForm({ slug }: Readonly<{ slug: string }>) {
 
   const percent = size ? Math.min(100, Math.round((loaded / size) * 100)) : 0;
   const stageText =
-    stage === 'processing' && currentJob
+    visibleStage === 'processing' && currentJob
       ? assetStatusLabel(currentJob.stage)
       : {
           cancelled: 'Cancelado',
@@ -205,27 +227,37 @@ export function AssetUploadForm({ slug }: Readonly<{ slug: string }>) {
           ready: 'Listo',
           uploading: 'Cargando',
           verifying: 'Verificando',
-        }[stage];
+        }[visibleStage];
 
   return (
-    <form className="mt-6 max-w-2xl space-y-6" onSubmit={submit}>
+    <form
+      className={
+        compact
+          ? 'grid gap-4 rounded-lg border bg-muted/10 p-4'
+          : 'mt-6 max-w-2xl space-y-6'
+      }
+      onSubmit={submit}
+    >
       <div className="space-y-2">
         <Label htmlFor="asset-kind">Tipo de recurso</Label>
         <select
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
           disabled={
-            stage !== 'idle' && stage !== 'error' && stage !== 'cancelled'
+            visibleStage !== 'idle' &&
+            visibleStage !== 'error' &&
+            visibleStage !== 'cancelled'
           }
           id="asset-kind"
           onChange={(event) => setKind(event.target.value as AssetKind)}
           value={kind}
         >
-          <option value="image">Imagen</option>
-          <option value="document">Documento PDF</option>
-          <option value="audio">Audio</option>
-          <option value="video">Video</option>
-          <option value="dataset">Dataset</option>
-          <option value="caption">Subtítulos WebVTT</option>
+          {ASSET_KIND_OPTIONS.filter(({ value }) =>
+            allowedKinds.includes(value),
+          ).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
       </div>
       <div className="space-y-2">
@@ -252,23 +284,23 @@ export function AssetUploadForm({ slug }: Readonly<{ slug: string }>) {
           terminar el análisis.
         </p>
       </div>
-      {stage !== 'idle' ? (
+      {visibleStage !== 'idle' ? (
         <section
           aria-atomic="true"
           aria-live="polite"
           className="rounded-lg border bg-muted/20 p-4"
         >
           <div className="flex items-center gap-2 font-medium">
-            {stage === 'ready' ? (
+            {visibleStage === 'ready' ? (
               <CheckCircle2 className="size-5 text-emerald-600" />
-            ) : stage === 'error' ? (
+            ) : visibleStage === 'error' ? (
               <AlertCircle className="size-5 text-destructive" />
             ) : (
               <LoaderCircle className="size-5 animate-spin" />
             )}
             {stageText}
           </div>
-          {stage === 'uploading' ? (
+          {visibleStage === 'uploading' ? (
             <>
               <progress
                 aria-label="Progreso de carga"
@@ -281,17 +313,27 @@ export function AssetUploadForm({ slug }: Readonly<{ slug: string }>) {
               </p>
             </>
           ) : null}
-          {stage === 'processing' && currentJob ? (
+          {visibleStage === 'processing' && currentJob ? (
             <p className="mt-2 text-sm text-muted-foreground">
               Etapa: {assetStatusLabel(currentJob.stage)}. Esta pantalla se
               actualiza automáticamente.
             </p>
           ) : null}
-          {stage === 'ready' && assetId ? (
+          {visibleStage === 'ready' && assetId && !compact ? (
             <Button asChild className="mt-3" size="sm">
               <Link href={`/organizaciones/${slug}/recursos/${assetId}`}>
                 Abrir recurso
               </Link>
+            </Button>
+          ) : null}
+          {visibleStage === 'ready' && assetId && compact && onReady ? (
+            <Button
+              className="mt-3"
+              onClick={() => onReady(assetId, kind)}
+              size="sm"
+              type="button"
+            >
+              {readyActionLabel}
             </Button>
           ) : null}
         </section>
@@ -310,15 +352,15 @@ export function AssetUploadForm({ slug }: Readonly<{ slug: string }>) {
             'uploading',
             'verifying',
             'processing',
-          ].includes(stage)}
+          ].includes(visibleStage)}
           type="submit"
         >
           <Upload data-icon="inline-start" />
-          {stage === 'error' || stage === 'cancelled'
+          {visibleStage === 'error' || visibleStage === 'cancelled'
             ? 'Reintentar'
             : 'Iniciar carga'}
         </Button>
-        {['preparing', 'uploading', 'verifying'].includes(stage) ? (
+        {['preparing', 'uploading', 'verifying'].includes(visibleStage) ? (
           <Button onClick={cancel} type="button" variant="outline">
             Cancelar
           </Button>

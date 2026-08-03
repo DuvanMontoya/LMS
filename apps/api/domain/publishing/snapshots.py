@@ -622,17 +622,16 @@ def release_previous_next(snapshot: object, unit_id: str) -> dict[str, Any | Non
     outline = release_outline(snapshot)
     flattened = [
         {
-            "id": activity["id"],
-            "title": activity["title"],
-            "type": activity["type"],
+            "id": unit["id"],
+            "title": unit["title"],
             "module_id": module["id"],
             "module_title": module["title"],
         }
         for module in outline
-        for activity in module["activities"]
+        for unit in module["units"]
     ]
-    for index, activity in enumerate(flattened):
-        if activity["id"] == unit_id:
+    for index, unit in enumerate(flattened):
+        if unit["id"] == unit_id:
             return {
                 "position": index + 1,
                 "total": len(flattened),

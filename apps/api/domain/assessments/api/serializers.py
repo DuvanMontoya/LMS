@@ -8,6 +8,9 @@ from typing import Any
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from domain.assets.api.serializers import AssetAccessDescriptorSerializer
+
+from ..assets import assessment_asset_descriptors
 from ..choices import FeedbackMode, ResponseStatus
 from ..models import (
     Assessment,
@@ -91,6 +94,8 @@ class QuestionSerializer(serializers.ModelSerializer):
     latest_version_number = serializers.SerializerMethodField()
     open_revision_id = serializers.SerializerMethodField()
     open_revision_status = serializers.SerializerMethodField()
+    preview = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
@@ -102,17 +107,33 @@ class QuestionSerializer(serializers.ModelSerializer):
             "open_revision_id",
             "open_revision_status",
             "latest_version_number",
+            "type",
+            "preview",
             "created_at",
             "archived_at",
         )
         read_only_fields = fields
 
     def get_latest_version_number(self, question: Question) -> int | None:
-        version = question.versions.order_by("-number").first()
+        version = self._latest_version(question)
         return version.number if version else None
 
     def _open_revision(self, question: Question) -> QuestionRevision | None:
+        prefetched = getattr(question, "_assessment_open_revisions", None)
+        if prefetched is not None:
+            return prefetched[0] if prefetched else None
         return question.revisions.exclude(status="approved").order_by("-number").first()
+
+    def _latest_version(self, question: Question) -> QuestionVersion | None:
+        prefetched = getattr(question, "_assessment_versions", None)
+        if prefetched is not None:
+            return prefetched[0] if prefetched else None
+        return question.versions.order_by("-number").first()
+
+    def _preview_source(
+        self, question: Question
+    ) -> QuestionRevision | QuestionVersion | None:
+        return self._open_revision(question) or self._latest_version(question)
 
     def get_open_revision_id(self, question: Question) -> str | None:
         revision = self._open_revision(question)
@@ -122,12 +143,33 @@ class QuestionSerializer(serializers.ModelSerializer):
         revision = self._open_revision(question)
         return revision.status if revision else None
 
+    def get_type(self, question: Question) -> str | None:
+        source = self._preview_source(question)
+        return source.type if source else None
+
+    def get_preview(self, question: Question) -> dict[str, Any] | None:
+        source = self._preview_source(question)
+        if source is None:
+            return None
+        if isinstance(source, QuestionVersion):
+            return source.public
+        definition = source.definition
+        public = definition.get("public") if isinstance(definition, dict) else None
+        return public if isinstance(public, dict) else None
+
 
 class QuestionPageSerializer(serializers.Serializer):
     count = serializers.IntegerField()
     next = serializers.URLField(allow_null=True)
     previous = serializers.URLField(allow_null=True)
     results = QuestionSerializer(many=True)
+
+
+class QuestionPreviewSerializer(serializers.Serializer):
+    assets = AssetAccessDescriptorSerializer(many=True)
+    code = serializers.CharField()
+    public = serializers.JSONField()
+    type = serializers.CharField()
 
 
 class QuestionRevisionSerializer(serializers.ModelSerializer):
@@ -229,10 +271,14 @@ class AssessmentCreateSerializer(StrictInputSerializer):
 
 class AssessmentSerializer(serializers.ModelSerializer):
     title = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
     authoring_status = serializers.SerializerMethodField()
+    attempt_limit = serializers.SerializerMethodField()
     latest_version_number = serializers.SerializerMethodField()
     latest_revision_id = serializers.SerializerMethodField()
     latest_revision_number = serializers.SerializerMethodField()
+    time_limit_minutes = serializers.SerializerMethodField()
+    updated_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Assessment
@@ -241,28 +287,65 @@ class AssessmentSerializer(serializers.ModelSerializer):
             "slug",
             "status",
             "title",
+            "description",
             "authoring_status",
+            "time_limit_minutes",
+            "attempt_limit",
             "latest_revision_id",
             "latest_revision_number",
             "latest_version_number",
             "created_at",
+            "updated_at",
             "archived_at",
         )
         read_only_fields = fields
 
     def _latest_revision(self, assessment: Assessment) -> AssessmentRevision | None:
-        return assessment.revisions.order_by("-number").first()
+        if hasattr(assessment, "_latest_revision_cache"):
+            return assessment._latest_revision_cache
+        prefetched = getattr(assessment, "_latest_revisions", None)
+        revision = (
+            prefetched[0]
+            if prefetched
+            else assessment.revisions.order_by("-number").first()
+        )
+        assessment._latest_revision_cache = revision
+        return revision
+
+    def _latest_version(self, assessment: Assessment) -> AssessmentVersion | None:
+        if hasattr(assessment, "_latest_version_cache"):
+            return assessment._latest_version_cache
+        prefetched = getattr(assessment, "_latest_versions", None)
+        version = (
+            prefetched[0]
+            if prefetched
+            else assessment.versions.order_by("-number").first()
+        )
+        assessment._latest_version_cache = version
+        return version
 
     def get_title(self, assessment: Assessment) -> str:
         revision = self._latest_revision(assessment)
         return revision.title if revision else ""
 
+    def get_description(self, assessment: Assessment) -> str:
+        revision = self._latest_revision(assessment)
+        return revision.description if revision else ""
+
     def get_authoring_status(self, assessment: Assessment) -> str:
         revision = self._latest_revision(assessment)
         return revision.status if revision else ""
 
+    def get_time_limit_minutes(self, assessment: Assessment) -> int | None:
+        revision = self._latest_revision(assessment)
+        return revision.time_limit_minutes if revision else None
+
+    def get_attempt_limit(self, assessment: Assessment) -> int | None:
+        revision = self._latest_revision(assessment)
+        return revision.attempt_limit if revision else None
+
     def get_latest_version_number(self, assessment: Assessment) -> int | None:
-        version = assessment.versions.order_by("-number").first()
+        version = self._latest_version(assessment)
         return version.number if version else None
 
     def get_latest_revision_id(self, assessment: Assessment) -> str | None:
@@ -272,6 +355,11 @@ class AssessmentSerializer(serializers.ModelSerializer):
     def get_latest_revision_number(self, assessment: Assessment) -> int | None:
         revision = self._latest_revision(assessment)
         return revision.number if revision else None
+
+    @extend_schema_field(serializers.DateTimeField())
+    def get_updated_at(self, assessment: Assessment):
+        revision = self._latest_revision(assessment)
+        return revision.updated_at if revision else assessment.created_at
 
 
 class AssessmentPageSerializer(serializers.Serializer):
@@ -694,6 +782,7 @@ class AttemptItemSerializer(serializers.ModelSerializer):
 
 class AttemptSerializer(serializers.ModelSerializer):
     items = AttemptItemSerializer(many=True, read_only=True)
+    assets = serializers.SerializerMethodField()
 
     class Meta:
         model = Attempt
@@ -709,8 +798,28 @@ class AttemptSerializer(serializers.ModelSerializer):
             "lock_version",
             "maximum_score",
             "items",
+            "assets",
         )
         read_only_fields = fields
+
+    @extend_schema_field(AssetAccessDescriptorSerializer(many=True))
+    def get_assets(self, attempt: Attempt) -> list[dict[str, Any]]:
+        return assessment_asset_descriptors(attempt=attempt)
+
+
+class AssessmentAssetAccessSerializer(StrictInputSerializer):
+    asset_version_ids = serializers.ListField(
+        child=serializers.UUIDField(), min_length=1, max_length=50
+    )
+
+    def validate_asset_version_ids(self, value: list[object]) -> list[object]:
+        if len(set(value)) != len(value):
+            raise serializers.ValidationError("No repitas versiones de recurso.")
+        return value
+
+
+class AssessmentAssetAccessResponseSerializer(serializers.Serializer):
+    assets = AssetAccessDescriptorSerializer(many=True)
 
 
 class ResponseSaveSerializer(AssessmentExpectedVersionSerializer):

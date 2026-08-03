@@ -1,6 +1,7 @@
 # Assessments
 
-Documento normativo de `domain.assessments`, conforme a ADR 0023.
+Documento normativo de `domain.assessments`, conforme a ADR 0023, ADR 0024 y
+ADR 0041.
 
 ## Propiedad y dependencias
 
@@ -8,7 +9,8 @@ El módulo posee bancos, preguntas, evaluaciones, versiones, entregas,
 asignaciones, intentos, respuestas, scoring inicial, decisiones manuales y
 eventos. Puede leer políticas de organizations, objetivos de catalog, releases
 de publishing y assignments efectivos de learning. Ninguno de esos módulos
-importa assessments.
+importa assessments. También lee versiones READY de assets para fijar recursos
+privados; assets obtiene usos por registro y no importa assessments.
 
 ## Capacidades y experiencia por rol
 
@@ -44,18 +46,25 @@ el release. Un assignment es válido sólo para el
 asignación, respeta ventana y límite, es idempotente y materializa orden,
 payload público y grading secreto en filas distintas del mismo item.
 
+El enunciado acepta el documento semántico v2 y una opción puede fijar una
+imagen informativa. La aprobación crea `AssessmentAssetReference` append-only.
+Los snapshots guardan sólo UUID; los descriptores temporales se emiten al dueño
+del intento y pueden renovarse únicamente si la versión aparece en ese intento.
+
 La respuesta guarda `{schema_version,type,value}` con validación de schema,
 tipo esperado y lock optimista del intento. No hay autosave. Después del
 vencimiento no se guarda; el submit final sí cierra y califica lo ausente como
-cero. Un intento enviado no vuelve a editarse.
+cero. El navegador envía automáticamente al vencer y un nuevo inicio reconcilia
+bajo lock cualquier intento vencido. Un intento enviado no vuelve a editarse.
 
 ## Scoring
 
-Los ocho tipos son single choice, multiple choice, true/false, numeric, short
-text, long text, ordering y matching. Todo scoring automático es all-or-none.
-Numeric analiza texto a `Decimal`, nunca float. Short text usa NFC, trim,
-colapso de whitespace y casefold configurable. Long text no vacío requiere
-decisión manual. Basis points es `floor(score / maximum * 10000)`.
+Los nueve tipos son single choice, multiple choice, true/false, numeric, short
+text, long text, ordering, matching y mathematical expression. Scoring v2
+calcula crédito parcial determinista en basis points; numeric analiza texto a
+`Decimal`, nunca float. Short text usa NFC, trim, colapso de whitespace y
+casefold configurable. Long text no vacío requiere decisión manual. MathJSON se
+traduce a un AST SymPy acotado sin evaluar strings arbitrarios.
 
 ## Seguridad
 
@@ -72,9 +81,11 @@ fondos oscuros de contenido. El encabezado de página es compacto: conserva un
 único `h1` y acciones sin repetir breadcrumbs, kicker o descripción visibles.
 La autoría de preguntas usa secciones editoriales, vista previa learner y
 control de calidad. Selección única/múltiple usa opciones visuales; ordering
-usa reordenamiento por botones y matching selectores izquierda-derecha, sin
-exponer códigos técnicos al autor. Errores de mutación se presentan dentro del
-formulario y nunca mediante un overlay de Runtime Error.
+usa reordenamiento por botones y matching mediante grupos visuales accesibles,
+sin exponer códigos técnicos al autor. Enunciado y opciones pueden seleccionar
+versiones privadas procesadas; las opciones exigen texto alternativo y ofrecen
+descripción extensa. Errores de mutación se presentan dentro del formulario y
+nunca mediante un overlay de Runtime Error.
 
 ## Verificación real
 
@@ -92,7 +103,7 @@ declaración de conformidad con QTI 3.
 
 ## Fuentes oficiales consultadas
 
-Consulta: 2026-07-30.
+Consultas: 2026-07-30 y 2026-08-03.
 
 - Django 6.0 QuerySet API, `select_for_update()` y `of=("self",)`:
   https://docs.djangoproject.com/en/6.0/ref/models/querysets/#select-for-update
@@ -110,3 +121,8 @@ Consulta: 2026-07-30.
 - React Hook Form: https://react-hook-form.com/docs
 - Next.js 16 App Router: https://nextjs.org/docs/app
 - Playwright: https://playwright.dev/docs/intro
+- 1EdTech QTI 3 Beginner's Guide:
+  https://www.imsglobal.org/spec/qti/v3p0/guide/
+- W3C WAI Images Tutorial: https://www.w3.org/WAI/tutorials/images/
+- W3C WAI Complex Images:
+  https://www.w3.org/WAI/tutorials/images/complex/

@@ -457,7 +457,7 @@ export function CourseCreateForm({
                 {mutation.isPending ? 'Creando…' : 'Crear curso'}
               </Button>
               <Button asChild className="w-full" variant="ghost">
-                <Link href={`/organizaciones/${slug}/cursos`}>
+                <Link href={`/organizaciones/${slug}/cursos/autoria`}>
                   <ArrowLeft data-icon="inline-start" />
                   Cancelar y volver
                 </Link>

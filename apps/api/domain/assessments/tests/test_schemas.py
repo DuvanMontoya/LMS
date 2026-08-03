@@ -48,6 +48,98 @@ class AssessmentSchemaTests(SimpleTestCase):
         with self.assertRaises(AssessmentInvalid):
             validate_question_definition(definition)
 
+    def test_choice_image_requires_an_informative_text_alternative(self) -> None:
+        definition = question_definition("single_choice")
+        definition["public"]["options"][0]["media"] = {  # type: ignore[index]
+            "asset_version_id": "50000000-0000-4000-8000-000000000001",
+            "kind": "image",
+            "alt_text": "Gráfica de una función creciente.",
+            "long_description": "La curva cruza el origen y crece para x positivo.",
+        }
+        validate_question_definition(definition)
+        definition["public"]["options"][0]["media"]["alt_text"] = ""  # type: ignore[index]
+        with self.assertRaises(AssessmentInvalid):
+            validate_question_definition(definition)
+
+    def test_question_math_accepts_latex_but_rejects_unsafe_capabilities(self) -> None:
+        definition = question_definition("single_choice")
+        definition["public"]["prompt"]["content"].append(  # type: ignore[index]
+            {
+                "type": "displayMath",
+                "attrs": {
+                    "nodeId": "50000000-0000-4000-8000-000000000004",
+                    "latex": r"\int_0^1 x^2\,dx",
+                },
+            }
+        )
+        definition["public"]["options"][0]["math_latex"] = r"x^2+2x+1"  # type: ignore[index]
+        validate_question_definition(definition)
+        definition["public"]["options"][0]["math_latex"] = r"\require{texhtml}"  # type: ignore[index]
+        with self.assertRaises(AssessmentInvalid):
+            validate_question_definition(definition)
+
+    def test_authoring_blueprint_and_worked_solution_are_private_validated_content(
+        self,
+    ) -> None:
+        definition = question_definition("single_choice")
+        definition["authoring"] = {
+            "framework": "icfes",
+            "difficulty": "advanced",
+            "cognitive_process": "analyze",
+            "estimated_minutes": 6,
+            "tags": ["algebra", "modelacion"],
+            "source_note": "Adaptación editorial interna.",
+            "choice_rationales": {
+                "a": "Respuesta válida por proporcionalidad.",
+                "b": "Confunde razón con diferencia absoluta.",
+            },
+        }
+        definition["worked_solution"] = {
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "attrs": {"nodeId": "50000000-0000-4000-8000-000000000005"},
+                    "content": [{"type": "text", "text": "Se despeja la razón."}],
+                },
+                {
+                    "type": "displayMath",
+                    "attrs": {
+                        "nodeId": "50000000-0000-4000-8000-000000000006",
+                        "latex": r"x=\frac{30}{120}",
+                    },
+                },
+            ],
+        }
+        validated = validate_question_definition(definition)
+        self.assertEqual(validated["authoring"]["framework"], "icfes")
+        self.assertIn("worked_solution", validated)
+
+    def test_choice_rationale_cannot_reference_a_nonexistent_option(self) -> None:
+        definition = question_definition("single_choice")
+        definition["authoring"] = {
+            "choice_rationales": {"hidden": "No existe en el payload público."}
+        }
+        with self.assertRaises(AssessmentInvalid):
+            validate_question_definition(definition)
+
+    def test_worked_solution_rejects_unsafe_math_capabilities(self) -> None:
+        definition = question_definition("single_choice")
+        definition["worked_solution"] = {
+            "type": "doc",
+            "content": [
+                {
+                    "type": "displayMath",
+                    "attrs": {
+                        "nodeId": "50000000-0000-4000-8000-000000000007",
+                        "latex": r"\require{texhtml}",
+                    },
+                }
+            ],
+        }
+        with self.assertRaises(AssessmentInvalid):
+            validate_question_definition(definition)
+
     def test_normalized_short_answer_collisions_are_rejected(self) -> None:
         definition = question_definition("short_text")
         definition["grading"]["accepted_answers"] = ["Bogotá", " BOGOTÁ "]  # type: ignore[index]

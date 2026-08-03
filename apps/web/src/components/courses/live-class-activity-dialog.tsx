@@ -351,7 +351,9 @@ export function LiveClassActivityDialog({
                       value={recording}
                     >
                       <option value="off">No grabar</option>
-                      <option value="manual">El docente decide en el aula</option>
+                      <option value="manual">
+                        El docente decide en el aula
+                      </option>
                     </select>
                   </label>
                   <label className="academic-field">
@@ -386,8 +388,8 @@ export function LiveClassActivityDialog({
                   <div className="mt-3 space-y-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-950">
                     <p>
                       Estos valores sólo preparan la selección inicial. El
-                      docente elige en el aula cuándo empezar, la composición
-                      y la calidad de cada grabación.
+                      docente elige en el aula cuándo empezar, la composición y
+                      la calidad de cada grabación.
                     </p>
                     <p>
                       Todos deberán reconocer el aviso antes de conectarse. El

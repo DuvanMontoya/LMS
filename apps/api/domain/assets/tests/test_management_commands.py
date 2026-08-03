@@ -18,7 +18,11 @@ from domain.assets.management.commands import bootstrap_demo_assets
 from domain.assets.models import Asset, AssetUploadSession, AssetVersion
 from domain.assets.storage.administration import BucketState
 from domain.assets.uploads.services import initialize_asset_upload
-from domain.organizations.services import create_organization_with_owner
+from domain.organizations.choices import RoleCode
+from domain.organizations.services import (
+    add_existing_member_with_roles,
+    create_organization_with_owner,
+)
 
 from .support import FakeStorageGateway, owner_context
 
@@ -46,6 +50,34 @@ class AssetManagementCommandTests(TestCase):
             self.assertGreater(audio.stat().st_size, 100)
             self.assertEqual(text.read_text(encoding="utf-8"), "safe\n")
 
+    def test_demo_storage_probe_detects_missing_and_valid_objects(self) -> None:
+        current_version = SimpleNamespace(
+            storage_bucket="private",
+            storage_key="organizations/demo/document.pdf",
+            size_bytes=128,
+        )
+        asset = SimpleNamespace(current_version=current_version)
+        client = MagicMock()
+        client.head_object.return_value = {"ContentLength": 128}
+
+        self.assertTrue(
+            bootstrap_demo_assets.Command._object_is_available(
+                client=client,
+                asset=asset,
+            )
+        )
+
+        client.head_object.side_effect = ClientError(
+            {"Error": {"Code": "404"}, "ResponseMetadata": {"HTTPStatusCode": 404}},
+            "HeadObject",
+        )
+        self.assertFalse(
+            bootstrap_demo_assets.Command._object_is_available(
+                client=client,
+                asset=asset,
+            )
+        )
+
     @override_settings(DEBUG=True)
     def test_demo_command_iterates_catalog_and_requires_context(self) -> None:
         with self.assertRaisesMessage(Exception, "pnpm demo:organizations"):
@@ -55,10 +87,20 @@ class AssetManagementCommandTests(TestCase):
             email="owner@demo.local",
             password="CorrectHorseBatteryStaple42!",
         )
-        create_organization_with_owner(
+        organization = create_organization_with_owner(
             actor=owner,
             name="Organización demo",
             slug="organizacion-demo",
+        )
+        author = get_user_model().objects.create_user(
+            email="author@demo.local",
+            password="CorrectHorseBatteryStaple42!",
+        )
+        add_existing_member_with_roles(
+            actor=owner,
+            organization=organization,
+            user=author,
+            roles={RoleCode.AUTHOR},
         )
         output = io.StringIO()
         with patch.object(

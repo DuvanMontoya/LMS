@@ -41,7 +41,9 @@ class Command(BaseCommand):
 
     def _bootstrap(self) -> None:
         organization = Organization.objects.get(slug="organizacion-a")
-        owner = User.objects.get(email="owner@organizations.e2e.test")
+        administrator = User.objects.get(email="administrator@organizations.e2e.test")
+        author = User.objects.get(email="author@organizations.e2e.test")
+        reviewer = User.objects.get(email="reviewer@organizations.e2e.test")
         learner = User.objects.get(email="learner@organizations.e2e.test")
         membership = Membership.objects.get(organization=organization, user=learner)
         course = Course.objects.get(
@@ -58,7 +60,7 @@ class Command(BaseCommand):
         ).first()
         if enrollment is None:
             enrollment = enroll_member(
-                actor=owner,
+                actor=administrator,
                 organization=organization,
                 course=course,
                 membership=membership,
@@ -75,7 +77,7 @@ class Command(BaseCommand):
         if objective is None:
             raise CommandError("Falta un objetivo E2E.")
         bank = create_question_bank(
-            actor=owner,
+            actor=author,
             organization=organization,
             name="Banco E2E de assessments",
             slug="banco-assessments-e2e",
@@ -93,20 +95,20 @@ class Command(BaseCommand):
         )
         for index, question_type in enumerate(question_types, start=1):
             _, revision = create_question(
-                actor=owner,
+                actor=author,
                 bank=bank,
                 code=f"ASSESS-E2E-{index:03d}",
                 question_type=question_type,
                 definition=demo_question_definition(question_type, index),
             )
             revision, _ = transition_question_revision(
-                actor=owner,
+                actor=author,
                 revision=revision,
                 expected_version=revision.lock_version,
                 to_status=AuthoringStatus.IN_REVIEW,
             )
             _, version = transition_question_revision(
-                actor=owner,
+                actor=reviewer,
                 revision=revision,
                 expected_version=revision.lock_version,
                 to_status=AuthoringStatus.APPROVED,
@@ -115,7 +117,7 @@ class Command(BaseCommand):
                 raise AssertionError("La aprobación debe materializar versión.")
             versions.append(version)
         _, revision = create_assessment(
-            actor=owner,
+            actor=author,
             organization=organization,
             slug="diagnostico-assessments-e2e",
             title="Diagnóstico integral E2E",
@@ -126,20 +128,20 @@ class Command(BaseCommand):
             pass_basis_points=6000,
         )
         revision = replace_assessment_objectives(
-            actor=owner,
+            actor=author,
             revision=revision,
             expected_version=revision.lock_version,
             objectives=[objective],
         )
         revision, section = add_assessment_section(
-            actor=owner,
+            actor=author,
             revision=revision,
             expected_version=revision.lock_version,
             title="Sección integral",
         )
         for version in versions:
             revision, _ = add_assessment_item(
-                actor=owner,
+                actor=author,
                 revision=revision,
                 expected_version=revision.lock_version,
                 section=section,
@@ -149,13 +151,13 @@ class Command(BaseCommand):
                 objectives=[objective],
             )
         revision, _ = transition_assessment_revision(
-            actor=owner,
+            actor=author,
             revision=revision,
             expected_version=revision.lock_version,
             to_status=AuthoringStatus.IN_REVIEW,
         )
         _, version = transition_assessment_revision(
-            actor=owner,
+            actor=reviewer,
             revision=revision,
             expected_version=revision.lock_version,
             to_status=AuthoringStatus.APPROVED,
@@ -163,19 +165,19 @@ class Command(BaseCommand):
         if version is None:
             raise AssertionError("La aprobación debe materializar versión.")
         delivery = create_delivery(
-            actor=owner,
+            actor=administrator,
             organization=organization,
             assessment_version=version,
             name="Entrega E2E activa",
             course_release=release,
         )
         delivery = activate_delivery(
-            actor=owner,
+            actor=administrator,
             delivery=delivery,
             expected_version=delivery.lock_version,
         )
         assignment = assign_delivery(
-            actor=owner,
+            actor=administrator,
             delivery=delivery,
             release_assignment=enrollment.current_release_assignment,
         )

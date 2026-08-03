@@ -1355,50 +1355,9 @@
     background-color: rgb(255 255 255 / 14%) !important;
   }
 
-  .library-course-hero__visual {
-    @apply relative hidden place-items-center overflow-hidden border-l border-white/10 lg:grid;
-  }
-
-  .library-course-hero__visual > div {
-    @apply relative z-10 grid size-48 place-items-center rounded-full border border-white/12 bg-white/7 shadow-[0_24px_70px_rgb(0_0_0_/_0.2)] backdrop-blur-md;
-  }
-
-  .library-course-hero__visual > div svg {
-    @apply size-9 text-sky-300;
-  }
-
-  .library-course-hero__visual > div span {
-    @apply -mt-6 text-5xl font-semibold tracking-[-0.06em];
-  }
-
-  .library-course-hero__visual > div small {
-    @apply -mt-8 text-xs font-semibold tracking-wider text-slate-300 uppercase;
-  }
-
-  .library-course-hero__visual > span {
-    @apply absolute rounded-full border border-white/8;
-  }
-
-  .library-course-hero__visual > span:nth-of-type(1) {
-    @apply size-64;
-  }
-
-  .library-course-hero__visual > span:nth-of-type(2) {
-    @apply size-80;
-  }
-
-  .library-course-layout {
-    @apply mt-7 grid items-start gap-7 xl:grid-cols-[minmax(0,1fr)_21rem];
-  }
-
-  .library-course-main {
-    @apply grid min-w-0 gap-6;
-  }
-
   .library-course-about,
   .library-course-objectives,
-  .library-course-curriculum,
-  .library-course-card-sticky {
+  .library-course-curriculum {
     @apply rounded-xl border border-border bg-card shadow-[0_12px_38px_rgb(41_56_82_/_0.055)];
   }
 
@@ -1520,59 +1479,110 @@
     @apply size-4 text-muted-foreground;
   }
 
-  .library-course-card-sticky {
-    @apply overflow-hidden xl:sticky xl:top-20;
+  /* Published course: compact, action-led catalog surface. */
+  .library-course-hero {
+    @apply min-h-0 lg:grid-cols-[minmax(0,1fr)_19rem];
   }
 
-  .library-course-card-sticky__cover {
-    @apply flex min-h-36 flex-col items-center justify-center bg-slate-950 text-white;
-    background-image:
-      radial-gradient(
-        circle at 50% 0%,
-        rgb(59 130 246 / 32%),
-        transparent 9rem
-      ),
-      linear-gradient(145deg, rgb(15 23 42), rgb(30 50 88));
+  .library-course-hero__content {
+    @apply justify-start p-6 sm:p-8 lg:p-9;
   }
 
-  .library-course-card-sticky__cover svg {
-    @apply size-7 text-sky-300;
+  .library-course-hero__meta {
+    @apply flex flex-wrap items-center gap-2 font-mono text-[0.625rem] font-semibold tracking-wider text-sky-300 uppercase;
   }
 
-  .library-course-card-sticky__cover span {
-    @apply mt-3 text-sm font-semibold;
+  .library-course-hero__meta span + span {
+    @apply border-l border-white/20 pl-2 text-slate-400;
   }
 
-  .library-course-card-sticky__cover small {
-    @apply mt-1 font-mono text-[0.625rem] tracking-wider text-slate-400 uppercase;
+  .library-course-hero__content h1 {
+    @apply mt-4 text-3xl sm:text-4xl lg:text-[2.65rem];
   }
 
-  .library-course-card-sticky__body {
-    @apply p-5;
+  .library-course-hero__actions {
+    @apply mt-5;
   }
 
-  .library-course-card-sticky__body > p {
-    @apply mt-5 text-sm font-semibold;
+  .library-course-hero__start-note {
+    @apply mt-3 max-w-3xl text-xs leading-5 text-slate-400;
   }
 
-  .library-course-card-sticky dl {
-    @apply mt-2 divide-y divide-border;
+  .library-course-hero__overview {
+    @apply relative z-10 grid content-center border-t border-white/10 bg-white/4 p-5 lg:border-t-0 lg:border-l;
   }
 
-  .library-course-card-sticky dl > div {
+  .library-course-hero__overview > div {
+    @apply flex items-center gap-3 border-b border-white/10 pb-4 text-slate-300;
+  }
+
+  .library-course-hero__overview > div > svg {
+    @apply size-5 text-sky-300;
+  }
+
+  .library-course-hero__overview > div > span {
+    @apply text-xs;
+  }
+
+  .library-course-hero__overview > div > strong {
+    @apply ml-auto text-sm text-white;
+  }
+
+  .library-course-hero__overview dl {
+    @apply divide-y divide-white/10;
+  }
+
+  .library-course-hero__overview dl > div {
     @apply grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3;
   }
 
-  .library-course-card-sticky dt {
-    @apply flex items-center gap-2 text-xs text-muted-foreground;
+  .library-course-hero__overview dt {
+    @apply flex items-center gap-2 text-xs text-slate-400;
   }
 
-  .library-course-card-sticky dt svg {
-    @apply size-3.5 text-primary;
+  .library-course-hero__overview dt svg {
+    @apply size-3.5 text-sky-300;
   }
 
-  .library-course-card-sticky dd {
-    @apply text-sm font-semibold;
+  .library-course-hero__overview dd {
+    @apply text-sm font-semibold text-white;
+  }
+
+  .library-course-introduction {
+    @apply mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)];
+  }
+
+  .library-course-about,
+  .library-course-objectives {
+    @apply h-full p-5 sm:p-6;
+  }
+
+  .library-course-about > p:last-child {
+    @apply mt-3 text-sm leading-6;
+  }
+
+  .library-course-objectives ul {
+    @apply mt-4 gap-2;
+  }
+
+  .library-course-objectives li {
+    @apply rounded-md border-0 bg-muted/30 px-3 py-2.5;
+  }
+
+  .library-course-curriculum {
+    @apply mt-5;
+  }
+
+  .library-course-curriculum > header {
+    @apply flex items-center justify-between gap-4 px-5 py-4 sm:px-6;
+  }
+
+  .library-course-curriculum > header > svg {
+    @apply size-5 text-primary;
+  }
+
+  .library-course-curriculum details > summary {
+    @apply min-h-16 py-3;
   }
 
   .learning-player-frame {
@@ -1697,6 +1707,34 @@
     @apply border-t border-slate-100 px-4 py-3;
   }
 
+  .learning-player__preview-status {
+    @apply flex items-start gap-2.5 border-t border-slate-100 px-4 py-3 text-slate-600;
+  }
+
+  .learning-player__preview-status > svg {
+    @apply mt-0.5 size-4 shrink-0 text-blue-600;
+  }
+
+  .learning-player__preview-status > span {
+    @apply grid min-w-0;
+  }
+
+  .learning-player__preview-status strong {
+    @apply text-xs font-semibold text-slate-800;
+  }
+
+  .learning-player__preview-status small {
+    @apply text-[0.6875rem] text-slate-500;
+  }
+
+  .learning-player__preview-badge {
+    @apply hidden shrink-0 border-blue-200 bg-blue-50 text-blue-700 sm:inline-flex;
+  }
+
+  .learning-player__preview-badge svg {
+    @apply size-3.5;
+  }
+
   .learning-player__curriculum-scroll {
     @apply min-h-0 overflow-y-auto;
     scrollbar-width: none;
@@ -1714,8 +1752,81 @@
     .learning-player__course
     > span:last-child,
   .learning-player[data-sidebar-collapsed='true']
-    .learning-player__sidebar-progress {
+    .learning-player__sidebar-progress,
+  .learning-player[data-sidebar-collapsed='true']
+    .learning-player__preview-status {
     display: none;
+  }
+
+  .course-preview-outline {
+    @apply divide-y divide-slate-200 bg-white;
+  }
+
+  .course-preview-outline > li > details > summary {
+    @apply grid min-h-14 cursor-pointer list-none grid-cols-[2rem_minmax(0,1fr)_auto_auto] items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-2.5 transition-colors hover:bg-blue-50/60;
+  }
+
+  .course-preview-outline summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .course-preview-outline__number {
+    @apply grid size-7 place-items-center rounded-md bg-blue-100 font-mono text-[0.625rem] font-semibold text-blue-700;
+  }
+
+  .course-preview-outline__title {
+    @apply truncate text-xs font-semibold;
+  }
+
+  .course-preview-outline summary small {
+    @apply text-[0.625rem] text-slate-500;
+  }
+
+  .course-preview-outline summary > svg {
+    @apply size-3.5 text-slate-500 transition-transform;
+  }
+
+  .course-preview-outline details[open] > summary > svg {
+    @apply rotate-180;
+  }
+
+  .course-preview-outline ol {
+    @apply divide-y divide-slate-100;
+  }
+
+  .course-preview-outline ol a {
+    @apply grid min-h-11 grid-cols-[2.2rem_minmax(0,1fr)] items-center gap-2 border-l-2 border-transparent px-4 py-2 text-slate-700 transition-colors hover:bg-slate-50;
+  }
+
+  .course-preview-outline ol a[data-current='true'] {
+    @apply border-blue-600 bg-blue-50 text-blue-950;
+  }
+
+  .course-preview-outline ol a > span {
+    @apply font-mono text-[0.625rem] text-slate-500;
+  }
+
+  .course-preview-outline ol a > strong {
+    @apply truncate text-xs font-medium;
+  }
+
+  .course-preview-outline[data-compact='true'] > li > details > summary {
+    @apply min-h-11 place-items-center px-0 py-1;
+    grid-template-columns: 1fr;
+  }
+
+  .course-preview-outline[data-compact='true']
+    :is(.course-preview-outline__title, summary small, summary > svg) {
+    display: none;
+  }
+
+  .course-preview-outline[data-compact='true'] ol a {
+    @apply grid min-h-11 place-items-center border-l-0 px-0;
+    grid-template-columns: 1fr;
+  }
+
+  .course-preview-outline[data-compact='true'] ol a > strong {
+    @apply sr-only;
   }
 
   .course-curriculum[data-variant='player'] {
@@ -2504,8 +2615,231 @@
     @apply resize-y;
   }
 
+  .assessment-bank-library,
+  .assessment-question-library {
+    @apply mt-6 overflow-hidden rounded-2xl border border-border bg-card shadow-[0_14px_40px_rgb(15_23_42_/_0.055)];
+  }
+
+  .assessment-portfolio {
+    @apply mt-5;
+  }
+
+  .assessment-portfolio > header,
+  .assessment-bank-library > header,
+  .assessment-question-library > header {
+    @apply flex flex-col gap-2 border-b border-border bg-muted/15 px-5 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-6;
+  }
+
+  .assessment-portfolio > header h2,
+  .assessment-bank-library > header h2,
+  .assessment-question-library > header h2 {
+    @apply mt-1 text-lg font-semibold tracking-[-0.025em];
+  }
+
+  .assessment-portfolio > header p:last-child,
+  .assessment-bank-library > header p:last-child,
+  .assessment-question-library > header p:last-child {
+    @apply mt-1 text-xs text-muted-foreground;
+  }
+
+  .assessment-portfolio > header > span,
+  .assessment-bank-library > header > span,
+  .assessment-question-library > header > span {
+    @apply rounded-full border border-border bg-background px-3 py-1 font-mono text-[0.625rem] font-semibold text-muted-foreground;
+  }
+
+  .assessment-portfolio__toolbar,
+  .assessment-bank-library__toolbar,
+  .assessment-question-library__toolbar {
+    @apply flex flex-col gap-3 border-b border-border bg-background px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6;
+  }
+
+  .assessment-portfolio__toolbar {
+    @apply rounded-xl border px-3 sm:px-3;
+  }
+
+  .assessment-portfolio__toolbar > label,
+  .assessment-bank-library__toolbar > label,
+  .assessment-question-library__toolbar > label {
+    @apply relative block w-full sm:max-w-md;
+  }
+
+  .assessment-portfolio__toolbar > label > svg,
+  .assessment-bank-library__toolbar > label > svg,
+  .assessment-question-library__toolbar > label > svg {
+    @apply pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground;
+  }
+
+  .assessment-portfolio__toolbar > label input,
+  .assessment-bank-library__toolbar > label input,
+  .assessment-question-library__toolbar > label input {
+    @apply pl-9;
+    padding-left: 2.5rem;
+  }
+
+  .assessment-portfolio__toolbar > div,
+  .assessment-bank-library__toolbar > div,
+  .assessment-question-library__toolbar > div {
+    @apply flex max-w-full items-center gap-1 overflow-x-auto rounded-lg border border-border bg-muted/25 p-1;
+  }
+
+  .assessment-portfolio__toolbar > div > svg,
+  .assessment-bank-library__toolbar > div > svg,
+  .assessment-question-library__toolbar > div > svg {
+    @apply mx-1 size-4 shrink-0 text-muted-foreground;
+  }
+
+  .assessment-portfolio__toolbar button,
+  .assessment-bank-library__toolbar button,
+  .assessment-question-library__toolbar button {
+    @apply shrink-0 rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground;
+  }
+
+  .assessment-portfolio__toolbar button[data-active='true'],
+  .assessment-bank-library__toolbar button[data-active='true'],
+  .assessment-question-library__toolbar button[data-active='true'] {
+    @apply bg-background text-foreground shadow-xs;
+  }
+
+  .assessment-library-count {
+    @apply shrink-0 text-xs font-medium text-muted-foreground;
+  }
+
+  .assessment-portfolio__list {
+    @apply grid gap-3 p-0 pt-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5;
+  }
+
+  .assessment-portfolio__list > li {
+    @apply min-w-0;
+  }
+
+  .assessment-portfolio__list > li > a {
+    @apply flex h-full min-h-40 flex-col rounded-xl border bg-card p-4 shadow-xs transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .assessment-portfolio__revision {
+    @apply hidden text-center sm:block;
+  }
+
+  .assessment-portfolio__revision small {
+    @apply block font-mono text-[0.5625rem] font-bold tracking-[0.14em] text-muted-foreground;
+  }
+
+  .assessment-portfolio__revision strong {
+    @apply mt-0.5 block font-mono text-xl font-semibold text-foreground;
+  }
+
+  .assessment-portfolio__titleline {
+    @apply flex items-center justify-between gap-2;
+  }
+
+  .assessment-portfolio__titleline > svg {
+    @apply size-4 text-muted-foreground transition-transform;
+  }
+
+  .assessment-portfolio__list
+    > li
+    > a:hover
+    .assessment-portfolio__titleline
+    > svg {
+    @apply translate-x-0.5 -translate-y-0.5 text-primary;
+  }
+
+  .assessment-portfolio__list h3 {
+    @apply mt-3 line-clamp-2 min-h-10 text-sm leading-5 font-semibold tracking-[-0.015em];
+  }
+
+  .assessment-portfolio__description {
+    @apply mt-2 line-clamp-2 min-h-8 text-[0.6875rem] leading-4 text-muted-foreground;
+  }
+
+  .assessment-portfolio__facts {
+    @apply mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[0.625rem] font-medium text-muted-foreground;
+  }
+
+  .assessment-portfolio__facts span {
+    @apply before:mr-1.5 before:inline-block before:size-1 before:rounded-full before:bg-primary/45;
+  }
+
+  .assessment-portfolio__meta {
+    @apply mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border;
+  }
+
+  .assessment-portfolio__meta > div {
+    @apply bg-background px-3 py-2;
+  }
+
+  .assessment-portfolio__meta span {
+    @apply block text-[0.625rem] font-medium text-muted-foreground;
+  }
+
+  .assessment-portfolio__meta strong {
+    @apply mt-0.5 block font-mono text-xs;
+  }
+
+  .assessment-portfolio__open {
+    @apply mt-auto pt-4 text-xs font-semibold text-primary;
+  }
+
   .assessment-studio-grid {
     @apply grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_21rem];
+  }
+
+  .assessment-create-form {
+    @apply mt-5 grid overflow-hidden rounded-xl border bg-card shadow-[0_14px_40px_rgb(15_23_42_/_0.055)] lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)];
+  }
+
+  .assessment-create-form__identity,
+  .assessment-create-form__policy {
+    @apply grid content-start gap-4 p-5 sm:p-6;
+  }
+
+  .assessment-create-form__policy {
+    @apply border-t bg-muted/10 lg:border-t-0 lg:border-l;
+  }
+
+  .assessment-create-form__policy > legend {
+    @apply text-sm font-semibold;
+  }
+
+  .assessment-create-form__numbers {
+    @apply grid grid-cols-3 gap-3;
+  }
+
+  .assessment-create-form__checks {
+    @apply grid gap-2 border-t pt-4;
+  }
+
+  .assessment-create-form__checks label {
+    @apply flex items-center gap-2 text-xs font-medium;
+  }
+
+  .assessment-create-form__checks input {
+    @apply size-4 rounded border-input accent-primary;
+  }
+
+  .assessment-create-form__advanced {
+    @apply border-t pt-3;
+  }
+
+  .assessment-create-form__advanced summary {
+    @apply cursor-pointer text-xs font-semibold text-muted-foreground;
+  }
+
+  .assessment-create-form__advanced[open] summary {
+    @apply mb-3 text-foreground;
+  }
+
+  .assessment-create-form > .assessment-workbench-footer {
+    @apply lg:col-span-2;
+  }
+
+  .assessment-bank-create-form {
+    @apply mt-5 grid max-w-4xl gap-5 overflow-hidden rounded-xl border bg-card p-5 shadow-[0_14px_40px_rgb(15_23_42_/_0.055)] sm:p-6;
+  }
+
+  .assessment-bank-create-form > .assessment-workbench-footer {
+    @apply -mx-5 -mb-5 mt-1 sm:-mx-6 sm:-mb-6;
   }
 
   .assessment-workbench {
@@ -3160,20 +3494,15 @@
   }
 
   .assessment-composer-summary {
-    @apply mt-6 grid gap-5 rounded-xl border border-border bg-card p-5 text-foreground shadow-[0_14px_42px_rgb(41_56_82_/_0.07)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end;
-    background-image: linear-gradient(
-      120deg,
-      rgb(255 255 255 / 100%),
-      rgb(239 245 255 / 72%)
-    );
+    @apply mt-4 grid gap-3 rounded-xl border border-border bg-card px-4 py-3 text-foreground shadow-[0_8px_24px_rgb(41_56_82_/_0.05)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center;
   }
 
   .assessment-composer-summary h2 {
-    @apply mt-1 text-xl font-semibold tracking-[-0.025em];
+    @apply truncate text-base font-semibold tracking-[-0.015em];
   }
 
-  .assessment-composer-summary > div > p:last-child {
-    @apply mt-1 max-w-2xl text-sm leading-6 text-muted-foreground;
+  .assessment-composer-summary > div > p {
+    @apply text-[0.625rem] font-semibold tracking-wider text-muted-foreground uppercase;
   }
 
   .assessment-composer-summary dl {
@@ -3181,7 +3510,7 @@
   }
 
   .assessment-composer-summary dl > div {
-    @apply min-w-24 bg-white/80 px-4 py-3;
+    @apply min-w-20 bg-background px-3 py-2;
   }
 
   .assessment-composer-summary dt {
@@ -3189,7 +3518,7 @@
   }
 
   .assessment-composer-summary dd {
-    @apply mt-1 text-sm font-semibold text-foreground;
+    @apply mt-0.5 text-sm font-semibold text-foreground;
   }
 
   .assessment-composer-card {
@@ -3220,6 +3549,18 @@
     @apply space-y-4 p-5 sm:p-6;
   }
 
+  .assessment-composer-settings > summary {
+    @apply cursor-pointer list-none items-center;
+  }
+
+  .assessment-composer-settings > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .assessment-composer-settings:not([open]) > summary {
+    @apply border-b-0;
+  }
+
   .assessment-objective-grid {
     @apply grid gap-2 sm:grid-cols-2;
   }
@@ -3238,6 +3579,59 @@
 
   .assessment-objective-grid span span {
     @apply mt-0.5 block text-xs leading-5 text-muted-foreground;
+  }
+
+  .assessment-candidate-picker {
+    @apply min-w-0 rounded-xl border bg-muted/10 p-3;
+  }
+
+  .assessment-candidate-picker > legend {
+    @apply px-1 text-sm font-semibold;
+  }
+
+  .assessment-candidate-picker__toolbar {
+    @apply mb-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_12rem_auto] sm:items-center;
+  }
+
+  .assessment-candidate-picker__toolbar > label {
+    @apply relative;
+  }
+
+  .assessment-candidate-picker__toolbar > label > svg {
+    @apply pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground;
+  }
+
+  .assessment-candidate-picker__toolbar input {
+    @apply pl-9;
+  }
+
+  .assessment-candidate-picker__toolbar > span {
+    @apply whitespace-nowrap rounded-full bg-primary/8 px-2.5 py-1.5 text-center text-xs font-semibold text-primary;
+  }
+
+  .assessment-candidate-picker__list {
+    @apply grid max-h-80 gap-1.5 overflow-y-auto overscroll-contain pr-1 sm:grid-cols-2;
+  }
+
+  .assessment-candidate-picker__list > label {
+    @apply flex min-w-0 items-start gap-2.5 rounded-lg border bg-card p-2.5 text-sm transition-colors hover:border-primary/25;
+  }
+
+  .assessment-candidate-picker__list > label[data-selected='true'] {
+    @apply border-primary/35 bg-primary/5;
+  }
+
+  .assessment-candidate-picker__list strong {
+    @apply block font-mono text-[0.6875rem] text-primary;
+  }
+
+  .assessment-candidate-picker__list span > span,
+  .assessment-candidate-picker__list small {
+    @apply mt-0.5 block truncate text-[0.6875rem] leading-4 text-muted-foreground;
+  }
+
+  .assessment-candidate-picker__list > p {
+    @apply col-span-full py-8 text-center text-sm text-muted-foreground;
   }
 
   .assessment-section-list {
@@ -3261,11 +3655,11 @@
   }
 
   .assessment-governance-rail {
-    @apply divide-y divide-border overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-[0_12px_38px_rgb(41_56_82_/_0.065)] xl:sticky xl:top-5;
+    @apply grid gap-px overflow-hidden rounded-xl border border-border bg-border text-foreground shadow-[0_8px_24px_rgb(41_56_82_/_0.045)] md:grid-cols-2;
   }
 
   .assessment-governance-rail > section {
-    @apply bg-card p-5;
+    @apply bg-card p-4;
   }
 
   .assessment-governance-rail__title {
@@ -3285,7 +3679,7 @@
   }
 
   .assessment-readiness-list {
-    @apply mt-4 space-y-2 text-xs leading-5 text-foreground;
+    @apply mt-3 grid gap-2 text-xs leading-5 text-foreground sm:grid-cols-2;
   }
 
   .assessment-readiness-list li {
@@ -3297,11 +3691,11 @@
   }
 
   .assessment-governance-rail__workflow label {
-    @apply mt-4 block text-xs text-muted-foreground;
+    @apply mt-3 block text-xs text-muted-foreground;
   }
 
   .assessment-governance-rail__workflow textarea {
-    @apply mt-1.5 min-h-24 border-input bg-card text-foreground;
+    @apply mt-1.5 min-h-16 border-input bg-card text-foreground;
   }
 
   .assessment-governance-rail__workflow button {
@@ -3729,8 +4123,12 @@
     @apply mt-2 text-lg font-semibold tracking-[-0.02em];
   }
 
-  .assessment-resource-card__body > p:last-child {
+  .assessment-resource-card__body > p:not(.assessment-resource-card__code) {
     @apply mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground;
+  }
+
+  .assessment-resource-card__body > small {
+    @apply mt-4 block font-mono text-[0.625rem] text-muted-foreground;
   }
 
   .assessment-status {
@@ -3754,12 +4152,45 @@
     @apply border-orange-600/20 bg-orange-500/8 text-orange-700;
   }
 
-  .assessment-question-list {
+  .assessment-resource-list {
     @apply divide-y divide-border;
   }
 
+  .assessment-resource-list > li {
+    @apply grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/15 sm:grid-cols-[2.25rem_minmax(0,1fr)_auto_2rem] sm:px-6;
+  }
+
+  .assessment-resource-list__icon {
+    @apply grid size-9 place-items-center rounded-lg bg-primary/8 text-primary [&>svg]:size-4;
+  }
+
+  .assessment-resource-list__body {
+    @apply min-w-0;
+  }
+
+  .assessment-resource-list__body h3 {
+    @apply truncate text-sm font-semibold;
+  }
+
+  .assessment-resource-list__body p {
+    @apply mt-0.5 line-clamp-1 text-xs text-muted-foreground;
+  }
+
+  .assessment-resource-list__meta {
+    @apply col-start-2 flex items-center gap-2 text-xs text-muted-foreground sm:col-start-auto sm:flex-col sm:items-end;
+  }
+
+  .assessment-resource-list > li > a,
+  .assessment-resource-list > li > button {
+    @apply col-start-3 row-span-2 row-start-1 sm:col-start-auto sm:row-span-1;
+  }
+
+  .assessment-question-list {
+    @apply grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-3;
+  }
+
   .assessment-question-list > li {
-    @apply flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-6;
+    @apply flex min-h-52 min-w-0 flex-col rounded-xl border bg-card p-4 shadow-xs transition hover:border-primary/25 hover:shadow-sm;
   }
 
   .assessment-question-list__icon {
@@ -3767,15 +4198,116 @@
   }
 
   .assessment-question-list h3 {
-    @apply font-mono text-sm font-semibold;
+    @apply mt-2 line-clamp-3 text-sm leading-6 font-semibold;
   }
 
-  .assessment-question-list p {
-    @apply mt-1 text-xs text-muted-foreground;
+  .assessment-question-list__topline {
+    @apply flex items-center justify-between gap-2;
+  }
+
+  .assessment-question-list__topline > span:first-child {
+    @apply truncate text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase;
+  }
+
+  .assessment-question-list__code {
+    @apply mt-3 font-mono text-[0.65rem] font-semibold text-primary;
+  }
+
+  .assessment-question-list__version {
+    @apply mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[0.6875rem] text-muted-foreground;
   }
 
   .assessment-question-list__locked {
     @apply text-xs font-medium text-muted-foreground;
+  }
+
+  .assessment-question-list__actions {
+    @apply mt-auto flex items-center justify-end gap-2 border-t pt-3;
+  }
+
+  .assessment-question-preview-dialog__loading {
+    @apply flex min-h-64 items-center justify-center gap-2 text-sm text-muted-foreground [&>svg]:size-4;
+  }
+
+  .assessment-question-preview-dialog__surface {
+    @apply overflow-hidden rounded-xl border bg-background;
+  }
+
+  .assessment-question-preview-dialog__prompt {
+    @apply p-5 sm:p-7;
+  }
+
+  .assessment-question-preview-dialog__options {
+    @apply grid gap-2 border-t bg-muted/10 p-5 sm:grid-cols-2;
+  }
+
+  .assessment-question-preview-dialog__options > li {
+    @apply grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] gap-3 rounded-lg border bg-card p-3 text-sm;
+  }
+
+  .assessment-question-preview-dialog__options > li > span {
+    @apply grid size-7 place-items-center rounded-full bg-primary/8 font-mono text-xs font-bold text-primary;
+  }
+
+  .assessment-question-preview-dialog__binary {
+    @apply grid grid-cols-2 gap-3 border-t bg-muted/10 p-5;
+  }
+
+  .assessment-question-preview-dialog__binary span,
+  .assessment-question-preview-dialog__matching > div > span {
+    @apply rounded-lg border bg-card p-3 text-sm;
+  }
+
+  .assessment-question-preview-dialog__matching {
+    @apply grid grid-cols-2 gap-4 border-t bg-muted/10 p-5;
+  }
+
+  .assessment-question-preview-dialog__matching > div {
+    @apply grid gap-2;
+  }
+
+  .assessment-question-preview-dialog__answer {
+    @apply m-5 min-h-24 rounded-lg border border-dashed bg-muted/10 p-4 text-sm text-muted-foreground;
+  }
+
+  .assessment-question-preview-dialog__answer span {
+    @apply mt-2 block text-xs;
+  }
+
+  .assessment-question-preview-dialog__media figure {
+    @apply my-3 max-h-80;
+  }
+
+  .assessment-question-review {
+    @apply mt-5 overflow-hidden rounded-xl border bg-card p-5 shadow-xs sm:p-6;
+  }
+
+  .assessment-question-review > header {
+    @apply mb-4 flex items-center justify-between gap-3;
+  }
+
+  .assessment-question-review > header p {
+    @apply text-[0.625rem] font-semibold tracking-wider text-primary uppercase;
+  }
+
+  .assessment-question-review > header h2 {
+    @apply mt-1 text-lg font-semibold;
+  }
+
+  .assessment-revision-workflow--wide {
+    @apply mt-5 overflow-hidden rounded-xl border bg-card p-0 shadow-xs;
+  }
+
+  .assessment-revision-workflow--wide > header {
+    @apply border-b bg-muted/15 px-5 py-4;
+  }
+
+  .assessment-revision-workflow__wide-body {
+    @apply grid gap-4 p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-end;
+  }
+
+  .assessment-revision-workflow__actions {
+    @apply flex flex-wrap justify-end gap-2;
   }
 
   .assessment-empty {
@@ -4226,7 +4758,893 @@
     @apply bg-red-500/15 text-red-200 hover:bg-red-500/25;
   }
 
+  .assessment-question-studio {
+    @apply mt-5 overflow-clip rounded-xl border bg-background shadow-sm;
+  }
+
+  .assessment-question-studio__command {
+    @apply sticky top-0 z-30 flex items-center justify-between gap-4 border-b bg-background/95 px-5 py-3 backdrop-blur-xl;
+  }
+
+  .assessment-question-studio__command > div {
+    @apply flex min-w-0 items-center gap-3;
+  }
+
+  .assessment-question-studio__command svg {
+    @apply size-3.5;
+  }
+
+  .assessment-question-studio__command strong {
+    @apply truncate text-sm;
+  }
+
+  .assessment-question-studio__command small {
+    @apply hidden text-xs text-muted-foreground lg:block;
+  }
+
+  .assessment-question-studio__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .assessment-question-studio__main {
+    @apply min-w-0 divide-y bg-background;
+  }
+
+  .assessment-studio-section {
+    @apply scroll-mt-20 px-4 py-5 sm:px-6;
+  }
+
+  .assessment-studio-section > header {
+    @apply mb-4;
+  }
+
+  .assessment-studio-section > header h2 {
+    @apply text-lg font-bold tracking-tight;
+  }
+
+  .assessment-question-blueprint {
+    @apply grid gap-3 md:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .assessment-studio-field {
+    @apply grid content-start gap-1.5 text-sm font-semibold;
+  }
+
+  .assessment-studio-field > small {
+    @apply text-xs font-normal leading-5 text-muted-foreground;
+  }
+
+  .assessment-input-with-suffix {
+    @apply relative;
+  }
+
+  .assessment-input-with-suffix input {
+    @apply pr-12;
+  }
+
+  .assessment-input-with-suffix span {
+    @apply pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground;
+  }
+
+  .assessment-rich-editor {
+    @apply overflow-hidden rounded-xl border bg-card shadow-xs;
+  }
+
+  .assessment-rich-editor__toolbar {
+    @apply flex flex-wrap items-center gap-1 border-b px-2 py-1.5;
+  }
+
+  .assessment-rich-editor__toolbar > div {
+    @apply flex items-center gap-0.5;
+  }
+
+  .assessment-rich-editor__toolbar svg {
+    @apply size-3.5;
+  }
+
+  .assessment-rich-editor__insert-panel {
+    @apply grid gap-3 border-b bg-sky-50/45 p-4 dark:bg-sky-950/15;
+  }
+
+  .assessment-rich-editor__math-preview {
+    @apply grid min-h-16 place-items-center overflow-auto rounded-lg border bg-background px-4 py-3 text-muted-foreground;
+  }
+
+  .assessment-rich-editor__table-panel {
+    @apply sm:grid-cols-[7rem_7rem_minmax(12rem,1fr)_auto];
+  }
+
+  .assessment-rich-editor__table-panel label {
+    @apply grid gap-1 text-xs font-semibold;
+  }
+
+  .assessment-rich-editor__table-panel button {
+    @apply self-end;
+  }
+
+  .assessment-segmented-control {
+    @apply flex w-fit rounded-lg bg-muted p-1;
+  }
+
+  .assessment-segmented-control button {
+    @apply rounded-md px-3 py-1.5 text-xs font-semibold text-muted-foreground;
+  }
+
+  .assessment-segmented-control button[data-active='true'] {
+    @apply bg-background text-foreground shadow-xs;
+  }
+
+  .assessment-rich-editor__canvas {
+    @apply min-h-72 bg-background px-5 py-5 sm:px-6;
+  }
+
+  .assessment-rich-editor[data-compact='true'] .assessment-rich-editor__canvas {
+    @apply min-h-64;
+  }
+
+  .assessment-rich-editor__canvas .tiptap {
+    @apply min-h-64 space-y-4 text-[1.02rem] leading-8 outline-none;
+  }
+
+  .assessment-rich-editor[data-compact='true']
+    .assessment-rich-editor__canvas
+    .tiptap {
+    @apply min-h-52;
+  }
+
+  .assessment-rich-editor__canvas .tiptap > p:first-child:empty::before {
+    content: 'Escribe el contexto y el enunciado.';
+    @apply pointer-events-none text-muted-foreground/65;
+  }
+
+  .assessment-rich-editor__preview {
+    @apply min-h-64 bg-background p-6;
+  }
+
+  .assessment-rich-editor__error {
+    @apply border-t border-destructive/20 bg-destructive/5 px-4 py-2.5 text-sm text-destructive;
+  }
+
+  .assessment-editor-loading {
+    @apply rounded-xl border p-5 text-sm text-muted-foreground;
+  }
+
+  .assessment-choice-studio > header,
+  .assessment-matching-studio > header {
+    @apply mb-3 flex items-center justify-between gap-4;
+  }
+
+  .assessment-choice-studio > header h3,
+  .assessment-matching-studio > header h3 {
+    @apply text-base font-bold;
+  }
+
+  .assessment-choice-studio > header > span,
+  .assessment-matching-studio > header > span {
+    @apply shrink-0 rounded-full border bg-background px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .assessment-choice-list {
+    @apply grid gap-3;
+  }
+
+  .assessment-choice-list > li {
+    @apply overflow-hidden rounded-xl border bg-card transition;
+  }
+
+  .assessment-choice-list > li[data-correct='true'] {
+    @apply border-emerald-500/45 ring-2 ring-emerald-500/10;
+  }
+
+  .assessment-choice-card__identity {
+    @apply flex items-center gap-2 border-b bg-muted/20 px-3 py-2;
+  }
+
+  .assessment-choice-card__identity > svg {
+    @apply size-4 text-muted-foreground;
+  }
+
+  .assessment-choice-card__identity > span {
+    @apply grid size-7 place-items-center rounded-md bg-slate-950 text-xs font-bold text-white dark:bg-white dark:text-slate-950;
+  }
+
+  .assessment-choice-correct {
+    @apply flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold text-muted-foreground transition hover:border-emerald-500/40;
+  }
+
+  .assessment-choice-correct[data-correct='true'] {
+    @apply border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300;
+  }
+
+  .assessment-choice-correct svg {
+    @apply size-3.5;
+  }
+
+  .assessment-choice-position {
+    @apply rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary;
+  }
+
+  .assessment-choice-card__actions {
+    @apply ml-auto flex;
+  }
+
+  .assessment-choice-card__body {
+    @apply grid gap-3 p-3;
+  }
+
+  .assessment-choice-card__body label > span {
+    @apply mb-1.5 block text-xs font-semibold text-muted-foreground;
+  }
+
+  .assessment-choice-card__rationale {
+    @apply rounded-lg border bg-muted/15 p-3;
+  }
+
+  .assessment-choice-card__rationale summary {
+    @apply flex cursor-pointer items-center gap-2 text-xs font-semibold;
+  }
+
+  .assessment-choice-card__rationale[open] summary {
+    @apply mb-3;
+  }
+
+  .assessment-choice-card__media > div {
+    @apply flex items-center gap-3 rounded-lg border border-sky-500/20 bg-sky-500/5 p-3;
+  }
+
+  .assessment-choice-card__media > div > svg {
+    @apply size-5 shrink-0 text-sky-600;
+  }
+
+  .assessment-choice-card__media p {
+    @apply grid min-w-0 flex-1 text-xs;
+  }
+
+  .assessment-choice-card__media p span {
+    @apply truncate text-muted-foreground;
+  }
+
+  .assessment-choice-add {
+    @apply mt-3 w-full border-dashed;
+  }
+
+  .assessment-matching-studio > div {
+    @apply mb-2 grid grid-cols-[2rem_minmax(0,1fr)_1.5rem_minmax(0,1fr)_2rem] items-center gap-2 rounded-xl border bg-card p-3;
+  }
+
+  .assessment-matching-studio__side {
+    @apply min-w-0;
+  }
+
+  .assessment-matching-studio__side-actions {
+    @apply mt-1.5 flex min-h-8 items-center justify-end gap-1;
+  }
+
+  .assessment-matching-studio__side-actions > span {
+    @apply mr-auto flex min-w-0 items-center gap-1.5 truncate text-[0.6875rem] text-muted-foreground;
+  }
+
+  .assessment-matching-studio__side-actions > span svg {
+    @apply size-3.5 shrink-0;
+  }
+
+  .assessment-matching-studio > div > span {
+    @apply grid size-7 place-items-center rounded-md bg-muted text-xs font-bold;
+  }
+
+  .assessment-matching-studio > div > svg {
+    @apply size-4 justify-self-center text-muted-foreground;
+  }
+
+  .assessment-binary-key {
+    @apply grid gap-3 sm:grid-cols-2;
+  }
+
+  .assessment-binary-key button {
+    @apply flex min-h-16 items-center justify-center gap-2 rounded-lg border bg-card text-base font-semibold transition hover:border-primary/35;
+  }
+
+  .assessment-binary-key button[data-active='true'] {
+    @apply border-primary bg-primary/5 text-primary ring-2 ring-primary/10;
+  }
+
+  .assessment-binary-key svg {
+    @apply size-6;
+  }
+
+  .assessment-exact-answer-grid {
+    @apply grid gap-4 sm:grid-cols-3;
+  }
+
+  .assessment-open-answer,
+  .assessment-math-key-studio {
+    @apply grid gap-5;
+  }
+
+  .assessment-math-key-studio {
+    @apply xl:grid-cols-[0.85fr_1.15fr];
+  }
+
+  .assessment-math-key-studio > div:first-child {
+    @apply grid content-start gap-4;
+  }
+
+  .assessment-check-row {
+    @apply flex items-center gap-2 text-sm;
+  }
+
+  .assessment-feedback-grid {
+    @apply mt-5 grid gap-4 xl:grid-cols-3;
+  }
+
+  .assessment-feedback-grid + .assessment-studio-field {
+    @apply mt-4;
+  }
+
+  .assessment-studio-submit-error {
+    @apply fixed right-5 bottom-5 z-50 max-w-md rounded-xl border border-destructive/20 bg-background p-4 text-sm text-destructive shadow-2xl;
+  }
+
+  .assessment-question-studio__mobile-save {
+    @apply hidden;
+  }
+
+  .asset-picker-source {
+    @apply grid grid-cols-2 overflow-hidden rounded-lg border bg-muted/20 p-1;
+  }
+
+  .asset-picker-source button {
+    @apply flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors [&>svg]:size-4;
+  }
+
+  .asset-picker-source button[data-active='true'] {
+    @apply bg-background text-foreground shadow-xs;
+  }
+
+  .asset-picker-layout {
+    @apply grid min-h-96 overflow-hidden rounded-lg border lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.8fr)];
+  }
+
+  .asset-picker-browser {
+    @apply min-w-0 border-b lg:border-r lg:border-b-0;
+  }
+
+  .asset-picker-filters {
+    @apply grid gap-2 border-b bg-muted/15 p-3 sm:grid-cols-[11rem_minmax(0,1fr)];
+  }
+
+  .asset-picker-results {
+    @apply max-h-[24rem] divide-y overflow-y-auto;
+  }
+
+  .asset-picker-results button {
+    @apply grid w-full grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-3 p-3 text-left transition-colors hover:bg-muted/25;
+  }
+
+  .asset-picker-results button[data-active='true'] {
+    @apply bg-primary/5 ring-1 ring-inset ring-primary/25;
+  }
+
+  .asset-picker-results__preview {
+    @apply h-12 overflow-hidden rounded-md border bg-muted;
+  }
+
+  .asset-picker-results button > span:last-child {
+    @apply grid min-w-0;
+  }
+
+  .asset-picker-results strong {
+    @apply truncate text-sm;
+  }
+
+  .asset-picker-results small {
+    @apply mt-0.5 text-xs text-muted-foreground;
+  }
+
+  .asset-picker-empty,
+  .asset-picker-error {
+    @apply p-8 text-center text-sm text-muted-foreground;
+  }
+
+  .asset-picker-error {
+    @apply text-destructive;
+  }
+
+  .asset-picker-metadata {
+    @apply grid content-start gap-4 p-4;
+  }
+
+  .asset-picker-metadata h3 {
+    @apply truncate text-sm font-semibold;
+  }
+
+  .asset-picker-metadata > p {
+    @apply text-sm leading-6 text-muted-foreground;
+  }
+
+  .asset-resource-grid {
+    @apply mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5;
+  }
+
+  .asset-resource-grid > li {
+    @apply min-w-0;
+  }
+
+  .asset-resource-card__trigger {
+    @apply block h-full w-full overflow-hidden rounded-xl border bg-card text-left shadow-xs transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .asset-resource-card__preview {
+    @apply h-24 overflow-hidden border-b bg-muted/20;
+  }
+
+  .asset-resource-card__preview [role='img'] > span:first-child {
+    @apply hidden;
+  }
+
+  .asset-resource-card__preview [role='img'] > span:nth-child(2) {
+    @apply size-9 rounded-xl;
+  }
+
+  .asset-resource-card__preview [role='img'] > span:nth-child(2) svg {
+    @apply size-4.5;
+  }
+
+  .asset-resource-card__preview [role='img'] > span:last-child {
+    @apply hidden;
+  }
+
+  .asset-resource-card__body {
+    @apply p-3;
+  }
+
+  .asset-resource-card__eyebrow {
+    @apply flex items-center justify-between gap-2 text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase;
+  }
+
+  .asset-resource-card__eyebrow span:last-child {
+    @apply flex items-center gap-1 tracking-normal normal-case;
+  }
+
+  .asset-resource-card__eyebrow span:last-child::before {
+    content: '';
+    @apply size-1.5 rounded-full bg-amber-500;
+  }
+
+  .asset-resource-card__eyebrow span:last-child[data-status='active']::before {
+    @apply bg-emerald-500;
+  }
+
+  .asset-resource-card__body h2 {
+    @apply mt-2 line-clamp-2 min-h-10 text-sm leading-5 font-semibold tracking-[-0.01em];
+  }
+
+  .asset-resource-card__body > p {
+    @apply mt-1 line-clamp-1 text-xs text-muted-foreground;
+  }
+
+  .asset-resource-card__body dl {
+    @apply mt-3 flex gap-4 border-t pt-2 text-[0.6875rem];
+  }
+
+  .asset-resource-card__body dl > div {
+    @apply min-w-0;
+  }
+
+  .asset-resource-card__body dt {
+    @apply text-muted-foreground;
+  }
+
+  .asset-resource-card__body dd {
+    @apply truncate font-semibold;
+  }
+
+  .asset-library-dialog [data-slot='dialog-title'] {
+    @apply text-xl leading-tight font-semibold tracking-[-0.02em];
+  }
+
+  .asset-library-dialog__viewer {
+    @apply min-h-56 overflow-hidden rounded-xl border bg-muted/10;
+  }
+
+  .asset-library-dialog__viewer > :only-child {
+    @apply border-0;
+  }
+
+  .asset-library-dialog__facts {
+    @apply grid overflow-hidden rounded-lg border bg-border sm:grid-cols-2 lg:grid-cols-4;
+    gap: 1px;
+  }
+
+  .asset-library-dialog__facts > div {
+    @apply min-w-0 bg-background px-3 py-2.5;
+  }
+
+  .asset-library-dialog__facts dt {
+    @apply text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase;
+  }
+
+  .asset-library-dialog__facts dd {
+    @apply mt-0.5 truncate text-xs font-medium;
+  }
+
+  .asset-library-dialog__unavailable {
+    @apply grid min-h-64 place-items-center content-center gap-2 p-8 text-center;
+  }
+
+  .asset-library-dialog__unavailable svg {
+    @apply size-8 text-muted-foreground;
+  }
+
+  .asset-library-dialog__unavailable p {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .asset-library-dialog__dataset {
+    @apply max-h-80 overflow-auto border-b bg-background;
+  }
+
+  .asset-library-dialog__dataset table {
+    @apply w-full min-w-[32rem] text-left text-xs;
+  }
+
+  .asset-library-dialog__dataset th {
+    @apply sticky top-0 border-b bg-muted px-3 py-2 font-semibold;
+  }
+
+  .asset-library-dialog__dataset td {
+    @apply border-b px-3 py-2;
+  }
+
+  .asset-library-dialog__text-preview {
+    @apply max-h-80 overflow-auto border-b bg-slate-950 p-4 font-mono text-xs whitespace-pre-wrap text-slate-100;
+  }
+
+  .asset-media-document {
+    @apply grid gap-3 bg-background p-3;
+  }
+
+  .asset-media-document iframe {
+    @apply h-[min(68vh,48rem)] w-full rounded-lg border bg-white;
+  }
+
+  .asset-media-document--text iframe {
+    @apply h-[min(52vh,34rem)];
+  }
+
+  .asset-media-document > a {
+    @apply justify-self-end;
+  }
+
+  .course-catalog-grid {
+    @apply mt-5 grid gap-3 xl:grid-cols-2;
+  }
+
+  .course-catalog-grid > li {
+    @apply grid min-w-0 grid-cols-[4.5rem_minmax(0,1fr)_2rem] items-center gap-4 rounded-xl border bg-card p-4 transition-colors hover:border-primary/25 hover:bg-muted/10;
+  }
+
+  .course-catalog-card__mark {
+    @apply grid h-20 place-items-center rounded-lg bg-primary/8 py-2 text-primary;
+  }
+
+  .course-catalog-card__mark > svg {
+    @apply size-5;
+  }
+
+  .course-catalog-card__mark > span {
+    @apply text-lg leading-none font-bold;
+  }
+
+  .course-catalog-card__mark > small {
+    @apply text-[0.6rem] font-medium text-muted-foreground;
+  }
+
+  .course-catalog-card__body {
+    @apply min-w-0;
+  }
+
+  .course-catalog-card__body h2 {
+    @apply truncate font-semibold;
+  }
+
+  .course-catalog-card__body > p {
+    @apply mt-1 line-clamp-2 text-sm leading-5 text-muted-foreground;
+  }
+
+  .course-catalog-card__body dl {
+    @apply mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground;
+  }
+
+  .course-catalog-card__body dd {
+    @apply flex items-center gap-1.5 [&>svg]:size-3.5;
+  }
+
+  .course-authoring-filters {
+    @apply mt-5 grid gap-2 rounded-lg border bg-card p-3 md:grid-cols-2 xl:grid-cols-[minmax(16rem,1fr)_11rem_12rem_12rem_auto];
+  }
+
+  .course-authoring-list {
+    @apply mt-4 divide-y overflow-hidden rounded-lg border bg-card;
+  }
+
+  .course-authoring-list > li {
+    @apply grid grid-cols-[2.25rem_minmax(0,1fr)_auto_2rem] items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/15 xl:grid-cols-[2.25rem_minmax(16rem,1fr)_minmax(10rem,0.55fr)_auto_8rem_2rem];
+  }
+
+  .course-authoring-list__icon {
+    @apply grid size-9 place-items-center rounded-lg bg-primary/8 text-primary [&>svg]:size-4;
+  }
+
+  .course-authoring-list__body {
+    @apply min-w-0;
+  }
+
+  .course-authoring-list__body > a {
+    @apply block truncate text-sm font-semibold underline-offset-4 hover:text-primary hover:underline;
+  }
+
+  .course-authoring-list__body p {
+    @apply mt-0.5 truncate text-xs text-muted-foreground;
+  }
+
+  .course-authoring-list__subject,
+  .course-authoring-list time {
+    @apply hidden truncate text-xs text-muted-foreground xl:block;
+  }
+
+  .course-workspace {
+    @apply pb-14;
+  }
+
+  .course-workspace__hero {
+    @apply mt-4 flex flex-col gap-5 rounded-xl border border-slate-200 bg-white p-5 shadow-[0_12px_34px_rgb(15_23_42_/_0.045)] sm:p-6 lg:flex-row lg:items-end lg:justify-between;
+    background-image: linear-gradient(
+      110deg,
+      rgb(239 246 255 / 72%),
+      rgb(255 255 255) 42%
+    );
+  }
+
+  .course-workspace__hero > div {
+    @apply min-w-0;
+  }
+
+  .course-workspace__eyebrow {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .course-workspace__eyebrow > span {
+    @apply font-mono text-[0.625rem] font-semibold tracking-wider text-blue-700 uppercase;
+  }
+
+  .course-workspace__hero h1 {
+    @apply mt-2 text-2xl leading-tight font-semibold tracking-[-0.04em] text-slate-950 sm:text-3xl;
+  }
+
+  .course-workspace__hero p {
+    @apply mt-2 max-w-4xl text-sm leading-6 text-slate-600;
+  }
+
+  .course-workspace__nav {
+    @apply mt-3 flex min-w-0 gap-1 overflow-x-auto rounded-lg border border-slate-200 bg-white p-1 shadow-sm;
+  }
+
+  .course-workspace__nav a {
+    @apply inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950;
+  }
+
+  .course-workspace__nav a[aria-current='page'] {
+    @apply bg-slate-950 text-white shadow-sm;
+  }
+
+  .course-workspace__nav svg {
+    @apply size-3.5;
+  }
+
+  .course-workspace__facts {
+    @apply mt-3 grid overflow-hidden rounded-lg border border-slate-200 bg-white sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .course-workspace__facts > div {
+    @apply border-b border-slate-200 px-4 py-3 last:border-b-0 sm:border-r sm:nth-[2n]:border-r-0 xl:border-b-0 xl:nth-[2n]:border-r xl:last:border-r-0;
+  }
+
+  .course-workspace__facts dt {
+    @apply text-[0.6875rem] font-medium text-slate-500;
+  }
+
+  .course-workspace__facts dd {
+    @apply mt-0.5 text-sm font-semibold text-slate-900;
+  }
+
+  .course-workspace__metadata:empty {
+    display: none;
+  }
+
+  .course-workspace__metadata > section {
+    @apply mt-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm;
+  }
+
+  .course-workspace__governance {
+    @apply mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(19rem,0.85fr)];
+  }
+
+  .course-workspace__panel {
+    @apply min-w-0 rounded-xl border border-slate-200 bg-white p-5 shadow-sm;
+  }
+
+  .course-workspace__panel > section {
+    @apply border-t-0 pt-0;
+  }
+
+  .course-workspace__panel fieldset > div,
+  .course-workspace__panel #readiness-issues {
+    @apply rounded-lg border border-slate-200;
+  }
+
+  .course-workspace__structure {
+    @apply mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm;
+  }
+
+  .course-workspace__structure > header {
+    @apply flex flex-col gap-3 border-b border-slate-200 bg-slate-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  .course-workspace__structure > header h2 {
+    @apply mt-0.5 text-lg font-semibold tracking-[-0.025em];
+  }
+
+  .course-workspace__structure > header p:last-child {
+    @apply mt-1 text-xs text-slate-500;
+  }
+
+  .course-workspace__structure > header > span {
+    @apply inline-flex w-fit shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700;
+  }
+
+  .course-workspace__structure > header > span svg {
+    @apply size-3.5 text-blue-600;
+  }
+
+  .course-workspace__structure > ol {
+    @apply grid gap-px bg-slate-200 sm:grid-cols-2 2xl:grid-cols-3;
+  }
+
+  .course-workspace__structure > ol > li {
+    @apply min-w-0 bg-white;
+  }
+
+  .course-workspace__structure > ol > li > header {
+    @apply flex min-h-16 items-center gap-3 border-b border-slate-100 px-4 py-3;
+  }
+
+  .course-workspace__structure > ol > li > header > span {
+    @apply grid size-8 shrink-0 place-items-center rounded-lg bg-blue-50 font-mono text-[0.6875rem] font-semibold text-blue-700;
+  }
+
+  .course-workspace__structure > ol > li > header > div {
+    @apply grid min-w-0;
+  }
+
+  .course-workspace__structure > ol > li > header small {
+    @apply font-mono text-[0.5625rem] font-semibold tracking-wider text-slate-400 uppercase;
+  }
+
+  .course-workspace__structure > ol > li > header strong {
+    @apply line-clamp-2 text-xs leading-4 font-semibold text-slate-900;
+  }
+
+  .course-workspace__structure > ol > li > ul {
+    @apply divide-y divide-slate-100;
+  }
+
+  .course-workspace__structure > ol > li > ul > li {
+    @apply flex min-h-12 items-center gap-2 px-4 py-2.5;
+  }
+
+  .course-workspace__unit-title {
+    @apply line-clamp-2 min-w-0 flex-1 text-xs font-medium text-slate-700;
+  }
+
+  .course-workspace__unit-status {
+    @apply shrink-0 text-[0.625rem];
+  }
+
+  .course-workspace__history {
+    @apply mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white;
+  }
+
+  .course-workspace__history > summary {
+    @apply cursor-pointer list-none px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-slate-50;
+  }
+
+  .course-workspace__history > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .course-workspace__history > ol {
+    @apply grid gap-3 border-t border-slate-200 bg-slate-50/50 p-4 sm:grid-cols-2 xl:grid-cols-3;
+  }
+
+  .course-workspace__history li {
+    @apply border-l-2 border-blue-300 pl-3 text-xs;
+  }
+
+  .course-workspace__history li > span {
+    @apply ml-1 text-slate-500;
+  }
+
+  .course-workspace__history li > p {
+    @apply mt-1 text-slate-600;
+  }
+
   @media (max-width: 42rem) {
+    .assessment-question-studio {
+      @apply -mx-3 rounded-none border-x-0;
+    }
+
+    .assessment-question-studio__command {
+      @apply px-3;
+    }
+
+    .assessment-question-studio__command > div:first-child > span,
+    .assessment-question-studio__command > div:first-child > small,
+    .assessment-question-studio__command > div:last-child {
+      @apply hidden;
+    }
+
+    .assessment-question-studio__layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .assessment-question-studio__main {
+      @apply border-r-0;
+    }
+
+    .assessment-studio-section {
+      @apply px-3 py-6;
+    }
+
+    .assessment-rich-editor__toolbar > div:last-child {
+      @apply ml-0 w-full border-t pt-1;
+    }
+
+    .assessment-rich-editor__canvas {
+      @apply min-h-80 px-4 py-5;
+    }
+
+    .assessment-matching-studio > div {
+      @apply grid-cols-[2rem_minmax(0,1fr)_2rem];
+    }
+
+    .assessment-matching-studio > div > svg {
+      @apply col-start-1 rotate-90;
+    }
+
+    .assessment-matching-studio
+      > div
+      > .assessment-matching-studio__side:nth-of-type(2) {
+      @apply col-start-2;
+    }
+
+    .assessment-matching-studio > div > button {
+      @apply col-start-3 row-start-1;
+    }
+
+    .assessment-question-studio__mobile-save {
+      @apply fixed right-0 bottom-0 left-0 z-40 flex items-center justify-between gap-3 border-t bg-background/95 px-4 py-3 shadow-2xl backdrop-blur;
+    }
+
+    .assessment-question-studio__mobile-save > div {
+      @apply flex items-center gap-2 text-xs text-muted-foreground;
+    }
+
+    .assessment-question-studio__mobile-save svg {
+      @apply size-4;
+    }
+
     .learning-player__active-surface,
     .learning-player__stage:has(.live-class-experience[data-state='active'])
       .learning-player__activity,

@@ -33,10 +33,15 @@ function semanticNodeProps(node: { attrs: Record<string, unknown> }) {
 }
 
 export function AcademicDocument({
+  assessmentRefreshContext,
   assets = [],
   document,
   refreshContext,
 }: Readonly<{
+  assessmentRefreshContext?: {
+    attemptId: string;
+    slug: string;
+  };
   assets?: readonly AssetAccessDescriptor[];
   document: LMSUnitAcademicDocumentVersion1 | LMSUnitAcademicDocumentVersion2;
   refreshContext?: {
@@ -59,6 +64,7 @@ export function AcademicDocument({
         : '';
     return (
       <AcademicAsset
+        {...(assessmentRefreshContext ? { assessmentRefreshContext } : {})}
         attrs={node.attrs}
         kind={kind}
         {...(descriptorByVersion.get(captionId)

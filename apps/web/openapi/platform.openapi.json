@@ -617,12 +617,18 @@
             "readOnly": true,
             "type": "string"
           },
+          "attempt_limit": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
           "authoring_status": { "readOnly": true, "type": "string" },
           "created_at": {
             "format": "date-time",
             "readOnly": true,
             "type": "string"
           },
+          "description": { "readOnly": true, "type": "string" },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
           "latest_revision_id": {
             "nullable": true,
@@ -648,19 +654,33 @@
             "allOf": [{ "$ref": "#/components/schemas/CourseLifecycleStatus" }],
             "readOnly": true
           },
-          "title": { "readOnly": true, "type": "string" }
+          "time_limit_minutes": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "integer"
+          },
+          "title": { "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
         },
         "required": [
           "archived_at",
+          "attempt_limit",
           "authoring_status",
           "created_at",
+          "description",
           "id",
           "latest_revision_id",
           "latest_revision_number",
           "latest_version_number",
           "slug",
           "status",
-          "title"
+          "time_limit_minutes",
+          "title",
+          "updated_at"
         ],
         "type": "object"
       },
@@ -685,6 +705,28 @@
           "expected_revision_version": { "minimum": 1, "type": "integer" }
         },
         "required": ["assessment_version_id", "expected_revision_version"],
+        "type": "object"
+      },
+      "AssessmentAssetAccess": {
+        "properties": {
+          "asset_version_ids": {
+            "items": { "format": "uuid", "type": "string" },
+            "maxItems": 50,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": ["asset_version_ids"],
+        "type": "object"
+      },
+      "AssessmentAssetAccessResponse": {
+        "properties": {
+          "assets": {
+            "items": { "$ref": "#/components/schemas/AssetAccessDescriptor" },
+            "type": "array"
+          }
+        },
+        "required": ["assets"],
         "type": "object"
       },
       "AssessmentAssignmentStatus": {
@@ -1322,11 +1364,17 @@
       },
       "AssetUsage": {
         "properties": {
+          "assessment_versions": { "items": {}, "type": "array" },
           "content_versions": { "items": {}, "type": "array" },
           "current_reference_count": { "minimum": 0, "type": "integer" },
           "releases": { "items": {}, "type": "array" }
         },
-        "required": ["content_versions", "current_reference_count", "releases"],
+        "required": [
+          "assessment_versions",
+          "content_versions",
+          "current_reference_count",
+          "releases"
+        ],
         "type": "object"
       },
       "AssetVariant": {
@@ -1564,6 +1612,11 @@
             "readOnly": true,
             "type": "string"
           },
+          "assets": {
+            "items": { "$ref": "#/components/schemas/AssetAccessDescriptor" },
+            "readOnly": true,
+            "type": "array"
+          },
           "attempt_number": { "readOnly": true, "type": "integer" },
           "delivery_assignment_id": {
             "format": "uuid",
@@ -1609,6 +1662,7 @@
         },
         "required": [
           "assessment_version_id",
+          "assets",
           "attempt_number",
           "delivery_assignment_id",
           "expires_at",
@@ -7503,10 +7557,17 @@
             "readOnly": true,
             "type": "string"
           },
+          "preview": {
+            "additionalProperties": {},
+            "nullable": true,
+            "readOnly": true,
+            "type": "object"
+          },
           "status": {
             "allOf": [{ "$ref": "#/components/schemas/CourseLifecycleStatus" }],
             "readOnly": true
-          }
+          },
+          "type": { "nullable": true, "readOnly": true, "type": "string" }
         },
         "required": [
           "archived_at",
@@ -7517,7 +7578,9 @@
           "latest_version_number",
           "open_revision_id",
           "open_revision_status",
-          "status"
+          "preview",
+          "status",
+          "type"
         ],
         "type": "object"
       },
@@ -7653,6 +7716,19 @@
           }
         },
         "required": ["count", "next", "previous", "results"],
+        "type": "object"
+      },
+      "QuestionPreview": {
+        "properties": {
+          "assets": {
+            "items": { "$ref": "#/components/schemas/AssetAccessDescriptor" },
+            "type": "array"
+          },
+          "code": { "type": "string" },
+          "public": {},
+          "type": { "type": "string" }
+        },
+        "required": ["assets", "code", "public", "type"],
         "type": "object"
       },
       "QuestionRevision": {
@@ -12494,6 +12570,53 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/assets/access/": {
+      "post": {
+        "operationId": "assessment_attempt_asset_access",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AssessmentAssetAccess" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/AssessmentAssetAccess" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/AssessmentAssetAccess" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentAssetAccessResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/assessments/attempts/{attempt_id}/responses/{attempt_item_id}/": {
       "put": {
         "operationId": "assessment_responses_save",
@@ -14242,6 +14365,43 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Question" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/preview/": {
+      "get": {
+        "operationId": "assessment_question_preview",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bank_id",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuestionPreview" }
               }
             },
             "description": ""

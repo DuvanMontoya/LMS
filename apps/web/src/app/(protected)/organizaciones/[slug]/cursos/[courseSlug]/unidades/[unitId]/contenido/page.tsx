@@ -14,7 +14,7 @@ export default async function UnitContentPage({
     <main className="academic-page">
       <PageHeader
         breadcrumbs={[
-          { href: `/organizaciones/${slug}/cursos`, label: 'Cursos' },
+          { href: `/organizaciones/${slug}/cursos/autoria`, label: 'Autoría' },
           {
             href: `/organizaciones/${slug}/cursos/${courseSlug}`,
             label: data.revision.title,

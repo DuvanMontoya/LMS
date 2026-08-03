@@ -209,7 +209,7 @@ export default async function AssetDetailPage({
           <h2 className="font-semibold" id="usage-heading">
             Uso del recurso
           </h2>
-          <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
+          <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
             <div>
               <dt className="text-muted-foreground">Referencias vigentes</dt>
               <dd className="text-lg font-semibold">
@@ -220,6 +220,12 @@ export default async function AssetDetailPage({
               <dt className="text-muted-foreground">Versiones de contenido</dt>
               <dd className="text-lg font-semibold">
                 {usage.content_versions.length}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Preguntas versionadas</dt>
+              <dd className="text-lg font-semibold">
+                {usage.assessment_versions.length}
               </dd>
             </div>
             <div>

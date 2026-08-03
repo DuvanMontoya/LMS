@@ -253,6 +253,29 @@ export function createQuestion(
   );
 }
 
+export function createQuestionRevisionFromVersion(
+  slug: string,
+  bankId: string,
+  questionId: string,
+  versionNumber: number,
+) {
+  return required(
+    platformBrowserClient.POST(
+      '/api/v1/organizations/{slug}/assessments/question-banks/{bank_id}/questions/{question_id}/versions/{version_number}/create-draft/',
+      {
+        params: {
+          path: {
+            bank_id: bankId,
+            question_id: questionId,
+            slug,
+            version_number: versionNumber,
+          },
+        },
+      },
+    ),
+  );
+}
+
 type QuestionRevisionPath = {
   bankId: string;
   questionId: string;

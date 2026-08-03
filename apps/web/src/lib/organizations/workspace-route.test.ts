@@ -7,8 +7,8 @@ describe('primaryWorkspaceHref', () => {
     ['owner', '/organizaciones/academia/miembros'],
     ['administrator', '/organizaciones/academia/aprendizaje/cohortes'],
     ['instructor', '/organizaciones/academia/aprendizaje/mis-asignaturas'],
-    ['author', '/organizaciones/academia/cursos'],
-    ['reviewer', '/organizaciones/academia/cursos'],
+    ['author', '/organizaciones/academia/cursos/autoria'],
+    ['reviewer', '/organizaciones/academia/cursos/autoria'],
     ['learner', '/organizaciones/academia/aprendizaje'],
   ] as const)(
     'routes %s to its primary existing workspace',

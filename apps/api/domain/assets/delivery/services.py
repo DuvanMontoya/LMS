@@ -39,7 +39,10 @@ def asset_access_descriptor(
         AssetKind.DATASET,
     }:
         source = _deliver_original(
-            version, gateway=gateway, expires_seconds=expires_seconds
+            version,
+            gateway=gateway,
+            expires_seconds=expires_seconds,
+            inline=version.asset.kind == AssetKind.DOCUMENT and not include_original,
         )
     return AssetAccessDescriptor(
         asset_version_id=str(version.id),
@@ -94,15 +97,15 @@ def _deliver_original(
     *,
     gateway: ObjectStorageGateway,
     expires_seconds: int,
+    inline: bool,
 ) -> DeliveredObject:
-    attachment = version.asset.kind in {AssetKind.DOCUMENT, AssetKind.DATASET}
     url = gateway.generate_download_url(
         bucket=version.storage_bucket,
         key=version.storage_key,
         expires_seconds=expires_seconds,
         content_type=version.detected_mime_type,
         content_disposition=content_disposition(
-            filename=version.original_filename, inline=not attachment
+            filename=version.original_filename, inline=inline
         ),
     )
     return DeliveredObject(

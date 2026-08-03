@@ -1696,3 +1696,30 @@ Siguiente paso:
   identidades. La sesión Chrome de estudiante volvió a cargar la actividad
   programada; la comprobación visual de controles exclusivos de moderador sigue
   explícitamente pendiente de una sesión con esa capacidad.
+## Auditoría end-to-end de evaluaciones — en curso 2026-08-03
+
+- Se confirmó que scoring, gradebook y progreso ya están conectados: una nota
+  de una entrega curricular proyecta `passed/failed` en la actividad del grupo
+  mediante el contrato de learning, sin confundir grade con `CourseProgress`.
+- Se cerró la brecha multimedia que hacía que la autoría se sintiera MVP. El
+  enunciado acepta documento semántico v2 con imagen/audio/video/documento y
+  cada opción puede fijar una imagen READY con texto alternativo, pie y
+  descripción extensa. QTI 3 y W3C WAI guiaron el modelo, sin declarar
+  conformidad QTI.
+- `AssessmentAssetReference` protege la relación entre `QuestionVersion` y
+  `AssetVersion` con FK PROTECT, unicidad y triggers append-only. Se rechazan
+  recursos de otra organización, tipo incorrecto, archivados o sin procesar.
+  La biblioteca reporta usos en preguntas versionadas.
+- Learner recibe descriptores temporales sólo para recursos presentes en su
+  intento propio; snapshots, grading JSON y releases nunca contienen buckets,
+  object keys o URLs firmadas. El acceso temporal puede renovarse sin recargar
+  ni perder respuestas locales.
+- La autoría reutiliza la biblioteca privada y obliga a que imágenes de opción
+  sean informativas. Matching dejó el `<select>` incapaz de mostrar imágenes y
+  usa grupos visuales con radio buttons. El temporizador envía automáticamente
+  al vencer; un nuevo inicio reconcilia primero intentos expirados bajo lock.
+- Evidencia focal actual: schemas/assets backend 9/9, frontend 7/7, TypeScript,
+  ESLint, Ruff y drift de migraciones/OpenAPI/tipos verdes. La suite integral,
+  migración PostgreSQL desde cero y Chromium/axe/390 px quedan por ejecutar
+  antes de cerrar esta auditoría.
+- Decisión: ADR 0041. No se realizó commit, push ni despliegue.

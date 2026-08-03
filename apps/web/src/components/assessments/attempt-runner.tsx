@@ -2,9 +2,12 @@
 
 import { ArrowDown, ArrowUp, CheckCircle2, Save, Timer } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { AcademicDocument } from '@/components/content/academic-document';
+import { AcademicAsset } from '@/components/content/academic-asset';
+import { MathJaxFormula } from '@/components/content/mathjax-formula';
+import { LatexText } from '@/components/content/latex-text';
 import { MutationError } from '@/components/assessments/authoring-forms';
 import {
   MathExpressionField,
@@ -22,16 +25,29 @@ import {
   useAssessmentMutation,
 } from '@/lib/assessments/hooks';
 import type { AssessmentAttempt } from '@/lib/assessments/server';
-import type { LMSUnitAcademicDocumentVersion1 } from '@/lib/content/generated/unit-document-v1';
+import type { LMSUnitAcademicDocumentVersion2 } from '@/lib/content/generated/unit-document-v2';
+import type { AssetAccessDescriptor } from '@/lib/assets/api';
 
-type Option = { id: string; label: string };
+type OptionMedia = {
+  alt_text: string;
+  asset_version_id: string;
+  caption?: string;
+  kind: 'image';
+  long_description?: string;
+};
+type Option = {
+  id: string;
+  label: string;
+  math_latex?: string;
+  media?: OptionMedia;
+};
 type PublicQuestion = {
   allowed_functions?: string[];
   allowed_symbols?: string[];
   false_label?: string;
   left?: Option[];
   options?: Option[];
-  prompt: LMSUnitAcademicDocumentVersion1;
+  prompt: LMSUnitAcademicDocumentVersion2;
   response_placeholder?: string;
   right?: Option[];
   schema_version: 1;
@@ -107,7 +123,33 @@ export function AttemptRunner({
   const submit = useAssessmentMutation(() =>
     submitAssessmentAttempt(slug, attempt.id, attempt.lock_version),
   );
+  const submitRef = useRef(submit);
   const active = attempt.items[activeIndex];
+  const resultHref =
+    returnHref ??
+    `/organizaciones/${slug}/evaluaciones/intentos/${attempt.id}/resultado`;
+
+  useEffect(() => {
+    submitRef.current = submit;
+  }, [submit]);
+
+  useEffect(() => {
+    if (attempt.status !== 'in_progress' || !attempt.expires_at) return;
+    const remaining = new Date(attempt.expires_at).getTime() - Date.now();
+    const timer = window.setTimeout(
+      () => {
+        void submitRef.current
+          .mutateAsync(undefined)
+          .then(() => {
+            router.replace(resultHref);
+            router.refresh();
+          })
+          .catch(() => undefined);
+      },
+      Math.max(0, Math.min(remaining, 2_147_483_647)),
+    );
+    return () => window.clearTimeout(timer);
+  }, [attempt.expires_at, attempt.status, resultHref, router]);
 
   async function saveItem(itemId: string, question: PublicQuestion) {
     try {
@@ -168,10 +210,7 @@ export function AttemptRunner({
             }
             try {
               await submit.mutateAsync(undefined);
-              router.push(
-                returnHref ??
-                  `/organizaciones/${slug}/evaluaciones/intentos/${attempt.id}/resultado`,
-              );
+              router.push(resultHref);
               router.refresh();
             } catch {
               // React Query presenta el error sin abandonar el intento.
@@ -199,6 +238,8 @@ export function AttemptRunner({
       {active ? (
         <QuestionPanel
           answer={answers[active.id]}
+          assets={attempt.assets ?? []}
+          attemptId={attempt.id}
           index={activeIndex}
           item={active}
           key={active.id}
@@ -219,6 +260,7 @@ export function AttemptRunner({
           }
           savePending={save.isPending}
           saved={Boolean(saved[active.id] || active.response)}
+          slug={slug}
           total={attempt.items.length}
         />
       ) : null}
@@ -228,6 +270,8 @@ export function AttemptRunner({
 
 function QuestionPanel({
   answer,
+  assets,
+  attemptId,
   index,
   item,
   onAnswer,
@@ -236,9 +280,12 @@ function QuestionPanel({
   onSave,
   savePending,
   saved,
+  slug,
   total,
 }: Readonly<{
   answer: Answer | undefined;
+  assets: readonly AssetAccessDescriptor[];
+  attemptId: string;
   index: number;
   item: AssessmentAttempt['items'][number];
   onAnswer: (answer: Answer) => void;
@@ -247,6 +294,7 @@ function QuestionPanel({
   onSave: () => Promise<void>;
   savePending: boolean;
   saved: boolean;
+  slug: string;
   total: number;
 }>) {
   const question = item.public_snapshot as PublicQuestion;
@@ -283,14 +331,21 @@ function QuestionPanel({
         </div>
       </header>
       <div className="assessment-question-panel__prompt">
-        <AcademicDocument document={question.prompt} />
+        <AcademicDocument
+          assessmentRefreshContext={{ attemptId, slug }}
+          assets={assets}
+          document={question.prompt}
+        />
       </div>
       <ResponseControl
         answer={answer}
+        assets={assets}
+        attemptId={attemptId}
         itemId={item.id}
         onAnswer={onAnswer}
         onMathValidationStateChange={setMathValidationState}
         question={question}
+        slug={slug}
       />
       <footer className="assessment-question-panel__footer">
         <Button
@@ -325,16 +380,22 @@ function QuestionPanel({
 
 function ResponseControl({
   answer,
+  assets,
+  attemptId,
   itemId,
   onAnswer,
   onMathValidationStateChange,
   question,
+  slug,
 }: Readonly<{
   answer: Answer | undefined;
+  assets: readonly AssetAccessDescriptor[];
+  attemptId: string;
   itemId: string;
   onAnswer: (answer: Answer) => void;
   onMathValidationStateChange: (state: MathExpressionValidationState) => void;
   question: PublicQuestion;
+  slug: string;
 }>) {
   const legend = `Respuesta a la pregunta`;
   if (question.type === 'single_choice') {
@@ -353,7 +414,18 @@ function ResponseControl({
               onChange={() => onAnswer(option.id)}
               type="radio"
             />
-            <span>{option.label}</span>
+            <span className="min-w-0 flex-1">
+              <LatexText value={option.label} />
+              {option.math_latex ? (
+                <MathJaxFormula display latex={option.math_latex} />
+              ) : null}
+              <ChoiceMedia
+                assets={assets}
+                attemptId={attemptId}
+                {...(option.media ? { media: option.media } : {})}
+                slug={slug}
+              />
+            </span>
           </label>
         ))}
       </fieldset>
@@ -381,7 +453,18 @@ function ResponseControl({
               }
               type="checkbox"
             />
-            <span>{option.label}</span>
+            <span className="min-w-0 flex-1">
+              <LatexText value={option.label} />
+              {option.math_latex ? (
+                <MathJaxFormula display latex={option.math_latex} />
+              ) : null}
+              <ChoiceMedia
+                assets={assets}
+                attemptId={attemptId}
+                {...(option.media ? { media: option.media } : {})}
+                slug={slug}
+              />
+            </span>
           </label>
         ))}
       </fieldset>
@@ -427,7 +510,18 @@ function ResponseControl({
                 <span className="w-6 text-center font-semibold">
                   {index + 1}
                 </span>
-                <span className="min-w-0 flex-1">{option?.label ?? id}</span>
+                <span className="min-w-0 flex-1">
+                  <LatexText value={option?.label ?? id} />
+                  {option?.math_latex ? (
+                    <MathJaxFormula display latex={option.math_latex} />
+                  ) : null}
+                </span>
+                <ChoiceMedia
+                  assets={assets}
+                  attemptId={attemptId}
+                  {...(option?.media ? { media: option.media } : {})}
+                  slug={slug}
+                />
                 <Button
                   aria-label={`Subir ${option?.label ?? id}`}
                   disabled={index === 0}
@@ -469,34 +563,53 @@ function ResponseControl({
         <legend className="font-semibold">{legend}</legend>
         {question.left?.map((left) => {
           return (
-            <div
-              className="grid gap-2 border p-3 sm:grid-cols-2 sm:items-center"
+            <fieldset
+              className="grid gap-3 rounded-lg border p-3"
               key={left.id}
             >
-              <Label htmlFor={`match-${itemId}-${left.id}`}>{left.label}</Label>
-              <select
-                className="h-9 border bg-background px-3 text-sm"
-                id={`match-${itemId}-${left.id}`}
-                onChange={(event) =>
-                  onAnswer(
-                    Object.fromEntries(
-                      Object.entries({
-                        ...pairs,
-                        [left.id]: event.target.value,
-                      }).filter(([, value]) => value),
-                    ),
-                  )
-                }
-                value={pairs[left.id] ?? ''}
-              >
-                <option value="">Selecciona la correspondencia</option>
+              <legend className="px-1 font-medium">
+                <LatexText value={left.label} />
+                {left.math_latex ? (
+                  <MathJaxFormula display latex={left.math_latex} />
+                ) : null}
+                <ChoiceMedia
+                  assets={assets}
+                  attemptId={attemptId}
+                  {...(left.media ? { media: left.media } : {})}
+                  slug={slug}
+                />
+              </legend>
+              <div className="grid gap-2 sm:grid-cols-2">
                 {question.right?.map((right) => (
-                  <option key={right.id} value={right.id}>
-                    {right.label}
-                  </option>
+                  <label
+                    className="assessment-response-option"
+                    data-selected={pairs[left.id] === right.id}
+                    key={right.id}
+                  >
+                    <input
+                      checked={pairs[left.id] === right.id}
+                      name={`match-${itemId}-${left.id}`}
+                      onChange={() =>
+                        onAnswer({ ...pairs, [left.id]: right.id })
+                      }
+                      type="radio"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <LatexText value={right.label} />
+                      {right.math_latex ? (
+                        <MathJaxFormula display latex={right.math_latex} />
+                      ) : null}
+                      <ChoiceMedia
+                        assets={assets}
+                        attemptId={attemptId}
+                        {...(right.media ? { media: right.media } : {})}
+                        slug={slug}
+                      />
+                    </span>
+                  </label>
                 ))}
-              </select>
-            </div>
+              </div>
+            </fieldset>
           );
         })}
       </fieldset>
@@ -557,6 +670,43 @@ function ResponseControl({
           <span className="text-sm">{question.unit}</span>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function ChoiceMedia({
+  assets,
+  attemptId,
+  media,
+  slug,
+}: Readonly<{
+  assets: readonly AssetAccessDescriptor[];
+  attemptId: string;
+  media?: OptionMedia;
+  slug: string;
+}>) {
+  if (!media) return null;
+  const descriptor = assets.find(
+    (entry) => entry.asset_version_id === media.asset_version_id,
+  );
+  return (
+    <div className="mt-3 overflow-hidden rounded-lg border bg-background">
+      <AcademicAsset
+        assessmentRefreshContext={{ attemptId, slug }}
+        attrs={{
+          altText: media.alt_text,
+          assetVersionId: media.asset_version_id,
+          caption: media.caption ?? '',
+          decorative: false,
+        }}
+        {...(descriptor ? { descriptor } : {})}
+        kind="image"
+      />
+      {media.long_description ? (
+        <p className="border-t px-4 py-3 text-sm leading-6 text-muted-foreground">
+          {media.long_description}
+        </p>
+      ) : null}
     </div>
   );
 }

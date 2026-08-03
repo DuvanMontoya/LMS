@@ -28,6 +28,10 @@ from domain.organizations.choices import MembershipStatus
 from domain.organizations.models import Organization
 from domain.publishing.integrity import verify_release
 
+from .asset_references import (
+    create_assessment_asset_references,
+    validate_assessment_asset_references,
+)
 from .canonical import canonical_json_bytes, content_digest, deep_json_copy
 from .choices import (
     AssignmentStatus,
@@ -205,6 +209,9 @@ def create_question(
     validated = validate_question_definition(definition)
     if validated["type"] != question_type:
         raise AssessmentInvalid("El tipo no coincide con la definición.")
+    validate_assessment_asset_references(
+        validated["public"], organization=locked_bank.organization
+    )
     now = timezone.now()
     question = Question(
         bank=locked_bank,
@@ -250,6 +257,9 @@ def update_question_revision(
     if locked.status not in EDITABLE_AUTHORING_STATUSES:
         raise AssessmentConflict("La revisión no está en un estado editable.")
     validated = validate_question_definition(definition)
+    validate_assessment_asset_references(
+        validated["public"], organization=locked.question.bank.organization
+    )
     locked.definition = validated
     locked.type = validated["type"]
     locked.updated_by_id = _actor_id(actor)
@@ -287,6 +297,9 @@ def transition_question_revision(
             QuestionVersion.objects.select_for_update().filter(question=locked.question)
         )
         public = validate_public_question(validated["public"])
+        asset_references = validate_assessment_asset_references(
+            public, organization=locked.question.bank.organization
+        )
         version = QuestionVersion(
             question=locked.question,
             number=version_number,
@@ -301,6 +314,9 @@ def transition_question_revision(
             created_by_id=_actor_id(actor),
         )
         _clean_save(version)
+        create_assessment_asset_references(
+            question_version=version, references=asset_references
+        )
     now = timezone.now()
     locked.status = to_status
     locked.status_changed_by_id = _actor_id(actor)
@@ -1564,9 +1580,11 @@ def materialize_course_group_assessments(
     for activity in activities:
         version_id = activity.binding_snapshot["assessment_version_id"]
         version = versions.get(version_id)
-        if version is None or activity.binding_snapshot.get(
-            "snapshot_digest"
-        ) != version.snapshot_digest:
+        if (
+            version is None
+            or activity.binding_snapshot.get("snapshot_digest")
+            != version.snapshot_digest
+        ):
             raise AssessmentInvalid(
                 f"La evaluación «{activity.title}» no coincide con el snapshot aprobado."
             )
@@ -1897,7 +1915,14 @@ def start_attempt(*, actor: object, assignment: DeliveryAssignment) -> Attempt:
     existing = Attempt.objects.select_for_update().filter(delivery_assignment=locked)
     in_progress = existing.filter(status=AttemptStatus.IN_PROGRESS).first()
     if in_progress:
-        return in_progress
+        if in_progress.expires_at and now >= in_progress.expires_at:
+            submit_attempt(
+                actor=actor,
+                attempt=in_progress,
+                expected_version=in_progress.lock_version,
+            )
+        else:
+            return in_progress
     version = locked.delivery.assessment_version
     attempt_number = existing.count() + 1
     if version.attempt_limit and attempt_number > version.attempt_limit:

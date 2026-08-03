@@ -21,7 +21,7 @@
       "properties": {
         "schema_version": { "const": 1 },
         "type": { "const": "mathematical_expression" },
-        "prompt": { "$ref": "urn:lms:content:unit-document:1" },
+        "prompt": { "$ref": "urn:lms:content:unit-document:2" },
         "allowed_symbols": { "$ref": "#/$defs/symbols" },
         "allowed_functions": { "$ref": "#/$defs/functions" },
         "response_guidance": {

@@ -22,7 +22,7 @@ const contentPath = path.join(
   repositoryRoot,
   'schemas',
   'content',
-  'unit-document-v1.schema.json',
+  'unit-document-v2.schema.json',
 );
 const contracts = [
   ['question-definition-v1', 'QuestionDefinitionV1'],
@@ -130,7 +130,7 @@ for (const [name, typeName] of contracts) {
   );
 }
 outputs.push([
-  path.join(outputDirectory, 'unit-document-v1.schema.json'),
+  path.join(outputDirectory, 'unit-document-v2.schema.json'),
   await prettier.format(JSON.stringify(contentSchema), { parser: 'json' }),
 ]);
 

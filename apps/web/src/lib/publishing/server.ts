@@ -210,19 +210,29 @@ export async function getLibraryUnit(
     notFound();
   }
   const client = await createPlatformServerClient();
-  const payload = (await required(
-    client.GET(
-      '/api/v1/organizations/{slug}/library/courses/{course_slug}/units/{unit_id}/',
-      {
-        params: {
-          path: { slug, course_slug: courseSlug, unit_id: unitId },
+  const [payload, libraryCourse] = await Promise.all([
+    required(
+      client.GET(
+        '/api/v1/organizations/{slug}/library/courses/{course_slug}/units/{unit_id}/',
+        {
+          params: {
+            path: { slug, course_slug: courseSlug, unit_id: unitId },
+          },
         },
-      },
-    ),
-    'No fue posible consultar la unidad publicada.',
-  )) as ReleaseUnit;
+      ),
+      'No fue posible consultar la unidad publicada.',
+    ) as Promise<ReleaseUnit>,
+    required(
+      client.GET(
+        '/api/v1/organizations/{slug}/library/courses/{course_slug}/',
+        { params: { path: { slug, course_slug: courseSlug } } },
+      ),
+      'No fue posible consultar el temario publicado.',
+    ) as Promise<LibraryDetail>,
+  ]);
   return {
     ...organization,
+    outline: libraryCourse.outline,
     payload,
     course: requirePublishedCourse(payload.course),
     unit: requirePublishedUnit(payload.unit),

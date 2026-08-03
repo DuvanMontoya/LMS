@@ -1,5 +1,9 @@
+import { Send } from 'lucide-react';
+import Link from 'next/link';
+
 import { AssessmentComposer } from '@/components/assessments/assessment-composer';
 import { PageHeader } from '@/components/platform/page-header';
+import { Button } from '@/components/ui/button';
 import { getAssessmentWorkspace } from '@/lib/assessments/server';
 
 export default async function AssessmentWorkspacePage({
@@ -11,6 +15,15 @@ export default async function AssessmentWorkspacePage({
   return (
     <main className="academic-page" id="contenido-principal">
       <PageHeader
+        actions={
+          capabilities.includes('assessment.delivery.view') ? (
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/organizaciones/${slug}/evaluaciones/entregas`}>
+                <Send data-icon="inline-start" /> Ir a entregas
+              </Link>
+            </Button>
+          ) : null
+        }
         breadcrumbs={[
           { href: `/organizaciones/${slug}`, label: data.organization.name },
           {

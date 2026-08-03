@@ -51,3 +51,56 @@ class AssetDeliveryTests(TestCase):
         self.assertIsNone(descriptor.source)
         self.assertEqual(len(descriptor.variants), 1)
         self.assertNotIn("quarantine", descriptor.variants[0].url)
+
+    def test_document_preview_is_inline_but_original_download_is_attachment(
+        self,
+    ) -> None:
+        owner, organization = owner_context("document-preview")
+        asset = Asset.objects.create(
+            organization=organization,
+            kind=AssetKind.DOCUMENT,
+            name="Document",
+            created_by=owner,
+            updated_by=owner,
+        )
+        version = AssetVersion.objects.create(
+            asset=asset,
+            number=1,
+            status=AssetVersionStatus.READY,
+            original_filename="paper.pdf",
+            declared_mime_type="application/pdf",
+            detected_mime_type="application/pdf",
+            size_bytes=10,
+            sha256="c" * 64,
+            storage_bucket="private",
+            storage_key="originals/paper.pdf",
+            expected_asset_lock_version=1,
+            created_by=owner,
+        )
+
+        class RecordingGateway(FakeStorageGateway):
+            dispositions: list[str]
+
+            def __init__(self) -> None:
+                super().__init__()
+                self.dispositions = []
+
+            def generate_download_url(
+                self,
+                *,
+                bucket: str,
+                key: str,
+                expires_seconds: int,
+                content_type: str,
+                content_disposition: str,
+            ) -> str:
+                del bucket, key, expires_seconds, content_type
+                self.dispositions.append(content_disposition)
+                return "https://storage.example.test/document?signature=test"
+
+        gateway = RecordingGateway()
+        asset_access_descriptor(version=version, gateway=gateway)
+        asset_access_descriptor(version=version, gateway=gateway, include_original=True)
+
+        self.assertTrue(gateway.dispositions[0].startswith("inline;"))
+        self.assertTrue(gateway.dispositions[1].startswith("attachment;"))

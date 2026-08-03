@@ -785,8 +785,7 @@ export function reconcileRecordingStatus(
   if (!observed) return { observed: false, status: current };
   return {
     observed: false,
-    status:
-      current === 'active' || current === 'starting' ? 'ended' : current,
+    status: current === 'active' || current === 'starting' ? 'ended' : current,
   };
 }
 
@@ -1025,7 +1024,11 @@ function ParticipantPanel({
     <aside className="live-classroom__participants" aria-label="Participantes">
       <header>
         <h2>Participantes ({participants.length})</h2>
-        <button aria-label="Cerrar participantes" onClick={onClose} type="button">
+        <button
+          aria-label="Cerrar participantes"
+          onClick={onClose}
+          type="button"
+        >
           <X />
         </button>
       </header>

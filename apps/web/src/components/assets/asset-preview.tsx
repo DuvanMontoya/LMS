@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { FileAudio, FileText, Film, ImageIcon, Table2 } from 'lucide-react';
+import { useState } from 'react';
 
 import { getAssetAccess } from '@/lib/assets/api';
 
@@ -60,6 +61,7 @@ export function AssetPreview({
   slug: string;
   versionId?: string | null;
 }>) {
+  const [failedUrl, setFailedUrl] = useState('');
   const descriptor = useQuery({
     enabled: Boolean(versionId && ['image', 'video'].includes(kind)),
     queryFn: () => getAssetAccess(slug, assetId, versionId!),
@@ -70,7 +72,7 @@ export function AssetPreview({
     descriptor.data?.variants.find((item) =>
       ['image_thumbnail', 'video_poster'].includes(item.role),
     ) ?? descriptor.data?.source;
-  if (preview?.url) {
+  if (preview?.url && preview.url !== failedUrl) {
     return (
       // Signed S3 URLs intentionally bypass the Next image proxy.
       // eslint-disable-next-line @next/next/no-img-element
@@ -79,6 +81,7 @@ export function AssetPreview({
         className="h-full w-full object-cover"
         height={preview.height ?? 160}
         loading="lazy"
+        onError={() => setFailedUrl(preview.url)}
         src={preview.url}
         width={preview.width ?? 240}
       />

@@ -11,6 +11,7 @@ from django.db import models
 from django.db.models import F, Q
 from django.db.models.functions import Lower, Trim
 
+from domain.assets.models import AssetVersion
 from domain.catalog.models import LearningObjective
 from domain.courses.choices import ActivityType
 from domain.courses.models import CourseActivity
@@ -411,6 +412,48 @@ class QuestionVersion(ImmutableModel):
             raise ValidationError(
                 {"source_revision": "La revisión no corresponde a esta versión."}
             )
+
+
+class AssessmentAssetReference(ImmutableModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    question_version = models.ForeignKey(
+        QuestionVersion,
+        on_delete=models.PROTECT,
+        related_name="asset_references",
+    )
+    asset_version = models.ForeignKey(
+        AssetVersion,
+        on_delete=models.PROTECT,
+        related_name="assessment_references",
+    )
+    location = models.CharField(max_length=255, editable=False)
+    reference_role = models.CharField(max_length=24, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("question_version", "location"),
+                name="assess_assetref_version_location_unique",
+            ),
+            models.CheckConstraint(
+                condition=Q(location=Trim(F("location"))) & ~Q(location=""),
+                name="assess_assetref_location_trimmed",
+            ),
+            models.CheckConstraint(
+                condition=Q(reference_role__in=("primary", "captions", "choice")),
+                name="assess_assetref_role_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("asset_version", "created_at"),
+                name="assess_assetref_asset_time_ix",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.question_version_id}:{self.location}"
 
 
 class QuestionBankVersion(ImmutableModel):

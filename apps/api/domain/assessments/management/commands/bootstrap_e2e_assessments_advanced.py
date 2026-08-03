@@ -46,27 +46,28 @@ class Command(BaseCommand):
     def _approve_question(
         self,
         *,
-        owner: User,
+        author: User,
+        reviewer: User,
         bank: QuestionBank,
         code: str,
         question_type: str,
         index: int,
     ) -> QuestionVersion:
         _, revision = create_question(
-            actor=owner,
+            actor=author,
             bank=bank,
             code=code,
             question_type=question_type,
             definition=demo_question_definition(question_type, index),
         )
         revision, _ = transition_question_revision(
-            actor=owner,
+            actor=author,
             revision=revision,
             expected_version=revision.lock_version,
             to_status=AuthoringStatus.IN_REVIEW,
         )
         _, version = transition_question_revision(
-            actor=owner,
+            actor=reviewer,
             revision=revision,
             expected_version=revision.lock_version,
             to_status=AuthoringStatus.APPROVED,
@@ -77,7 +78,9 @@ class Command(BaseCommand):
 
     def _bootstrap(self) -> None:
         organization = Organization.objects.get(slug="organizacion-a")
-        owner = User.objects.get(email="owner@organizations.e2e.test")
+        administrator = User.objects.get(email="administrator@organizations.e2e.test")
+        author = User.objects.get(email="author@organizations.e2e.test")
+        reviewer = User.objects.get(email="reviewer@organizations.e2e.test")
         course = Course.objects.get(
             organization=organization, slug="publicacion-inmutable-e2e"
         )
@@ -102,7 +105,7 @@ class Command(BaseCommand):
         ):
             raise CommandError("Faltan release, objetivo o matrícula E2E.")
         bank = create_question_bank(
-            actor=owner,
+            actor=author,
             organization=organization,
             name="Banco E2E avanzado",
             slug="banco-assessments-avanzado-e2e",
@@ -116,7 +119,8 @@ class Command(BaseCommand):
         )
         fixed_versions = [
             self._approve_question(
-                owner=owner,
+                author=author,
+                reviewer=reviewer,
                 bank=bank,
                 code=f"ADV-E2E-{index:03d}",
                 question_type=question_type,
@@ -126,7 +130,8 @@ class Command(BaseCommand):
         ]
         pool_versions = [
             self._approve_question(
-                owner=owner,
+                author=author,
+                reviewer=reviewer,
                 bank=bank,
                 code=f"ADV-POOL-{index:03d}",
                 question_type="single_choice",
@@ -135,7 +140,7 @@ class Command(BaseCommand):
             for index in range(1, 21)
         ]
         assessment, revision = create_assessment(
-            actor=owner,
+            actor=author,
             organization=organization,
             slug="assessment-avanzado-e2e",
             title="Assessment avanzado E2E",
@@ -146,20 +151,20 @@ class Command(BaseCommand):
             pass_basis_points=5000,
         )
         revision = replace_assessment_objectives(
-            actor=owner,
+            actor=author,
             revision=revision,
             expected_version=revision.lock_version,
             objectives=[objective],
         )
         revision, section = add_assessment_section(
-            actor=owner,
+            actor=author,
             revision=revision,
             expected_version=revision.lock_version,
             title="Scoring avanzado",
         )
         for version in fixed_versions:
             revision, _ = add_assessment_item(
-                actor=owner,
+                actor=author,
                 revision=revision,
                 expected_version=revision.lock_version,
                 section=section,
@@ -169,7 +174,7 @@ class Command(BaseCommand):
                 objectives=[objective],
             )
         revision, _ = create_assessment_pool(
-            actor=owner,
+            actor=author,
             revision=revision,
             expected_version=revision.lock_version,
             title="Pool 5 de 20",
@@ -180,13 +185,13 @@ class Command(BaseCommand):
             question_versions=pool_versions,
         )
         revision, _ = transition_assessment_revision(
-            actor=owner,
+            actor=author,
             revision=revision,
             expected_version=revision.lock_version,
             to_status=AuthoringStatus.IN_REVIEW,
         )
         _, version = transition_assessment_revision(
-            actor=owner,
+            actor=reviewer,
             revision=revision,
             expected_version=revision.lock_version,
             to_status=AuthoringStatus.APPROVED,
@@ -227,26 +232,26 @@ class Command(BaseCommand):
                     "grading_payload": grading_payload,
                 }
         correction = create_scoring_correction(
-            actor=owner,
+            actor=administrator,
             assessment_version=version,
             expected_policy_version=policy.lock_version,
             reason="Crédito parcial E2E aprobado.",
             item_overrides=overrides,
         )
         delivery = create_delivery(
-            actor=owner,
+            actor=administrator,
             organization=organization,
             assessment_version=version,
             name="Entrega avanzada E2E",
             course_release=release,
         )
         delivery = activate_delivery(
-            actor=owner,
+            actor=administrator,
             delivery=delivery,
             expected_version=delivery.lock_version,
         )
         assignment = assign_delivery(
-            actor=owner,
+            actor=administrator,
             delivery=delivery,
             release_assignment=enrollment.current_release_assignment,
         )

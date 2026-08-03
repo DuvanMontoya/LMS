@@ -38,7 +38,7 @@ export default async function CourseStructurePage({
           </Button>
         }
         breadcrumbs={[
-          { href: `/organizaciones/${slug}/cursos`, label: 'Cursos' },
+          { href: `/organizaciones/${slug}/cursos/autoria`, label: 'Autoría' },
           {
             href: `/organizaciones/${slug}/cursos/${courseSlug}`,
             label: data.revision.title,

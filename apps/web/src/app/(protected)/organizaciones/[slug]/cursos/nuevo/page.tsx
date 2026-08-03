@@ -22,7 +22,7 @@ export default async function NewCoursePage({
       <PageHeader
         actions={
           <Button asChild size="sm" variant="outline">
-            <Link href={`/organizaciones/${slug}/cursos`}>
+            <Link href={`/organizaciones/${slug}/cursos/autoria`}>
               <ArrowLeft data-icon="inline-start" />
               Volver a cursos
             </Link>
@@ -30,7 +30,7 @@ export default async function NewCoursePage({
         }
         breadcrumbs={[
           { href: `/organizaciones/${slug}`, label: organization.name },
-          { href: `/organizaciones/${slug}/cursos`, label: 'Cursos' },
+          { href: `/organizaciones/${slug}/cursos/autoria`, label: 'Autoría' },
           { label: 'Nuevo curso' },
         ]}
         description="Configura la identidad y la alineación curricular del curso. Al crearlo, abrirás su espacio de autoría para construir la estructura."
