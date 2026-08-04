@@ -188,6 +188,7 @@ export function MemberOnboardingForm({
       }
       setSuccess({ email: payload.email, mode });
       setPerson(initialPerson);
+      setRoles([initialRole]);
     } catch {
       // The structured API response is rendered below.
     }

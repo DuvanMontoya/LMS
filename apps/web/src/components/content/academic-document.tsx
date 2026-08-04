@@ -65,7 +65,7 @@ export function AcademicDocument({
     return (
       <AcademicAsset
         {...(assessmentRefreshContext ? { assessmentRefreshContext } : {})}
-        attrs={node.attrs}
+        attrs={{ ...node.attrs }}
         kind={kind}
         {...(descriptorByVersion.get(captionId)
           ? { captionDescriptor: descriptorByVersion.get(captionId)! }

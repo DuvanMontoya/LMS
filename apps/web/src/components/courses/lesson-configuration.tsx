@@ -130,6 +130,8 @@ export function LessonConfiguration({
   });
   const [mediaPickerError, setMediaPickerError] = useState('');
   const mediaPickerWindow = useRef<Window | null>(null);
+  const mediaPickerNonce = useRef<string | null>(null);
+  const mediaPickerPoll = useRef<number | null>(null);
   const [selectedTopicIds, setSelectedTopicIds] = useState(
     lesson.topics.map((item) => item.topic.id),
   );
@@ -335,9 +337,11 @@ export function LessonConfiguration({
     function receiveMediaSelection(event: MessageEvent<unknown>) {
       if (
         event.origin !== mediaCmsPickerOrigin ||
-        event.source !== mediaPickerWindow.current ||
+        !mediaPickerWindow.current ||
         !record(event.data) ||
         event.data.channel !== 'lms-mediacms-picker-v1' ||
+        typeof event.data.nonce !== 'string' ||
+        event.data.nonce !== mediaPickerNonce.current ||
         typeof event.data.mediaFriendlyToken !== 'string' ||
         !/^[A-Za-z0-9_-]{1,64}$/.test(event.data.mediaFriendlyToken)
       ) {
@@ -346,10 +350,57 @@ export function LessonConfiguration({
       setMediaCmsFriendlyToken(event.data.mediaFriendlyToken);
       setMediaPickerError('');
       mediaPickerWindow.current = null;
+      mediaPickerNonce.current = null;
     }
     window.addEventListener('message', receiveMediaSelection);
     return () => window.removeEventListener('message', receiveMediaSelection);
   }, [lesson.lesson_kind, mediaCmsPickerOrigin]);
+
+  useEffect(() => {
+    function receiveStoredMediaSelection(event: StorageEvent) {
+      if (
+        event.key !== 'lms-mediacms-picker-selection' ||
+        !event.newValue
+      )
+        return;
+      try {
+        const data: unknown = JSON.parse(event.newValue);
+        if (
+          !record(data) ||
+          data.channel !== 'lms-mediacms-picker-v1' ||
+          typeof data.nonce !== 'string' ||
+          data.nonce !== mediaPickerNonce.current ||
+          typeof data.mediaFriendlyToken !== 'string' ||
+          !/^[A-Za-z0-9_-]{1,64}$/.test(data.mediaFriendlyToken)
+        )
+          return;
+        setMediaCmsFriendlyToken(data.mediaFriendlyToken);
+        setMediaPickerError('');
+        mediaPickerWindow.current?.close();
+        mediaPickerWindow.current = null;
+        mediaPickerNonce.current = null;
+        if (mediaPickerPoll.current !== null) {
+          window.clearInterval(mediaPickerPoll.current);
+          mediaPickerPoll.current = null;
+        }
+        window.localStorage.removeItem('lms-mediacms-picker-selection');
+      } catch {
+        // La selección no cumple el contrato local del popup.
+      }
+    }
+    window.addEventListener('storage', receiveStoredMediaSelection);
+    return () =>
+      window.removeEventListener('storage', receiveStoredMediaSelection);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (mediaPickerPoll.current !== null) {
+        window.clearInterval(mediaPickerPoll.current);
+      }
+    },
+    [],
+  );
 
   function openMediaPicker() {
     if (!mediaCmsAuthoringUrl || !mediaCmsPickerOrigin) {
@@ -359,7 +410,10 @@ export function LessonConfiguration({
       return;
     }
     const pickerUrl = new URL('/lti/media-picker/', mediaCmsAuthoringUrl);
+    const nonce = crypto.randomUUID();
     pickerUrl.searchParams.set('origin', window.location.origin);
+    pickerUrl.searchParams.set('nonce', nonce);
+    mediaPickerNonce.current = nonce;
     const popup = window.open(
       pickerUrl.toString(),
       'lms-mediacms-picker',
@@ -372,6 +426,42 @@ export function LessonConfiguration({
       return;
     }
     mediaPickerWindow.current = popup;
+    if (mediaPickerPoll.current !== null) {
+      window.clearInterval(mediaPickerPoll.current);
+    }
+    mediaPickerPoll.current = window.setInterval(() => {
+      const current = mediaPickerWindow.current;
+      if (!current || current.closed) {
+        if (mediaPickerPoll.current !== null) {
+          window.clearInterval(mediaPickerPoll.current);
+          mediaPickerPoll.current = null;
+        }
+        return;
+      }
+      try {
+        if (current.location.origin !== window.location.origin) return;
+        const callback = new URL(current.location.href);
+        const token = callback.searchParams.get('mediaFriendlyToken') ?? '';
+        const returnedNonce = callback.searchParams.get('nonce') ?? '';
+        if (
+          callback.pathname !== '/auth/mediacms-picker-callback' ||
+          returnedNonce !== mediaPickerNonce.current ||
+          !/^[A-Za-z0-9_-]{1,64}$/.test(token)
+        )
+          return;
+        setMediaCmsFriendlyToken(token);
+        setMediaPickerError('');
+        current.close();
+        mediaPickerWindow.current = null;
+        mediaPickerNonce.current = null;
+        if (mediaPickerPoll.current !== null) {
+          window.clearInterval(mediaPickerPoll.current);
+          mediaPickerPoll.current = null;
+        }
+      } catch {
+        // El popup sigue en el origen aislado de MediaCMS.
+      }
+    }, 200);
     setMediaPickerError('');
     popup.focus();
   }

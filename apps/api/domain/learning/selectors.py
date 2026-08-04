@@ -30,6 +30,7 @@ from .policies import (
 from .services import completion_projection, resolve_resume_target
 from .snapshots import (
     snapshot_activity,
+    snapshot_activity_navigation,
     snapshot_navigation,
     snapshot_outline,
     snapshot_unit,
@@ -418,7 +419,9 @@ def learning_activity(
     activity_progress = get_object_or_404(
         ActivityProgress, course_progress=progress, group_activity=instance
     )
-    navigation = snapshot_navigation(assignment.release, instance.source_activity_id)
+    navigation = snapshot_activity_navigation(
+        assignment.release, instance.source_activity_id
+    )
     base = (
         f"/organizaciones/{enrollment.organization.slug}/aprender/"
         f"{enrollment.course.slug}/actividades"

@@ -2089,13 +2089,6 @@ def open_unit(
     snapshot_unit(assignment.release, unit_id)
     now = timezone.now()
     activity_progress = _lesson_activity_progress(progress=progress, unit_id=unit_id)
-    _transition_activity_progress(
-        activity_progress=activity_progress,
-        status=ActivityProgressStatus.IN_PROGRESS,
-        actor=actor,
-        now=now,
-        evidence={"unit_id": str(unit_id), "action": "opened"},
-    )
     unit_progress, created = UnitProgress.objects.get_or_create(
         course_progress=progress,
         unit_id=unit_id,
@@ -2107,6 +2100,14 @@ def open_unit(
     if not created:
         unit_progress.last_opened_at = now
         unit_progress.save(update_fields=["last_opened_at", "updated_at"])
+    if unit_progress.status != UnitProgressStatus.COMPLETED:
+        _transition_activity_progress(
+            activity_progress=activity_progress,
+            status=ActivityProgressStatus.IN_PROGRESS,
+            actor=actor,
+            now=now,
+            evidence={"unit_id": str(unit_id), "action": "opened"},
+        )
     started = progress.started_at is None
     if started:
         progress.started_at = now
@@ -2201,6 +2202,21 @@ def complete_unit(
         .first()
     )
     if unit_progress and unit_progress.status == UnitProgressStatus.COMPLETED:
+        if (
+            activity_progress is not None
+            and activity_progress.status != ActivityProgressStatus.COMPLETED
+        ):
+            _transition_activity_progress(
+                activity_progress=activity_progress,
+                status=ActivityProgressStatus.COMPLETED,
+                actor=actor,
+                now=now,
+                evidence={"unit_id": str(unit_id), "action": "completed"},
+            )
+            _recalculate_progress(progress, now)
+            progress.lock_version += 1
+            progress.full_clean()
+            progress.save()
         return progress, True
     started = progress.started_at is None
     if unit_progress is None:

@@ -212,9 +212,17 @@ def lms_media_picker(request):
     origin through ``postMessage``.
     """
 
-    allowed_origin = settings.LMS_MEDIA_PICKER_ALLOWED_ORIGIN
-    if request.GET.get("origin", "").rstrip("/") != allowed_origin:
+    requested_origin = request.GET.get("origin", "").rstrip("/")
+    allowed_origins = getattr(
+        settings,
+        "LMS_MEDIA_PICKER_ALLOWED_ORIGINS",
+        (settings.LMS_MEDIA_PICKER_ALLOWED_ORIGIN,),
+    )
+    if requested_origin not in allowed_origins:
         return HttpResponseForbidden("Origen de autoría no autorizado.")
+    nonce = request.GET.get("nonce", "")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{16,128}", nonce):
+        return HttpResponseForbidden("Selector de autoría no válido.")
     if not request.user.is_authenticated:
         return HttpResponseForbidden("La sesión de MediaCMS es obligatoria.")
     media = (
@@ -241,7 +249,8 @@ def lms_media_picker(request):
         )
     # The origin is a reviewed setting, and json escapes it before it enters
     # JavaScript.  Rows were escaped by ``format_html_join`` above.
-    origin_json = json.dumps(allowed_origin).replace("<", "\\u003c")
+    origin_json = json.dumps(requested_origin).replace("<", "\\u003c")
+    nonce_json = json.dumps(nonce).replace("<", "\\u003c")
     response = HttpResponse(
         format_html(
             """<!doctype html><html lang="es"><meta charset="utf-8">
@@ -256,9 +265,10 @@ padding:14px;text-align:left;cursor:pointer;color:inherit}}.media:hover,.media:f
 .empty{{border:1px dashed #94a3b8;border-radius:12px;padding:18px;background:#fff}}
 </style><main><h1>Elegir vídeo</h1><p>Selecciona un vídeo ya procesado. La LMS
 vinculará sólo este vídeo privado a la lección.</p><div class="list">{}</div></main>
-<script>const targetOrigin={};document.querySelectorAll('.media').forEach((button)=>{{button.addEventListener('click',()=>{{if(window.opener){{window.opener.postMessage({{channel:'lms-mediacms-picker-v1',mediaFriendlyToken:button.dataset.token}},targetOrigin);}}window.close();}});}});</script>""",
+<script>const targetOrigin={},nonce={};document.querySelectorAll('.media').forEach((button)=>{{button.addEventListener('click',()=>{{const callback=new URL('/auth/mediacms-picker-callback',targetOrigin);callback.searchParams.set('channel','lms-mediacms-picker-v1');callback.searchParams.set('mediaFriendlyToken',button.dataset.token);callback.searchParams.set('nonce',nonce);window.location.assign(callback);}});}});</script>""",
             mark_safe(rows),
             mark_safe(origin_json),
+            mark_safe(nonce_json),
         ),
         content_type="text/html; charset=utf-8",
     )

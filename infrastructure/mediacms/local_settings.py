@@ -73,6 +73,14 @@ LMS_MEDIA_ACCESS_SESSION_TTL_SECONDS = int(
 LMS_MEDIA_PICKER_ALLOWED_ORIGIN = os.environ.get(
     "LMS_MEDIA_PICKER_ALLOWED_ORIGIN", "http://localhost:3000"
 ).rstrip("/")
+LMS_MEDIA_PICKER_ALLOWED_ORIGINS = tuple(
+    origin.strip().rstrip("/")
+    for origin in os.environ.get(
+        "LMS_MEDIA_PICKER_ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    ).split(",")
+    if origin.strip()
+)
 
 REDIS_LOCATION = (
     "redis://:"

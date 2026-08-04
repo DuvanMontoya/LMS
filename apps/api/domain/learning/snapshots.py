@@ -63,6 +63,35 @@ def snapshot_navigation(
         ) from error
 
 
+def snapshot_activity_navigation(
+    release: CourseRelease, activity_id: uuid.UUID
+) -> dict[str, Any | None]:
+    flattened = [
+        {
+            "id": activity["id"],
+            "title": activity["title"],
+            "type": activity["type"],
+            "module_id": module["id"],
+            "module_title": module["title"],
+        }
+        for module in snapshot_outline(release)
+        for activity in module["activities"]
+    ]
+    for index, activity in enumerate(flattened):
+        if activity["id"] == str(activity_id):
+            return {
+                "position": index + 1,
+                "total": len(flattened),
+                "previous": flattened[index - 1] if index > 0 else None,
+                "next": (
+                    flattened[index + 1]
+                    if index + 1 < len(flattened)
+                    else None
+                ),
+            }
+    raise LearningUnitNotFound("La actividad no existe en el release asignado.")
+
+
 def snapshot_unit_ids(release: CourseRelease) -> tuple[uuid.UUID, ...]:
     return tuple(
         uuid.UUID(unit["id"])

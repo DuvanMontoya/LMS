@@ -2137,7 +2137,6 @@
 
   .pdf-document-reader__pages {
     @apply divide-y divide-slate-200;
-    min-width: max-content;
   }
 
   .pdf-document-reader__skeleton {

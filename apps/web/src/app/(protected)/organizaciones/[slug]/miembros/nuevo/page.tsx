@@ -35,11 +35,7 @@ export default async function NewMemberPage({
         ]}
         description="Crea una incorporación verificable y asigna los roles institucionales desde el principio."
         eyebrow="Miembros"
-        title={
-          initialRole === 'learner'
-            ? 'Registrar estudiante'
-            : 'Registrar persona'
-        }
+        title={rol === 'learner' ? 'Registrar estudiante' : 'Registrar persona'}
       />
       <div className="mt-6">
         <MemberOnboardingForm initialRole={initialRole} slug={slug} />

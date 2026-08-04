@@ -23,6 +23,7 @@ import { AcademicDocument } from '@/components/content/academic-document';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { interactiveContentEditorExtensions } from '@/lib/content/editor/interactive-extensions';
+import { normalizeLatexDelimiters } from '@/lib/content/editor/latex-delimiters';
 import { findDuplicateNodeIds } from '@/lib/content/editor/extensions';
 import type { LMSUnitAcademicDocumentVersion2 } from '@/lib/content/generated/unit-document-v2';
 import {
@@ -116,7 +117,12 @@ export function QuestionContentEditor({
     },
     extensions: interactiveContentEditorExtensions,
     immediatelyRender: false,
-    onUpdate: ({ editor: activeEditor }) => {
+    onUpdate: ({ editor: activeEditor, transaction }) => {
+      if (
+        !transaction.getMeta('latexDelimiterNormalization') &&
+        normalizeLatexDelimiters(activeEditor)
+      )
+        return;
       const json = activeEditor.getJSON();
       const duplicates = findDuplicateNodeIds(json);
       if (duplicates.length) {

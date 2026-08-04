@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
@@ -12,12 +12,33 @@ function clampScale(value: number) {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, Number(value.toFixed(2))));
 }
 
+export function isExpectedPdfCancellation(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.name === 'AbortError' ||
+      error.name === 'RenderingCancelledException')
+  );
+}
+
+export function pdfRenderScale(
+  naturalWidth: number,
+  availableWidth: number,
+  zoom: number,
+) {
+  if (naturalWidth <= 0 || availableWidth <= 0) return zoom;
+  return Math.min(1, availableWidth / naturalWidth) * zoom;
+}
+
 function PdfPage({
   document,
+  availableWidth,
   pageNumber,
   scale,
+  onError,
 }: Readonly<{
   document: PDFDocumentProxy;
+  availableWidth: number;
+  onError: () => void;
   pageNumber: number;
   scale: number;
 }>) {
@@ -29,36 +50,32 @@ function PdfPage({
       null;
 
     async function render() {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const page = await document.getPage(pageNumber);
-      if (cancelled) return;
-      const viewport = page.getViewport({ scale });
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-      const context = canvas.getContext('2d', { alpha: false });
-      if (!context) return;
-      canvas.width = Math.ceil(viewport.width * pixelRatio);
-      canvas.height = Math.ceil(viewport.height * pixelRatio);
-      canvas.style.width = `${Math.ceil(viewport.width)}px`;
-      canvas.style.height = `${Math.ceil(viewport.height)}px`;
-      renderTask = page.render({
-        canvas,
-        canvasContext: context,
-        transform: [pixelRatio, 0, 0, pixelRatio, 0, 0],
-        viewport,
-      });
       try {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const page = await document.getPage(pageNumber);
+        if (cancelled) return;
+        const naturalViewport = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({
+          scale: pdfRenderScale(naturalViewport.width, availableWidth, scale),
+        });
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        const context = canvas.getContext('2d', { alpha: false });
+        if (!context) return;
+        canvas.width = Math.ceil(viewport.width * pixelRatio);
+        canvas.height = Math.ceil(viewport.height * pixelRatio);
+        canvas.style.width = `${Math.ceil(viewport.width)}px`;
+        canvas.style.height = `${Math.ceil(viewport.height)}px`;
+        renderTask = page.render({
+          canvas,
+          canvasContext: context,
+          transform: [pixelRatio, 0, 0, pixelRatio, 0, 0],
+          viewport,
+        });
         await renderTask.promise;
       } catch (error) {
-        if (
-          !cancelled &&
-          !(
-            error instanceof Error &&
-            error.name === 'RenderingCancelledException'
-          )
-        ) {
-          throw error;
-        }
+        if (cancelled || isExpectedPdfCancellation(error)) return;
+        onError();
       }
     }
 
@@ -67,7 +84,7 @@ function PdfPage({
       cancelled = true;
       renderTask?.cancel();
     };
-  }, [document, pageNumber, scale]);
+  }, [availableWidth, document, onError, pageNumber, scale]);
 
   return (
     <div className="flex min-h-32 justify-center px-3 py-3 sm:px-6 sm:py-5">
@@ -93,6 +110,12 @@ export function PdfDocumentReader({
   const [document, setDocument] = useState<PDFDocumentProxy | null>(null);
   const [failed, setFailed] = useState(false);
   const [scale, setScale] = useState(INITIAL_SCALE);
+  const [availableWidth, setAvailableWidth] = useState(0);
+  const pagesRef = useRef<HTMLDivElement>(null);
+  const handleError = useCallback(() => {
+    setFailed(true);
+    onError?.();
+  }, [onError]);
 
   useEffect(() => {
     let active = true;
@@ -126,9 +149,31 @@ export function PdfDocumentReader({
     void load();
     return () => {
       active = false;
-      void destroyLoadingTask?.();
+      void destroyLoadingTask?.().catch(() => undefined);
     };
   }, [onError, source]);
+
+  useEffect(() => {
+    const pages = pagesRef.current;
+    if (!pages || !document) return;
+
+    const measure = () => {
+      const horizontalPadding = window.matchMedia('(min-width: 640px)').matches
+        ? 48
+        : 24;
+      const nextWidth = Math.max(
+        1,
+        Math.floor(pages.clientWidth - horizontalPadding),
+      );
+      setAvailableWidth((current) =>
+        current === nextWidth ? current : nextWidth,
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(pages);
+    return () => observer.disconnect();
+  }, [document]);
 
   return (
     <section
@@ -147,16 +192,20 @@ export function PdfDocumentReader({
       {!document && !failed ? (
         <div aria-hidden="true" className="pdf-document-reader__skeleton" />
       ) : null}
-      {document ? (
-        <div className="pdf-document-reader__pages">
-          {Array.from({ length: document.numPages }, (_, index) => (
-            <PdfPage
-              document={document}
-              key={`${document.fingerprints[0]}-${index + 1}-${scale}`}
-              pageNumber={index + 1}
-              scale={scale}
-            />
-          ))}
+      {document && !failed ? (
+        <div className="pdf-document-reader__pages" ref={pagesRef}>
+          {availableWidth > 0
+            ? Array.from({ length: document.numPages }, (_, index) => (
+                <PdfPage
+                  availableWidth={availableWidth}
+                  document={document}
+                  key={`${document.fingerprints[0]}-${index + 1}-${scale}-${availableWidth}`}
+                  onError={handleError}
+                  pageNumber={index + 1}
+                  scale={scale}
+                />
+              ))
+            : null}
         </div>
       ) : null}
       {failed ? (
@@ -166,7 +215,7 @@ export function PdfDocumentReader({
       ) : null}
       <span aria-live="polite" className="sr-only">
         {document
-          ? `Documento de ${document.numPages} páginas. Zoom ${Math.round(scale * 100)} por ciento.`
+          ? `Documento de ${document.numPages} páginas. Ajustado al ancho disponible. Zoom ${Math.round(scale * 100)} por ciento.`
           : ''}
       </span>
     </section>

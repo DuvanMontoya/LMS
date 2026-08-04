@@ -289,6 +289,26 @@ class LearningServiceTests(LearningFixtureMixin, TestCase):
         )
         activity_progress.refresh_from_db()
         self.assertEqual(activity_progress.status, ActivityProgressStatus.COMPLETED)
+        open_unit(
+            actor=synced_user,
+            enrollment=synced_enrollment,
+            unit_id=_unit.id,
+        )
+        activity_progress.refresh_from_db()
+        self.assertEqual(activity_progress.status, ActivityProgressStatus.COMPLETED)
+        activity_progress.status = ActivityProgressStatus.IN_PROGRESS
+        activity_progress.completed_at = None
+        activity_progress.save(update_fields=["status", "completed_at"])
+        synced_progress.refresh_from_db()
+        _repaired, already_completed = complete_unit(
+            actor=synced_user,
+            enrollment=synced_enrollment,
+            unit_id=_unit.id,
+            expected_progress_version=synced_progress.lock_version,
+        )
+        self.assertTrue(already_completed)
+        activity_progress.refresh_from_db()
+        self.assertEqual(activity_progress.status, ActivityProgressStatus.COMPLETED)
         self.assertIsNotNone(manual_enrollment.effective_cohort)
         self.assertEqual(manual_enrollment.effective_cohort.id, cohort.id)
         self.assertEqual(
