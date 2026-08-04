@@ -8,9 +8,22 @@ Antes de recibir tráfico, se deben aplicar migraciones, verificar salud, confir
 
 ## Portal estático
 
-El flujo `documentation.yml` compila una copia estática y la publica en GitHub Pages desde `main` sin secretos adicionales. La URL prevista por ese flujo es `https://duvanmontoya.github.io/LMS/`; sólo se considera desplegada después de que GitHub Actions concluya correctamente.
+El flujo `documentation.yml` compila una copia estática y conserva el artefacto
+de Pages desde `main` sin secretos adicionales. La URL prevista es
+`https://duvanmontoya.github.io/LMS/`; sólo se considera desplegada después de
+que GitHub Actions concluya correctamente.
 
-El workflow realiza instalación bloqueada, generación y validación OpenAPI con configuración de pruebas, compilación estricta de Zensical y publicación del artefacto. El despliegue aprovecha el token de GitHub Actions; no contiene credenciales, dominio privado ni rutas `localhost` de producción.
+El workflow realiza instalación bloqueada, generación y validación OpenAPI con
+configuración de pruebas, compilación estricta de Zensical y publicación del
+artefacto. El despliegue aprovecha el token de GitHub Actions; no contiene
+credenciales, dominio privado ni rutas `localhost` de producción.
+
+El despliegue se activa sólo cuando la variable de repositorio no secreta
+`DOCS_PAGES_ENABLED` tiene el valor exacto `true`. Esa protección mantiene
+verdes las validaciones cuando la cuenta no dispone de GitHub Pages. Cuando el
+plan permita Pages, configure Pages para compilar mediante GitHub Actions,
+establezca esa variable y el siguiente push a `main` publicará el artefacto sin
+modificar código.
 
 ## Configuración de aplicación
 

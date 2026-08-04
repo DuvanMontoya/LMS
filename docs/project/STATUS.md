@@ -23,12 +23,13 @@
   fuera del alcance: plataforma debe resolverlos en su actualización dedicada.
   El portal no ejecuta ese lifecycle y su Mermaid se copia desde la versión
   exacta declarada.
-- El 2026-08-04, una consulta autenticada y de sólo lectura confirmó que el
-  remoto `main` aún está en `0dd3cdf` y que GitHub Pages no está configurado
-  para el repositorio (la API devolvió `404`). El workflow está listo, pero no
-  se habilitó Pages, no se creó commit ni se publicó el árbol local mezclado;
-  la URL esperada no se declara desplegada hasta que esa secuencia termine
-  correctamente.
+- El 2026-08-04, `main` remoto avanzó a `4041cf5` e incluye el portal. La
+  creación autenticada de GitHub Pages devolvió `422`: el plan actual no admite
+  Pages para este repositorio. No se cambió la visibilidad del repositorio ni
+  se expuso código para eludir esa limitación. El workflow mantiene validación
+  y artefacto; su job de despliegue queda condicionado a la variable no secreta
+  `DOCS_PAGES_ENABLED=true`, que sólo debe configurarse después de que el plan
+  permita Pages. La URL esperada no se declara desplegada.
 
 ## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
 

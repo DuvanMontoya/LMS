@@ -65,7 +65,7 @@ jobs:
           path: documentation/site
 
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DOCS_PAGES_ENABLED == 'true'
     needs: validate
     environment:
       name: github-pages
