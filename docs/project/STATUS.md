@@ -81,6 +81,17 @@
   Docker ni del código; por ello no se toma como PASS de build. La siguiente
   ejecución Linux de CI es la evidencia pendiente del build completo con los
   reintentos nuevos.
+- La ejecución `30885991860` confirmó que el worker supera el build firmado
+  con el origen oficial y alcanza las pruebas media; la falla posterior fue una
+  carrera de Loki. El healthcheck del contenedor sólo comprobaba el binario,
+  mientras `/-/ready` todavía respondía «Ingester not ready». `Assert-Http`
+  conserva la exigencia de HTTP 200, pero espera hasta 30 segundos y reporta
+  la última respuesta si no converge. Ningún endpoint se omite ni se degrada a
+  una comprobación de proceso.
+- En local, tras iniciar el perfil correspondiente, pasaron `observability:validate`,
+  el smoke OTLP completo, dashboards, métricas, trazas y logs. La siguiente
+  ejecución remota queda como evidencia pendiente de la misma espera de
+  preparación bajo Linux.
 
 ## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
 

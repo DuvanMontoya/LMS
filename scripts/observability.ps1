@@ -17,9 +17,21 @@ function Invoke-Compose([string[]]$Arguments) {
     if ($LASTEXITCODE -ne 0) { throw "docker compose failed: $($Arguments -join ' ')" }
 }
 
-function Assert-Http([string]$Uri) {
-    $response = Invoke-WebRequest -UseBasicParsing -Uri $Uri -TimeoutSec 10
-    if ($response.StatusCode -ne 200) { throw "Unhealthy endpoint: $Uri" }
+function Assert-Http([string]$Uri, [int]$ReadyTimeoutSeconds = 30) {
+    $deadline = (Get-Date).AddSeconds($ReadyTimeoutSeconds)
+    $lastFailure = $null
+    do {
+        try {
+            $response = Invoke-WebRequest -UseBasicParsing -Uri $Uri -TimeoutSec 10
+            if ($response.StatusCode -eq 200) { return }
+            $lastFailure = "HTTP $($response.StatusCode)"
+        }
+        catch {
+            $lastFailure = $_.Exception.Message
+        }
+        if ((Get-Date) -lt $deadline) { Start-Sleep -Seconds 1 }
+    } while ((Get-Date) -lt $deadline)
+    throw "Unhealthy endpoint after $ReadyTimeoutSeconds seconds: $Uri. Last response: $lastFailure"
 }
 
 function Get-GrafanaHeaders {
