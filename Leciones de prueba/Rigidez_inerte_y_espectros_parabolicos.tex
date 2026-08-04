@@ -1,0 +1,2557 @@
+\documentclass[11pt,a4paper,openany]{report}
+
+% ------------------------------------------------------------
+% Codificación, idioma y tipografía
+% ------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage{amsmath,amsthm,mathtools}
+\usepackage{newtxtext,newtxmath}
+\usepackage[final]{microtype}
+\usepackage{csquotes}
+
+% ------------------------------------------------------------
+% Página, estructura y navegación
+% ------------------------------------------------------------
+\usepackage[a4paper,margin=2.35cm,headheight=15pt]{geometry}
+\usepackage{setspace}
+\setstretch{1.08}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{bookmark}
+\usepackage{hyperref}
+\usepackage[nameinlink,capitalise,noabbrev]{cleveref}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{parskip}
+
+% ------------------------------------------------------------
+% Matemáticas
+% ------------------------------------------------------------
+\usepackage{thmtools}
+\usepackage{bm}
+\usepackage{cancel}
+
+% ------------------------------------------------------------
+% Tablas, figuras y gráficos
+% ------------------------------------------------------------
+\usepackage{booktabs,longtable,tabularx,array,multirow}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,intersections,positioning,fit,backgrounds,decorations.pathreplacing,decorations.markings,angles,quotes,matrix,shapes.geometric,shapes.misc,babel}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage[most]{tcolorbox}
+
+% ------------------------------------------------------------
+% Código
+% ------------------------------------------------------------
+\usepackage{listings}
+\usepackage{xcolor}
+
+% ------------------------------------------------------------
+% Colores y estilo visual
+% ------------------------------------------------------------
+\definecolor{Navy}{HTML}{13293D}
+\definecolor{DeepBlue}{HTML}{1B4965}
+\definecolor{Teal}{HTML}{087E8B}
+\definecolor{Aqua}{HTML}{5BC0BE}
+\definecolor{Gold}{HTML}{D9A441}
+\definecolor{Warm}{HTML}{F4E9CD}
+\definecolor{Red}{HTML}{B23A48}
+\definecolor{Green}{HTML}{2E7D5A}
+\definecolor{Ink}{HTML}{20262E}
+\definecolor{SoftGray}{HTML}{F2F5F7}
+\definecolor{MidGray}{HTML}{66717E}
+\definecolor{Purple}{HTML}{6C5B7B}
+
+\hypersetup{
+  colorlinks=true,
+  hypertexnames=false,
+  linkcolor=DeepBlue,
+  citecolor=Teal,
+  urlcolor=Purple,
+  pdftitle={Rigidez inerte y espectros parabólicos},
+  pdfauthor={Robert Duan Montoya Cardona},
+  pdfsubject={Geometría de parábolas, puntos reticulares y teoría de números},
+  pdfkeywords={parábola, circunferencia, primos inertes, enteros gaussianos, Bateman-Horn, Selberg-Delange}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{MidGray}\nouppercase{\leftmark}}
+\fancyhead[R]{\small\color{MidGray}Rigidez inerte y espectros parabólicos}
+\fancyfoot[C]{\color{MidGray}\thepage}
+\renewcommand{\headrulewidth}{0.35pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\titleformat{\chapter}[display]
+  {\normalfont\bfseries\color{Navy}}
+  {\filleft\fontsize{44}{48}\selectfont\color{Aqua!70!Navy}\thechapter}
+  {-1ex}
+  {\titlerule[1.2pt]\vspace{1.2ex}\Huge}
+  [\vspace{0.8ex}\titlerule]
+\titleformat{\section}{\Large\bfseries\color{DeepBlue}}{\thesection}{0.75em}{}
+\titleformat{\subsection}{\large\bfseries\color{Teal}}{\thesubsection}{0.7em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{Purple}}{\thesubsubsection}{0.65em}{}
+
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.35em,topsep=0.35em}
+\setlist[enumerate]{leftmargin=1.65em,itemsep=0.35em,topsep=0.35em}
+
+% ------------------------------------------------------------
+% Entornos matemáticos
+% ------------------------------------------------------------
+\declaretheoremstyle[
+  headfont=\bfseries\color{Navy},
+  bodyfont=\normalfont,
+  headpunct={.},
+  postheadspace=0.6em,
+  spaceabove=0.9em,
+  spacebelow=0.9em
+]{cleanthm}
+\declaretheorem[style=cleanthm,name=Teorema,numberwithin=chapter]{theorem}
+\declaretheorem[style=cleanthm,name=Proposición,sibling=theorem]{proposition}
+\declaretheorem[style=cleanthm,name=Lema,sibling=theorem]{lemma}
+\declaretheorem[style=cleanthm,name=Corolario,sibling=theorem]{corollary}
+\declaretheorem[style=cleanthm,name=Definición,sibling=theorem]{definition}
+\declaretheorem[style=cleanthm,name=Conjetura,sibling=theorem]{conjecture}
+\declaretheorem[style=cleanthm,name=Pregunta,sibling=theorem]{question}
+\declaretheorem[style=cleanthm,name=Observación,sibling=theorem]{remark}
+\declaretheorem[style=cleanthm,name=Ejemplo,sibling=theorem]{example}
+
+\newtcolorbox{rigorousbox}[1][]{
+  enhanced,breakable,colback=Green!4,colframe=Green!75!black,
+  title={Resultado riguroso},fonttitle=\bfseries,arc=2mm,boxrule=0.8pt,
+  left=1.2mm,right=1.2mm,top=1mm,bottom=1mm,#1}
+\newtcolorbox{classicalbox}[1][]{
+  enhanced,breakable,colback=DeepBlue!4,colframe=DeepBlue!75!black,
+  title={Hecho clásico o reformulación},fonttitle=\bfseries,arc=2mm,boxrule=0.8pt,
+  left=1.2mm,right=1.2mm,top=1mm,bottom=1mm,#1}
+\newtcolorbox{experimentalbox}[1][]{
+  enhanced,breakable,colback=Gold!8,colframe=Gold!80!black,
+  title={Evidencia computacional},fonttitle=\bfseries,arc=2mm,boxrule=0.8pt,
+  left=1.2mm,right=1.2mm,top=1mm,bottom=1mm,#1}
+\newtcolorbox{conjecturalbox}[1][]{
+  enhanced,breakable,colback=Red!4,colframe=Red!80!black,
+  title={Conjetural: no demostrado},fonttitle=\bfseries,arc=2mm,boxrule=0.8pt,
+  left=1.2mm,right=1.2mm,top=1mm,bottom=1mm,#1}
+\newtcolorbox{insightbox}[1][]{
+  enhanced,breakable,colback=Teal!5,colframe=Teal!85!black,
+  title={Idea central},fonttitle=\bfseries,arc=2mm,boxrule=0.8pt,
+  left=1.2mm,right=1.2mm,top=1mm,bottom=1mm,#1}
+\newtcolorbox{warningbox}[1][]{
+  enhanced,breakable,colback=Warm!55,colframe=Red!70!black,
+  title={Advertencia epistemológica},fonttitle=\bfseries,arc=2mm,boxrule=0.8pt,
+  left=1.2mm,right=1.2mm,top=1mm,bottom=1mm,#1}
+
+% ------------------------------------------------------------
+% Comandos
+% ------------------------------------------------------------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\Iset}{\mathcal{I}}
+\newcommand{\Sset}{\mathcal{S}}
+\newcommand{\Lam}{\Lambda}
+\newcommand{\Area}{\mathcal{A}}
+\newcommand{\ord}{\operatorname{ord}}
+\newcommand{\rad}{\operatorname{rad}}
+\newcommand{\Norm}{\operatorname{N}}
+\newcommand{\Li}{\operatorname{Li}}
+\newcommand{\Res}{\operatorname{Res}}
+\newcommand{\e}{\mathrm{e}}
+\newcommand{\ii}{\mathrm{i}}
+\newcommand{\dd}{\,\mathrm{d}}
+\newcommand{\modulo}[1]{\; (\mathrm{mod}\ #1)}
+
+\lstdefinestyle{pythonstyle}{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{DeepBlue}\bfseries,
+  commentstyle=\color{Green!65!black},
+  stringstyle=\color{Purple},
+  numbers=left,
+  numberstyle=\tiny\color{MidGray},
+  stepnumber=1,
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{Aqua!55!Navy},
+  backgroundcolor=\color{SoftGray},
+  tabsize=4,
+  columns=fullflexible,
+  keepspaces=true
+}
+\lstset{style=pythonstyle}
+
+\captionsetup{font=small,labelfont=bf,labelsep=period}
+\pgfplotsset{
+  every axis/.append style={
+    axis line style={Navy!65},
+    tick style={Navy!65},
+    label style={font=\small},
+    tick label style={font=\small},
+    grid=major,
+    grid style={SoftGray!85!MidGray}
+  }
+}
+
+% ------------------------------------------------------------
+% Documento
+% ------------------------------------------------------------
+\begin{document}
+
+\begin{titlepage}
+\begin{tikzpicture}[remember picture,overlay]
+  \fill[Navy] (current page.south west) rectangle (current page.north east);
+  \fill[Teal!32!Navy] ($(current page.north west)+(0,-5.2)$) rectangle ($(current page.north east)+(0,-5.35)$);
+  \draw[Aqua!65,line width=1.2pt,domain=-6:6,samples=160,smooth,variable=\x]
+    plot ({\x*0.78},{0.11*\x*\x-10.9});
+  \draw[Gold!75,line width=1.0pt] ($(current page.center)+(-3.2,-3.0)$) circle (4.1cm);
+  \fill[Gold] ($(current page.center)+(-3.2,-7.1)$) circle (2.4pt);
+  \foreach \a in {15,55,105,145,205,245,295,335}{
+    \fill[Aqua!80] ($(current page.center)+(-3.2,-3.0)+(\a:4.1)$) circle (1.35pt);
+  }
+  \node[anchor=north west,text width=16.2cm] at ($(current page.north west)+(2.0,-2.0)$) {
+    {\fontsize{31}{36}\selectfont\bfseries\color{white} Rigidez inerte y\\[0.15em] espectros parabólicos}\par
+    \vspace{0.7cm}
+    {\Large\color{Aqua!90!white} De una construcción euclidiana elemental a constantes,\\ semigrupos multiplicativos y problemas de frontera}\par
+  };
+  \node[anchor=south west,text width=15.8cm] at ($(current page.south west)+(2.0,2.0)$) {
+    {\large\color{white}\textbf{Robert Duan Montoya Cardona}}\\[0.45em]
+    {\normalsize\color{white!78}Monografía de investigación exploratoria, autocontenida y reproducible}\\[0.35em]
+    {\normalsize\color{white!62}1 de agosto de 2026}
+  };
+\end{tikzpicture}
+\end{titlepage}
+
+\pagenumbering{roman}
+
+\chapter*{Declaración de alcance y honestidad matemática}
+\addcontentsline{toc}{chapter}{Declaración de alcance y honestidad matemática}
+
+\begin{warningbox}
+Este documento distingue estrictamente cuatro niveles: resultados demostrados aquí, consecuencias de teoremas clásicos, cálculos experimentales y conjeturas. Una verificación computacional, por extensa que sea, no reemplaza una demostración. Tampoco se afirma que una formulación sea inédita solo porque no se haya localizado en una búsqueda bibliográfica inicial.
+\end{warningbox}
+
+La construcción geométrica y sus identidades elementales se demuestran completamente. Las fórmulas de conteo basadas en el teorema de las dos sumas de cuadrados también se prueban. Las expansiones asintóticas usan explícitamente el método de Selberg--Delange como herramienta estándar; se enuncia la versión necesaria y se muestra con detalle cómo se aplica. Las predicciones de primalidad se presentan únicamente como heurísticas del tipo Bateman--Horn, y se marcan como conjeturas.
+
+La idea conductora es sencilla:
+
+\begin{center}
+\begin{tikzpicture}[node distance=7mm and 8mm,>={Latex}]
+\tikzset{box/.style={rounded corners=2mm,draw=Navy!70,fill=SoftGray,minimum height=10mm,text width=3.15cm,align=center,font=\small\bfseries}}
+\node[box] (p) {Parábola y tres puntos canónicos};
+\node[box,right=of p] (t) {Triángulo y circunferencia tangente};
+\node[box,right=of t] (l) {Puntos de la red y sumas de dos cuadrados};
+\node[box,below=of l] (i) {Primos escindidos e inertes};
+\node[box,left=of i] (s) {Espectro parabólico y rigidez};
+\node[box,left=of s] (c) {Constantes y conjeturas de transmutación};
+\draw[->,thick,Teal] (p)--(t);
+\draw[->,thick,Teal] (t)--(l);
+\draw[->,thick,Teal] (l)--(i);
+\draw[->,thick,Teal] (i)--(s);
+\draw[->,thick,Teal] (s)--(c);
+\end{tikzpicture}
+\end{center}
+
+\chapter*{Resumen}
+\addcontentsline{toc}{chapter}{Resumen}
+
+Partimos de la parábola real no degenerada
+\[
+ x^2=\ell y,\qquad \ell>0,
+\]
+donde \(\ell\) es la longitud de su lado recto. Para cada \(k>0\), el vértice y los extremos de la cuerda perpendicular al eje situada en \(y=k\ell\) forman un triángulo isósceles \(T_k\). Calculamos sus lados, área, ángulos, centros clásicos y circunferencia. Esta última es siempre tangente a la parábola en el vértice. Tres valores son especialmente notables: \(k=1/4\) produce el lado recto y una estructura \(3\!:\!4\!:\!5\); \(k=1\) produce un triángulo rectángulo isósceles con \(\Area=R^2\); y \(k=3\) produce el triángulo equilátero y maximiza \(\Area/R^2\).
+
+Al fijar \(y=x^2\) y elegir los puntos \((\pm n,n^2)\), aparecen áreas cúbicas \(n^3\), circunradios \((n^2+1)/2\), una curva diofántica cuspidal, una ecuación de Pell para radios cuadrados y una conexión directa con triples pitagóricos. Después definimos el espectro parabólico entero
+\[
+ \Lam(R)=\{\lambda\in\{1,\dots,2R-1\}:\lambda(2R-\lambda)\text{ es un cuadrado}\}.
+\]
+Probamos que este espectro equivale exactamente a los puntos enteros de la circunferencia \(u^2+x^2=R^2\), y obtenemos
+\[
+ |\Lam(R)|=2\prod_{p\equiv1\ (4)}\bigl(2v_p(R)+1\bigr)-1.
+\]
+De aquí surge una descomposición rigurosa: los factores primos \(3\pmod4\) y las potencias de \(2\) solo dilatan el espectro; no crean nuevas ramas normalizadas. Esa es la noción precisa de \emph{rigidez inerte}.
+
+La media de \(|\Lam(R)|\) tiene una expansión con término principal \((2/\pi)\log X\) y una constante explícita
+\[
+ \mathfrak C_{\mathrm{par}}=0.127461231444132383\ldots.
+\]
+Finalmente estudiamos la transformación
+\[
+ T(n)=\frac{n^2+1}{2},\qquad n\text{ impar}.
+\]
+Todo divisor primo de \(T(n)\) es \(1\pmod4\). Si la entrada \(n\) está formada solo por primos inertes, la salida está formada solo por primos escindidos. Formulamos una conjetura cuantitativa para las salidas primas, proponemos una constante híbrida
+\[
+ \mathfrak T_{\mathrm{par}}\approx0.5384457,
+\]
+y la contrastamos mediante un cálculo exacto hasta \(2\times10^7\). La constante es una propuesta heurística, no un teorema.
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\chapter*{Guía de símbolos}
+\addcontentsline{toc}{chapter}{Guía de símbolos}
+\begin{longtable}{>{\raggedright\arraybackslash}p{3cm}p{10.5cm}}
+\toprule
+Símbolo & Significado\\
+\midrule
+\endhead
+\(\ell\) & Longitud del lado recto de la parábola \(x^2=\ell y\).\\
+\(k\) & Parámetro adimensional que fija la altura \(y=k\ell\).\\
+\(T_k\) & Triángulo formado por el vértice y los extremos de la cuerda \(y=k\ell\).\\
+\(R\) & Circunradio; en la parte aritmética también es un radio entero.\\
+\(r_2(N)\) & Número de pares ordenados \((a,b)\in\Z^2\) con \(a^2+b^2=N\).\\
+\(v_p(n)\) & Exponente de \(p\) en la factorización prima de \(n\).\\
+\(\chi_4\) & Carácter de Dirichlet no principal módulo \(4\).\\
+\(\Lam(R)\) & Espectro parabólico entero de la circunferencia de radio \(R\).\\
+\(\Iset\) & Semigrupo de enteros impares cuyos factores primos son todos \(3\pmod4\).\\
+\(K\) & Constante de Landau--Ramanujan.\\
+\(\mathfrak C_{\mathrm{par}}\) & Constante rigurosa del término estable de la complejidad parabólica media.\\
+\(\mathfrak T_{\mathrm{par}}\) & Constante heurística propuesta para la transmutación prima sobre \(\Iset\).\\
+\bottomrule
+\end{longtable}
+
+\clearpage
+\pagenumbering{arabic}
+
+% ============================================================
+\chapter{La construcción geométrica desde lo más básico}
+% ============================================================
+
+\section{¿Qué es una parábola?}
+
+Una parábola es el lugar geométrico de los puntos del plano que están a la misma distancia de un punto fijo, llamado \emph{foco}, y de una recta fija, llamada \emph{directriz}. Esta definición no depende de cómo orientemos los ejes coordenados.
+
+Coloquemos el vértice en el origen, el eje de simetría sobre el eje \(y\), el foco en
+\[
+ F=(0,a),\qquad a>0,
+\]
+y la directriz en \(y=-a\). Si \(P=(x,y)\) pertenece a la parábola, la igualdad de distancias es
+\[
+ \sqrt{x^2+(y-a)^2}=y+a.
+\]
+Al elevar al cuadrado y simplificar,
+\[
+ x^2+y^2-2ay+a^2=y^2+2ay+a^2,
+\]
+de modo que
+\[
+ x^2=4ay.
+\]
+La cuerda que pasa por el foco y es perpendicular al eje se llama \emph{lado recto}. Al poner \(y=a\), sus extremos son \((\pm2a,a)\), así que su longitud es \(4a\).
+
+Por ello introducimos
+\[
+ \ell=4a
+\]
+y escribimos la parábola en la forma
+\begin{equation}
+ \boxed{\mathcal P_\ell:\quad x^2=\ell y},\qquad \ell>0.
+ \label{eq:parabola-standard}
+\end{equation}
+Sus datos fundamentales son
+\[
+ V=(0,0),\qquad F=\left(0,\frac\ell4\right),\qquad
+ \text{directriz: }y=-\frac\ell4.
+\]
+
+\begin{insightbox}
+La cantidad \(\ell\) fija la escala métrica de la parábola. Tras una traslación y una rotación, toda parábola real no degenerada puede ponerse en la forma \eqref{eq:parabola-standard}. Por tanto, las fórmulas que obtengamos en esta posición se trasladan a cualquier parábola mediante isometrías.
+\end{insightbox}
+
+\section{¿Existen tres puntos canónicos?}
+
+El vértice sí es un punto canónico de la curva. Sin embargo, no existen otros dos puntos de la parábola determinados sin introducir alguna regla adicional: cualquier isometría que preserve el eje puede desplazar una cuerda perpendicular al eje a otra altura.
+
+La forma natural de evitar una elección arbitraria es medir la altura usando la propia escala \(\ell\). Para \(k>0\), trazamos la recta
+\[
+ y=k\ell.
+\]
+Al intersectarla con \(x^2=\ell y\), obtenemos
+\[
+ x^2=k\ell^2,
+\]
+y por tanto los dos puntos
+\begin{equation}
+ P_k^- =(-\ell\sqrt{k},k\ell),
+ \qquad
+ P_k^+=(\ell\sqrt{k},k\ell).
+ \label{eq:Pk}
+\end{equation}
+Definimos
+\[
+ T_k=\triangle VP_k^-P_k^+.
+\]
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.92,>={Latex}]
+  \def\ellv{3}
+  \def\kv{1.15}
+  \pgfmathsetmacro{\h}{\kv*\ellv}
+  \pgfmathsetmacro{\xx}{\ellv*sqrt(\kv)}
+  \pgfmathsetmacro{\cy}{\ellv*(\kv+1)/2}
+  \draw[->,Navy!70] (-5,0)--(5,0) node[right] {$x$};
+  \draw[->,Navy!70] (0,-1.3)--(0,6.3) node[above] {$y$};
+  \draw[dashed,Red!75] (-4.7,-0.75)--(4.7,-0.75) node[right] {directriz};
+  \draw[very thick,DeepBlue,domain=-4.2:4.2,samples=180,smooth,variable=\x]
+    plot ({\x},{\x*\x/\ellv});
+  \draw[thick,Teal] (-4.5,\h)--(4.5,\h) node[right] {$y=k\ell$};
+  \filldraw[Gold] (0,0) circle (2pt) node[below left] {$V$};
+  \filldraw[Red] (0,0.75) circle (2pt) node[right] {$F$};
+  \filldraw[Teal] (-\xx,\h) circle (2pt) node[above left] {$P_k^-$};
+  \filldraw[Teal] (\xx,\h) circle (2pt) node[above right] {$P_k^+$};
+  \draw[very thick,Gold!80!black] (0,0)--(-\xx,\h)--(\xx,\h)--cycle;
+  \draw[thick,Purple] (0,\cy) circle (\cy);
+  \filldraw[Purple] (0,\cy) circle (1.8pt) node[right] {$O_k$};
+  \draw[<->,MidGray] (-\xx,\h+0.42)--(\xx,\h+0.42)
+    node[midway,fill=white,inner sep=1pt] {$2\ell\sqrt{k}$};
+  \draw[<->,MidGray] (0.35,0)--(0.35,\h)
+    node[midway,right,fill=white,inner sep=1pt] {$k\ell$};
+\end{tikzpicture}
+\caption{Construcción general: el triángulo \(T_k\) y su circunferencia. La figura usa valores concretos solo para visualizar; las fórmulas son generales.}
+\label{fig:general-construction}
+\end{figure}
+
+\section{Longitudes, área y ángulo del vértice}
+
+\begin{proposition}[Invariantes elementales de \(T_k\)]
+Para \(k>0\), el triángulo \(T_k\) tiene base, lados iguales y área
+\begin{align}
+ P_k^-P_k^+&=2\ell\sqrt{k},\label{eq:base}\\
+ VP_k^-=VP_k^+&=\ell\sqrt{k(k+1)},\label{eq:equal-sides}\\
+ \Area(T_k)&=k^{3/2}\ell^2.\label{eq:areaTk}
+\end{align}
+Además, si \(\theta_k=\angle P_k^-VP_k^+\), entonces
+\begin{equation}
+ \boxed{\cos\theta_k=\frac{k-1}{k+1}}.
+ \label{eq:vertex-angle}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+La base es la diferencia entre las abscisas de los puntos \eqref{eq:Pk}. La distancia desde \(V\) hasta cualquiera de ellos satisface
+\[
+ VP_k^2=(\ell\sqrt{k})^2+(k\ell)^2
+       =\ell^2k(k+1),
+\]
+lo que prueba \eqref{eq:equal-sides}. Como la altura respecto de la base es \(k\ell\),
+\[
+ \Area(T_k)=\frac12(2\ell\sqrt{k})(k\ell)=k^{3/2}\ell^2.
+\]
+Para el ángulo del vértice usamos los vectores
+\[
+ \overrightarrow{VP_k^-}=(-\ell\sqrt{k},k\ell),
+ \qquad
+ \overrightarrow{VP_k^+}=(\ell\sqrt{k},k\ell).
+\]
+Su producto escalar es
+\[
+ -\ell^2k+k^2\ell^2=\ell^2k(k-1),
+\]
+y el producto de sus normas es \(\ell^2k(k+1)\). Al dividir obtenemos \eqref{eq:vertex-angle}.
+\end{proof}
+
+La fórmula angular permite leer la forma del triángulo sin dibujarlo:
+\[
+ 0<k<1\Rightarrow \theta_k>90^\circ,
+ \qquad
+ k=1\Rightarrow \theta_k=90^\circ,
+ \qquad
+ k>1\Rightarrow \theta_k<90^\circ.
+\]
+
+\section{Circuncentro, circunradio y tangencia}
+
+\begin{theorem}[Circunferencia canónica asociada a la cuerda]
+El circuncentro y el circunradio de \(T_k\) son
+\begin{equation}
+ \boxed{
+ O_k=\left(0,\frac{k+1}{2}\ell\right),
+ \qquad
+ R_k=\frac{k+1}{2}\ell.}
+ \label{eq:circumcenter}
+\end{equation}
+La circunferencia circunscrita es
+\begin{equation}
+ \boxed{x^2+y^2-(k+1)\ell y=0.}
+ \label{eq:circle-k}
+\end{equation}
+Esta circunferencia es tangente a \(\mathcal P_\ell\) en el vértice y corta nuevamente la parábola en \(P_k^-\) y \(P_k^+\).
+\end{theorem}
+
+\begin{proof}
+Por simetría, el circuncentro tiene la forma \(O_k=(0,c)\). Como debe estar a igual distancia de \(V\) y \(P_k^+\),
+\[
+ c^2=(\ell\sqrt{k})^2+(k\ell-c)^2.
+\]
+Al expandir y cancelar \(c^2\),
+\[
+ 2k\ell c=k\ell^2+k^2\ell^2=k\ell^2(k+1),
+\]
+de donde \(c=(k+1)\ell/2\). Como \(V=(0,0)\), el radio es \(OV=c\), lo cual prueba \eqref{eq:circumcenter}. La ecuación
+\[
+ x^2+(y-c)^2=c^2
+\]
+se reduce a \eqref{eq:circle-k}.
+
+Para hallar las intersecciones con la parábola sustituimos \(x^2=\ell y\) en \eqref{eq:circle-k}:
+\[
+ \ell y+y^2-(k+1)\ell y=0,
+\]
+por tanto
+\[
+ y(y-k\ell)=0.
+\]
+La solución \(y=0\) es el vértice; la solución \(y=k\ell\) produce exactamente los dos puntos \eqref{eq:Pk}. En el origen, los gradientes de
+\[
+ x^2-\ell y=0,
+ \qquad
+ x^2+y^2-(k+1)\ell y=0
+\]
+son, respectivamente,
+\[
+ (0,-\ell),\qquad (0,-(k+1)\ell),
+\]
+que son paralelos y no nulos. Ambas curvas tienen allí la misma recta tangente \(y=0\).
+\end{proof}
+
+\begin{rigorousbox}
+Toda cuerda perpendicular al eje de una parábola, junto con el vértice, determina una circunferencia tangente a la parábola en el vértice. La tangencia no es una coincidencia de un ejemplo particular: vale para todo \(k>0\).
+\end{rigorousbox}
+
+\section{Atlas de centros clásicos}
+
+La simetría obliga a que todos los centros clásicos del triángulo estén sobre el eje \(y\). Esto permite calcularlos exactamente.
+
+\begin{proposition}[Centros de \(T_k\)]
+El baricentro \(G_k\), el ortocentro \(H_k\), el centro de los nueve puntos \(N_k\), el incentro \(I_k\) y el inradio \(r_k\) son
+\begin{align}
+ G_k&=\left(0,\frac{2k}{3}\ell\right),\label{eq:G}\\
+ H_k&=(0,(k-1)\ell),\label{eq:H}\\
+ N_k&=\left(0,\frac{3k-1}{4}\ell\right),\label{eq:N}\\
+ I_k&=\left(0,\bigl(k+1-\sqrt{k+1}\bigr)\ell\right),\label{eq:I}\\
+ r_k&=\bigl(\sqrt{k+1}-1\bigr)\ell.\label{eq:inradius}
+\end{align}
+\end{proposition}
+
+\begin{proof}
+La fórmula del baricentro es el promedio de las coordenadas de los tres vértices. Para el ortocentro podemos usar la relación vectorial de la recta de Euler
+\[
+ H_k=3G_k-2O_k,
+\]
+que da \eqref{eq:H}; también puede verificarse intersectando dos alturas. El centro de los nueve puntos es el punto medio de \(O_kH_k\), lo que produce \eqref{eq:N}.
+
+Para el inradio usamos \(r=\Area/s\), donde \(s\) es el semiperímetro. Por \eqref{eq:base} y \eqref{eq:equal-sides},
+\[
+ s=\ell\sqrt{k}\bigl(1+\sqrt{k+1}\bigr).
+\]
+Entonces
+\[
+ r_k=\frac{k^{3/2}\ell^2}{\ell\sqrt{k}(1+\sqrt{k+1})}
+ =\frac{k\ell}{1+\sqrt{k+1}}
+ =(\sqrt{k+1}-1)\ell.
+\]
+Como la base está en \(y=k\ell\), el incentro se encuentra a distancia \(r_k\) por debajo de ella, y obtenemos \eqref{eq:I}.
+\end{proof}
+
+\subsection{Coincidencias exactas con el foco}
+
+El foco está en \(F=(0,\ell/4)\). Igualando las ordenadas obtenemos valores especiales:
+
+\begin{table}[H]
+\centering
+\caption{Valores de \(k\) para los cuales un centro clásico coincide con el foco.}
+\begin{tabular}{lll}
+\toprule
+Coincidencia & Ecuación & Valor de \(k\)\\
+\midrule
+\(G_k=F\) & \(2k/3=1/4\) & \(k=3/8\)\\
+\(N_k=F\) & \((3k-1)/4=1/4\) & \(k=2/3\)\\
+\(H_k=F\) & \(k-1=1/4\) & \(k=5/4\)\\
+\(I_k=F\) & \(k+1-\sqrt{k+1}=1/4\) & \(k=(2\sqrt2-1)/4\)\\
+\bottomrule
+\end{tabular}
+\label{tab:center-focus}
+\end{table}
+
+El circuncentro nunca coincide con el foco para \(k>0\), pues ello exigiría \((k+1)/2=1/4\). En cambio, todos los centros coinciden entre sí cuando \(k=3\), precisamente porque el triángulo es equilátero.
+
+\begin{remark}
+La potencia del foco respecto de la circunferencia \eqref{eq:circle-k} es
+\[
+ \operatorname{Pow}_{\Gamma_k}(F)=O_kF^2-R_k^2
+ =-\frac{4k+3}{16}\ell^2<0.
+\]
+Por tanto, el foco está siempre estrictamente dentro de la circunferencia.
+\end{remark}
+
+% ============================================================
+\chapter{Tres valores canónicos y sus estructuras ocultas}
+% ============================================================
+
+\section{El lado recto: \(k=1/4\)}
+
+Cuando \(k=1/4\), los puntos laterales son
+\[
+ A_\pm=\left(\pm\frac\ell2,\frac\ell4\right),
+\]
+que son los extremos del lado recto. El triángulo \(VA_-A_+\) es, por tanto, el triple más intrínseco si se exige que los tres puntos estén determinados únicamente por la definición foco--directriz.
+
+Su área y circunradio son
+\[
+ \Area=\frac{\ell^2}{8},
+ \qquad
+ R=\frac{5\ell}{8}.
+\]
+Si \(O=(0,5\ell/8)\), \(F=(0,2\ell/8)\) y \(A=(\ell/2,\ell/4)\), entonces
+\[
+ OF=\frac{3\ell}{8},\qquad
+ FA=\frac{4\ell}{8},\qquad
+ OA=\frac{5\ell}{8}.
+\]
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=1.25,>={Latex}]
+  \def\l{4}
+  \draw[->,Navy!65] (-3.3,0)--(3.3,0);
+  \draw[->,Navy!65] (0,-1.35)--(0,5.65);
+  \draw[very thick,DeepBlue,domain=-3.1:3.1,samples=140,smooth,variable=\x]
+    plot ({\x},{\x*\x/\l});
+  \draw[dashed,Red] (-3.1,-1)--(3.1,-1) node[right] {$y=-\ell/4$};
+  \coordinate (V) at (0,0);
+  \coordinate (F) at (0,1);
+  \coordinate (A) at (2,1);
+  \coordinate (B) at (-2,1);
+  \coordinate (O) at (0,2.5);
+  \draw[thick,Purple] (O) circle (2.5);
+  \draw[very thick,Gold!85!black] (V)--(A)--(B)--cycle;
+  \draw[thick,Teal] (O)--(F)--(A)--cycle;
+  \pic[draw=Teal,angle radius=5mm] {right angle=O--F--A};
+  \filldraw[Gold] (V) circle (1.8pt) node[below left] {$V$};
+  \filldraw[Red] (F) circle (1.8pt) node[left] {$F$};
+  \filldraw[Teal] (A) circle (1.8pt) node[right] {$A_+$};
+  \filldraw[Teal] (B) circle (1.8pt) node[left] {$A_-$};
+  \filldraw[Purple] (O) circle (1.8pt) node[left] {$O$};
+  \node[Teal,fill=white,inner sep=1pt] at (0,1.75) {$3$};
+  \node[Teal,fill=white,inner sep=1pt] at (1,0.8) {$4$};
+  \node[Teal,fill=white,inner sep=1pt] at (1.15,1.85) {$5$};
+\end{tikzpicture}
+\caption{La estructura \(3\!:\!4\!:\!5\) escondida en el lado recto. Las longitudes reales son esos números multiplicados por \(\ell/8\).}
+\label{fig:345}
+\end{figure}
+
+\begin{rigorousbox}
+Toda parábola real no degenerada contiene, hasta semejanza, el mismo triángulo rectángulo \(3\!:\!4\!:\!5\) formado por foco, circuncentro del triángulo del lado recto y uno de los extremos del lado recto.
+\end{rigorousbox}
+
+\section{El triángulo rectángulo isósceles: \(k=1\)}
+
+Para \(k=1\),
+\[
+ Q_-=(-\ell,\ell),\qquad Q_+=(\ell,\ell).
+\]
+La fórmula \eqref{eq:vertex-angle} da \(\cos\theta_1=0\), así que el ángulo del vértice es recto. Además,
+\[
+ VQ_-=VQ_+=\ell\sqrt2,
+ \qquad Q_-Q_+=2\ell.
+\]
+El circuncentro es el punto medio de la hipotenusa:
+\[
+ O=(0,\ell),\qquad R=\ell.
+\]
+El área satisface la identidad especialmente limpia
+\begin{equation}
+ \boxed{\Area=R^2=\ell^2.}
+ \label{eq:AequalsR2}
+\end{equation}
+La circunferencia es
+\[
+ x^2+(y-\ell)^2=\ell^2.
+\]
+
+\begin{insightbox}
+La construcción \(k=1\) es la más conveniente para introducir aritmética: si \(\ell\) es entero, los tres vértices, el circuncentro, el área y el radio son enteros. Si \(\ell\) es primo, el radio es primo y el área es su cuadrado.
+\end{insightbox}
+
+\section{El triángulo equilátero: \(k=3\)}
+
+Para \(k=3\),
+\[
+ P_3^\pm=(\pm\sqrt3\,\ell,3\ell).
+\]
+La base mide \(2\sqrt3\ell\), y cada lado igual mide
+\[
+ \ell\sqrt{3(3+1)}=2\sqrt3\ell.
+\]
+Así, el triángulo es equilátero. Su área y radio son
+\[
+ \Area=3\sqrt3\ell^2,
+ \qquad R=2\ell.
+\]
+
+\begin{theorem}[Extremalidad del equilátero]
+Entre todos los triángulos \(T_k\), el cociente adimensional \(\Area(T_k)/R_k^2\) alcanza su máximo único en \(k=3\).
+\end{theorem}
+
+\begin{proof}
+Por \eqref{eq:areaTk} y \eqref{eq:circumcenter},
+\[
+ \frac{\Area(T_k)}{R_k^2}
+ =\frac{4k^{3/2}}{(k+1)^2}.
+\]
+Al derivar el logaritmo,
+\[
+ \frac{\dd}{\dd k}\log\left(\frac{4k^{3/2}}{(k+1)^2}\right)
+ =\frac{3}{2k}-\frac{2}{k+1}
+ =\frac{3-k}{2k(k+1)}.
+\]
+La función crece en \((0,3)\), decrece en \((3,\infty)\) y tiene máximo único en \(k=3\). El valor máximo es
+\[
+ \frac{3\sqrt3}{4},
+\]
+que es precisamente el cociente área--circunradio de un triángulo equilátero.
+\end{proof}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.82]
+\foreach \kv/\xshift/\title in {0.25/0/Lado recto,1/7/Rectángulo,3/14/Equilátero}{
+  \begin{scope}[xshift=\xshift cm]
+    \def\l{1.45}
+    \pgfmathsetmacro{\h}{\kv*\l}
+    \pgfmathsetmacro{\xx}{\l*sqrt(\kv)}
+    \pgfmathsetmacro{\cy}{\l*(\kv+1)/2}
+    \draw[->,Navy!55] (-2.7,0)--(2.7,0);
+    \draw[->,Navy!55] (0,-0.45)--(0,5.35);
+    \draw[thick,DeepBlue,domain=-2.5:2.5,samples=100,smooth,variable=\x]
+      plot ({\x},{\x*\x/\l});
+    \draw[very thick,Gold!85!black] (0,0)--(-\xx,\h)--(\xx,\h)--cycle;
+    \draw[thick,Purple] (0,\cy) circle (\cy);
+    \node[font=\bfseries\small,Navy] at (0,-0.8) {$k=\kv$: \title};
+  \end{scope}
+}
+\end{tikzpicture}
+\caption{Tres miembros distinguidos de la familia \(T_k\).}
+\label{fig:three-special}
+\end{figure}
+
+% ============================================================
+\chapter{La parábola reticular \(y=x^2\)}
+% ============================================================
+
+\section{Una familia de triángulos con coordenadas enteras}
+
+Fijemos ahora la parábola
+\[
+ \mathcal P:\qquad y=x^2,
+\]
+que corresponde a \(\ell=1\). Para cada \(n\in\N\), elegimos
+\begin{equation}
+ V=(0,0),\qquad P_n=(-n,n^2),\qquad Q_n=(n,n^2).
+ \label{eq:integer-triangle}
+\end{equation}
+Esta elección equivale a tomar \(k=n^2\) en la familia anterior.
+
+\begin{proposition}[Invariantes del triángulo reticular]
+El triángulo \(\triangle VP_nQ_n\) tiene
+\begin{align}
+ \Area_n&=n^3,\label{eq:area-cube}\\
+ R_n&=\frac{n^2+1}{2},\label{eq:Rn}\\
+ O_n&=\left(0,\frac{n^2+1}{2}\right),\label{eq:On}\\
+ H_n&=(0,n^2-1).\label{eq:Hn}
+\end{align}
+Su circunferencia es
+\begin{equation}
+ \Gamma_n:\quad x^2+y^2-(n^2+1)y=0.
+ \label{eq:Gamma-n}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Basta sustituir \(\ell=1\) y \(k=n^2\) en las fórmulas de los capítulos anteriores. También puede verificarse directamente: la base mide \(2n\), la altura \(n^2\), y por tanto el área es \(n^3\). La igualdad de distancias desde \((0,R_n)\) al origen y a \((n,n^2)\) produce \eqref{eq:Rn}.
+\end{proof}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.72,>={Latex}]
+  \draw[->,Navy!65] (-6,0)--(6,0) node[right] {$x$};
+  \draw[->,Navy!65] (0,-0.7)--(0,11) node[above] {$y$};
+  \draw[very thick,DeepBlue,domain=-3.25:3.25,samples=160,smooth,variable=\x]
+    plot ({\x},{\x*\x});
+  \draw[thick,Purple] (0,5) circle (5);
+  \draw[very thick,Gold!85!black] (0,0)--(-3,9)--(3,9)--cycle;
+  \filldraw[Gold] (0,0) circle (2.3pt) node[below left] {$V$};
+  \filldraw[Teal] (-3,9) circle (2.3pt) node[above left] {$P_3$};
+  \filldraw[Teal] (3,9) circle (2.3pt) node[above right] {$Q_3$};
+  \filldraw[Purple] (0,5) circle (2pt) node[right] {$O_3=(0,5)$};
+  \draw[dashed,MidGray] (-3,9)--(3,9);
+  \node[fill=white,inner sep=2pt,text=Navy] at (0,7.65) {$\Area_3=27$};
+  \node[fill=white,inner sep=2pt,text=Purple] at (3.5,4.2) {$R_3=5$};
+\end{tikzpicture}
+\caption{El caso \(n=3\): un triángulo de área \(27\) y circunradio \(5\), inscrito en una circunferencia tangente a \(y=x^2\).}
+\label{fig:n3}
+\end{figure}
+
+\section{La curva diofántica área--radio}
+
+Las fórmulas \eqref{eq:area-cube} y \eqref{eq:Rn} eliminan el parámetro \(n\):
+\[
+ 2R_n-1=n^2,
+ \qquad
+ \Area_n^2=n^6.
+\]
+Así obtenemos
+\begin{equation}
+ \boxed{\Area^2=(2R-1)^3.}
+ \label{eq:cusp}
+\end{equation}
+Esta es una curva cúbica cuspidal en el plano \((R,\Area)\).
+
+\begin{theorem}[Clasificación de los puntos enteros positivos]
+Las soluciones \((R,\Area)\in\N^2\) de \eqref{eq:cusp} son exactamente
+\[
+ R=\frac{n^2+1}{2},\qquad \Area=n^3,
+\]
+donde \(n\) recorre los enteros positivos impares.
+\end{theorem}
+
+\begin{proof}
+Sea \(d=2R-1\), que es impar. La ecuación dice \(\Area^2=d^3\). En la factorización prima de \(d\), si un primo aparece con exponente \(e\), en \(d^3\) aparece con exponente \(3e\). Como \(d^3\) es un cuadrado, \(3e\) es par, y por tanto \(e\) es par. Así, \(d=n^2\). Como \(d\) es impar, \(n\) es impar. Entonces \(R=(n^2+1)/2\) y, tomando valores positivos, \(\Area=n^3\). El recíproco es inmediato.
+\end{proof}
+
+\begin{corollary}
+Si \(n\) es impar, entonces
+\[
+ \gcd\left(n^3,\frac{n^2+1}{2}\right)=1.
+\]
+\end{corollary}
+
+\begin{proof}
+Sea \(p\) un primo que dividiera ambos números. De \(p\mid n^3\) se sigue \(p\mid n\); pero entonces \(p\mid n^2+1\) implicaría \(p\mid1\), contradicción. Por tanto no existe ningún primo divisor común y el máximo común divisor es \(1\).
+\end{proof}
+
+\section{El triple pitagórico asociado}
+
+Si \(n\) es impar, \((n^2-1)/2\) es entero y
+\begin{equation}
+ n^2+\left(\frac{n^2-1}{2}\right)^2
+ =\left(\frac{n^2+1}{2}\right)^2.
+ \label{eq:pythagorean}
+\end{equation}
+Así, cada triángulo reticular con radio entero produce el triple pitagórico
+\[
+ \boxed{\left(n,\frac{n^2-1}{2},\frac{n^2+1}{2}\right).}
+\]
+Para \(n=3,5,9,11\) se obtienen
+\[
+ (3,4,5),\quad(5,12,13),\quad(9,40,41),\quad(11,60,61).
+\]
+
+\begin{classicalbox}
+La identidad \eqref{eq:pythagorean} es la parametrización euclidiana clásica con parámetros consecutivos. Lo distintivo aquí no es el triple por sí mismo, sino que aparece simultáneamente como información del circunradio de un triángulo inscrito en una parábola y de los puntos reticulares de su circunferencia.
+\end{classicalbox}
+
+\section{Radios cuadrados y la ecuación de Pell}
+
+Preguntemos cuándo \(R_n\) es cuadrado. Si \(R_n=s^2\), entonces
+\[
+ \frac{n^2+1}{2}=s^2,
+\]
+o equivalentemente
+\begin{equation}
+ n^2-2s^2=-1.
+ \label{eq:negative-pell}
+\end{equation}
+Esta es la ecuación de Pell negativa para \(2\).
+
+\begin{theorem}[Infinitud de radios cuadrados]
+Existen infinitos \(n\) para los cuales \(R_n\) es un cuadrado. Todas las soluciones positivas de \eqref{eq:negative-pell} están dadas por
+\[
+ n_j+s_j\sqrt2=(1+\sqrt2)^{2j+1},\qquad j\ge0.
+\]
+Equivalentemente,
+\begin{align}
+ n_{j+1}&=3n_j+4s_j,\label{eq:pell-rec1}\\
+ s_{j+1}&=2n_j+3s_j,\label{eq:pell-rec2}
+\end{align}
+con \((n_0,s_0)=(1,1)\).
+\end{theorem}
+
+\begin{proof}
+La norma algebraica en \(\Z[\sqrt2]\) satisface
+\[
+ \Norm(a+b\sqrt2)=a^2-2b^2.
+\]
+Como \(\Norm(1+\sqrt2)=-1\) y \(\Norm(3+2\sqrt2)=1\), todos los números
+\[
+ (1+\sqrt2)(3+2\sqrt2)^j=(1+\sqrt2)^{2j+1}
+\]
+tienen norma \(-1\), dando soluciones. La teoría estándar de las unidades de \(\Z[\sqrt2]\) muestra que son todas las soluciones positivas. Multiplicar \(n_j+s_j\sqrt2\) por \(3+2\sqrt2\) produce las recurrencias.
+\end{proof}
+
+\begin{table}[H]
+\centering
+\caption{Primeros radios cuadrados.}
+\begin{tabular}{rrrr}
+\toprule
+\(j\)&\(n_j\)&\(s_j\)&\(R_{n_j}=s_j^2\)\\
+\midrule
+0&1&1&1\\
+1&7&5&25\\
+2&41&29&841\\
+3&239&169&28\,561\\
+4&1393&985&970\,225\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Un teorema de imposibilidad: radios triangulares}
+
+\begin{theorem}
+El único radio \(R_n\) que es un número triangular es \(R_1=1\).
+\end{theorem}
+
+\begin{proof}
+Supongamos
+\[
+ \frac{n^2+1}{2}=\frac{s(s+1)}2.
+\]
+Entonces \(n^2+1=s(s+1)\), y
+\[
+ (2s+1)^2-(2n)^2=5.
+\]
+Factorizando,
+\[
+ (2s+1-2n)(2s+1+2n)=5.
+\]
+Ambos factores son enteros positivos impares, así que deben ser \(1\) y \(5\). De aquí \(s=n=1\).
+\end{proof}
+
+\section{Radios primos}
+
+Para \(n=2m+1\),
+\begin{equation}
+ R_n=\frac{n^2+1}{2}=2m^2+2m+1=m^2+(m+1)^2.
+ \label{eq:centered-square}
+\end{equation}
+Si \(R_n\) es primo, necesariamente \(R_n\equiv1\pmod4\). La infinitud de primos de la forma \eqref{eq:centered-square} no se conoce. La sucesión está registrada en OEIS A002731 \cite{OEISA002731}; la subfamilia donde además \(n\) es primo aparece en OEIS A048161 \cite{OEISA048161}.
+
+\begin{conjecturalbox}
+La conjetura de Bunyakovsky, y más cuantitativamente Bateman--Horn \cite{BatemanHorn,AletheiaFukshanskyGarcia}, predice que \(2m^2+2m+1\) toma valores primos infinitas veces. Esto permanece abierto: los experimentos numéricos no constituyen una demostración.
+\end{conjecturalbox}
+
+El discriminante del polinomio \(f(m)=2m^2+2m+1\) es \(-4\). Para un primo impar \(p\), la congruencia \(f(m)\equiv0\pmod p\) tiene dos soluciones si \(p\equiv1\pmod4\) y ninguna si \(p\equiv3\pmod4\). La constante de Bateman--Horn correspondiente es
+\begin{equation}
+ C_f=2
+ \prod_{p\equiv1(4)}\frac{p-2}{p-1}
+ \prod_{q\equiv3(4)}\frac{q}{q-1}
+ =2.7456269256\ldots.
+ \label{eq:Cf}
+\end{equation}
+La predicción es
+\[
+ \#\{m\le X:f(m)\text{ primo}\}
+ \sim C_f\int_2^X\frac{\dd t}{\log f(t)}
+ \sim 1.3728134628\ldots\frac{X}{\log X}.
+\]
+
+\begin{remark}
+El factor \(1.372813\ldots\) puede interpretarse heurísticamente como una ventaja relativa frente a enteros impares aleatorios de tamaño comparable. La causa local es que ningún primo \(3\pmod4\) divide un valor de \(m^2+(m+1)^2\).
+\end{remark}
+
+% ============================================================
+\chapter{El espectro parabólico entero}
+% ============================================================
+
+\section{Definición geométrica}
+
+Consideremos la circunferencia tangente al eje \(x\) en el origen
+\begin{equation}
+ \Gamma_R:\quad x^2+(y-R)^2=R^2,
+ \qquad R\in\N.
+ \label{eq:GammaR}
+\end{equation}
+Su ecuación expandida es
+\[
+ x^2+y^2-2Ry=0.
+\]
+Para \(\lambda>0\), consideremos la parábola
+\begin{equation}
+ \mathcal P_\lambda:\quad x^2=\lambda y.
+ \label{eq:Plambda}
+\end{equation}
+Al sustituir \eqref{eq:Plambda} en \eqref{eq:GammaR},
+\[
+ \lambda y+y^2-2Ry=0,
+\]
+de modo que
+\[
+ y=0\quad\text{o}\quad y=2R-\lambda.
+\]
+Las intersecciones distintas del origen tienen
+\begin{equation}
+ x^2=\lambda(2R-\lambda).
+ \label{eq:lambda-square}
+\end{equation}
+
+\begin{definition}[Espectro parabólico entero]
+Definimos
+\begin{equation}
+ \boxed{
+ \Lam(R)=\left\{\lambda\in\{1,\ldots,2R-1\}:\lambda(2R-\lambda)\text{ es un cuadrado}\right\}.}
+ \label{eq:spectrum}
+\end{equation}
+Su cardinal
+\[
+ C(R)=|\Lam(R)|
+\]
+se llamará \emph{complejidad parabólica} del radio \(R\).
+\end{definition}
+
+Cada \(\lambda\in\Lam(R)\) representa una parábola integral \(x^2=\lambda y\) que, además del origen, corta a \(\Gamma_R\) en dos puntos enteros simétricos.
+
+\section{La transformación hacia una suma de dos cuadrados}
+
+Pongamos
+\[
+ u=R-\lambda.
+\]
+Entonces
+\[
+ \lambda(2R-\lambda)=(R-u)(R+u)=R^2-u^2.
+\]
+Por tanto, \eqref{eq:lambda-square} equivale a
+\begin{equation}
+ u^2+x^2=R^2.
+ \label{eq:lattice-circle}
+\end{equation}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[>={Latex},node distance=8mm and 12mm]
+  \node[draw=DeepBlue,fill=DeepBlue!5,rounded corners=2mm,text width=4.3cm,align=center,minimum height=15mm] (a)
+  {$\lambda\in\Lam(R)$\\[1mm]$x^2=\lambda(2R-\lambda)$};
+  \node[draw=Teal,fill=Teal!5,rounded corners=2mm,text width=4.3cm,align=center,minimum height=15mm,right=of a] (b)
+  {$u=R-\lambda$\\[1mm]$u^2+x^2=R^2$};
+  \draw[->,very thick,Gold!80!black] (a)--node[above] {$\lambda\mapsto R-\lambda$}(b);
+  \draw[->,very thick,Gold!80!black] (b.south west) to[bend right=28]
+    node[below] {$u\mapsto R-u$}(a.south east);
+\end{tikzpicture}
+\caption{El espectro parabólico es una reparametrización exacta de los puntos reticulares de una circunferencia.}
+\label{fig:bijection}
+\end{figure}
+
+\begin{theorem}[Bijección espectral]
+Sea \(r_2(N)\) el número de pares ordenados \((u,x)\in\Z^2\) con \(u^2+x^2=N\). Entonces
+\begin{equation}
+ \boxed{C(R)=\frac{r_2(R^2)-2}{2}.}
+ \label{eq:C-r2}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+La transformación \(u=R-\lambda\) lleva cada \(\lambda\in\{1,\ldots,2R-1\}\) a un entero \(u\) con \(|u|<R\). Si \(\lambda\in\Lam(R)\), existen exactamente dos signos \(x=\pm\sqrt{R^2-u^2}\), porque \(|u|<R\) implica \(x\ne0\).
+
+Recíprocamente, todo punto entero \((u,x)\) de \eqref{eq:lattice-circle} distinto de \((R,0)\) y \((-R,0)\) tiene \(|u|<R\) y determina \(\lambda=R-u\in\{1,\ldots,2R-1\}\). Los dos signos de \(x\) producen la misma \(\lambda\). Así, eliminamos dos puntos y dividimos entre dos.
+\end{proof}
+
+\section{Fórmula exacta por factorización prima}
+
+Usaremos el teorema clásico de las dos sumas de cuadrados:
+
+\begin{theorem}[Fórmula de Jacobi]
+Si
+\[
+ N=2^a\prod_{p\equiv1(4)}p^{\alpha_p}
+       \prod_{q\equiv3(4)}q^{\beta_q},
+\]
+entonces \(r_2(N)=0\) si algún \(\beta_q\) es impar; si todos son pares,
+\[
+ r_2(N)=4\prod_{p\equiv1(4)}(\alpha_p+1).
+\]
+\end{theorem}
+
+\begin{proof}
+Incluimos la demostración porque esta fórmula es el puente aritmético principal del trabajo.
+
+Primero recordemos por qué puede factorizarse de manera única en \(\Z[\ii]\). La norma
+\[
+ \Norm(a+b\ii)=a^2+b^2
+\]
+es euclidiana: dados \(z,w\in\Z[\ii]\), con \(w\ne0\), se aproximan la parte real y la parte imaginaria de \(z/w\) por enteros. Así se obtiene \(q\in\Z[\ii]\) tal que
+\[
+ \Norm(z-qw)\le \frac12\Norm(w)<\Norm(w).
+\]
+Por tanto, \(\Z[\ii]\) es un dominio euclidiano y, en consecuencia, un dominio de factorización única.
+
+Los primos racionales se comportan del modo siguiente:
+\begin{enumerate}[label=(\alph*)]
+\item \(2=-\ii(1+\ii)^2\), de modo que \(2\) es ramificado;
+\item si \(q\equiv3\pmod4\), el polinomio \(X^2+1\) no tiene raíz módulo \(q\). Entonces
+\[
+ \Z[\ii]/(q)\cong\mathbb F_q[X]/(X^2+1)
+\]
+es un cuerpo; por ello \(q\) continúa siendo primo en \(\Z[\ii]\);
+\item si \(p\equiv1\pmod4\), existe \(t\) con \(t^2\equiv-1\pmod p\). En el cociente \(\Z[\ii]/(p)\), los elementos no nulos \(t+\ii\) y \(t-\ii\) tienen producto cero. El cociente no es un dominio, de modo que \((p)\) no es un ideal primo. Como \(\Z[\ii]\) es factorial, \(p\) no es irreducible y admite una factorización no trivial \(p=\pi_p\rho_p\). Al tomar normas,
+\[
+ p^2=\Norm(\pi_p)\Norm(\rho_p).
+\]
+Ambos factores son enteros mayores que \(1\), así que necesariamente tienen valor \(p\). Conjugando y absorbiendo una unidad obtenemos
+\[
+ p=\pi_p\overline{\pi_p}.
+\]
+Así, \(p\) se escinde.
+\end{enumerate}
+
+Sea ahora \(z=a+b\ii\) con \(\Norm(z)=N\). En una factorización única de \(z\):
+\begin{itemize}
+\item un primo inerte \(q\equiv3\pmod4\) tiene norma \(q^2\). Por ello, su exponente \(\beta_q\) en \(N\) debe ser par y el exponente de \(q\) en \(z\) queda forzado a ser \(\beta_q/2\). Si algún \(\beta_q\) es impar, no existe representación;
+\item el factor ramificado \(1+\ii\) queda determinado, salvo una unidad, por el exponente de \(2\);
+\item para cada primo escindido \(p\equiv1\pmod4\), si
+\[
+ p=\pi_p\overline{\pi_p},
+\]
+el exponente total \(\alpha_p\) puede distribuirse en \(z\) como
+\[
+ \pi_p^{j}\overline{\pi_p}^{\,\alpha_p-j},
+ \qquad j=0,1,\ldots,\alpha_p.
+\]
+Hay exactamente \(\alpha_p+1\) elecciones independientes.
+\end{itemize}
+Finalmente, las cuatro unidades \(\{1,-1,\ii,-\ii\}\) producen las cuatro rotaciones y cambios de signo correspondientes. Cada entero gaussiano \(a+b\ii\) determina un único par ordenado \((a,b)\). Por tanto,
+\[
+ r_2(N)=4\prod_{p\equiv1(4)}(\alpha_p+1)
+\]
+cuando todos los exponentes inertes son pares, y \(r_2(N)=0\) en caso contrario.
+\end{proof}
+
+Para \(N=R^2\), todos los exponentes son pares. Si
+\[
+ R=2^a\prod_{p\equiv1(4)}p^{e_p}
+       \prod_{q\equiv3(4)}q^{f_q},
+\]
+entonces
+\[
+ r_2(R^2)=4\prod_{p\equiv1(4)}(2e_p+1).
+\]
+Junto con \eqref{eq:C-r2}, obtenemos:
+
+\begin{theorem}[Fórmula fundamental del espectro]
+\begin{equation}
+ \boxed{
+ C(R)=2\prod_{p\equiv1(4)}\bigl(2v_p(R)+1\bigr)-1.}
+ \label{eq:Cfactor}
+\end{equation}
+Los exponentes de \(2\) y de los primos \(3\pmod4\) no aparecen.
+\end{theorem}
+
+\begin{table}[H]
+\centering
+\caption{Primeros ejemplos del espectro.}
+\begin{tabular}{rllr}
+\toprule
+\(R\)&Factorización&\(\Lam(R)\)&\(C(R)\)\\
+\midrule
+3&\(3\)&\(\{3\}\)&1\\
+5&\(5\)&\(\{1,2,5,8,9\}\)&5\\
+13&\(13\)&\(\{1,8,13,18,25\}\)&5\\
+15&\(3\cdot5\)&\(\{3,6,15,24,27\}\)&5\\
+25&\(5^2\)&\(\{1,5,10,18,25,32,40,45,49\}\)&9\\
+45&\(3^2\cdot5\)&\(\{9,18,45,72,81\}\)&5\\
+\bottomrule
+\end{tabular}
+\label{tab:spectra}
+\end{table}
+
+\section{Rigidez inerte: una descomposición exacta}
+
+Definamos la parte \emph{inerte--diádica} y la parte \emph{escindida} de \(R\):
+\begin{equation}
+ I(R)=2^{v_2(R)}\prod_{q\equiv3(4)}q^{v_q(R)},
+ \qquad
+ S(R)=\prod_{p\equiv1(4)}p^{v_p(R)}.
+ \label{eq:ISparts}
+\end{equation}
+Así, \(R=I(R)S(R)\) y \(\gcd(I(R),S(R))=1\).
+
+\begin{lemma}[Divisibilidad de coordenadas]
+Si \(d\) tiene únicamente factores primos iguales a \(2\) o congruentes con \(3\pmod4\), y
+\[
+ u^2+x^2=(dM)^2,
+\]
+entonces \(d\mid u\) y \(d\mid x\).
+\end{lemma}
+
+\begin{proof}
+Sea primero \(q\equiv3\pmod4\) primo. Si \(q\mid u^2+x^2\) y \(q\nmid x\), entonces
+\[
+ (ux^{-1})^2\equiv-1\pmod q,
+\]
+lo cual es imposible porque \(-1\) no es residuo cuadrático módulo \(q\). Por tanto, \(q\mid x\), y luego \(q\mid u\). Repitiendo el argumento con las potencias, si \(q^{2f}\mid u^2+x^2\), se deduce \(q^f\mid u,x\).
+
+Para \(2\), si \(4\mid u^2+x^2\), ambos cuadrados deben ser pares módulo \(4\), por lo que \(u,x\) son pares. Se itera el argumento. Aplicándolo a cada factor primo de \(d\), obtenemos la afirmación.
+\end{proof}
+
+\begin{theorem}[Teorema de rigidez inerte]
+Para todo \(R\ge1\),
+\begin{equation}
+ \boxed{\Lam(R)=I(R)\,\Lam(S(R)).}
+ \label{eq:inert-rigidity}
+\end{equation}
+En particular,
+\begin{equation}
+ \boxed{
+ \frac1R\Lam(R)=\frac1{S(R)}\Lam(S(R)).}
+ \label{eq:normalized-spectrum}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Sea \(\lambda\in\Lam(R)\), y escribamos \(u=R-\lambda\). Por la bijección espectral existe \(x\in\Z\) con
+\[
+ u^2+x^2=R^2=I(R)^2S(R)^2.
+\]
+El lema implica
+\[
+ u=I(R)u_0,
+ \qquad
+ x=I(R)x_0,
+\]
+y entonces
+\[
+ u_0^2+x_0^2=S(R)^2.
+\]
+Como
+\[
+ \lambda=R-u=I(R)(S(R)-u_0),
+\]
+el número \(\lambda/I(R)\) pertenece a \(\Lam(S(R))\). Esto prueba una inclusión.
+
+Recíprocamente, si \(\lambda_0\in\Lam(S(R))\), existe \(x_0\) tal que
+\[
+ (S(R)-\lambda_0)^2+x_0^2=S(R)^2.
+\]
+Multiplicando por \(I(R)^2\), obtenemos un punto reticular para el radio \(R\), asociado a \(\lambda=I(R)\lambda_0\). Por tanto, la inclusión inversa también vale.
+\end{proof}
+
+\begin{insightbox}
+Los factores inertes no añaden nuevas posiciones relativas. Multiplican simultáneamente el radio, las coordenadas y todos los parámetros \(\lambda\). Son factores de escala exacta, no factores de ramificación. Esta lectura es compatible con la teoría multiplicativa de las medidas angulares generadas por puntos reticulares en circunferencias \cite{KurlbergWigman}.
+\end{insightbox}
+
+\begin{corollary}[Radios rígidos]
+Las siguientes condiciones son equivalentes:
+\begin{enumerate}[label=(\roman*)]
+\item \(\Lam(R)=\{R\}\);
+\item \(C(R)=1\);
+\item \(R\) no tiene divisores primos congruentes con \(1\pmod4\);
+\item \(S(R)=1\).
+\end{enumerate}
+\end{corollary}
+
+Ejemplos de radios rígidos son
+\[
+ 2^a3^b7^c11^d\cdots.
+\]
+No son excepciones aisladas: forman un conjunto multiplicativo infinito.
+
+\section{Los primos como detector geométrico}
+
+Sea \(p\) un primo impar. Si \(p\equiv3\pmod4\), entonces \(C(p)=1\). Si \(p\equiv1\pmod4\), entonces \(C(p)=5\). Por tanto,
+\begin{equation}
+ \boxed{C(p)=3+2\chi_4(p),}
+ \qquad
+ \boxed{\chi_4(p)=\frac{C(p)-3}{2}.}
+ \label{eq:prime-detector}
+\end{equation}
+
+Esto proporciona una lectura geométrica de la descomposición en \(\Z[\ii]\): contar las parábolas enteras compatibles con \(\Gamma_p\) distingue si \(p\) permanece inerte o se escinde.
+
+\begin{theorem}[Espectro de un primo escindido]
+Sea \(p\equiv1\pmod4\) primo, y escribamos de manera única, salvo signos y orden,
+\[
+ p=a^2+b^2,
+ \qquad a>b>0.
+\]
+Entonces
+\begin{equation}
+ \boxed{
+ \Lam(p)=\{(a-b)^2,\,2b^2,\,p,\,2a^2,\,(a+b)^2\}.}
+ \label{eq:split-prime-spectrum}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Las representaciones de \(p^2\) como suma de dos cuadrados proceden de
+\[
+ (a+b\ii)^2=(a^2-b^2)+2ab\ii,
+\]
+además de las representaciones triviales. Los posibles valores no triviales de la coordenada \(u\) son
+\[
+ 0,\quad \pm(a^2-b^2),\quad \pm2ab.
+\]
+Como \(\lambda=p-u\), obtenemos
+\[
+ p,\quad p\pm(a^2-b^2),\quad p\pm2ab.
+\]
+Finalmente,
+\[
+ p-(a^2-b^2)=2b^2,
+ \quad p+(a^2-b^2)=2a^2,
+\]
+y
+\[
+ p-2ab=(a-b)^2,
+ \quad p+2ab=(a+b)^2.
+\]
+\end{proof}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[>={Latex},node distance=5mm and 13mm]
+\tikzset{rbox/.style={draw=Navy!75,rounded corners=2mm,fill=SoftGray,text width=3.2cm,align=center,minimum height=12mm}}
+\node[rbox] (p3) {\(p\equiv3\pmod4\)\\primo inerte};
+\node[rbox,below=of p3,fill=Red!4,draw=Red!70] (one) {\(\Lam(p)=\{p\}\)\\una sola rama};
+\node[rbox,right=5.1cm of p3] (p1) {\(p\equiv1\pmod4\)\\primo escindido};
+\node[rbox,below=of p1,fill=Green!4,draw=Green!70] (five) {\(|\Lam(p)|=5\)\\cinco ramas};
+\draw[->,very thick,Red!75] (p3)--(one);
+\draw[->,very thick,Green!75!black] (p1)--(five);
+\node[below=14mm of $(one)!0.5!(five)$,text width=11cm,align=center,draw=Gold!75!black,fill=Gold!7,rounded corners=2mm]
+{El primo inerte representa rigidez; el primo escindido representa ramificación. Ninguno es ``mejor'': realizan funciones estructurales diferentes.};
+\end{tikzpicture}
+\caption{Dichotomía espectral para radios primos.}
+\label{fig:prime-dichotomy}
+\end{figure}
+
+% ============================================================
+\chapter{Complejidad media y una constante parabólica rigurosa}
+% ============================================================
+
+\section{Una función multiplicativa auxiliar}
+
+Definamos
+\begin{equation}
+ \Phi(R)=\frac{C(R)+1}{2}
+ =\prod_{p\equiv1(4)}\bigl(2v_p(R)+1\bigr).
+ \label{eq:Phi}
+\end{equation}
+La función \(\Phi\) es multiplicativa. Sus valores sobre potencias primas son
+\[
+ \Phi(2^e)=1,
+ \qquad
+ \Phi(q^e)=1\quad(q\equiv3\pmod4),
+ \qquad
+ \Phi(p^e)=2e+1\quad(p\equiv1\pmod4).
+\]
+
+\section{Serie de Dirichlet}
+
+Para \(\Re(s)>1\),
+\[
+ \sum_{e\ge0}(2e+1)x^e=\frac{1+x}{(1-x)^2}.
+\]
+Por multiplicatividad,
+\begin{align}
+ F(s)
+ &=\sum_{R\ge1}\frac{\Phi(R)}{R^s}\\
+ &=\frac1{1-2^{-s}}
+ \prod_{q\equiv3(4)}\frac1{1-q^{-s}}
+ \prod_{p\equiv1(4)}\frac{1+p^{-s}}{(1-p^{-s})^2}.
+ \label{eq:F-euler}
+\end{align}
+Comparando los factores de Euler de \(\zeta(s)\), \(L(s,\chi_4)\) y \(\zeta(2s)\), se obtiene
+\begin{equation}
+ \boxed{
+ F(s)=\frac{\zeta(s)^2L(s,\chi_4)}{(1+2^{-s})\zeta(2s)}.}
+ \label{eq:Dirichlet-Phi}
+\end{equation}
+
+\begin{proof}[Verificación factor por factor]
+Para \(p\equiv1\pmod4\), el factor del lado derecho es
+\[
+ (1-p^{-s})^{-2}(1-p^{-s})^{-1}(1-p^{-2s})
+ =\frac{1+p^{-s}}{(1-p^{-s})^2}.
+\]
+Para \(q\equiv3\pmod4\),
+\[
+ (1-q^{-s})^{-2}(1+q^{-s})^{-1}(1-q^{-2s})
+ =\frac1{1-q^{-s}}.
+\]
+Para \(2\), el factor adicional \((1+2^{-s})^{-1}\) deja \((1-2^{-s})^{-1}\).
+\end{proof}
+
+\section{La herramienta analítica necesaria}
+
+Usaremos la siguiente forma estándar del método de Selberg--Delange; una exposición completa puede consultarse en \cite{Tenenbaum}.
+
+\begin{theorem}[Caso de polo doble]
+Supongamos que una serie de Dirichlet con coeficientes no negativos puede escribirse cerca de \(s=1\) como
+\[
+ F(s)=\zeta(s)^2H(s),
+\]
+donde \(H\) es holomorfa en una región suficiente alrededor de \(1\). Entonces
+\begin{equation}
+ \sum_{n\le X}a_n
+ =H(1)X\log X+\bigl(H(1)(2\gamma-1)+H'(1)\bigr)X+o(X).
+ \label{eq:SD-double}
+\end{equation}
+\end{theorem}
+
+La demostración general pertenece al método de Selberg--Delange \cite{Tenenbaum}. Aquí la usamos con
+\[
+ H(s)=\frac{L(s,\chi_4)}{(1+2^{-s})\zeta(2s)}.
+\]
+Como
+\[
+ L(1,\chi_4)=\frac\pi4,
+ \qquad
+ \zeta(2)=\frac{\pi^2}{6},
+\]
+obtenemos
+\begin{equation}
+ H(1)=\frac{\pi/4}{(3/2)(\pi^2/6)}=\frac1\pi.
+ \label{eq:H1}
+\end{equation}
+Además,
+\begin{equation}
+ \frac{H'(1)}{H(1)}
+ =\frac{L'}{L}(1,\chi_4)
+ +\frac{\log2}{3}
+ -2\frac{\zeta'}{\zeta}(2).
+ \label{eq:Hlogder}
+\end{equation}
+
+\begin{theorem}[Complejidad parabólica media]
+Cuando \(X\to\infty\),
+\begin{equation}
+ \boxed{
+ \frac1X\sum_{R\le X}C(R)
+ =\frac{2}{\pi}\log X+\mathfrak C_{\mathrm{par}}+o(1),}
+ \label{eq:mean-complexity}
+\end{equation}
+donde
+\begin{equation}
+ \boxed{
+ \mathfrak C_{\mathrm{par}}
+ =\frac{2}{\pi}\left(
+ 2\gamma-1+\frac{L'}{L}(1,\chi_4)
+ +\frac{\log2}{3}-2\frac{\zeta'}{\zeta}(2)
+ \right)-1.}
+ \label{eq:Cpar-exact}
+\end{equation}
+Numéricamente,
+\begin{equation}
+ \boxed{\mathfrak C_{\mathrm{par}}
+ =0.1274612314441323831340923797\ldots.}
+ \label{eq:Cpar-value}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Aplicando \eqref{eq:SD-double} a \(\Phi\), con \eqref{eq:H1} y \eqref{eq:Hlogder},
+\[
+ \frac1X\sum_{R\le X}\Phi(R)
+ =\frac1\pi\log X
+ +\frac1\pi\left(
+ 2\gamma-1+\frac{L'}{L}(1,\chi_4)
+ +\frac{\log2}{3}-2\frac{\zeta'}{\zeta}(2)
+ \right)+o(1).
+\]
+Como \(C(R)=2\Phi(R)-1\), multiplicamos por \(2\) y restamos \(1\).
+\end{proof}
+
+\begin{classicalbox}
+La constante \(\mathfrak C_{\mathrm{par}}\) es rigurosa, pero su expresión se construye con constantes y valores \(L\) clásicos. El nombre ``parabólica'' describe la estadística que la origina; no se afirma que el número decimal sea desconocido en toda reformulación posible.
+\end{classicalbox}
+
+\section{Comprobación computacional}
+
+\begin{table}[H]
+\centering
+\caption{Convergencia de la media normalizada hacia \(\mathfrak C_{\mathrm{par}}\). Los valores se calcularon exactamente mediante factorización por criba.}
+\begin{tabular}{rrr}
+\toprule
+\(X\)&\(X^{-1}\sum_{R\le X}C(R)\)&Resto tras restar \((2/\pi)\log X\)\\
+\midrule
+\(10^3\)&4.5240000&0.1263864\\
+\(10^4\)&5.9884000&0.1249152\\
+\(10^5\)&7.4574400&0.1280840\\
+\(10^6\)&8.9225680&0.1273408\\
+\(5\cdot10^6\)&9.9472048&0.1273776\\
+\(10^7\)&10.3885900&0.1274916\\
+\(2\cdot10^7\)&10.8298194&0.1274498\\
+\bottomrule
+\end{tabular}
+\label{tab:Cpar-convergence}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+ width=13.5cm,height=7.2cm,
+ xmode=log,
+ xlabel={$X$},
+ ylabel={$\displaystyle \frac1X\sum_{R\le X}C(R)-\frac{2}{\pi}\log X$},
+ legend style={at={(0.5,-0.2)},anchor=north,legend columns=2},
+ ymin=0.1235,ymax=0.1302
+]
+\addplot[very thick,Teal,mark=*] coordinates {
+ (1000,0.1263864067)
+ (10000,0.1249152090)
+ (100000,0.1280840112)
+ (1000000,0.1273408134)
+ (5000000,0.1273776160)
+ (10000000,0.1274916157)
+ (20000000,0.1274498154)
+};
+\addlegendentry{Cálculo exacto}
+\addplot[very thick,Red,dashed,domain=1000:20000000] {0.127461231444132};
+\addlegendentry{$\mathfrak C_{\mathrm{par}}$}
+\end{axis}
+\end{tikzpicture}
+\caption{La oscilación numérica se concentra alrededor de la constante teórica.}
+\label{fig:Cpar-convergence}
+\end{figure}
+
+% ============================================================
+\chapter{Transmutación inerte--escindida}
+% ============================================================
+
+\section{Primos inertes y escindidos en \(\Z[\ii]\)}
+
+Los enteros gaussianos, cuya aritmética clásica puede consultarse en \cite{Cox,IrelandRosen}, son
+\[
+ \Z[\ii]=\{a+b\ii:a,b\in\Z\},
+\]
+con norma
+\[
+ \Norm(a+b\ii)=a^2+b^2.
+\]
+Un primo racional impar se comporta de una de dos maneras:
+\begin{itemize}
+\item si \(p\equiv1\pmod4\), se factoriza en \(\Z[\ii]\) y se llama \emph{escindido};
+\item si \(q\equiv3\pmod4\), permanece primo en \(\Z[\ii]\) y se llama \emph{inerte}.
+\end{itemize}
+El primo \(2\) es ramificado:
+\[
+ 2=-\ii(1+\ii)^2.
+\]
+
+La palabra ``inerte'' no significa inútil, defectuoso ni negativo. Significa que el primo no se descompone en esa extensión. Esa propiedad produce rigidez divisoria: si un primo inerte divide una suma de dos cuadrados, divide ambos sumandos.
+
+\section{La transformación parabólica}
+
+Para \(n\) impar, definimos
+\begin{equation}
+ \boxed{T(n)=\frac{n^2+1}{2}.}
+ \label{eq:Tn}
+\end{equation}
+Si \(n=2m+1\), entonces
+\begin{equation}
+ T(n)=m^2+(m+1)^2.
+ \label{eq:T-consecutive}
+\end{equation}
+Esta identidad tiene una interpretación gaussiana exacta. Como \(n\) y \(1\) son impares,
+\[
+ \alpha_n=\frac{n+\ii}{1+\ii}
+ =\frac{n+1}{2}+\frac{1-n}{2}\ii
+ =(m+1)-m\ii
+\]
+pertenece a \(\Z[\ii]\), y
+\begin{equation}
+ \boxed{T(n)=\Norm(\alpha_n).}
+ \label{eq:Tnorm}
+\end{equation}
+
+\begin{theorem}[Principio elemental de transmutación]
+Sea \(n\) impar. Todo divisor primo de \(T(n)\) es congruente con \(1\pmod4\).
+\end{theorem}
+
+\begin{proof}[Primera demostración: residuos cuadráticos]
+Sea \(p\mid T(n)\). Como \(T(n)\) es impar, \(p\ne2\). Entonces
+\[
+ n^2\equiv-1\pmod p.
+\]
+Por el criterio de Euler, \(-1\) es residuo cuadrático módulo un primo impar si y solo si \(p\equiv1\pmod4\).
+\end{proof}
+
+\begin{proof}[Segunda demostración: enteros gaussianos]
+Por \eqref{eq:T-consecutive},
+\[
+ T(n)=m^2+(m+1)^2,
+\]
+y \(\gcd(m,m+1)=1\). Si un primo \(q\equiv3\pmod4\) dividiera esta suma de cuadrados, la inercia de \(q\) obligaría a \(q\mid m\) y \(q\mid m+1\), imposible.
+\end{proof}
+
+\begin{rigorousbox}
+La salida \(T(n)\) no puede tener factores primos inertes. Los primos inertes están ausentes de la salida no porque sean ``malos'', sino porque su rigidez impide que dividan una norma primitiva.
+\end{rigorousbox}
+
+\section{Entradas construidas solo con primos inertes}
+
+Definimos el semigrupo
+\begin{equation}
+ \Iset=\left\{n\in\N:n\text{ impar y }p\mid n\Rightarrow p\equiv3\pmod4\right\}.
+ \label{eq:Iset}
+\end{equation}
+Incluimos \(1\) como producto vacío. También definimos
+\[
+ \Sset=\left\{N\in\N:p\mid N\Rightarrow p\equiv1\pmod4\right\}.
+\]
+El teorema anterior implica
+\begin{equation}
+ \boxed{T(\Iset)\subseteq\Sset.}
+ \label{eq:transmutation-inclusion}
+\end{equation}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[>={Latex},node distance=12mm and 13mm]
+\tikzset{big/.style={draw=Navy!75,rounded corners=3mm,minimum height=18mm,text width=4cm,align=center,font=\bfseries}}
+\node[big,fill=Red!4,draw=Red!70] (I) {$n\in\Iset$\\solo primos \(3\pmod4\)};
+\node[big,right=of I,fill=Gold!7,draw=Gold!80!black] (T) {$T(n)=\dfrac{n^2+1}{2}$\\norma de \(\alpha_n\)};
+\node[big,right=of T,fill=Green!4,draw=Green!70] (S) {$T(n)\in\Sset$\\solo primos \(1\pmod4\)};
+\draw[->,very thick,Teal] (I)--node[above] {transformación}(T);
+\draw[->,very thick,Teal] (T)--node[above] {factores}(S);
+\node[below=8mm of T,text width=11.8cm,align=center,fill=SoftGray,draw=Aqua!70!Navy,rounded corners=2mm]
+{La entrada inerte no se conserva como inerte: se convierte en una norma cuyos factores no ramificados son necesariamente escindidos.};
+\end{tikzpicture}
+\caption{Esquema de la transmutación inerte--escindida.}
+\label{fig:transmutation}
+\end{figure}
+
+Ejemplos:
+\[
+ 3\mapsto5,
+ \qquad
+ 7\mapsto25=5^2,
+ \qquad
+ 11\mapsto61,
+\]
+\[
+ 21\mapsto221=13\cdot17,
+ \qquad
+ 27\mapsto365=5\cdot73,
+ \qquad
+ 33\mapsto545=5\cdot109.
+\]
+En todos los casos los factores de la salida son \(1\pmod4\).
+
+\section{¿Cuántas entradas inertes existen?}
+
+La serie de Dirichlet del indicador de \(\Iset\) es
+\begin{equation}
+ G(s)=\sum_{n\in\Iset}\frac1{n^s}
+ =\prod_{q\equiv3(4)}(1-q^{-s})^{-1}.
+ \label{eq:Ginert}
+\end{equation}
+Cerca de \(s=1\), esta función tiene una singularidad de orden \(1/2\). Usando los productos de Euler de \(\zeta\) y \(L(s,\chi_4)\),
+\begin{equation}
+ G(s)^2
+ =(1-2^{-s})\frac{\zeta(s)}{L(s,\chi_4)}
+ \prod_{q\equiv3(4)}(1-q^{-2s})^{-1}.
+ \label{eq:G-square}
+\end{equation}
+
+La constante de Landau--Ramanujan es
+\begin{equation}
+ K=\frac1{\sqrt2}
+ \prod_{q\equiv3(4)}(1-q^{-2})^{-1/2}
+ =0.76422365358922066299\ldots.
+ \label{eq:K}
+\end{equation}
+Una aplicación de Selberg--Delange, en la forma estudiada para conjuntos multiplicativos por Moree \cite{Moree}, da:
+
+\begin{theorem}[Conteo del semigrupo inerte]
+Si
+\[
+ I(X)=|\Iset\cap[1,X]|,
+\]
+entonces
+\begin{equation}
+ \boxed{
+ I(X)\sim\frac{2K}{\pi}\frac{X}{\sqrt{\log X}}.}
+ \label{eq:inert-count}
+\end{equation}
+La constante principal es
+\[
+ \frac{2K}{\pi}=0.486519888385891\ldots.
+\]
+\end{theorem}
+
+\begin{proof}[Cálculo de la constante]
+De \eqref{eq:G-square}, escribimos
+\[
+ G(s)=\zeta(s)^{1/2}H_I(s),
+\]
+donde
+\[
+ H_I(1)
+ =\left(\frac{1/2}{\pi/4}
+ \prod_{q\equiv3(4)}(1-q^{-2})^{-1}\right)^{1/2}.
+\]
+Por \eqref{eq:K}, el producto dentro de la raíz es \(2K^2\). Así,
+\[
+ H_I(1)=\frac{2K}{\sqrt\pi}.
+\]
+El caso de exponente \(1/2\) de Selberg--Delange da
+\[
+ I(X)\sim\frac{H_I(1)}{\Gamma(1/2)}
+ \frac{X}{(\log X)^{1/2}}.
+\]
+Como \(\Gamma(1/2)=\sqrt\pi\), el coeficiente es \(2K/\pi\).
+\end{proof}
+
+\section{La pregunta prima sobre el conjunto delgado}
+
+Definamos
+\begin{equation}
+ A(X)=\#\left\{n\le X:n\in\Iset,\ T(n)\text{ es primo}\right\}.
+ \label{eq:AX}
+\end{equation}
+Esta pregunta combina dos rarezas:
+\begin{itemize}
+\item pertenecer a \(\Iset\), cuya frecuencia es del orden \((\log X)^{-1/2}\);
+\item que un número de tamaño aproximadamente \(n^2/2\) sea primo, cuya frecuencia es del orden \((\log X)^{-1}\).
+\end{itemize}
+Esto sugiere el exponente total \((\log X)^{-3/2}\).
+
+\section{Factores locales: beneficio y penalización}
+
+La siguiente derivación es heurística. Su propósito es construir una constante coherente, no demostrar el resultado asintótico.
+
+\subsection{Primos escindidos}
+
+Sea \(p\equiv1\pmod4\). Como \(n\in\Iset\), no puede ocurrir \(p\mid n\), de modo que consideramos las \(p-1\) clases no nulas. La congruencia
+\[
+ T(n)\equiv0\pmod p
+\]
+equivale a \(n^2\equiv-1\pmod p\) y tiene dos soluciones no nulas. La probabilidad condicional de evitar \(p\) es
+\[
+ 1-\frac{2}{p-1}=\frac{p-3}{p-1}.
+\]
+Frente al factor aleatorio \(1-1/p\), la corrección es
+\begin{equation}
+ \frac{(p-3)/(p-1)}{1-1/p}
+ =\frac{p(p-3)}{(p-1)^2}<1.
+ \label{eq:split-local}
+\end{equation}
+
+\subsection{Primos inertes}
+
+Si \(q\equiv3\pmod4\), la congruencia \(n^2\equiv-1\pmod q\) no tiene soluciones. Por tanto, \(q\nmid T(n)\) para cualquier \(n\), y la corrección es
+\begin{equation}
+ \frac1{1-1/q}=\frac{q}{q-1}>1.
+ \label{eq:inert-local}
+\end{equation}
+Este es el sentido cuantitativo en que los primos inertes ayudan a la primalidad: eliminan automáticamente una familia completa de posibles divisores.
+
+\subsection{El primo \(2\)}
+
+Para \(n\) impar, \(T(n)\) es impar. La corrección local frente a un entero aleatorio es \(2\).
+
+\section{Productos convergentes y constantes}
+
+Definimos el producto balanceado
+\begin{equation}
+ \mathfrak P=
+ \prod_{p\equiv1(4)}\frac{p(p-3)}{(p-1)^2}
+ \prod_{q\equiv3(4)}\frac{q}{q-1}.
+ \label{eq:Pbalance}
+\end{equation}
+El producto se entiende tomando los primos en orden creciente. La convergencia proviene de la cancelación entre las dos clases módulo \(4\). Para calcularlo de manera estable, extraemos
+\[
+ \prod_{r\text{ impar}}\left(1-\frac{\chi_4(r)}r\right)
+ =\frac4\pi.
+\]
+Así,
+\begin{equation}
+ \boxed{
+ \mathfrak P=\frac4\pi
+ \prod_{p\equiv1(4)}\frac{p^2(p-3)}{(p-1)^3}
+ \prod_{q\equiv3(4)}(1-q^{-2})^{-1}.}
+ \label{eq:P-accelerated}
+\end{equation}
+Los dos productos restantes convergen absolutamente. Numéricamente,
+\begin{equation}
+ \boxed{\mathfrak P=1.10672906\ldots.}
+ \label{eq:P-value}
+\end{equation}
+
+La constante de Bateman--Horn para exigir simultáneamente que
+\[
+ 4t+3,
+ \qquad
+ 8t^2+12t+5=\frac{(4t+3)^2+1}{2}
+\]
+sean primos es
+\begin{equation}
+ \mathfrak B=4\mathfrak P=4.42691624\ldots.
+ \label{eq:B-pair}
+\end{equation}
+
+Para nuestro conjunto delgado \(\Iset\), combinamos:
+\begin{itemize}
+\item la densidad principal \(2K/\pi\) de las entradas;
+\item la corrección local \(2\mathfrak P\) para la salida prima;
+\item el hecho de que \(\log T(n)\sim2\log n\).
+\end{itemize}
+Esto lleva a la constante
+\begin{equation}
+ \boxed{
+ \mathfrak T_{\mathrm{par}}
+ =\frac{2K}{\pi}\,\mathfrak P
+ =\frac{K\mathfrak B}{2\pi}
+ =0.53844570\ldots.}
+ \label{eq:Tpar}
+\end{equation}
+
+\begin{warningbox}
+La fórmula \eqref{eq:Tpar} es una constante heurística propuesta para un problema sobre un conjunto multiplicativo delgado. No es una consecuencia automática del teorema original de Bateman--Horn, porque el parámetro \(n\) no recorre todos los enteros. Su justificación rigurosa requeriría resultados de distribución y criba sobre \(\Iset\).
+\end{warningbox}
+
+\begin{conjecture}[Transmutación prima parabólica]
+Cuando \(X\to\infty\),
+\begin{equation}
+ \boxed{
+ A(X)\sim\mathfrak T_{\mathrm{par}}
+ \int_2^X\frac{\dd t}{(\log t)^{3/2}}.}
+ \label{eq:transmutation-conjecture}
+\end{equation}
+\end{conjecture}
+
+\section{Evidencia computacional hasta veinte millones}
+
+El cálculo se realizó con una criba exacta para construir \(\Iset\) y un test de Miller--Rabin determinista para enteros de \(64\) bits. La columna final compara el conteo observado con la integral de \eqref{eq:transmutation-conjecture}.
+
+\begin{table}[H]
+\centering
+\caption{Conteo experimental de entradas inertes con salida prima.}
+\begin{tabular}{rrrr}
+\toprule
+\(X\)&\(I(X)\)&\(A(X)\)&\(A(X)/\int_2^X(\log t)^{-3/2}\dd t\)\\
+\midrule
+\(10^3\)&201&41&0.534411\\
+\(10^4\)&1\,680&258&0.578936\\
+\(10^5\)&14\,902&1\,661&0.552280\\
+\(10^6\)&135\,124&12\,146&0.548913\\
+\(5\cdot10^6\)&636\,229&50\,693&0.549201\\
+\(10^7\)&1\,243\,370&94\,329&0.548888\\
+\(2\cdot10^7\)&2\,431\,863&176\,143&0.548668\\
+\bottomrule
+\end{tabular}
+\label{tab:transmutation-data}
+\end{table}
+
+\begin{experimentalbox}
+El cociente observado en \(2\cdot10^7\) es aproximadamente \(0.54867\), un \(1.9\%\) por encima de la constante propuesta. En problemas de densidad prima, una discrepancia de este tamaño a esa escala puede ser perfectamente compatible con convergencia lenta, pero también podría señalar que falta una corrección. Solo una teoría rigurosa o cálculos mucho mayores pueden decidirlo.
+\end{experimentalbox}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+ width=13.5cm,height=7.2cm,xmode=log,
+ xlabel={$X$},
+ ylabel={$\displaystyle A(X)\Big/\int_2^X(\log t)^{-3/2}\dd t$},
+ ymin=0.525,ymax=0.59,
+ legend style={at={(0.5,-0.2)},anchor=north,legend columns=2}
+]
+\addplot[very thick,Teal,mark=*] coordinates {
+ (1000,0.5344106)
+ (10000,0.5789358)
+ (100000,0.5522802)
+ (1000000,0.5489127)
+ (5000000,0.5492015)
+ (10000000,0.5488882)
+ (20000000,0.5486684)
+};
+\addlegendentry{Observado}
+\addplot[very thick,Red,dashed,domain=1000:20000000] {0.53844570};
+\addlegendentry{$\mathfrak T_{\mathrm{par}}$ propuesta}
+\end{axis}
+\end{tikzpicture}
+\caption{La evidencia es compatible con una convergencia lenta; no prueba la conjetura.}
+\label{fig:Tpar-data}
+\end{figure}
+
+\subsection*{Lectura cautelosa de la convergencia}
+Definamos
+\[
+ Q(X)=\frac{A(X)}{\displaystyle\int_2^X(\log t)^{-3/2}\dd t}.
+\]
+La desviación relativa \(100\bigl(Q(X)/\mathfrak T_{\mathrm{par}}-1\bigr)\) vale aproximadamente \(-0.75\%\) para \(10^3\), \(7.52\%\) para \(10^4\), \(2.57\%\) para \(10^5\) y permanece cerca del \(1.9\%\) entre \(10^6\) y \(2\cdot10^7\). Esto muestra tres cosas:
+\begin{enumerate}
+\item la aproximación no es monótona en los primeros rangos;
+\item los datos son compatibles con una convergencia lenta, habitual en productos de densidades locales;
+\item el intervalo calculado no permite distinguir entre la constante propuesta y una constante cercana ligeramente mayor.
+\end{enumerate}
+Por tanto, la tabla constituye evidencia a favor de la escala \(X/(\log X)^{3/2}\), pero todavía es una prueba débil del valor exacto de la constante.
+
+% ============================================================
+\chapter{Qué es realmente valioso investigar}
+% ============================================================
+
+\section{Separación entre lo clásico y lo potencialmente original}
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{4.1cm}>{\raggedright\arraybackslash}p{5.1cm}>{\raggedright\arraybackslash}p{5.1cm}}
+\caption{Auditoría de originalidad y dificultad.}\label{tab:novelty-audit}\\
+\toprule
+Componente&Estado matemático&Valor para el proyecto\\
+\midrule
+\endfirsthead
+\toprule
+Componente&Estado matemático&Valor para el proyecto\\
+\midrule
+\endhead
+Triángulos \(T_k\), áreas y círculos tangentes&Geometría elemental; las fórmulas se prueban aquí&Excelente puerta de entrada y lenguaje visual\\
+Lado recto y razón \(3:4:5\)&Consecuencia elemental, posiblemente poco difundida en esta forma&Resultado pedagógico elegante, no frontera\\
+Áreas cúbicas y radios \((n^2+1)/2\)&Clásico en esencia; conectado con triples pitagóricos&Conecta la geometría con la aritmética\\
+Espectro \(\Lam(R)\)&Nueva terminología para una reparametrización de puntos reticulares&Puede ser una formulación propia útil\\
+Fórmula de \(C(R)\)&Consecuencia directa del teorema de dos cuadrados&Teorema central, riguroso y transparente\\
+Rigidez \(\Lam(R)=I(R)\Lam(S(R))\)&Consecuencia elemental de la inercia gaussiana&Probablemente la mejor formulación conceptual del artículo\\
+Constante \(\mathfrak C_{\mathrm{par}}\)&Combinación rigurosa de valores clásicos vía Selberg--Delange&Resultado publicable solo si se acompaña de contexto, errores o generalizaciones\\
+Transformación \(T(n)\)&Norma gaussiana clásica&Base conceptual de la transmutación\\
+Conjetura \eqref{eq:transmutation-conjecture}&No demostrada; heurística híbrida&Dirección genuina de investigación\\
+Ley de Erdős--Kac sobre \(T(n)\), \(n\in\Iset\)&No establecida aquí; requiere literatura especializada&Objetivo doctoral potencial\\
+Generalización a campos cuadráticos&Programa abierto&La dirección con mayor posibilidad de profundidad estructural\\
+\bottomrule
+\end{longtable}
+
+\section{El mejor mensaje científico}
+
+No sería correcto afirmar que durante siglos los matemáticos consideraron a los primos inertes ``malos''. La teoría algebraica de números reconoce desde hace mucho que inercia, escisión y ramificación son comportamientos complementarios.
+
+La afirmación defendible es más precisa:
+
+\begin{insightbox}
+En los problemas de representación como suma de dos cuadrados, los primos inertes aparecen como obstrucciones. En los espectros parabólicos normalizados, esa misma obstrucción se convierte en un principio de conservación: los factores inertes no ramifican el espectro, sino que lo dilatan exactamente. En las normas primitivas \(T(n)\), la inercia excluye divisores y genera una ventaja local para la primalidad.
+\end{insightbox}
+
+Esta dualidad \emph{obstrucción--rigidez} es el relato conceptual más fuerte.
+
+\section{Problemas de investigación ordenados por dificultad}
+
+\begin{question}[Error efectivo para la complejidad media]
+¿Puede demostrarse una expansión
+\[
+ \sum_{R\le X}C(R)
+ =\frac{2}{\pi}X\log X+\mathfrak C_{\mathrm{par}}X
+ +O(X^\theta(\log X)^A)
+\]
+con un exponente \(\theta<1\) explícito y competitivo?
+\end{question}
+
+Esta es la continuación más accesible: usa análisis de series de Dirichlet y puede convertir la constante en un resultado más sustancial.
+
+\begin{question}[Distribución en progresiones]
+¿Cómo se distribuyen \(C(R)\), los radios rígidos y los espectros reducidos en clases de congruencia?
+\end{question}
+
+\begin{question}[Cota de criba]
+¿Puede probarse incondicionalmente
+\[
+ A(X)\ll\frac{X}{(\log X)^{3/2}}?
+\]
+\end{question}
+
+Una cota superior del orden correcto sería un avance real aunque no demostrara la conjetura asintótica.
+
+\begin{question}[Valores casi primos]
+¿Existen infinitos \(n\in\Iset\) para los cuales \(T(n)\) tiene como máximo \(r\) factores primos, para algún \(r\) absoluto pequeño?
+\end{question}
+
+Los resultados de casi primalidad suelen ser más accesibles a la criba que la primalidad exacta.
+
+\begin{conjecture}[Erdős--Kac inerte--escindido]
+Al escoger uniformemente \(n\in\Iset\cap[1,X]\), la variable
+\[
+ \frac{\omega(T(n))-\log\log X}{\sqrt{\log\log X}}
+\]
+converge en distribución hacia una normal estándar, posiblemente con correcciones en la media y la varianza que deben calcularse a partir de las densidades locales.
+\end{conjecture}
+
+Esta formulación es deliberadamente cautelosa: antes de fijar exactamente la media y la varianza es necesario estudiar las correlaciones locales sobre el semigrupo delgado.
+
+\section{Generalización a otros campos cuadráticos}
+
+Sea \(d>0\) libre de cuadrados. Si un primo \(p\nmid2d\) divide \(n^2+d\), entonces
+\[
+ n^2\equiv-d\pmod p,
+\]
+de modo que el símbolo de Legendre satisface
+\[
+ \left(\frac{-d}{p}\right)=1.
+\]
+Esto significa que \(p\) se escinde en el campo cuadrático \(\Q(\sqrt{-d})\).
+
+\begin{theorem}[Principio cuadrático general]
+Sea \(d>0\) libre de cuadrados. Todo primo no ramificado \(p\nmid2d\) que divide \(n^2+d\) se escinde en \(\Q(\sqrt{-d})\).
+\end{theorem}
+
+\begin{proof}
+La congruencia \(n^2\equiv-d\pmod p\) afirma exactamente que \(-d\) es un cuadrado módulo \(p\). Por el criterio de descomposición de primos en extensiones cuadráticas, esto equivale a la escisión de \(p\).
+\end{proof}
+
+Esta observación sugiere una familia de programas:
+\[
+ \text{construcción cónica}
+ \longrightarrow
+ \text{forma norma}
+ \longrightarrow
+ \text{espectro reticular}
+ \longrightarrow
+ \text{constante local de escisión}.
+\]
+El caso gaussiano \(d=1\) es el laboratorio más sencillo, no el único.
+
+\section{Nivel académico realista}
+
+\begin{table}[H]
+\centering
+\caption{Posibles alcances académicos.}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{3cm}X}
+\toprule
+Nivel&Resultado razonable\\
+\midrule
+Pregrado&Geometría completa de \(T_k\), espectro \(\Lam(R)\), fórmula exacta, rigidez inerte, algoritmos y experimentos reproducibles.\\
+Maestría&Serie de Dirichlet, constante \(\mathfrak C_{\mathrm{par}}\), términos de error, distribución en progresiones y generalizaciones a otras formas cuadráticas.\\
+Doctorado&Criba sobre \(\Iset\), casi primos, teoremas de distribución para \(T(n)\), ley de Erdős--Kac y constantes híbridas rigurosas.\\
+Frontera abierta&Asintótica completa \eqref{eq:transmutation-conjecture} o infinitud de salidas primas.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{rigorousbox}
+El mejor trabajo inmediato no es intentar ``resolver'' la infinitud de valores primos. Es construir una teoría sólida del espectro, obtener resultados medios con términos de error y desarrollar una criba sobre el semigrupo inerte. Eso crea una plataforma desde la cual una conjetura prima tiene significado matemático serio.
+\end{rigorousbox}
+
+% ============================================================
+\appendix
+\chapter{Protocolo de verificación computacional}
+% ============================================================
+
+\section{Qué se verificó y qué no puede verificarse por fuerza bruta}
+
+Los cálculos se usaron para detectar errores algebraicos y contrastar fórmulas, no para sustituir pruebas. El protocolo fue:
+
+\begin{enumerate}
+\item comparar la definición directa de \(\Lam(R)\) con la fórmula prima \eqref{eq:Cfactor} para todos los \(R\le5000\);
+\item verificar \(\Lam(R)=I(R)\Lam(S(R))\) en el mismo intervalo;
+\item comprobar que todos los divisores primos de \(T(n)\) son \(1\pmod4\) para \(n\) impar hasta un límite dado;
+\item calcular la media de \(C(R)\) mediante una criba de menor factor primo;
+\item calcular \(A(X)\) mediante una criba del semigrupo \(\Iset\) y primalidad determinista de \(64\) bits;
+\item evaluar las constantes mediante productos absolutamente convergentes, evitando truncar directamente productos condicionales.
+\end{enumerate}
+
+\section{Código Python de verificación estructural}
+
+\begin{lstlisting}[caption={Verificacion de espectros, factorizacion y transmutacion.},label={lst:verify}]
+from math import isqrt
+from sympy import factorint, isprime
+
+
+def is_square(n: int) -> bool:
+    r = isqrt(n)
+    return r * r == n
+
+
+def spectrum_bruteforce(R: int) -> list[int]:
+    return [
+        lam for lam in range(1, 2 * R)
+        if is_square(lam * (2 * R - lam))
+    ]
+
+
+def split_inert_parts(R: int) -> tuple[int, int]:
+    fac = factorint(R)
+    inert_part = 1
+    split_part = 1
+    for p, e in fac.items():
+        if p == 2 or p % 4 == 3:
+            inert_part *= p ** e
+        else:
+            split_part *= p ** e
+    return inert_part, split_part
+
+
+def complexity_formula(R: int) -> int:
+    product = 1
+    for p, e in factorint(R).items():
+        if p % 4 == 1:
+            product *= 2 * e + 1
+    return 2 * product - 1
+
+
+def verify_spectra(limit: int = 5000) -> None:
+    for R in range(1, limit + 1):
+        spec = spectrum_bruteforce(R)
+        assert len(spec) == complexity_formula(R)
+
+        I, S = split_inert_parts(R)
+        reduced = [I * x for x in spectrum_bruteforce(S)]
+        assert spec == reduced
+
+
+def verify_transmutation(limit: int = 100_000) -> None:
+    for n in range(1, limit + 1, 2):
+        T = (n * n + 1) // 2
+        for p in factorint(T):
+            assert p % 4 == 1
+
+
+if __name__ == "__main__":
+    verify_spectra()
+    verify_transmutation()
+    print("Todas las verificaciones terminaron correctamente.")
+\end{lstlisting}
+
+\section{Cálculo estable de las constantes}
+
+Truncar directamente \eqref{eq:Pbalance} es poco estable porque sus factores tienen términos de primer orden que se cancelan entre clases de primos. La identidad acelerada \eqref{eq:P-accelerated} elimina ese problema.
+
+\begin{lstlisting}[caption={Calculo de las constantes mediante productos acelerados.},label={lst:constants}]
+import math
+import mpmath as mp
+from sympy import primerange
+
+mp.mp.dps = 50
+
+
+def landau_ramanujan(prime_limit: int) -> mp.mpf:
+    log_product = -mp.log(2) / 2
+    for q in primerange(3, prime_limit + 1):
+        if q % 4 == 3:
+            log_product -= mp.log(1 - mp.mpf(1) / (q * q)) / 2
+    return mp.e ** log_product
+
+
+def balance_product(prime_limit: int) -> mp.mpf:
+    # Formula absolutamente convergente:
+    # (4/pi) prod_{p=1 mod 4} p^2(p-3)/(p-1)^3
+    #        prod_{q=3 mod 4} (1-q^-2)^-1
+    log_product = mp.log(4 / mp.pi)
+    for r in primerange(3, prime_limit + 1):
+        r = mp.mpf(r)
+        if int(r) % 4 == 1:
+            log_product += mp.log(r*r*(r-3)/(r-1)**3)
+        else:
+            log_product -= mp.log(1 - 1/(r*r))
+    return mp.e ** log_product
+
+
+def dirichlet_beta(s: mp.mpf) -> mp.mpf:
+    return mp.nsum(lambda k: (-1)**k / (2*k + 1)**s,
+                   [0, mp.inf])
+
+
+def parabolic_offset_constant() -> mp.mpf:
+    beta1 = dirichlet_beta(mp.mpf(1))
+    beta_prime = mp.diff(dirichlet_beta, mp.mpf(1))
+    zeta2 = mp.zeta(2)
+    zeta_prime_2 = mp.diff(mp.zeta, mp.mpf(2))
+    return (
+        (2/mp.pi) * (
+            2*mp.euler - 1
+            + beta_prime/beta1
+            + mp.log(2)/3
+            - 2*zeta_prime_2/zeta2
+        ) - 1
+    )
+
+
+P = balance_product(10_000_000)
+K = landau_ramanujan(10_000_000)
+B = 4 * P
+T_par = 2 * K * P / mp.pi
+C_par = parabolic_offset_constant()
+
+print("P      =", P)
+print("B      =", B)
+print("T_par  =", T_par)
+print("C_par  =", C_par)
+\end{lstlisting}
+
+Para \(10^7\), el producto acelerado entrega aproximadamente
+\[
+ \mathfrak P=1.1067290601,
+ \qquad
+ \mathfrak B=4.4269162403,
+ \qquad
+ \mathfrak T_{\mathrm{par}}=0.5384456988.
+\]
+El error de truncación de los productos acelerados es del orden de las colas de \(\sum p^{-2}\), mucho menor que el de los productos originales.
+
+\section{Conteo experimental de \(A(X)\)}
+
+El siguiente código Python es transparente y apropiado para límites moderados. Para la tabla hasta \(2\cdot10^7\) se usó la misma lógica en C++ con Miller--Rabin determinista para \(64\) bits.
+
+\begin{lstlisting}[caption={Conteo de entradas inertes con salida prima.},label={lst:count}]
+from math import log
+from sympy import primerange, isprime
+
+
+def inert_mask(N: int) -> bytearray:
+    # mask[n] = 1 si n es impar y no tiene factores 1 mod 4.
+    mask = bytearray(b"\x01") * (N + 1)
+    mask[0] = 0
+    for n in range(2, N + 1, 2):
+        mask[n] = 0
+    for p in primerange(5, N + 1):
+        if p % 4 == 1:
+            for multiple in range(p, N + 1, p):
+                mask[multiple] = 0
+    return mask
+
+
+def count_transmutations(N: int) -> tuple[int, int]:
+    mask = inert_mask(N)
+    count_inert = 0
+    count_prime_output = 0
+
+    for n in range(1, N + 1, 2):
+        if not mask[n]:
+            continue
+        count_inert += 1
+        T = (n*n + 1) // 2
+        if T > 1 and isprime(T):
+            count_prime_output += 1
+
+    return count_inert, count_prime_output
+
+
+for N in (10**3, 10**4, 10**5, 10**6):
+    print(N, count_transmutations(N))
+\end{lstlisting}
+
+\section{Programa C++ que reproduce la tabla hasta \(2\cdot10^7\)}
+
+El siguiente programa es el utilizado para la auditoría final. Construye exactamente el semigrupo inerte mediante una criba, evalúa \(T(n)=(n^2+1)/2\) con enteros de 64 bits y usa Miller--Rabin con el conjunto de testigos determinista válido para todo entero sin signo de 64 bits. Puede compilarse con
+\[
+ \texttt{g++ -O3 -std=c++20 transmutation\_count.cpp -o transmutation\_count}.
+\]
+
+\begin{lstlisting}[language=C++,caption={Conteo exacto hasta veinte millones con primalidad determinista de 64 bits.},label={lst:cpp-count}]
+#include <algorithm>
+#include <cstdint>
+#include <iostream>
+#include <vector>
+
+using u64 = std::uint64_t;
+using u128 = __uint128_t;
+
+u64 mod_mul(u64 a, u64 b, u64 mod) {
+    return static_cast<u64>((static_cast<u128>(a) * b) % mod);
+}
+
+u64 mod_pow(u64 base, u64 exp, u64 mod) {
+    u64 result = 1;
+    while (exp > 0) {
+        if (exp & 1U) result = mod_mul(result, base, mod);
+        base = mod_mul(base, base, mod);
+        exp >>= 1U;
+    }
+    return result;
+}
+
+bool is_prime_u64(u64 n) {
+    if (n < 2) return false;
+    for (u64 p : {2ULL, 3ULL, 5ULL, 7ULL, 11ULL, 13ULL, 17ULL,
+                  19ULL, 23ULL, 29ULL, 31ULL, 37ULL}) {
+        if (n % p == 0) return n == p;
+    }
+
+    u64 d = n - 1;
+    int s = 0;
+    while ((d & 1U) == 0) {
+        d >>= 1U;
+        ++s;
+    }
+
+    // Deterministic for every unsigned 64-bit integer.
+    constexpr u64 witnesses[] = {
+        2ULL, 325ULL, 9375ULL, 28178ULL,
+        450775ULL, 9780504ULL, 1795265022ULL
+    };
+
+    for (u64 a : witnesses) {
+        if (a % n == 0) continue;
+        u64 x = mod_pow(a % n, d, n);
+        if (x == 1 || x == n - 1) continue;
+
+        bool composite = true;
+        for (int r = 1; r < s; ++r) {
+            x = mod_mul(x, x, n);
+            if (x == n - 1) {
+                composite = false;
+                break;
+            }
+        }
+        if (composite) return false;
+    }
+    return true;
+}
+
+std::vector<bool> prime_sieve(std::uint32_t n) {
+    std::vector<bool> prime(n + 1, true);
+    prime[0] = prime[1] = false;
+    for (std::uint32_t p = 2; static_cast<u64>(p) * p <= n; ++p) {
+        if (!prime[p]) continue;
+        for (std::uint32_t m = p * p; m <= n; m += p) prime[m] = false;
+    }
+    return prime;
+}
+
+int main() {
+    constexpr std::uint32_t N = 20'000'000;
+    const std::vector<std::uint32_t> checkpoints = {
+        1'000, 10'000, 100'000, 1'000'000,
+        5'000'000, 10'000'000, 20'000'000
+    };
+
+    auto prime = prime_sieve(N);
+    std::vector<std::uint8_t> inert(N + 1, 1);
+    inert[0] = 0;
+    for (std::uint32_t n = 2; n <= N; n += 2) inert[n] = 0;
+
+    // Remove every integer divisible by a split prime p = 1 (mod 4).
+    for (std::uint32_t p = 5; p <= N; ++p) {
+        if (!prime[p] || p % 4 != 1) continue;
+        for (std::uint32_t m = p; m <= N; m += p) inert[m] = 0;
+    }
+
+    u64 count_inert = 0;
+    u64 count_prime_output = 0;
+    std::size_t next = 0;
+
+    for (std::uint32_t n = 1; n <= N; ++n) {
+        if ((n & 1U) && inert[n]) {
+            ++count_inert;
+            const u64 nn = n;
+            const u64 T = (nn * nn + 1) / 2;
+            if (is_prime_u64(T)) ++count_prime_output;
+        }
+
+        if (next < checkpoints.size() && n == checkpoints[next]) {
+            std::cout << checkpoints[next] << ' '
+                      << count_inert << ' '
+                      << count_prime_output << '\n';
+            ++next;
+        }
+    }
+    return 0;
+}
+\end{lstlisting}
+
+La salida obtenida fue
+\begin{center}
+\begin{tabular}{rrr}
+\toprule
+\(X\)&\(I(X)\)&\(A(X)\)\\
+\midrule
+1,000&201&41\\
+10,000&1,680&258\\
+100,000&14,902&1,661\\
+1,000,000&135,124&12,146\\
+5,000,000&636,229&50,693\\
+10,000,000&1,243,370&94,329\\
+20,000,000&2,431,863&176,143\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Pruebas unitarias matemáticas recomendadas}
+
+Una versión de investigación del programa debería incluir automáticamente:
+\begin{itemize}
+\item comprobación de simetría: \(\lambda\in\Lam(R)\Rightarrow2R-\lambda\in\Lam(R)\);
+\item comprobación de que \(R\in\Lam(R)\);
+\item igualdad entre el conteo directo y \((r_2(R^2)-2)/2\);
+\item comparación de productos truncados en varios límites;
+\item pruebas de primalidad con aritmética exacta, nunca con punto flotante;
+\item registro de versión del lenguaje, bibliotecas, límite y tiempo de ejecución.
+\end{itemize}
+
+% ============================================================
+\chapter{Demostraciones complementarias y observaciones}
+% ============================================================
+
+\section{Simetría interna del espectro}
+
+\begin{proposition}
+Para todo \(R\),
+\[
+ \lambda\in\Lam(R)
+ \quad\Longleftrightarrow\quad
+ 2R-\lambda\in\Lam(R).
+\]
+Además, \(R\in\Lam(R)\).
+\end{proposition}
+
+\begin{proof}
+El producto
+\[
+ \lambda(2R-\lambda)
+\]
+permanece igual al sustituir \(\lambda\) por \(2R-\lambda\). Para \(\lambda=R\), el producto es \(R^2\).
+\end{proof}
+
+Por ello, \(C(R)\) siempre es impar: hay un punto fijo central \(R\), y los demás parámetros aparecen en parejas.
+
+\section{Número de radios rígidos}
+
+Sea
+\[
+ \mathcal R=\{R\ge1:C(R)=1\}.
+\]
+Estos son exactamente los enteros cuyos factores primos pertenecen a \(\{2\}\cup\{q:q\equiv3\pmod4\}\). Como permitir cualquier potencia de \(2\) multiplica asintóticamente por
+\[
+ \sum_{a\ge0}2^{-a}=2,
+\]
+del teorema de conteo de \(\Iset\) se deduce
+\begin{equation}
+ \#\{R\le X:R\in\mathcal R\}
+ \sim\frac{4K}{\pi}\frac{X}{\sqrt{\log X}}.
+ \label{eq:rigid-count}
+\end{equation}
+La constante \(4K/\pi\approx0.9730397768\) muestra que, dentro de la escala natural \(X/\sqrt{\log X}\), la rigidez es abundante.
+
+\section{El equilibrio de divergencias locales}
+
+Los logaritmos de los factores de \(\mathfrak P\) satisfacen
+\[
+ \log\frac{p(p-3)}{(p-1)^2}
+ =-\frac1p+O\left(\frac1{p^2}\right)
+ \quad(p\equiv1\pmod4),
+\]
+y
+\[
+ \log\frac{q}{q-1}
+ =\frac1q+O\left(\frac1{q^2}\right)
+ \quad(q\equiv3\pmod4).
+\]
+Cada suma por separado diverge logarítmicamente, pero el teorema de los primos en progresiones aritméticas equilibra las dos clases. El valor finito de \(\mathfrak P\) mide el residuo multiplicativo de esa competencia.
+
+\begin{insightbox}
+La constante \(\mathfrak P>1\) no significa que cada primo inerte ``gane'' individualmente a cada primo escindido. Significa que, después de balancear todas las correcciones locales en orden natural, el efecto neto favorece ligeramente la primalidad de la familia estudiada.
+\end{insightbox}
+
+\section{Una parametrización completa de las intersecciones}
+
+Todo punto reticular \((u,x)\) de \(u^2+x^2=R^2\) con \(|u|<R\) produce
+\[
+ \lambda=R-u,
+ \qquad
+ y=R+u,
+\]
+pues \(y=2R-\lambda\). Así,
+\begin{equation}
+ (u,x)
+ \longleftrightarrow
+ \left(\lambda,R+u,\pm x\right).
+ \label{eq:full-correspondence}
+\end{equation}
+La pareja dual \(\lambda\leftrightarrow2R-\lambda\) corresponde a reflejar \(u\leftrightarrow-u\), es decir, a reflejar el punto reticular respecto del eje vertical de la circunferencia centrada en el origen.
+
+% ============================================================
+\chapter{Conclusiones}
+% ============================================================
+
+La investigación comenzó con una pregunta elemental: ¿qué tres puntos de una parábola conviene escoger para formar un triángulo? La respuesta más intrínseca usa el vértice y los extremos del lado recto. La respuesta más fértil aritméticamente usa una cuerda situada a una altura igual a la longitud del lado recto, o, en la parábola \(y=x^2\), los puntos \((\pm n,n^2)\).
+
+De esa elección surgieron, de manera encadenada:
+\begin{enumerate}
+\item una familia completa de triángulos \(T_k\) y circunferencias tangentes;
+\item valores especiales \(k=1/4,1,3\), con estructuras \(3:4:5\), rectángula y equilátera;
+\item áreas cúbicas, radios cuadráticos y ecuaciones de Pell;
+\item un espectro parabólico entero equivalente a puntos reticulares de círculos;
+\item una fórmula exacta de complejidad basada en la factorización prima;
+\item el teorema de rigidez inerte \(\Lam(R)=I(R)\Lam(S(R))\);
+\item una constante rigurosa \(\mathfrak C_{\mathrm{par}}\) para la complejidad media;
+\item una transformación gaussiana que envía entradas inertes a salidas escindidas;
+\item una constante heurística \(\mathfrak T_{\mathrm{par}}\) y una conjetura de frontera.
+\end{enumerate}
+
+La idea central puede resumirse así:
+\[
+ \boxed{
+ \text{la inercia es obstrucción para representar,}
+ \quad
+ \text{pero conservación para escalar y excluir divisores.}}
+\]
+
+El trabajo matemático más prometedor a continuación no consiste en proclamar una revolución histórica, sino en demostrar mejores términos de error, desarrollar una teoría de criba sobre \(\Iset\), estudiar casi primos y generalizar el mecanismo a otros campos cuadráticos. Si esos pasos producen teoremas nuevos, entonces la narrativa geométrica habrá servido como algo más que inspiración: habrá creado una estructura útil para investigar.
+
+% ============================================================
+\begin{thebibliography}{99}
+
+\bibitem{AletheiaFukshanskyGarcia}
+S. L. Aletheia-Zomlefer, L. Fukshansky y S. R. Garcia,
+\emph{The Bateman--Horn conjecture: heuristic, history, and applications},
+Expositiones Mathematicae 38 (2020), 430--479.
+\href{https://doi.org/10.1016/j.exmath.2019.04.005}{doi:10.1016/j.exmath.2019.04.005}.
+
+\bibitem{BatemanHorn}
+P. T. Bateman y R. A. Horn,
+\emph{A heuristic asymptotic formula concerning the distribution of prime numbers},
+Mathematics of Computation 16 (1962), 363--367.
+\href{https://doi.org/10.1090/S0025-5718-1962-0148632-7}{doi:10.1090/S0025-5718-1962-0148632-7}.
+
+\bibitem{Cox}
+D. A. Cox,
+\emph{Primes of the Form \(x^2+ny^2\)}, segunda edición,
+Wiley, 2013.
+
+\bibitem{HardyWright}
+G. H. Hardy y E. M. Wright,
+\emph{An Introduction to the Theory of Numbers}, sexta edición,
+Oxford University Press, 2008.
+
+\bibitem{IrelandRosen}
+K. Ireland y M. Rosen,
+\emph{A Classical Introduction to Modern Number Theory}, segunda edición,
+Springer, 1990.
+
+\bibitem{KurlbergWigman}
+P. Kurlberg e I. Wigman,
+\emph{On probability measures arising from lattice points on circles},
+Mathematische Annalen 367 (2017), 1057--1098.
+\href{https://doi.org/10.1007/s00208-016-1411-4}{doi:10.1007/s00208-016-1411-4}.
+
+\bibitem{Moree}
+P. Moree,
+\emph{Counting numbers in multiplicative sets: Landau versus Ramanujan},
+Šiauliai Mathematical Seminar 8(16) (2013), 161--179;
+versión previa en \href{https://arxiv.org/abs/1110.0708}{arXiv:1110.0708}.
+
+\bibitem{OEISA002731}
+OEIS Foundation,
+\emph{A002731: Numbers \(k\) such that \((k^2+1)/2\) is prime},
+\url{https://oeis.org/A002731}, consultado el 1 de agosto de 2026.
+
+\bibitem{OEISA048161}
+OEIS Foundation,
+\emph{A048161: Primes \(p\) such that \((p^2+1)/2\) is also prime},
+\url{https://oeis.org/A048161}, consultado el 1 de agosto de 2026.
+
+\bibitem{Tenenbaum}
+G. Tenenbaum,
+\emph{Introduction to Analytic and Probabilistic Number Theory}, tercera edición,
+Graduate Studies in Mathematics 163, American Mathematical Society, 2015.
+
+\end{thebibliography}
+
+\end{document}

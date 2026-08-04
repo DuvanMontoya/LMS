@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import {
   CalendarClock,
   Check,
@@ -46,7 +46,9 @@ export function LiveClassActivityDialog({
   const [mode, setMode] = useState(binding?.session_mode ?? 'interactive');
   const [recording, setRecording] = useState(binding?.recording_mode ?? 'off');
 
-  async function submit(formData: FormData) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
     if (await onSubmit(formData)) setOpen(false);
   }
 
@@ -101,7 +103,7 @@ export function LiveClassActivityDialog({
               : 'Define una política reutilizable para la sala. La fecha, el grupo y el docente se programan después sobre la versión publicada del curso.'}
           </DialogDescription>
         </DialogHeader>
-        <form action={submit}>
+        <form onSubmit={submit}>
           <div className="grid gap-4 p-5 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-4">
               <section className="rounded-xl border p-4">
@@ -198,6 +200,7 @@ export function LiveClassActivityDialog({
                         key={objective.id}
                       >
                         <input
+                          aria-label={`${objective.code}: ${objective.statement}`}
                           className="mt-1"
                           defaultChecked={activity?.learning_objective_ids.includes(
                             objective.id,

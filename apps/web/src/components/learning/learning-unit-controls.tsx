@@ -22,6 +22,7 @@ import {
 export function LearningUnitControls({
   compact = false,
   enrollmentId,
+  presentation = 'standard',
   progress,
   slug,
   unitId,
@@ -29,6 +30,7 @@ export function LearningUnitControls({
 }: Readonly<{
   compact?: boolean;
   enrollmentId: string;
+  presentation?: 'navigation' | 'standard';
   progress: components['schemas']['Progress'];
   slug: string;
   unitId: string;
@@ -83,8 +85,14 @@ export function LearningUnitControls({
     }
   }
 
+  const className = compact
+    ? 'learning-unit-control--compact'
+    : presentation === 'navigation'
+      ? 'learning-unit-control--navigation'
+      : 'grid gap-3';
+
   return (
-    <div className={compact ? 'learning-unit-control--compact' : 'grid gap-3'}>
+    <div className={className}>
       <Button
         aria-label={
           unitStatus === 'completed'
@@ -93,7 +101,7 @@ export function LearningUnitControls({
         }
         disabled={mutation.isPending || openMutation.isPending}
         onClick={toggleCompletion}
-        size={compact ? 'sm' : 'default'}
+        size={compact ? 'sm' : presentation === 'navigation' ? 'lg' : 'default'}
         type="button"
         variant={unitStatus === 'completed' ? 'outline' : 'default'}
       >
@@ -104,7 +112,7 @@ export function LearningUnitControls({
         ) : (
           <CheckCircle2 />
         )}
-        {unitStatus === 'completed' ? 'Reabrir' : 'Completar'}
+        {unitStatus === 'completed' ? 'Reabrir lección' : 'Completar lección'}
       </Button>
       {notice && !compact ? (
         <Alert aria-live="polite">

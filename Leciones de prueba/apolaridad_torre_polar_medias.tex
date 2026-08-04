@@ -1,0 +1,3114 @@
+\documentclass[11pt,oneside]{scrartcl}
+
+% -----------------------------------------------------------------------------
+% Idioma, tipografía y composición
+% -----------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage{amsmath,amsthm,mathtools,bm}
+\usepackage{newtxtext}
+\usepackage{newtxmath}
+\usepackage{microtype}
+\usepackage[a4paper,top=2.55cm,bottom=2.65cm,left=2.55cm,right=2.55cm,
+            headheight=17pt,headsep=0.65cm,footskip=1.15cm]{geometry}
+\usepackage{setspace}
+\setstretch{1.055}
+\setlength{\parindent}{1.25em}
+\setlength{\parskip}{0.20em}
+\usepackage{ragged2e}
+\usepackage{scrlayer-scrpage}
+\clearpairofpagestyles
+\ihead{\small\sffamily De la conjugación armónica a una torre polar de medias}
+\ohead{\small\sffamily Robert Duan Montoya Cardona}
+\cfoot{\small\sffamily\thepage}
+\setkomafont{pageheadfoot}{\normalfont}
+\setkomafont{section}{\sffamily\bfseries\color{Navy}}
+\setkomafont{subsection}{\sffamily\bfseries\color{DeepBlue}}
+\setkomafont{subsubsection}{\sffamily\bfseries\color{Slate}}
+\setkomafont{paragraph}{\sffamily\bfseries\color{Slate}}
+
+% -----------------------------------------------------------------------------
+% Matemáticas
+% -----------------------------------------------------------------------------
+\usepackage{thmtools}
+\usepackage{array,booktabs,longtable,tabularx,multirow}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\sisetup{output-decimal-marker={,}}
+
+% -----------------------------------------------------------------------------
+% Gráficos y color
+% -----------------------------------------------------------------------------
+\usepackage{xcolor}
+\definecolor{Navy}{HTML}{132A46}
+\definecolor{DeepBlue}{HTML}{1D4E89}
+\definecolor{Sky}{HTML}{DCECF7}
+\definecolor{Ice}{HTML}{F3F8FC}
+\definecolor{Gold}{HTML}{B88322}
+\definecolor{Warm}{HTML}{F6E9D1}
+\definecolor{Brick}{HTML}{9B3A32}
+\definecolor{Green}{HTML}{2E6B57}
+\definecolor{Mint}{HTML}{DDEFE8}
+\definecolor{Slate}{HTML}{485769}
+\definecolor{SoftGray}{HTML}{EFF2F5}
+\definecolor{DarkGray}{HTML}{30363D}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,positioning,fit,backgrounds,decorations.pathreplacing,
+                intersections,patterns,shadows.blur,matrix,3d,angles,quotes,babel}
+\usepackage{tikz-cd}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[section]{placeins}
+\usepackage{needspace}
+\captionsetup{font=small,labelfont={bf,sf,color=Navy},textfont=it,
+              justification=justified,singlelinecheck=false}
+
+% -----------------------------------------------------------------------------
+% Cajas, enlaces y referencias internas
+% -----------------------------------------------------------------------------
+\usepackage[most]{tcolorbox}
+\usepackage{csquotes}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=DeepBlue,
+  citecolor=Green,
+  urlcolor=Brick,
+  pdftitle={De la conjugación armónica a una torre polar de medias},
+  pdfauthor={Robert Duan Montoya Cardona},
+  pdfsubject={Geometría proyectiva, apolaridad, medias simétricas y dinámica racional},
+  pdfkeywords={apolaridad, curva racional normal, medias simétricas, Newton, mapa polar, formas binarias}
+}
+\usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\crefname{theorem}{teorema}{teoremas}
+\crefname{proposition}{proposición}{proposiciones}
+\crefname{lemma}{lema}{lemas}
+\crefname{corollary}{corolario}{corolarios}
+\crefname{definition}{definición}{definiciones}
+\crefname{remark}{observación}{observaciones}
+\crefname{example}{ejemplo}{ejemplos}
+\crefname{figure}{figura}{figuras}
+\crefname{section}{sección}{secciones}
+\crefname{equation}{ecuación}{ecuaciones}
+
+% -----------------------------------------------------------------------------
+% Entornos matemáticos
+% -----------------------------------------------------------------------------
+\declaretheoremstyle[
+  headfont=\sffamily\bfseries\color{Navy},
+  bodyfont=\itshape,
+  spaceabove=8pt,spacebelow=8pt,
+  headpunct={.},postheadspace=0.55em
+]{plainblue}
+\declaretheoremstyle[
+  headfont=\sffamily\bfseries\color{DeepBlue},
+  bodyfont=\normalfont,
+  spaceabove=8pt,spacebelow=8pt,
+  headpunct={.},postheadspace=0.55em
+]{definitionblue}
+\declaretheoremstyle[
+  headfont=\sffamily\bfseries\color{Slate},
+  bodyfont=\normalfont,
+  spaceabove=7pt,spacebelow=7pt,
+  headpunct={.},postheadspace=0.55em
+]{remarkgray}
+
+\theoremstyle{plainblue}
+\newtheorem{theorem}{Teorema}[section]
+\newtheorem{proposition}[theorem]{Proposición}
+\newtheorem{lemma}[theorem]{Lema}
+\newtheorem{corollary}[theorem]{Corolario}
+\theoremstyle{definitionblue}
+\newtheorem{definition}[theorem]{Definición}
+\newtheorem{example}[theorem]{Ejemplo}
+\theoremstyle{remarkgray}
+\newtheorem{remark}[theorem]{Observación}
+\newtheorem{warning}[theorem]{Advertencia}
+
+% Identificadores PDF unívocos para los entornos que comparten contador.
+\makeatletter
+\def\theHtheorem{\thesection.\arabic{theorem}}
+\def\theHproposition{\theHtheorem}
+\def\theHlemma{\theHtheorem}
+\def\theHcorollary{\theHtheorem}
+\def\theHdefinition{\theHtheorem}
+\def\theHexample{\theHtheorem}
+\def\theHremark{\theHtheorem}
+\def\theHwarning{\theHtheorem}
+\makeatother
+
+\newtcolorbox{keybox}[1][]{
+  enhanced,breakable,colback=Ice,colframe=DeepBlue,boxrule=0.8pt,
+  arc=2mm,left=4mm,right=4mm,top=2.5mm,bottom=2.5mm,
+  borderline west={2.5pt}{0pt}{DeepBlue},fonttitle=\sffamily\bfseries,
+  title=#1
+}
+\newtcolorbox{researchbox}[1][]{
+  enhanced,breakable,colback=Warm,colframe=Gold,boxrule=0.8pt,
+  arc=2mm,left=4mm,right=4mm,top=2.5mm,bottom=2.5mm,
+  borderline west={2.5pt}{0pt}{Gold},fonttitle=\sffamily\bfseries,
+  title=#1
+}
+\newtcolorbox{proofmap}[1][]{
+  enhanced,breakable,colback=SoftGray,colframe=Slate,boxrule=0.5pt,
+  arc=1.5mm,left=4mm,right=4mm,top=2mm,bottom=2mm,
+  fonttitle=\sffamily\bfseries,title=#1
+}
+
+% -----------------------------------------------------------------------------
+% Operadores y abreviaturas
+% -----------------------------------------------------------------------------
+\newcommand{\RR}{\mathbb{R}}
+\newcommand{\CC}{\mathbb{C}}
+\newcommand{\QQ}{\mathbb{Q}}
+\newcommand{\KK}{\mathbb{K}}
+\newcommand{\PP}{\mathbb{P}}
+\newcommand{\Aff}{\mathbb{A}}
+\newcommand{\ee}{\mathrm{e}}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\id}{\mathrm{id}}
+\newcommand{\Sym}{\operatorname{Sym}}
+\newcommand{\PGL}{\operatorname{PGL}}
+\newcommand{\GL}{\operatorname{GL}}
+\newcommand{\SL}{\operatorname{SL}}
+\newcommand{\Osc}{\operatorname{Osc}}
+\newcommand{\Span}{\operatorname{span}}
+\newcommand{\Fix}{\operatorname{Fix}}
+\newcommand{\Crit}{\operatorname{Crit}}
+\newcommand{\rad}{\operatorname{rad}}
+\newcommand{\Res}{\operatorname{Res}}
+\newcommand{\Hess}{\operatorname{Hess}}
+\newcommand{\AM}{\operatorname{AM}}
+\newcommand{\GM}{\operatorname{GM}}
+\newcommand{\HM}{\operatorname{HM}}
+\newcommand{\CR}{\operatorname{cr}}
+\newcommand{\cN}{\mathfrak{N}}
+\newcommand{\cP}{\mathcal{P}}
+\newcommand{\cD}{\mathcal{D}}
+\newcommand{\cM}{\mathcal{M}}
+\newcommand{\cE}{\mathcal{E}}
+\newcommand{\cC}{\mathcal{C}}
+\newcommand{\cF}{\mathcal{F}}
+\newcommand{\cH}{\mathcal{H}}
+\newcommand{\cO}{\mathcal{O}}
+\newcommand{\brak}[1]{\left[#1\right]}
+\newcommand{\paren}[1]{\left(#1\right)}
+\newcommand{\set}[1]{\left\{#1\right\}}
+\newcommand{\abs}[1]{\left|#1\right|}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\xto}[1]{\xrightarrow{#1}}
+\newcommand{\defeq}{\vcentcolon=}
+
+% -----------------------------------------------------------------------------
+% Datos del documento
+% -----------------------------------------------------------------------------
+\title{De la conjugación armónica a una torre polar de medias}
+\subtitle{Apolaridad, derivadas normalizadas, formas binarias y dinámica racional de divisores de raíces}
+\author{Robert Duan Montoya Cardona}
+\date{Julio de 2026}
+
+\begin{document}
+\hypersetup{pageanchor=false}
+
+% -----------------------------------------------------------------------------
+% Portada
+% -----------------------------------------------------------------------------
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture,overlay]
+  \fill[Navy] (current page.north west) rectangle ([yshift=-9.30cm]current page.north east);
+  \fill[Ice] ([yshift=-9.30cm]current page.north west) rectangle (current page.south east);
+  \draw[Gold,line width=1.2pt] ([xshift=1.7cm,yshift=-9.15cm]current page.north west)
+       -- ([xshift=-1.7cm,yshift=-9.15cm]current page.north east);
+
+  % Curva racional normal esquemática
+  \begin{scope}[shift={(13.0,-2.05)},scale=0.72]
+    \draw[Sky,line width=9pt,opacity=.24] plot[smooth] coordinates
+      {(-4,-.6) (-3.3,.15) (-2.5,.65) (-1.5,.75) (-.4,.25) (.8,-.6) (2,-1.0) (3.1,-.55) (4,.35)};
+    \draw[white,line width=1.5pt] plot[smooth] coordinates
+      {(-4,-.6) (-3.3,.15) (-2.5,.65) (-1.5,.75) (-.4,.25) (.8,-.6) (2,-1.0) (3.1,-.55) (4,.35)};
+    \foreach \x/\y in {-3.2/.23,-1.45/.73,.65/-.50,2.1/-.97,3.25/-.45}{
+      \fill[Gold] (\x,\y) circle (2.2pt);
+    }
+    \draw[white!80,dashed] (-3.2,.23)--(3.25,-.45);
+  \end{scope}
+
+  % Cadena de medias
+  \begin{scope}[shift={(7.10,-17.8)}]
+    \foreach \i/\lab in {0/{\AM},1/{\cN_2},2/{\cdots},3/{\cN_{n-1}},4/{\HM}}{
+      \node[circle,draw=DeepBlue,fill=white,minimum size=12mm,
+            font=\small\bfseries,blur shadow] (m\i) at (1.75*\i,0) {$\lab$};
+    }
+    \foreach \i in {0,...,3}{\draw[-{Latex[length=2mm]},DeepBlue,thick] (m\i)--(m\the\numexpr\i+1\relax);}
+    \node[font=\small\sffamily,text=Slate] at (3.5,-1.15)
+      {$\displaystyle \prod_{k=1}^{n}\cN_k=\GM^n$};
+  \end{scope}
+\end{tikzpicture}
+
+\vspace*{1.0cm}
+{\color{white}\sffamily
+\begin{center}
+  {\fontsize{27}{31}\selectfont\bfseries De la conjugación armónica\\[2mm]
+  a una torre polar de medias\par}
+  \vspace{0.65cm}
+  {\Large Apolaridad, derivadas normalizadas, formas binarias\\
+  y dinámica racional de divisores de raíces\par}
+\end{center}}
+
+\vspace{4.45cm}
+\begin{center}
+{\Large\sffamily\bfseries\color{Navy} Robert Duan Montoya Cardona}\par
+\vspace{0.35cm}
+{\large\sffamily\color{Slate} Manuscrito de investigación autocontenido}\par
+\vspace{0.15cm}
+{\sffamily\color{Slate} Geometría proyectiva \enspace$\cdot$\enspace Álgebra clásica \enspace$\cdot$\enspace Desigualdades simétricas \enspace$\cdot$\enspace Dinámica compleja}\par
+\vfill
+\begin{minipage}{0.82\textwidth}
+\centering\small\color{DarkGray}
+Esta versión reconstruye desde sus fundamentos la relación entre la parábola, la
+conjugación armónica, la curva racional normal y la apolaridad, y la prolonga hacia
+una torre de mapas polares asociada a las derivadas normalizadas de un polinomio.
+El texto distingue cuidadosamente los ingredientes clásicos de las contribuciones
+estructurales desarrolladas aquí.
+\end{minipage}\par
+\vspace{0.75cm}
+{\sffamily\color{Slate} Julio de 2026\par}
+\end{center}
+\end{titlepage}
+\hypersetup{pageanchor=true}
+
+\pagenumbering{roman}
+
+\begin{abstract}
+Sea
+\[
+P(t)=\prod_{i=1}^{n}(t-r_i)
+=t^n-e_1t^{n-1}+e_2t^{n-2}-\cdots+(-1)^ne_n
+\]
+un polinomio mónico con raíces positivas. El propósito de este trabajo es explicar,
+desde los fundamentos de la recta proyectiva hasta la geometría de formas binarias,
+por qué las razones consecutivas
+\[
+\cN_k(r_1,\dots,r_n)
+=\frac{e_k/\binom nk}{e_{k-1}/\binom n{k-1}}
+=\frac{k}{n-k+1}\frac{e_k}{e_{k-1}},
+\qquad 1\le k\le n,
+\]
+forman una cadena natural de medias que comienza en la media aritmética y termina
+en la media armónica. Se demuestra que
+\[
+\AM=\cN_1\ge \cN_2\ge\cdots\ge\cN_n=\HM,
+\qquad
+\prod_{k=1}^{n}\cN_k=\GM^n,
+\]
+y que cada \(\cN_k\) es una media simétrica, homogénea, interna y estrictamente
+creciente en cada variable positiva. Estas cantidades se realizan como cocientes de
+coordenadas consecutivas del punto apolar \(K_P\), obtenido como intersección de los
+hiperplanos osculadores de la curva racional normal en las raíces.
+
+La segunda estructura central es la torre de polinomios mónicos
+\[
+Q_k(t)=\frac{k!}{n!}P^{(n-k)}(t),\qquad Q_k'=kQ_{k-1},
+\]
+y sus mapas polares
+\[
+\Phi_k(t)=t-k\frac{Q_k(t)}{Q_k'(t)}
+=t-\frac{Q_k(t)}{Q_{k-1}(t)}.
+\]
+Se prueba que \(\cN_k=\Phi_k(0)\). Si \(P\) tiene raíces reales positivas, las
+raíces de \(Q_k\) también son positivas y
+\(\cN_k\) es exactamente su media armónica, mientras que todas las capas de la
+torre conservan la misma media aritmética. En el nivel superior,
+\(\Phi_n(t)=t-nP(t)/P'(t)\) es el mapa racional asociado al diferencial exterior de
+la forma binaria que codifica las raíces. Este mapa, ya presente en la literatura de
+dinámica algebraica, se caracteriza como el único mapa racional de grado \(n-1\)
+que fija las raíces simples con multiplicador \(1-n\). Su divisor crítico es el
+hessiano de la forma binaria. Para \(n=2\), el mapa se reduce exactamente a la
+involución armónica realizada por una parábola.
+
+El resultado es una síntesis rigurosa entre geometría proyectiva, apolaridad,
+desigualdades de Newton, teoría clásica de invariantes y dinámica racional. Se
+incluyen ejemplos, diagramas, extensiones a raíces múltiples y una agenda de
+problemas abiertos formulada sin atribuir novedad a los componentes clásicos.
+\end{abstract}
+
+\begin{keybox}[Lectura de alcance y prioridad]
+La curva racional normal, la apolaridad de formas binarias, las desigualdades de
+Newton--Maclaurin y el mapa racional obtenido del diferencial de una forma binaria
+son ingredientes clásicos. En particular, Doyle y McMullen observaron que el mapa
+\(t-nP/P'\) es el único de grado \(n-1\) que fija las raíces con multiplicador
+\(1-n\). La contribución estructural desarrollada en este manuscrito consiste en
+organizar esos ingredientes en un único marco: la cadena proyectiva de cocientes
+normalizados \(\cN_k\), su realización mediante banderas osculadoras opuestas, la
+torre derivada \(Q_k\), la identidad \(\cN_k=\Phi_k(0)\), la interpretación de cada
+capa como media armónica de raíces derivadas y el producto telescópico que recupera
+la media geométrica. No se formula una afirmación absoluta de prioridad histórica
+sin una búsqueda bibliográfica especializada exhaustiva.
+\end{keybox}
+
+\tableofcontents
+\vspace{0.5cm}
+\begin{center}
+\begin{tikzpicture}[node distance=8mm and 9mm,>=Latex,every node/.style={align=center}]
+\node[draw=Navy,fill=Ice,rounded corners,minimum width=47mm,minimum height=12mm,font=\sffamily\bfseries] (a) {Parábola y razón doble};
+\node[draw=Navy,fill=Ice,rounded corners,minimum width=47mm,minimum height=12mm,font=\sffamily\bfseries,right=of a] (b) {Curva racional normal};
+\node[draw=Navy,fill=Ice,rounded corners,minimum width=47mm,minimum height=12mm,font=\sffamily\bfseries,right=of b] (c) {Punto apolar $K_P$};
+\node[draw=Brick,fill=white,rounded corners,minimum width=47mm,minimum height=12mm,font=\sffamily\bfseries,below=of a] (f) {Dinámica, hessiano\\y módulos};
+\node[draw=Green,fill=Mint,rounded corners,minimum width=47mm,minimum height=12mm,font=\sffamily\bfseries,below=of b] (e) {Torre $Q_k$\\y mapas $\Phi_k$};
+\node[draw=Gold,fill=Warm,rounded corners,minimum width=47mm,minimum height=12mm,font=\sffamily\bfseries,below=of c] (d) {Cadena\\$\cN_1,\dots,\cN_n$};
+\draw[->,thick,DeepBlue] (a)--(b);
+\draw[->,thick,DeepBlue] (b)--(c);
+\draw[->,thick,Gold] (c)--(d);
+\draw[->,thick,Green] (d)--(e);
+\draw[->,thick,Brick] (e)--(f);
+\draw[->,thick,Slate,dashed] (a)--(f);
+\end{tikzpicture}
+\end{center}
+
+\clearpage
+\pagenumbering{arabic}
+
+% =============================================================================
+\section{Qué problema se está estudiando realmente}
+% =============================================================================
+
+\subsection{Tres medias conocidas y una pregunta menos conocida}
+
+Para números positivos \(r,s\), las tres medias pitagóricas son
+\[
+\AM(r,s)=\frac{r+s}{2},\qquad
+\GM(r,s)=\sqrt{rs},\qquad
+\HM(r,s)=\frac{2rs}{r+s}.
+\]
+Su desigualdad clásica
+\[
+\HM(r,s)\le \GM(r,s)\le \AM(r,s)
+\]
+es elemental. Sin embargo, una fórmula puede ser fácil de calcular y, al mismo
+tiempo, esconder una estructura difícil de ver. La pregunta de este manuscrito no es
+cómo calcular esas medias, sino por qué pueden aparecer como coordenadas de una
+misma construcción proyectiva.
+
+Consideremos la parábola
+\[
+y=a(x-r)(x-s),\qquad a\ne 0.
+\]
+Su vértice tiene abscisa \((r+s)/2\), mientras que una secante especial recupera
+\(2rs/(r+s)\). Esta coincidencia sugiere que las medias no están entrando como
+operaciones numéricas aisladas, sino como imágenes de puntos distinguidos bajo una
+transformación proyectiva.
+
+Cuando se sustituyen dos raíces por \(n\) raíces, el plano ya no contiene por sí solo
+la geometría adecuada. El objeto natural pasa a ser la curva racional normal
+\[
+\nu_n:\PP^1\longrightarrow\PP^n,
+\qquad
+[u:v]\longmapsto[u^n:u^{n-1}v:\cdots:uv^{n-1}:v^n].
+\]
+Las raíces determinan puntos de esta curva, sus hiperplanos osculadores se cortan en
+un punto \(K_P\), y las coordenadas normalizadas de ese punto son precisamente los
+polinomios simétricos elementales de las raíces.
+
+\subsection{La nueva dirección: no sólo dos medias, sino una cadena completa}
+
+Sea
+\[
+e_k=e_k(r_1,\dots,r_n)
+=\sum_{1\le i_1<\cdots<i_k\le n}r_{i_1}\cdots r_{i_k},
+\qquad e_0=1.
+\]
+Los números normalizados
+\[
+a_k=\frac{e_k}{\binom nk}
+\]
+son las medias elementales sin extraer la raíz \(k\)-ésima. En lugar de estudiar
+únicamente \(a_k^{1/k}\), como en las desigualdades de Maclaurin, estudiaremos sus
+cocientes consecutivos:
+\begin{equation}\label{eq:def-Nk-intro}
+\cN_k=\frac{a_k}{a_{k-1}}
+=\frac{k}{n-k+1}\frac{e_k}{e_{k-1}}.
+\end{equation}
+Los extremos son
+\[
+\cN_1=\frac{e_1}{n}=\AM(r_1,\dots,r_n),
+\qquad
+\cN_n=\frac{ne_n}{e_{n-1}}=\HM(r_1,\dots,r_n).
+\]
+La pregunta cambia entonces de naturaleza:
+
+\begin{researchbox}[Pregunta guía]
+¿Existe una geometría que produzca simultáneamente todos los cocientes
+\(\cN_1,\dots,\cN_n\), explique por qué están ordenados, muestre por qué su
+producto es \(\GM^n\) y conecte esa cadena con mapas racionales definidos por las
+raíces y por las derivadas sucesivas de \(P\)?
+\end{researchbox}
+
+La respuesta será afirmativa. El punto apolar \(K_P\) contiene todos los \(a_k\) como
+coordenadas consecutivas. Las banderas osculadoras en \(0\) y \(\infty\) seleccionan
+cada par \([a_k:a_{k-1}]\). Al mismo tiempo, las derivadas normalizadas de \(P\)
+forman una torre \(Q_k\), y el mapa polar asociado a \(Q_k\), evaluado en el origen,
+produce exactamente \(\cN_k\).
+
+\subsection{Mapa conceptual de los resultados principales}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[node distance=12mm and 12mm,>=Latex,scale=0.85,transform shape,
+ every node/.style={align=center}]
+\node[draw=Navy,fill=Ice,rounded corners,minimum width=39mm,minimum height=13mm] (roots)
+  {raíces $r_1,\dots,r_n$\\[-1mm] divisor en $\PP^1$};
+\node[draw=Navy,fill=Ice,rounded corners,minimum width=42mm,minimum height=13mm,right=of roots] (poly)
+  {$P(t)=\prod(t-r_i)$\\ coeficientes $e_k$};
+\node[draw=DeepBlue,fill=Sky,rounded corners,minimum width=43mm,minimum height=13mm,right=of poly] (kp)
+  {punto apolar $K_P$\\ intersección osculadora};
+\node[draw=Gold,fill=Warm,rounded corners,minimum width=48mm,minimum height=13mm,below=of kp] (chain)
+  {$[a_k:a_{k-1}]$\\ cadena $\cN_k=a_k/a_{k-1}$};
+\node[draw=Green,fill=Mint,rounded corners,minimum width=48mm,minimum height=13mm,left=of chain] (tower)
+  {$Q_k=\frac{k!}{n!}P^{(n-k)}$\\ $Q_k'=kQ_{k-1}$};
+\node[draw=Brick,fill=white,rounded corners,minimum width=48mm,minimum height=13mm,left=of tower] (map)
+  {$\Phi_k(t)=t-\frac{Q_k}{Q_{k-1}}$\\ $\Phi_k(0)=\cN_k$};
+\draw[->,thick,DeepBlue] (roots)--(poly);
+\draw[->,thick,DeepBlue] (poly)--(kp);
+\draw[->,thick,Gold] (kp)--(chain);
+\draw[->,thick,Green] (poly)--(tower);
+\draw[->,thick,Green] (tower)--(map);
+\draw[->,thick,Brick] (map)--node[below,sloped,font=\small] {misma cantidad}(chain);
+\draw[->,thick,Slate,dashed,bend right=28] (roots) to node[above,font=\small] {forma binaria}(map);
+\end{tikzpicture}
+\caption{Las dos rutas que convergen en la cadena de medias: la ruta apolar y la ruta dinámica.}
+\label{fig:mapa-principal}
+\end{figure}
+
+% =============================================================================
+\section{Contexto histórico y conceptual}
+% =============================================================================
+
+\subsection{División armónica y geometría proyectiva}
+
+La geometría proyectiva nació de la necesidad de formular propiedades que no
+cambian al proyectar una figura desde un punto de vista a otro. Distancias y ángulos
+no sobreviven en general, pero la incidencia, la alineación y la razón doble sí lo
+hacen. La división armónica, caracterizada por una razón doble igual a \(-1\), fue
+uno de los mecanismos clásicos para construir conjugaciones sobre una recta sin
+recurrir a una métrica euclidiana \cite{Coxeter,Berger}.
+
+En lenguaje moderno, dos puntos distintos \(r,s\in\PP^1\) determinan una única
+involución proyectiva no trivial que los fija. En una carta afín, esa involución es
+\[
+h_{r,s}(o)=\frac{2rs-(r+s)o}{r+s-2o}.
+\]
+La media aritmética y la media armónica aparecen simplemente como
+\[
+h_{r,s}(\infty)=\frac{r+s}{2},
+\qquad
+h_{r,s}(0)=\frac{2rs}{r+s}.
+\]
+La parábola proporciona una realización visual de esa involución.
+
+\subsection{Newton, Maclaurin y la geometría oculta de los coeficientes}
+
+Si \(r_1,\dots,r_n>0\), las desigualdades de Newton afirman que la sucesión
+normalizada
+\[
+a_k=\frac{e_k}{\binom nk}
+\]
+es log-cóncava:
+\[
+a_k^2\ge a_{k-1}a_{k+1}.
+\]
+Las desigualdades de Maclaurin se expresan usualmente mediante las cantidades
+\(a_k^{1/k}\) \cite{HardyLittlewoodPolya,MarshallOlkinArnold}. Sin embargo, la log-concavidad contiene otra lectura inmediata:
+\[
+\frac{a_1}{a_0}\ge \frac{a_2}{a_1}\ge\cdots\ge\frac{a_n}{a_{n-1}}.
+\]
+Es exactamente la cadena \(\cN_1\ge\cdots\ge\cN_n\). Así, el paso de Maclaurin a
+los cocientes consecutivos no añade una desigualdad nueva, pero revela una
+organización distinta: una escalera multiplicativa cuyas piezas tienen dimensión de
+longitud y cuyos extremos son \(\AM\) y \(\HM\).
+
+\subsection{Apolaridad, formas binarias y la curva racional normal}
+
+La apolaridad surgió en la teoría clásica de invariantes como un emparejamiento entre
+formas binarias. En la formulación geométrica contemporánea, la aplicación de
+Veronese
+\[
+\PP^1\hookrightarrow\PP^n
+\]
+identifica una potencia \(L^n\) de una forma lineal con un punto de una curva racional
+normal. Los hiperplanos osculadores de esa curva pueden describirse mediante la
+anulación apolar \cite{Dolgachev,IarrobinoKanev,Olver}. El polinomio cuyas raíces son \(r_i\) define un hiperplano secante;
+su polo apolar es un punto \(K_P\) que también es la intersección de los hiperplanos
+osculadores en las raíces. La geometría de configuraciones osculadoras de curvas
+racionales normales continúa siendo objeto de investigación moderna
+\cite{CaminataCarliniSchaffler}.
+
+\subsection{El diferencial exterior y los mapas racionales de raíces}
+
+Una forma binaria homogénea \(F(X,Y)\) determina la $1$-forma exacta
+\(\dd F=F_X\dd X+F_Y\dd Y\). En dimensión dos, una forma lineal puede identificarse,
+mediante el área orientada, con un vector. De aquí nace el mapa homogéneo
+\[
+[-F_Y:F_X]:\PP^1\longrightarrow\PP^1.
+\]
+Para \(F(X,Y)=Y^nP(X/Y)\), su expresión afín es
+\[
+\Phi_P(t)=t-n\frac{P(t)}{P'(t)}.
+\]
+Este mapa fue señalado explícitamente por Doyle y McMullen en el contexto de mapas
+racionales con simetría \cite{DoyleMcMullen}: es el único mapa de grado \(n-1\) que fija las raíces de
+\(P\) y tiene derivada \(1-n\) en cada una de ellas. En el presente trabajo no se
+reclama ese hecho como nuevo; se utiliza como el nivel superior de una torre que
+conecta todas las medias \(\cN_k\).
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[x=1.2cm,y=1cm,>=Latex]
+\draw[Slate,line width=1.1pt] (0,0)--(12,0);
+\foreach \x/\year/\lab in {
+0.5/{s. XIX}/{razón doble\\y división armónica},
+3.4/{s. XIX}/{invariantes\\y apolaridad},
+6.2/{Newton--Maclaurin}/{log-concavidad\\de $e_k/\binom nk$},
+9.0/{1989}/{Doyle--McMullen\\mapa $t-nP/P'$},
+11.6/{presente marco}/{cadena $\cN_k$\\y torre derivada}}
+{
+  \fill[DeepBlue] (\x,0) circle (2.4pt);
+  \draw[DeepBlue] (\x,0)--(\x,0.35);
+  \node[above,font=\small\sffamily\bfseries,text=Navy] at (\x,0.35) {\year};
+  \node[below=3mm,align=center,font=\scriptsize,text=Slate] at (\x,0) {\lab};
+}
+\end{tikzpicture}
+\caption{Línea conceptual, no cronología exhaustiva: el manuscrito reúne tradiciones matemáticas distintas en una sola construcción.}
+\label{fig:timeline}
+\end{figure}
+
+% =============================================================================
+\section{La recta proyectiva, la razón doble y la involución armónica}
+% =============================================================================
+
+\subsection{La recta proyectiva desde cero}
+
+Sea \(\KK\) un cuerpo. La recta proyectiva se define como
+\[
+\PP^1(\KK)=\bigl(\KK^2\setminus\{(0,0)\}\bigr)/\sim,
+\]
+donde \((u,v)\sim(\lambda u,\lambda v)\) para todo \(\lambda\in\KK^\times\). La
+clase de \((u,v)\) se escribe \([u:v]\). Cuando \(v\ne0\), podemos dividir por
+\(v\) y escribir \([u:v]=[u/v:1]\). Así aparece la carta afín \(t=u/v\). El punto
+que falta es \([1:0]\), denotado por \(\infty\).
+
+Una transformación proyectiva de la recta es la acción de una matriz invertible
+\[
+\begin{pmatrix}a&b\\c&d\end{pmatrix}
+\]
+sobre coordenadas homogéneas. En la carta afín se convierte en una transformación de
+Möbius
+\[
+t\longmapsto\frac{at+b}{ct+d}.
+\]
+Dos matrices proporcionales inducen la misma transformación, por lo que el grupo
+natural es \(\PGL_2(\KK)\).
+
+\subsection{Razón doble}
+
+\begin{definition}[Razón doble homogénea]
+Sean \(A=[a_0:a_1]\), \(B=[b_0:b_1]\), \(C=[c_0:c_1]\) y
+\(D=[d_0:d_1]\) cuatro puntos tales que los denominadores siguientes no se anulan.
+Definimos
+\[
+(A,B;C,D)=
+\frac{\det(A,C)\det(B,D)}{\det(A,D)\det(B,C)},
+\]
+donde \(\det(A,C)=a_0c_1-a_1c_0\).
+\end{definition}
+
+La fórmula es homogénea: si se cambia un representante por un múltiplo escalar, ese
+factor aparece una vez arriba y una vez abajo, y se cancela.
+
+\begin{proposition}[Invariancia proyectiva]
+La razón doble es invariante bajo la acción de \(\PGL_2(\KK)\).
+\end{proposition}
+
+\begin{proof}
+Si \(M\in\GL_2(\KK)\), entonces
+\[
+\det(Mu,Mv)=\det(M)\det(u,v).
+\]
+Cada uno de los cuatro determinantes de la razón doble recibe el mismo factor
+\(\det(M)\). Dos factores aparecen en el numerador y dos en el denominador, por lo
+que se cancelan.
+\end{proof}
+
+\subsection{Conjugados armónicos}
+
+\begin{definition}
+Dados dos puntos distintos \(R,S\in\PP^1\), decimos que \(O\) y \(H\) son
+conjugados armónicos respecto de \(R,S\) si
+\[
+(R,S;O,H)=-1.
+\]
+\end{definition}
+
+\begin{theorem}[Fórmula de la involución armónica]\label{thm:harmonic-map}
+Sean \(r,s\in\KK\), \(r\ne s\), y supongamos \(\operatorname{char}(\KK)\ne2\).
+Para cada \(o\in\PP^1(\KK)\) existe un único \(h_{r,s}(o)\) tal que
+\((r,s;o,h_{r,s}(o))=-1\). En coordenada afín,
+\begin{equation}\label{eq:harmonic-explicit}
+h_{r,s}(o)=\frac{2rs-(r+s)o}{r+s-2o}.
+\end{equation}
+Si
+\[
+A=\frac{r+s}{2},\qquad D=\frac{r-s}{2},
+\]
+entonces
+\begin{equation}\label{eq:harmonic-centered}
+h_{r,s}(o)=A+\frac{D^2}{o-A}.
+\end{equation}
+Además, \(h_{r,s}\) es una involución proyectiva no trivial, fija \(r\) y \(s\), y
+satisface
+\[
+h_{r,s}(\infty)=A,
+\qquad
+h_{r,s}(0)=\frac{2rs}{r+s}
+\]
+cuando \(r+s\ne0\).
+\end{theorem}
+
+\begin{proof}
+En coordenadas afines, la condición armónica es
+\[
+\frac{r-o}{s-o}\frac{r-h}{s-h}=-1.
+\]
+Al despejar \(h\),
+\[
+(r-o)(s-h)=-(s-o)(r-h),
+\]
+y, después de reagrupar,
+\[
+h(r+s-2o)=2rs-(r+s)o.
+\]
+Esto produce \cref{eq:harmonic-explicit}. Para obtener la forma centrada, sustituimos
+\(r=A+D\), \(s=A-D\), de modo que \(rs=A^2-D^2\). Entonces
+\[
+\frac{2(A^2-D^2)-2Ao}{2A-2o}
+=A+\frac{D^2}{o-A}.
+\]
+La involutividad se ve directamente:
+\[
+h_{r,s}(o)-A=\frac{D^2}{o-A}
+\quad\Longrightarrow\quad
+h_{r,s}(h_{r,s}(o))-A
+=\frac{D^2}{D^2/(o-A)}=o-A.
+\]
+Las demás identidades se obtienen por sustitución o por continuidad proyectiva.
+\end{proof}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[scale=1.03,>=Latex]
+\draw[-{Latex[length=2.5mm]},Slate] (-5.3,0)--(5.4,0) node[right] {$\PP^1$};
+\coordinate (R) at (-3.4,0);
+\coordinate (S) at (3.2,0);
+\coordinate (O) at (-1.0,0);
+\coordinate (H) at (1.6,0);
+\foreach \p/\lab/\col in {R/$r$/Brick,S/$s$/Brick,O/$o$/DeepBlue,H/$h_{r,s}(o)$/Gold}{
+  \fill[\col] (\p) circle (2.6pt);
+  \node[above=2mm,text=\col,font=\small\bfseries] at (\p) {\lab};
+}
+\draw[decorate,decoration={brace,amplitude=5pt},Brick] (R)+(0,-.35)--(S)+(0,-.35)
+ node[midway,below=5pt,font=\small] {par fijo};
+\draw[decorate,decoration={brace,amplitude=5pt,mirror},DeepBlue] (O)+(0,.42)--(H)+(0,.42)
+ node[midway,above=6pt,font=\small] {par armónico};
+\node[draw=Navy,fill=Ice,rounded corners,align=center,font=\small] at (0,-1.45)
+ {$\displaystyle (r,s;o,h)=-1$\\la razón doble, no la distancia, es el invariante};
+\end{tikzpicture}
+\caption{La condición armónica vive en la recta proyectiva y no depende de una métrica.}
+\label{fig:harmonic-line}
+\end{figure}
+
+% =============================================================================
+\section{La parábola como máquina geométrica de la involución}
+% =============================================================================
+
+\subsection{Construcción correcta}
+
+Sea
+\[
+\mathcal P:\quad y=a(x-r)(x-s),\qquad a\in\RR^\times,\quad r\ne s.
+\]
+Escribamos
+\[
+A=\frac{r+s}{2},\qquad D=\frac{r-s}{2}.
+\]
+Entonces
+\[
+\mathcal P:\quad y=a\bigl((x-A)^2-D^2\bigr),
+\]
+y su vértice es
+\[
+V=(A,-aD^2).
+\]
+Para cada abscisa \(o\), la vertical \(x=o\) corta la gráfica en un único punto
+\[
+Y_o=\bigl(o,a((o-A)^2-D^2)\bigr).
+\]
+Es importante decir \emph{el punto de la parábola de abscisa \(o\)}, y no ``el
+segundo punto de intersección con la vertical'', porque una gráfica cuadrática tiene
+un solo punto sobre cada vertical.
+
+\begin{theorem}[Realización parabólica]\label{thm:parabola-harmonic}
+Si \(o\ne A\), la recta \(VY_o\) corta el eje \(x\) en el punto de abscisa
+\[
+h_{r,s}(o)=A+\frac{D^2}{o-A}.
+\]
+Cuando \(o=A\), la recta límite es la tangente horizontal en el vértice, cuyo punto
+de intersección proyectivo con el eje es \(\infty=h_{r,s}(A)\).
+\end{theorem}
+
+\begin{proof}
+La pendiente de \(VY_o\) es
+\[
+\frac{a((o-A)^2-D^2)+aD^2}{o-A}=a(o-A).
+\]
+Por tanto, la recta tiene ecuación
+\[
+y+aD^2=a(o-A)(x-A).
+\]
+Al imponer \(y=0\), obtenemos
+\[
+x=A+\frac{D^2}{o-A}=h_{r,s}(o).
+\]
+El caso \(o=A\) se obtiene como límite proyectivo.
+\end{proof}
+
+\begin{corollary}[Lectura de dos medias]
+Para \(r,s>0\),
+\[
+\AM(r,s)=h_{r,s}(\infty)=\frac{r+s}{2},
+\qquad
+\HM(r,s)=h_{r,s}(0)=\frac{2rs}{r+s}.
+\]
+\end{corollary}
+
+\begin{figure}[p]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.92\textwidth,height=0.58\textwidth,
+  axis lines=middle,xmin=-2.7,xmax=5.3,ymin=-3.2,ymax=6.7,
+  xlabel={$x$},ylabel={$y$},
+  xtick={-2,0,1,1.6,2,2.5,4,5},
+  xticklabels={$-2$,$0$,$1$,$\frac85$,$2$,$\frac52$,$4$,$5$},
+  ytick={-2.25,0,4},yticklabels={$-\frac94$,$0$,$4$},
+  grid=both,minor tick num=1,grid style={SoftGray},
+  legend style={draw=none,fill=none,font=\small,at={(0.03,0.97)},anchor=north west},
+  clip=false]
+\addplot[DeepBlue,very thick,domain=-2.2:5.0,samples=240]{(x-1)*(x-4)};
+\addlegendentry{$y=(x-1)(x-4)$}
+\addplot[Brick,thick,domain=-2.5:2.55]{-0.9*(x-2.5)-2.25};
+\addlegendentry{recta $VY_0$}
+\addplot[Green,thick,domain=-2.4:4.1]{-0.5*(x-2.5)-2.25};
+\addlegendentry{recta $VY_2$}
+\addplot[Slate,dashed] coordinates {(2.5,-3.1) (2.5,6.2)};
+\addplot[Slate,dashed] coordinates {(0,-3.1) (0,4.2)};
+\addplot[Slate,dashed] coordinates {(2,-3.1) (2,4.2)};
+\addplot[only marks,mark=*,mark size=2.7pt,Brick] coordinates {(1,0) (4,0)};
+\addplot[only marks,mark=*,mark size=2.7pt,Gold] coordinates {(2.5,-2.25)};
+\addplot[only marks,mark=*,mark size=2.7pt,Brick] coordinates {(0,4)};
+\addplot[only marks,mark=*,mark size=2.7pt,Green] coordinates {(2,-2)};
+\addplot[only marks,mark=*,mark size=2.7pt,Brick] coordinates {(1.6,0)};
+\addplot[only marks,mark=*,mark size=2.7pt,Green] coordinates {(-2,0)};
+\node[anchor=south east,text=Brick] at (axis cs:1,0) {$R$};
+\node[anchor=south west,text=Brick] at (axis cs:4,0) {$S$};
+\node[anchor=north west,text=Gold] at (axis cs:2.5,-2.25) {$V$};
+\node[anchor=south west,text=Brick] at (axis cs:0,4) {$Y_0$};
+\node[anchor=north east,text=Green] at (axis cs:2,-2) {$Y_2$};
+\node[anchor=south,text=Brick] at (axis cs:1.6,0) {$H_0=\HM=\frac85$};
+\node[anchor=south,text=Green] at (axis cs:-2,0) {$H_2=h_{1,4}(2)$};
+\node[anchor=south west,text=Gold] at (axis cs:2.5,0) {$\AM=\frac52$};
+\end{axis}
+\end{tikzpicture}
+\caption{La parábola realiza toda la involución armónica, no sólo los valores especiales \(0\) y \(\infty\). En el ejemplo \(r=1\), \(s=4\), la secante \(VY_0\) corta el eje en \(8/5\), mientras que \(VY_2\) lo corta en \(-2\).}
+\label{fig:parabola}
+\end{figure}
+
+\subsection{La media geométrica pertenece a otra involución}
+
+La transformación recíproca
+\[
+m_{r,s}(x)=\frac{rs}{x}
+\]
+intercambia \(r\) y \(s\), y sus puntos fijos satisfacen \(x^2=rs\). Por tanto,
+para \(r,s>0\), el punto fijo positivo es \(\GM(r,s)\). Las involuciones
+\(h_{r,s}\) y \(m_{r,s}\) no son iguales: la primera fija las raíces; la segunda las
+intercambia. Su compatibilidad se expresa mediante
+\[
+m_{r,s}(\AM)=\HM,
+\qquad
+\AM\cdot\HM=\GM^2.
+\]
+Más adelante, la identidad de producto se generalizará a una cadena completa:
+\[
+\cN_1\cN_2\cdots\cN_n=\GM^n.
+\]
+
+
+% =============================================================================
+\section{Polinomios simétricos, log-concavidad y una cadena de medias}
+% =============================================================================
+
+\subsection{De las raíces a los coeficientes}
+
+Sea \(n\ge2\) y sean \(r_1,\dots,r_n\) números, inicialmente en un cuerpo de
+característica cero. Los polinomios simétricos elementales son
+\[
+e_0=1,
+\qquad
+e_k=\sum_{1\le i_1<\cdots<i_k\le n}
+ r_{i_1}\cdots r_{i_k}
+\quad(1\le k\le n).
+\]
+El polinomio mónico de raíces \(r_i\) es
+\begin{equation}\label{eq:P-viete}
+P(t)=\prod_{i=1}^{n}(t-r_i)
+=\sum_{k=0}^{n}(-1)^ke_k t^{n-k}.
+\end{equation}
+Las identidades de Viète no son sólo un mecanismo de cálculo: convierten un conjunto
+de puntos en una lista de coordenadas algebraicas invariantes bajo permutaciones.
+
+Normalizamos esos coeficientes mediante
+\begin{equation}\label{eq:ak}
+a_k=\frac{e_k}{\binom nk},\qquad 0\le k\le n.
+\end{equation}
+La normalización es esencial. Si todas las variables son iguales a \(x\), entonces
+\[
+e_k=\binom nk x^k,
+\qquad a_k=x^k.
+\]
+Por tanto, los cocientes \(a_k/a_{k-1}\) devuelven exactamente \(x\), como debe
+hacer una media.
+
+\begin{definition}[Cocientes de Newton normalizados]\label{def:newton-quotient-means}
+Para \(r_1,\dots,r_n>0\), definimos
+\begin{equation}\label{eq:Nk}
+\boxed{
+\cN_k(r_1,\dots,r_n)
+=\frac{a_k}{a_{k-1}}
+=\frac{k}{n-k+1}\frac{e_k}{e_{k-1}}},
+\qquad 1\le k\le n.
+\end{equation}
+Los llamaremos \emph{cocientes de Newton normalizados} o, cuando queramos enfatizar
+sus propiedades de internalidad, \emph{medias cociente de Newton}.
+\end{definition}
+
+\begin{remark}
+La terminología se usa aquí para organizar el manuscrito. Las razones consecutivas de
+sumas simétricas elementales aparecen naturalmente en la teoría de desigualdades y de
+polinomios reales; no se afirma que la expresión algebraica sea inédita.
+\end{remark}
+
+\subsection{Prueba autocontenida de las desigualdades de Newton}
+
+La cadena \(\cN_1\ge\cdots\ge\cN_n\) será consecuencia de la log-concavidad de
+\((a_k)\). Como esta propiedad sostiene una parte central del artículo, daremos una
+prueba completa.
+
+\begin{theorem}[Newton normalizado]\label{thm:newton}
+Si \(r_1,\dots,r_n\in\RR\) y el polinomio
+\[
+E(x)=\prod_{i=1}^{n}(1+r_i x)
+=\sum_{k=0}^{n}\binom nk a_kx^k
+\]
+tiene todas sus raíces reales, entonces
+\begin{equation}\label{eq:newton-logconcave}
+a_k^2\ge a_{k-1}a_{k+1},
+\qquad 1\le k\le n-1.
+\end{equation}
+Si todos los \(r_i\) son positivos, la desigualdad es estricta salvo en el caso en que
+todos los \(r_i\) sean iguales.
+\end{theorem}
+
+\begin{proof}
+Fijemos \(k\in\{1,\dots,n-1\}\) y escribamos \(m=n-k+1\). Como la derivación
+preserva la realidad de las raíces por el teorema de Rolle, el polinomio
+\[
+G(x)=\frac{1}{n(n-1)\cdots(n-k+2)}E^{(k-1)}(x)
+\]
+tiene todas sus raíces reales. Usando
+\[
+\frac{\dd^{k-1}}{\dd x^{k-1}}\binom n{k-1+j}x^{k-1+j}
+=\frac{n!}{(n-k+1)!}\binom mj x^j,
+\]
+obtenemos, salvo un factor positivo irrelevante,
+\[
+G(x)=\sum_{j=0}^{m}\binom mj a_{k-1+j}x^j.
+\]
+El polinomio recíproco
+\[
+G^*(x)=x^mG(1/x)
+=\sum_{j=0}^{m}\binom mj a_{k-1+j}x^{m-j}
+\]
+también tiene todas sus raíces reales. Derivamos \(m-2\) veces. Sólo los tres
+primeros términos contribuyen a los grados \(2,1,0\), y se obtiene
+\[
+\frac{2}{m!}\frac{\dd^{m-2}}{\dd x^{m-2}}G^*(x)
+=a_{k-1}x^2+2a_kx+a_{k+1}.
+\]
+Este polinomio cuadrático tiene raíces reales; por tanto, su discriminante es no
+negativo:
+\[
+(2a_k)^2-4a_{k-1}a_{k+1}\ge0.
+\]
+Esto es exactamente \cref{eq:newton-logconcave}.
+
+Para variables positivas, la condición de igualdad en las desigualdades de Newton
+implica que las raíces negativas de \(E\) coinciden, es decir, que
+\(-1/r_1=\cdots=-1/r_n\). Equivalentemente, \(r_1=\cdots=r_n\).
+\end{proof}
+
+\begin{corollary}[Cadena decreciente]\label{cor:chain-monotone}
+Para \(r_i>0\),
+\begin{equation}\label{eq:chain}
+\boxed{
+\cN_1\ge\cN_2\ge\cdots\ge\cN_n}.
+\end{equation}
+La cadena es estricta si no todas las variables son iguales.
+\end{corollary}
+
+\begin{proof}
+La desigualdad \(a_k^2\ge a_{k-1}a_{k+1}\), con todos los términos positivos, es
+equivalente a
+\[
+\frac{a_k}{a_{k-1}}\ge\frac{a_{k+1}}{a_k}.
+\]
+El lado izquierdo es \(\cN_k\) y el derecho es \(\cN_{k+1}\).
+\end{proof}
+
+\subsection{Los extremos y el producto telescópico}
+
+\begin{theorem}[De la media aritmética a la armónica]\label{thm:endpoints-product}
+Para \(r_1,\dots,r_n>0\),
+\begin{align}
+\cN_1&=\frac{e_1}{n}=\AM(r_1,\dots,r_n),\label{eq:N1-AM}\\
+\cN_n&=\frac{ne_n}{e_{n-1}}
+=\frac{n}{\sum_{i=1}^{n}r_i^{-1}}
+=\HM(r_1,\dots,r_n),\label{eq:Nn-HM}\\
+\prod_{k=1}^{n}\cN_k&=e_n=\prod_{i=1}^{n}r_i=\GM(r_1,\dots,r_n)^n.\label{eq:product-GM}
+\end{align}
+Por tanto,
+\begin{equation}\label{eq:main-chain-product}
+\boxed{
+\AM=\cN_1\ge\cN_2\ge\cdots\ge\cN_n=\HM,
+\qquad
+\GM=\left(\prod_{k=1}^{n}\cN_k\right)^{1/n}.}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+La primera identidad es inmediata. Para la segunda, observamos que
+\[
+e_{n-1}=\sum_{j=1}^{n}\prod_{i\ne j}r_i
+=e_n\sum_{j=1}^{n}\frac1{r_j}.
+\]
+Así,
+\[
+\frac{ne_n}{e_{n-1}}
+=\frac{n}{\sum_j1/r_j}.
+\]
+Finalmente, el producto de los cocientes es telescópico:
+\[
+\prod_{k=1}^{n}\cN_k
+=\prod_{k=1}^{n}\frac{a_k}{a_{k-1}}
+=\frac{a_n}{a_0}=e_n.
+\]
+\end{proof}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=Latex,node distance=9mm]
+\foreach \k/\lab/\col in {1/{\AM=\cN_1}/DeepBlue,2/{\cN_2}/Gold,3/{\cN_3}/Gold,4/{\cdots}/Slate,5/{\cN_{n-1}}/Gold,6/{\cN_n=\HM}/Brick}{
+  \node[circle,draw=\col,fill=white,minimum size=13mm,font=\small\bfseries] (n\k) at (1.8*\k,0) {$\lab$};
+}
+\foreach \k in {1,...,5}{
+  \pgfmathtruncatemacro{\j}{\k+1}
+  \draw[-{Latex[length=2.3mm]},thick,Slate] (n\k)--node[above,font=\scriptsize] {$\ge$}(n\j);
+}
+\draw[decorate,decoration={brace,mirror,amplitude=6pt},Green,thick]
+  ($(n1.south west)+(0,-.35)$)--($(n6.south east)+(0,-.35)$)
+  node[midway,below=9pt,text=Green,font=\small\bfseries]
+  {$\displaystyle \cN_1\cN_2\cdots\cN_n=\GM^n$};
+\end{tikzpicture}
+\caption{La media geométrica no es, en general, uno de los peldaños: es la media geométrica de todos ellos.}
+\label{fig:newton-chain}
+\end{figure}
+
+\subsection[Por qué cada cociente merece llamarse media]{Por qué cada \(\cN_k\) merece llamarse media}
+
+Una función de varias variables positivas puede llamarse media en un sentido amplio
+si es simétrica, continua, homogénea de grado uno, idempotente e interna. Es deseable,
+además, que sea creciente en cada variable.
+
+\begin{theorem}[Propiedades de media]\label{thm:mean-properties}
+Para cada \(k\in\{1,\dots,n\}\), la función \(\cN_k:(0,\infty)^n\to(0,\infty)\)
+es:
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item simétrica;
+\item continua y homogénea de grado uno;
+\item idempotente: \(\cN_k(x,\dots,x)=x\);
+\item estrictamente creciente en cada variable;
+\item interna:
+\[
+\min_i r_i\le\cN_k(r_1,\dots,r_n)\le\max_i r_i.
+\]
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+Las propiedades (i)--(iii) se leen directamente de \cref{eq:Nk}. Para la monotonicidad,
+fijemos un índice \(j\) y separemos la variable \(x=r_j\). Denotemos por
+\(E_q\) el polinomio simétrico elemental de grado \(q\) en las otras \(n-1\)
+variables, con la convención \(E_q=0\) fuera del intervalo \(0\le q\le n-1\). Entonces
+\[
+e_k=E_k+xE_{k-1},
+\qquad
+e_{k-1}=E_{k-1}+xE_{k-2}.
+\]
+Para \(k\ge2\),
+\[
+\frac{\partial}{\partial x}\frac{e_k}{e_{k-1}}
+=\frac{E_{k-1}^2-E_kE_{k-2}}{(E_{k-1}+xE_{k-2})^2}.
+\]
+Las desigualdades de Newton aplicadas a las \(n-1\) variables restantes implican
+\(E_{k-1}^2>E_kE_{k-2}\) en el cono positivo. Por tanto, la derivada es positiva.
+Para \(k=1\), \(\cN_1=e_1/n\) y la derivada es \(1/n\).
+
+Finalmente, si \(m=\min_i r_i\) y \(M=\max_i r_i\), la monotonicidad coordenada a
+coordenada da
+\[
+\cN_k(m,\dots,m)\le\cN_k(r_1,\dots,r_n)
+\le\cN_k(M,\dots,M).
+\]
+La idempotencia convierte los extremos en \(m\) y \(M\).
+\end{proof}
+
+\subsection{Dualidad por inversión}
+
+La relación clásica entre media aritmética y armónica se amplía a toda la cadena.
+
+\begin{theorem}[Dualidad recíproca]\label{thm:reciprocal-duality}
+Para \(r_i>0\),
+\begin{equation}\label{eq:reciprocal-duality}
+\boxed{
+\cN_k(r_1^{-1},\dots,r_n^{-1})
+=\frac{1}{\cN_{n-k+1}(r_1,\dots,r_n)}}.
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+La identidad elemental
+\[
+e_k(r_1^{-1},\dots,r_n^{-1})
+=\frac{e_{n-k}(r_1,\dots,r_n)}{e_n(r_1,\dots,r_n)}
+\]
+implica, usando \(\binom nk=\binom n{n-k}\), que
+\[
+a_k(r^{-1})=\frac{a_{n-k}(r)}{a_n(r)}.
+\]
+Por tanto,
+\[
+\cN_k(r^{-1})
+=\frac{a_{n-k}/a_n}{a_{n-k+1}/a_n}
+=\frac{a_{n-k}}{a_{n-k+1}}
+=\frac{1}{\cN_{n-k+1}(r)}.
+\]
+\end{proof}
+
+\begin{keybox}[Qué se ha obtenido sin geometría]
+Hasta aquí, la cadena completa se deduce de álgebra simétrica y de las desigualdades
+de Newton. Todavía falta responder la pregunta estructural: ¿por qué los números
+\(a_k\) deben aparecer como coordenadas de un único punto geométrico y por qué los
+cocientes consecutivos corresponden a proyecciones naturales? Esa es la función de la
+curva racional normal y de la apolaridad.
+\end{keybox}
+
+% =============================================================================
+\section{Curva racional normal y espacios osculadores}
+% =============================================================================
+
+\subsection{La aplicación de Veronese}
+
+Sea \(\KK\) un cuerpo y supongamos \(n\ge2\). Definimos
+\begin{equation}\label{eq:veronese}
+\nu_n:\PP^1(\KK)\longrightarrow\PP^n(\KK),
+\qquad
+[u:v]\longmapsto[u^n:u^{n-1}v:\cdots:uv^{n-1}:v^n].
+\end{equation}
+Su imagen se llama \emph{curva racional normal de grado \(n\)}. En la carta
+\(v\ne0\), con \(t=u/v\), escribimos
+\[
+\nu_n(t)=[t^n:t^{n-1}:\cdots:t:1].
+\]
+Los puntos distinguidos son
+\[
+\nu_n(0)=[0:\cdots:0:1],
+\qquad
+\nu_n(\infty)=[1:0:\cdots:0].
+\]
+
+La palabra ``normal'' indica que la curva de grado \(n\) ocupa el espacio proyectivo
+mínimo posible \(\PP^n\) sin quedar contenida en un hiperplano. No debe confundirse
+con una noción métrica de normalidad.
+
+\subsection{Qué significa oscilar una curva}
+
+En cálculo, la recta tangente aproxima una curva hasta primer orden. En geometría
+proyectiva superior se consideran aproximaciones de orden mayor.
+
+\begin{definition}[Espacio osculador]
+Para \(r\in\KK\) y \(0\le m\le n\), definimos
+\[
+\Osc_r^m(\nu_n)
+=\PP\left(\Span\{\nu_n(r),\nu_n'(r),\dots,\nu_n^{(m)}(r)\}\right).
+\]
+Es un subespacio proyectivo de dimensión \(m\), siempre que la característica no
+produzca degeneraciones. El caso \(m=1\) es la tangente y el caso \(m=n-1\) es el
+hiperplano osculador.
+\end{definition}
+
+\begin{lemma}[Banderas opuestas en \(0\) y \(\infty\)]\label{lem:flags}
+En coordenadas \([X_0:\cdots:X_n]\),
+\begin{align}
+\Osc_0^m(\nu_n)&=\PP\Span\{e_{n-m},\dots,e_n\},\label{eq:osc0}\\
+\Osc_\infty^m(\nu_n)&=\PP\Span\{e_0,\dots,e_m\},\label{eq:oscinf}
+\end{align}
+donde \(e_0,\dots,e_n\) es la base canónica de \(\KK^{n+1}\).
+\end{lemma}
+
+\begin{proof}
+En la carta afín,
+\[
+\nu_n(t)=(t^n,t^{n-1},\dots,t,1).
+\]
+Al evaluar las derivadas de órdenes \(0,\dots,m\) en \(t=0\), sólo aparecen los
+últimos \(m+1\) vectores de la base. Para \(\infty\), usamos el parámetro local
+\(s=v/u\):
+\[
+\nu_n([1:s])=(1,s,s^2,\dots,s^n),
+\]
+y las derivadas en \(s=0\) generan los primeros \(m+1\) vectores.
+\end{proof}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=Latex,scale=0.92]
+\draw[rounded corners,fill=Ice,draw=Navy] (0,0) rectangle (14,4.3);
+\foreach \i in {0,...,8}{
+  \node[circle,draw=DeepBlue,fill=white,minimum size=8mm] (e\i) at (1.1+1.45*\i,2.15) {$e_{\i}$};
+}
+\draw[decorate,decoration={brace,amplitude=7pt},Brick,thick]
+  ($(e0.north west)+(0,.15)$)--($(e3.north east)+(0,.15)$)
+  node[midway,above=8pt,font=\small\bfseries,text=Brick] {$\Osc_\infty^3$};
+\draw[decorate,decoration={brace,mirror,amplitude=7pt},Green,thick]
+  ($(e5.south west)+(0,-.15)$)--($(e8.south east)+(0,-.15)$)
+  node[midway,below=8pt,font=\small\bfseries,text=Green] {$\Osc_0^3$};
+\draw[-{Latex[length=2.5mm]},Slate,thick] (e0.west)+(-.7,0)--(e0.west)
+ node[left,font=\small] {$\infty$};
+\draw[-{Latex[length=2.5mm]},Slate,thick] (e8.east)+(.7,0)--(e8.east)
+ node[right,font=\small] {$0$};
+\node[font=\small\sffamily,text=Slate] at (7,0.55)
+ {dos banderas osculadoras que avanzan desde extremos opuestos};
+\end{tikzpicture}
+\caption{Las banderas osculadoras en \(\infty\) y \(0\) seleccionan bloques consecutivos de coordenadas. Esta estructura permitirá leer todos los cocientes \(a_k/a_{k-1}\).}
+\label{fig:opposite-flags}
+\end{figure}
+
+% =============================================================================
+\section{Apolaridad y el punto que comprime todas las raíces}
+% =============================================================================
+
+\subsection{La forma apolar}
+
+A partir de ahora suponemos
+\[
+\operatorname{char}(\KK)=0
+\quad\text{o bien}\quad
+\operatorname{char}(\KK)>n.
+\]
+Esta hipótesis garantiza que los coeficientes binomiales relevantes son invertibles.
+
+\begin{definition}[Emparejamiento apolar]\label{def:apolar-pairing}
+Para \(X=(X_0,\dots,X_n)\) y \(Y=(Y_0,\dots,Y_n)\) en \(\KK^{n+1}\), definimos
+\begin{equation}\label{eq:apolar}
+B_n(X,Y)=\sum_{i=0}^{n}(-1)^i\binom ni X_iY_{n-i}.
+\end{equation}
+\end{definition}
+
+Su matriz es antidiagonal, con entradas no nulas
+\[
+1,-n,\binom n2,\dots,(-1)^n.
+\]
+Por la hipótesis de característica, ninguna se anula; por tanto, \(B_n\) es no
+degenerada. Además,
+\[
+B_n(Y,X)=(-1)^nB_n(X,Y).
+\]
+Para nuestros propósitos, la ecuación de ortogonalidad \(B_n(X,Y)=0\) es simétrica,
+aunque la forma sea alternante cuando \(n\) es impar.
+
+\begin{proposition}[Primera identidad maestra]\label{prop:first-master}
+Para cualesquiera \(t,r\in\KK\),
+\begin{equation}\label{eq:first-master}
+B_n(\nu_n(t),\nu_n(r))=(t-r)^n.
+\end{equation}
+En consecuencia, el hiperplano polar de \(\nu_n(r)\),
+\[
+H_r=\{X\in\PP^n:B_n(X,\nu_n(r))=0\},
+\]
+coincide con el hiperplano osculador \(\Osc_r^{n-1}(\nu_n)\).
+\end{proposition}
+
+\begin{proof}
+Sustituyendo \(\nu_n(t)=[t^n:t^{n-1}:\cdots:1]\) y
+\(\nu_n(r)=[r^n:r^{n-1}:\cdots:1]\), obtenemos
+\[
+B_n(\nu_n(t),\nu_n(r))
+=\sum_{i=0}^{n}(-1)^i\binom ni t^{n-i}r^i
+=(t-r)^n.
+\]
+Al derivar respecto de \(t\) hasta orden \(n-1\) y evaluar en \(t=r\), se obtiene
+\[
+B_n(\nu_n^{(j)}(r),\nu_n(r))=0,
+\qquad 0\le j\le n-1.
+\]
+Por tanto, el hiperplano polar contiene el espacio osculador de dimensión \(n-1\), y
+ambos deben coincidir.
+\end{proof}
+
+\subsection{El punto apolar asociado a un polinomio}
+
+Sea \(P\) como en \cref{eq:P-viete}. Definimos
+\begin{equation}\label{eq:KP}
+K_P=
+\left[
+ e_n:\frac{e_{n-1}}{n}:\frac{e_{n-2}}{\binom n2}:\cdots:
+ \frac{e_1}{n}:1
+\right]
+=[a_n:a_{n-1}:\cdots:a_1:a_0].
+\end{equation}
+La inversión del orden no es caprichosa: está adaptada a la antidiagonal de la forma
+apolar.
+
+\begin{proposition}[Segunda identidad maestra]\label{prop:second-master}
+Para todo \(t\),
+\begin{equation}\label{eq:second-master}
+B_n(\nu_n(t),K_P)=P(t).
+\end{equation}
+En consecuencia, el hiperplano polar \(K_P^\perp\) contiene los puntos
+\(\nu_n(r_1),\dots,\nu_n(r_n)\). Si las raíces son distintas, esos \(n\) puntos
+son linealmente independientes y \(K_P^\perp\) es el único hiperplano que los
+contiene: el hiperplano \(n\)-secante determinado por el divisor de raíces.
+\end{proposition}
+
+\begin{proof}
+La coordenada de índice \(n-i\) de \(K_P\) es \(e_i/\binom ni\). Por tanto,
+\[
+B_n(\nu_n(t),K_P)
+=\sum_{i=0}^{n}(-1)^i\binom ni t^{n-i}\frac{e_i}{\binom ni}
+=\sum_{i=0}^{n}(-1)^ie_it^{n-i}=P(t).
+\]
+Si \(t=r_j\), el lado derecho se anula, de modo que \(\nu_n(r_j)\) pertenece al
+hiperplano polar de \(K_P\). Para raíces distintas, el menor formado por las últimas \(n\) coordenadas de
+los vectores \(\nu_n(r_j)\) es la matriz de Vandermonde
+\(\bigl(r_j^{\,n-1-i}\bigr)_{0\le i\le n-1,\,1\le j\le n}\), cuyo
+determinante es no nulo. Por tanto, los puntos
+abarcan un hiperplano proyectivo único, que necesariamente es \(K_P^\perp\).
+\end{proof}
+
+\begin{theorem}[Compresión apolar de las raíces]\label{thm:KP-intersection}
+Supongamos que \(r_1,\dots,r_n\) son distintas. Entonces
+\begin{equation}\label{eq:KP-intersection}
+\boxed{
+K_P=\bigcap_{i=1}^{n}\Osc_{r_i}^{n-1}(\nu_n).}
+\end{equation}
+Es decir, el mismo punto que es polar al hiperplano secante determinado por las raíces
+es la intersección de los hiperplanos osculadores en esas raíces.
+\end{theorem}
+
+\begin{proof}
+Sea \(X\) un punto perteneciente a todos los hiperplanos osculadores. Por
+\cref{prop:first-master},
+\[
+B_n(X,\nu_n(r_i))=0
+\]
+para cada \(i\). Como la ortogonalidad es simétrica hasta signo,
+\(B_n(\nu_n(r_i),X)=0\). Definamos
+\[
+F_X(t)=B_n(\nu_n(t),X).
+\]
+Es un polinomio de grado a lo sumo \(n\). La no degeneración de \(B_n\) garantiza
+que no es idénticamente nulo para un punto proyectivo \(X\). Como tiene las \(n\)
+raíces distintas \(r_i\), debe ser proporcional a \(P\):
+\[
+F_X(t)=\lambda P(t).
+\]
+Pero \cref{prop:second-master} afirma que \(P(t)=B_n(\nu_n(t),K_P)\). Comparando
+coeficientes se obtiene \(X=\lambda K_P\), es decir, el mismo punto proyectivo.
+\end{proof}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=Latex,node distance=10mm and 14mm,scale=0.76,transform shape]
+\node[draw=Navy,fill=Ice,rounded corners,minimum width=42mm,minimum height=13mm] (roots)
+ {$r_1,\dots,r_n\in\PP^1$};
+\node[draw=DeepBlue,fill=Sky,rounded corners,minimum width=52mm,minimum height=15mm,right=of roots] (points)
+ {$\nu_n(r_1),\dots,\nu_n(r_n)\in\PP^n$};
+\node[draw=Brick,fill=white,rounded corners,minimum width=46mm,minimum height=15mm,above right=7mm and 15mm of points] (sec)
+ {hiperplano secante $\Pi_P$};
+\node[draw=Green,fill=Mint,rounded corners,minimum width=49mm,minimum height=15mm,below right=7mm and 15mm of points] (osc)
+ {$n$ hiperplanos osculadores};
+\node[draw=Gold,fill=Warm,rounded corners,minimum width=48mm,minimum height=17mm,right=35mm of points] (kp)
+ {$K_P=[a_n:\cdots:a_0]$};
+\draw[->,thick,DeepBlue] (roots)--node[above,font=\small] {$\nu_n$}(points);
+\draw[->,thick,Brick] (points)--(sec);
+\draw[->,thick,Green] (points)--(osc);
+\draw[<->,thick,Gold] (sec)--node[above,sloped,font=\small] {polaridad}(kp);
+\draw[->,thick,Green] (osc)--node[below,sloped,font=\small] {intersección}(kp);
+\node[font=\small\sffamily,text=Slate,align=center] at ($(points.south)+(0,-2.1)$)
+ {dos descripciones duales del mismo punto};
+\end{tikzpicture}
+\caption{El punto \(K_P\) comprime toda la información simétrica de las raíces.}
+\label{fig:apolar-compression}
+\end{figure}
+
+
+% =============================================================================
+\section{Banderas osculadoras opuestas y realización geométrica de toda la cadena}
+% =============================================================================
+
+\subsection{Cómo seleccionar dos coordenadas consecutivas}
+
+El punto \(K_P=[a_n:a_{n-1}:\cdots:a_0]\) contiene toda la cadena, pero aún debemos
+explicar por qué cada razón \(a_k/a_{k-1}\) es una proyección geométrica natural.
+Las banderas de \cref{lem:flags} proporcionan exactamente los centros y las rectas
+objetivo necesarios.
+
+Para \(1\le k\le n\), definimos la recta coordenada
+\begin{equation}\label{eq:Lk}
+L_k=\PP\Span\{e_{n-k},e_{n-k+1}\}
+\end{equation}
+y el subespacio complementario
+\begin{equation}\label{eq:Lambdak}
+\Lambda_k=
+\PP\Span\{e_0,\dots,e_{n-k-1},e_{n-k+2},\dots,e_n\}.
+\end{equation}
+Usaremos la convención de que un bloque vacío simplemente se omite. Por ejemplo,
+\[
+\Lambda_1=\PP\Span\{e_0,\dots,e_{n-2}\}=\Osc_\infty^{n-2}(\nu_n),
+\]
+\[
+\Lambda_n=\PP\Span\{e_2,\dots,e_n\}=\Osc_0^{n-2}(\nu_n).
+\]
+Para los índices intermedios,
+\begin{equation}\label{eq:center-flags}
+\Lambda_k=
+\left\langle
+\Osc_\infty^{n-k-1}(\nu_n),
+\Osc_0^{k-2}(\nu_n)
+\right\rangle.
+\end{equation}
+Es la unión lineal de dos piezas tomadas de banderas osculadoras opuestas.
+
+Como los espacios vectoriales que subyacen a \(L_k\) y \(\Lambda_k\) son
+complementarios, existe una proyección lineal
+\[
+\pi_k:\PP^n\dashrightarrow L_k
+\]
+con centro \(\Lambda_k\). En coordenadas, esta proyección simplemente conserva
+\(X_{n-k}\) y \(X_{n-k+1}\):
+\begin{equation}\label{eq:pik}
+\pi_k([X_0:\cdots:X_n])
+=[0:\cdots:0:X_{n-k}:X_{n-k+1}:0:\cdots:0].
+\end{equation}
+
+\begin{theorem}[Realización proyectiva de la cadena]\label{thm:projective-chain}
+Para \(K_P=[a_n:a_{n-1}:\cdots:a_0]\),
+\begin{equation}\label{eq:pikKP}
+\pi_k(K_P)=[a_k:a_{k-1}]\in L_k.
+\end{equation}
+Si identificamos \(L_k\simeq\PP^1\) mediante la coordenada afín
+\(z=X_{n-k}/X_{n-k+1}\), entonces
+\begin{equation}\label{eq:pik-coordinate}
+z(\pi_k(K_P))=\frac{a_k}{a_{k-1}}=\cN_k.
+\end{equation}
+En particular, los dos extremos son las proyecciones desde los osculadores de orden
+\(n-2\):
+\begin{align}
+\pi_1(K_P)&=[a_1:a_0] &&\Longrightarrow&& z=\AM,\label{eq:proj-AM}\\
+\pi_n(K_P)&=[a_n:a_{n-1}] &&\Longrightarrow&& z=\HM.\label{eq:proj-HM}
+\end{align}
+\end{theorem}
+
+\begin{proof}
+La forma de \(K_P\) en \cref{eq:KP} muestra que su coordenada de índice \(n-k\) es
+\(a_k\) y la siguiente es \(a_{k-1}\). La proyección \(\pi_k\) elimina todas las
+demás coordenadas. La razón afín es, por definición, \(a_k/a_{k-1}\).
+\end{proof}
+
+\begin{figure}[p]
+\centering
+\begin{tikzpicture}[>=Latex,scale=0.94]
+\draw[rounded corners,fill=Ice,draw=Navy] (0,0) rectangle (15.2,7.9);
+\node[font=\sffamily\bfseries,text=Navy] at (7.6,7.45)
+ {El punto apolar y sus ventanas de dos coordenadas};
+
+\foreach \i/\lab in {0/{a_n},1/{a_{n-1}},2/{a_{n-2}},3/{\cdots},4/{a_k},5/{a_{k-1}},6/{\cdots},7/{a_1},8/{a_0}}{
+  \node[draw=DeepBlue,fill=white,rounded corners,minimum width=12mm,minimum height=10mm] (a\i) at (1.1+1.6*\i,5.65) {$\lab$};
+}
+\node[left=2mm of a0,font=\small\bfseries] {$K_P=$};
+\draw[decorate,decoration={brace,amplitude=7pt},Green,thick]
+  ($(a0.north west)+(0,.15)$)--($(a3.north east)+(0,.15)$)
+  node[midway,above=8pt,font=\small,text=Green] {$\Osc_\infty^{n-k-1}$};
+\draw[decorate,decoration={brace,amplitude=7pt},Brick,thick]
+  ($(a6.south west)+(0,-.15)$)--($(a8.south east)+(0,-.15)$)
+  node[midway,below=8pt,font=\small,text=Brick] {$\Osc_0^{k-2}$};
+\draw[very thick,Gold,rounded corners] ($(a4.north west)+(-.13,.13)$) rectangle ($(a5.south east)+(.13,-.13)$);
+\node[draw=Gold,fill=Warm,rounded corners,minimum width=34mm,minimum height=13mm] (ratio) at (7.6,2.75)
+ {$\displaystyle [a_k:a_{k-1}]$};
+\draw[-{Latex[length=3mm]},Gold,line width=1.4pt] ($(a4.south)!0.5!(a5.south)$)--(ratio.north);
+\node[draw=Navy,fill=white,rounded corners,minimum width=36mm,minimum height=13mm] (mean) at (7.6,1.0)
+ {$\displaystyle \cN_k=\frac{a_k}{a_{k-1}}$};
+\draw[-{Latex[length=2.5mm]},Navy,thick] (ratio)--(mean);
+\node[font=\small\sffamily,text=Slate,align=center] at (2.2,1.15)
+ {el centro $\Lambda_k$\\elimina los bloques exteriores};
+\node[font=\small\sffamily,text=Slate,align=center] at (13.0,1.15)
+ {la recta $L_k$\\retiene una ventana consecutiva};
+\draw[Slate,dashed] (2.2,1.75)--(3.8,4.75);
+\draw[Slate,dashed] (13.0,1.75)--(10.1,4.75);
+\end{tikzpicture}
+\caption{Cada media \(\cN_k\) es la coordenada afín de una proyección de \(K_P\) determinada por las banderas osculadoras opuestas en \(0\) y \(\infty\).}
+\label{fig:coordinate-window}
+\end{figure}
+
+\subsection{Qué es intrínseco y qué depende de un marco afín}
+
+La construcción de \(K_P\) es proyectivamente natural: cambia covariantemente cuando
+se aplica una transformación de \(\PGL_2\) a las raíces y la representación de grado
+\(n\) al espacio ambiente. Sin embargo, las cantidades numéricas
+\(\AM,\HM,\cN_k\) requieren distinguir \(0\) y \(\infty\). En otras palabras, dependen
+de un marco afín sobre \(\PP^1\).
+
+\begin{warning}[No confundir naturalidad con invariancia absoluta]
+La media armónica no es invariante bajo una transformación proyectiva arbitraria.
+La afirmación correcta es que la construcción es natural para una recta proyectiva
+\emph{enmarcada}, es decir, para el dato
+\[
+(\PP^1;0,\infty;r_1,\dots,r_n).
+\]
+Al cambiar el marco, cambian las coordenadas y las medias. Lo que permanece es la
+arquitectura apolar y osculadora que produce las nuevas coordenadas en el nuevo marco.
+\end{warning}
+
+\subsection{La cadena como espectro de cocientes del punto apolar}
+
+El teorema anterior permite pensar en
+\[
+\cN(P)=\bigl(\cN_1(P),\dots,\cN_n(P)\bigr)
+\]
+como un espectro de lecturas consecutivas de \(K_P\). La desigualdad de Newton
+significa que, para raíces positivas, las coordenadas de \(K_P\) forman una sucesión
+log-cóncava:
+\[
+a_k^2\ge a_{k-1}a_{k+1}.
+\]
+Geométricamente, la pendiente afín de cada ventana no aumenta al avanzar desde el
+extremo de la media aritmética hacia el extremo de la media armónica.
+
+Esta lectura conecta tres lenguajes:
+\[
+\begin{array}{ccl}
+\text{coeficientes de }P &:& a_k=e_k/\binom nk,\\[1mm]
+\text{geometría de }K_P &:& \pi_k(K_P)=[a_k:a_{k-1}],\\[1mm]
+\text{desigualdades} &:& \cN_k=a_k/a_{k-1}\ge a_{k+1}/a_k.
+\end{array}
+\]
+
+% =============================================================================
+\section{La torre de derivadas normalizadas}
+% =============================================================================
+
+\subsection{Una secuencia de polinomios mónicos de todos los grados}
+
+La geometría apolar explica dónde viven las cantidades \(\cN_k\). Ahora construiremos
+una segunda ruta, puramente polinomial al principio, que desembocará en dinámica
+racional.
+
+\begin{definition}[Torre derivada normalizada]\label{def:Qk}
+Sea \(P\) mónico de grado \(n\). Para \(0\le k\le n\), definimos
+\begin{equation}\label{eq:Qk}
+Q_k(t)=\frac{k!}{n!}P^{(n-k)}(t).
+\end{equation}
+En particular, \(Q_n=P\) y \(Q_0=1\).
+\end{definition}
+
+\begin{proposition}[Estructura de Appell truncada]\label{prop:Qk-properties}
+Para \(1\le k\le n\):
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item \(Q_k\) es mónico de grado \(k\);
+\item \(Q_k'=kQ_{k-1}\);
+\item su término constante es
+\begin{equation}\label{eq:Qk-zero}
+Q_k(0)=(-1)^k\frac{e_k}{\binom nk}=(-1)^ka_k;
+\end{equation}
+\item el coeficiente de \(t^{k-1}\) es \(-k e_1/n\), de modo que la media
+aritmética de sus raíces es \(e_1/n\), independiente de \(k\).
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+Como \(P\) es mónico, su derivada de orden \(n-k\) tiene término principal
+\(n!/k!\,t^k\), y la normalización lo vuelve mónico. Además,
+\[
+Q_k' = \frac{k!}{n!}P^{(n-k+1)}
+= k\frac{(k-1)!}{n!}P^{(n-k+1)}=kQ_{k-1}.
+\]
+El término constante se obtiene de \cref{eq:P-viete}:
+\[
+P^{(n-k)}(0)=(n-k)!(-1)^ke_k,
+\]
+y por tanto
+\[
+Q_k(0)=\frac{k!(n-k)!}{n!}(-1)^ke_k
+=(-1)^k\frac{e_k}{\binom nk}.
+\]
+Para el coeficiente de \(t^{k-1}\), derivamos el término
+\(-e_1t^{n-1}\):
+\[
+\frac{k!}{n!}\frac{(n-1)!}{(k-1)!}(-e_1)t^{k-1}
+=-\frac{k}{n}e_1t^{k-1}.
+\]
+La suma de las raíces de un polinomio mónico de grado \(k\) es, por Viète,
+\(ke_1/n\), y su promedio es \(e_1/n\).
+\end{proof}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=Latex,node distance=7mm and 8mm,scale=0.72,transform shape]
+\node[draw=Navy,fill=Ice,rounded corners,minimum width=29mm,minimum height=12mm] (qn) {$Q_n=P$};
+\node[draw=DeepBlue,fill=Sky,rounded corners,minimum width=29mm,minimum height=12mm,right=of qn] (qn1) {$Q_{n-1}=P'/n$};
+\node[draw=DeepBlue,fill=Sky,rounded corners,minimum width=29mm,minimum height=12mm,right=of qn1] (qn2) {$Q_{n-2}$};
+\node[right=of qn2,font=\Large] (dots) {$\cdots$};
+\node[draw=Gold,fill=Warm,rounded corners,minimum width=29mm,minimum height=12mm,right=of dots] (q2) {$Q_2$};
+\node[draw=Brick,fill=white,rounded corners,minimum width=29mm,minimum height=12mm,right=of q2] (q1) {$Q_1=t-\AM$};
+\foreach \a/\b/\lab in {qn/qn1/{\frac1n\,D},qn1/qn2/{\frac1{n-1}\,D},qn2/dots/{},dots/q2/{},q2/q1/{\frac12\,D}}{
+  \draw[-{Latex[length=2.3mm]},thick,Green] (\a)--node[above,font=\scriptsize] {$\lab$}(\b);
+}
+\node[below=9mm of qn,font=\small\sffamily,text=Slate] {grado $n$};
+\node[below=9mm of q1,font=\small\sffamily,text=Slate] {grado $1$};
+\draw[decorate,decoration={brace,mirror,amplitude=6pt},Slate]
+  ($(qn.south west)+(0,-1.0)$)--($(q1.south east)+(0,-1.0)$)
+  node[midway,below=8pt,font=\small\bfseries,text=Slate]
+  {todas las capas conservan el mismo centroide de raíces};
+\end{tikzpicture}
+\caption{La normalización convierte las derivadas sucesivas en una torre de polinomios mónicos con la relación exacta \(Q_k'=kQ_{k-1}\).}
+\label{fig:derivative-tower}
+\end{figure}
+
+\subsection{Raíces derivadas e intercalación}
+
+Si \(P\) tiene raíces reales, Rolle garantiza que \(P'\) también las tiene y que se
+intercalan. Repitiendo el argumento, todos los \(Q_k\) son reales enraizados. Si las
+raíces originales son positivas, cada raíz derivada queda en el intervalo convexo
+\([\min r_i,\max r_i]\), por lo que también es positiva.
+
+Denotemos las raíces de \(Q_k\) por
+\[
+\rho_{k,1},\dots,\rho_{k,k}.
+\]
+Para raíces simples ordenadas, la intercalación toma la forma
+\[
+r_1<\rho_{n-1,1}<r_2<\rho_{n-1,2}<\cdots<\rho_{n-1,n-1}<r_n.
+\]
+En niveles inferiores se obtiene una malla triangular de raíces.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[x=1.1cm,y=0.78cm,>=Latex]
+\foreach \row/\ys/\pts/\col/\lab in {
+0/0/{0.4,2.0,3.6,5.2,7.1}/Navy/{$Q_5=P$},
+1/-1/{1.2,2.8,4.45,6.15}/DeepBlue/{$Q_4$},
+2/-2/{2.0,3.65,5.35}/Green/{$Q_3$},
+3/-3/{2.85,4.5}/Gold/{$Q_2$},
+4/-4/{3.7}/Brick/{$Q_1$}}
+{
+  \draw[Slate!55] (0,\ys)--(7.6,\ys);
+  \foreach \x in \pts {\fill[\col] (\x,\ys) circle (2.4pt);}
+  \node[right,font=\small\bfseries,text=\col] at (7.8,\ys) {\lab};
+}
+\foreach \x in {0.4,2.0,3.6,5.2,7.1}{\draw[Slate!25,dashed] (\x,0)--(3.7,-4);}
+\node[align=center,font=\small\sffamily,text=Slate] at (3.8,-5.0)
+ {Rolle comprime progresivamente la configuración\\sin mover su media aritmética};
+\end{tikzpicture}
+\caption{Esquema de intercalación para un polinomio real de grado cinco. Las posiciones son ilustrativas; la propiedad esencial es que cada fila se intercala con la anterior.}
+\label{fig:interlacing}
+\end{figure}
+
+% =============================================================================
+\section{La torre polar de medias}
+% =============================================================================
+
+\subsection{Un mapa racional en cada nivel}
+
+La relación \(Q_k'=kQ_{k-1}\) sugiere comparar dos niveles consecutivos mediante una
+razón racional.
+
+\begin{definition}[Mapa polar del nivel \(k\)]\label{def:Phik}
+Para \(1\le k\le n\), definimos
+\begin{equation}\label{eq:Phik}
+\Phi_k(t)
+=t-k\frac{Q_k(t)}{Q_k'(t)}
+=t-\frac{Q_k(t)}{Q_{k-1}(t)}.
+\end{equation}
+Para \(k=1\), interpretamos \(Q_0=1\), de modo que
+\[
+\Phi_1(t)=t-Q_1(t)=\AM(r_1,\dots,r_n),
+\]
+un mapa constante.
+\end{definition}
+
+La forma \(t-kQ_k/Q_k'\) muestra que \(\Phi_k\) es el mapa polar asociado al
+polinomio de grado \(k\), \(Q_k\). La forma \(t-Q_k/Q_{k-1}\) hace visible la
+naturaleza telescópica de la torre.
+
+\begin{theorem}[Teorema de la torre polar de medias]\label{thm:polar-tower-means}
+Sea \(P(t)=\prod_{i=1}^{n}(t-r_i)\) con \(r_i>0\), y sean \(Q_k\), \(\Phi_k\) y
+\(\cN_k\) como antes. Entonces, para cada \(1\le k\le n\):
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item
+\begin{equation}\label{eq:Nk-Phik0}
+\boxed{\cN_k(r_1,\dots,r_n)=\Phi_k(0)};
+\end{equation}
+\item si \(\rho_{k,1},\dots,\rho_{k,k}\) son las raíces de \(Q_k\),
+\begin{equation}\label{eq:Nk-HM-derived}
+\boxed{
+\cN_k(r_1,\dots,r_n)
+=\HM(\rho_{k,1},\dots,\rho_{k,k})};
+\end{equation}
+\item todas las capas tienen la misma media aritmética:
+\begin{equation}\label{eq:AM-preserved}
+\AM(\rho_{k,1},\dots,\rho_{k,k})
+=\AM(r_1,\dots,r_n);
+\end{equation}
+\item la media geométrica original satisface
+\begin{equation}\label{eq:GM-product-derived-HM}
+\boxed{
+\GM(r_1,\dots,r_n)^n
+=\prod_{k=1}^{n}\HM(\rho_{k,1},\dots,\rho_{k,k})}.
+\end{equation}
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+Por \cref{eq:Qk-zero},
+\[
+\Phi_k(0)=-\frac{Q_k(0)}{Q_{k-1}(0)}
+=-\frac{(-1)^ka_k}{(-1)^{k-1}a_{k-1}}
+=\frac{a_k}{a_{k-1}}=\cN_k.
+\]
+Como \(Q_k\) es mónico de grado \(k\) y tiene raíces positivas \(\rho_{k,j}\), la
+identidad general
+\[
+-k\frac{Q_k(0)}{Q_k'(0)}
+=\frac{k}{\sum_{j=1}^{k}\rho_{k,j}^{-1}}
+\]
+muestra que \(\Phi_k(0)\) es la media armónica de esas raíces. La conservación de la
+media aritmética fue probada en \cref{prop:Qk-properties}. Finalmente,
+\cref{eq:GM-product-derived-HM} se obtiene sustituyendo
+\(\cN_k=\HM(\rho_{k,1},\dots,\rho_{k,k})\) en
+\cref{eq:product-GM}.
+\end{proof}
+
+\begin{keybox}[Interpretación]
+La cadena \(\AM=\cN_1\ge\cdots\ge\cN_n=\HM\) puede leerse como sigue:
+\begin{enumerate}[leftmargin=8mm]
+\item se deriva \(P\) hasta obtener un polinomio mónico de grado \(k\);
+\item se toman sus \(k\) raíces, que siguen teniendo la misma media aritmética;
+\item se calcula la media armónica de esas raíces;
+\item al aumentar \(k\), esa media armónica desciende desde el centroide único de
+\(Q_1\) hasta la media armónica de todas las raíces originales.
+\end{enumerate}
+\end{keybox}
+
+\subsection{Una fórmula local alrededor de cualquier punto}
+
+La evaluación en \(0\) no es esencial. Si recentramos el polinomio en un punto
+\(o\), las raíces relativas son \(r_i-o\). Aplicando la definición a esa lista se
+obtiene una familia local.
+
+\begin{definition}[Cociente local de orden \(k\)]
+Siempre que el denominador no se anule, definimos
+\begin{equation}\label{eq:local-Nk}
+\cN_k(P;o)
+=-k\frac{P^{(n-k)}(o)}{P^{(n-k+1)}(o)}.
+\end{equation}
+La cantidad afín trasladada es
+\begin{equation}\label{eq:local-map}
+\mathfrak M_k(P;o)=o+\cN_k(P;o)
+=o-k\frac{P^{(n-k)}(o)}{P^{(n-k+1)}(o)}
+=\Phi_k(o).
+\end{equation}
+\end{definition}
+
+La igualdad con \(\Phi_k\) es inmediata por la normalización de \(Q_k\). En términos
+de las raíces relativas,
+\[
+\cN_k(P;o)=\cN_k(r_1-o,\dots,r_n-o).
+\]
+Para \(k=1\),
+\[
+\Phi_1(o)=\AM(r_1,\dots,r_n),
+\]
+independiente de \(o\). Para \(k=n\),
+\[
+\Phi_n(o)=o-n\frac{P(o)}{P'(o)},
+\]
+que será el mapa polar completo.
+
+\subsection[Ejemplo completo: raíces 1, 2 y 3]{Ejemplo completo: raíces \(1,2,3\)}
+
+Tomemos
+\[
+P(t)=(t-1)(t-2)(t-3)=t^3-6t^2+11t-6.
+\]
+Entonces
+\[
+a_0=1,
+\qquad a_1=\frac{6}{3}=2,
+\qquad a_2=\frac{11}{3},
+\qquad a_3=6.
+\]
+La cadena es
+\[
+\cN_1=2,
+\qquad
+\cN_2=\frac{11/3}{2}=\frac{11}{6},
+\qquad
+\cN_3=\frac{6}{11/3}=\frac{18}{11}.
+\]
+En efecto,
+\[
+2>\frac{11}{6}>\frac{18}{11},
+\qquad
+2\cdot\frac{11}{6}\cdot\frac{18}{11}=6=\GM(1,2,3)^3.
+\]
+
+La torre normalizada es
+\[
+Q_3=P,
+\qquad
+Q_2=\frac{P'}{3}=t^2-4t+\frac{11}{3},
+\qquad
+Q_1=\frac{P''}{6}=t-2.
+\]
+Las raíces de \(Q_2\) son
+\[
+2\pm\frac{1}{\sqrt3},
+\]
+y su media armónica es
+\[
+\frac{2}{\dfrac1{2-1/\sqrt3}+\dfrac1{2+1/\sqrt3}}
+=\frac{11}{6}=\cN_2.
+\]
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+ width=0.92\textwidth,height=0.48\textwidth,
+ axis lines=middle,xmin=0.55,xmax=3.45,ymin=-2.7,ymax=3.2,
+ xlabel={$t$},ylabel={},
+ xtick={1,1.42265,2,2.57735,3},
+ xticklabels={$1$,$2-1/\sqrt3$,$2$,$2+1/\sqrt3$,$3$},
+ ytick=\empty,grid=major,grid style={SoftGray},
+ legend style={draw=none,fill=none,at={(0.02,0.97)},anchor=north west,font=\small}]
+\addplot[Navy,very thick,domain=.65:3.35,samples=220]{(x-1)*(x-2)*(x-3)};
+\addlegendentry{$Q_3=P$}
+\addplot[Green,thick,domain=.65:3.35,samples=220]{x^2-4*x+11/3};
+\addlegendentry{$Q_2=P'/3$}
+\addplot[Brick,thick,domain=.65:3.35,samples=2]{x-2};
+\addlegendentry{$Q_1=P''/6$}
+\addplot[only marks,mark=*,mark size=2.4pt,Navy] coordinates {(1,0)(2,0)(3,0)};
+\addplot[only marks,mark=*,mark size=2.4pt,Green] coordinates {(1.42265,0)(2.57735,0)};
+\addplot[only marks,mark=*,mark size=2.4pt,Brick] coordinates {(2,0)};
+\end{axis}
+\end{tikzpicture}
+\caption{La torre derivada para \(P(t)=(t-1)(t-2)(t-3)\). Las raíces de cada nivel se intercalan y conservan centroide \(2\); sus medias armónicas son \(2,11/6,18/11\).}
+\label{fig:cubic-example-tower}
+\end{figure}
+
+
+% =============================================================================
+\section{Formas binarias y el mapa polar exterior}
+% =============================================================================
+
+\subsection{Homogeneizar el polinomio}
+
+La expresión \(t-kQ_k/Q_k'\) parece depender de una coordenada afín. Para descubrir
+su contenido proyectivo, debemos regresar a coordenadas homogéneas.
+
+Sea \(V\) un espacio vectorial de dimensión dos sobre \(\KK\), con coordenadas
+\((X,Y)\). Una forma binaria de grado \(m\) es un elemento de
+\(\Sym^m(V^*)\), es decir, un polinomio homogéneo
+\[
+F(X,Y)=\sum_{j=0}^{m}c_jX^{m-j}Y^j.
+\]
+Si \(Q(t)\) es mónico de grado \(m\), su homogeneización es
+\begin{equation}\label{eq:homogenization}
+F_Q(X,Y)=Y^mQ(X/Y).
+\end{equation}
+Para \(Q=P\),
+\begin{equation}\label{eq:F-P}
+F_P(X,Y)=\prod_{i=1}^{n}(X-r_iY)
+=\sum_{k=0}^{n}(-1)^ke_kX^{n-k}Y^k.
+\end{equation}
+Los ceros de \(F_P\) son puntos de \(\PP^1\), de modo que la forma binaria codifica
+el divisor de raíces sin privilegiar una carta afín.
+
+\subsection{Del diferencial a un vector}
+
+Fijemos una forma de área no nula \(\omega\in\bigwedge^2V^*\). En coordenadas,
+podemos tomar \(\omega=\dd X\wedge\dd Y\). Para cada punto \(v\in V\), el
+diferencial \(\dd F_v\) es una forma lineal. La forma \(\omega\) identifica formas
+lineales con vectores, salvo un factor escalar. En coordenadas, el vector hamiltoniano
+es proporcional a
+\[
+\cH_F(X,Y)=(-F_Y(X,Y),F_X(X,Y)).
+\]
+Como ambas componentes son homogéneas de grado \(m-1\), su proyectivización define
+un mapa racional.
+
+\begin{definition}[Mapa polar exterior]\label{def:polar-map}
+Sea \(F\) una forma binaria no nula de grado \(m\ge2\). Definimos
+\begin{equation}\label{eq:polar-map-homogeneous}
+\cD_F:\PP^1\dashrightarrow\PP^1,
+\qquad
+[X:Y]\longmapsto[-F_Y(X,Y):F_X(X,Y)].
+\end{equation}
+Cuando \(F_X\) y \(F_Y\) no tienen factor común, el mapa tiene grado \(m-1\).
+\end{definition}
+
+El signo global es irrelevante en coordenadas proyectivas. La elección anterior tiene
+la ventaja de producir directamente la fórmula afín que necesitamos.
+
+\begin{proposition}[Expresión afín]\label{prop:affine-polar}
+Sea \(F_Q(X,Y)=Y^mQ(X/Y)\). En la carta \(Y=1\), el mapa \(\cD_{F_Q}\) es
+\begin{equation}\label{eq:PhiQ}
+\boxed{
+\Phi_Q(t)=t-m\frac{Q(t)}{Q'(t)}}.
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+En \((t,1)\),
+\[
+(F_Q)_X(t,1)=Q'(t).
+\]
+La identidad de Euler para una forma homogénea de grado \(m\),
+\[
+XF_X+YF_Y=mF,
+\]
+da
+\[
+(F_Q)_Y(t,1)=mQ(t)-tQ'(t).
+\]
+Por tanto,
+\[
+[-(F_Q)_Y:(F_Q)_X]
+=[tQ'(t)-mQ(t):Q'(t)],
+\]
+cuya coordenada afín es \(t-mQ/Q'\).
+\end{proof}
+
+Aplicando esta proposición a \(Q_k\), obtenemos exactamente los mapas \(\Phi_k\) de
+\cref{def:Phik}. La torre de medias es, por tanto, una torre de mapas polares
+exteriores asociados a formas binarias de grados \(1,2,\dots,n\).
+
+\subsection{Covariancia proyectiva}
+
+La construcción no depende esencialmente de las coordenadas.
+
+\begin{theorem}[Covariancia bajo \(\PGL_2\)]\label{thm:covariance}
+Sea \(g\in\GL(V)\) y definamos la acción sobre formas por
+\[
+(g\cdot F)(v)=F(g^{-1}v).
+\]
+Entonces, como mapas proyectivos,
+\begin{equation}\label{eq:covariance}
+\boxed{
+\cD_{g\cdot F}=g\circ\cD_F\circ g^{-1}.}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+La regla de la cadena da
+\[
+\dd(g\cdot F)_v=\dd F_{g^{-1}v}\circ g^{-1}.
+\]
+La identificación entre \(V^*\) y \(V\) mediante \(\omega\) cambia bajo \(g\) por el
+factor \(\det(g)\). Por tanto, el vector hamiltoniano de \(g\cdot F\) en \(v\) es
+proporcional a
+\[
+g\bigl(\cH_F(g^{-1}v)\bigr).
+\]
+El factor escalar desaparece al proyectivizar, y se obtiene \cref{eq:covariance}.
+\end{proof}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzcd}[column sep=large,row sep=large]
+\PP^1 \arrow[r,"{\cD_F}"] \arrow[d,"g"']
+& \PP^1 \arrow[d,"g"]\\
+\PP^1 \arrow[r,"{\cD_{g\cdot F}}"']
+& \PP^1
+\end{tikzcd}
+\caption{La covariancia significa que transformar la configuración de raíces y después construir el mapa produce el mismo resultado que conjugar el mapa original.}
+\label{fig:covariance}
+\end{figure}
+
+\subsection{Los extremos de la cadena dentro del mapa polar superior}
+
+Para \(P\) mónico de grado \(n\), el mapa superior es
+\begin{equation}\label{eq:PhiP}
+\Phi_P(t)=t-n\frac{P(t)}{P'(t)}.
+\end{equation}
+La forma homogénea permite evaluar sin ambigüedad en \(0\) y \(\infty\).
+
+\begin{proposition}[Dos valores distinguidos]\label{prop:Phi-endpoints}
+Si \(F_P\) es como en \cref{eq:F-P}, entonces
+\begin{align}
+\cD_{F_P}([0:1])&=[ne_n:e_{n-1}],\label{eq:Phi-zero-hom}\\
+\cD_{F_P}([1:0])&=[e_1:n].\label{eq:Phi-infinity-hom}
+\end{align}
+En la carta afín,
+\begin{equation}\label{eq:Phi-endpoint-means}
+\boxed{
+\Phi_P(0)=\HM(r_1,\dots,r_n),
+\qquad
+\Phi_P(\infty)=\AM(r_1,\dots,r_n).}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+En \([0:1]\), los únicos términos relevantes son
+\[
+(F_P)_X(0,1)=(-1)^{n-1}e_{n-1},
+\qquad
+(F_P)_Y(0,1)=n(-1)^ne_n.
+\]
+Por tanto,
+\[
+[-F_Y:F_X]=[ne_n:e_{n-1}].
+\]
+En \([1:0]\),
+\[
+(F_P)_X(1,0)=n,
+\qquad
+(F_P)_Y(1,0)=-e_1,
+\]
+y el valor es \([e_1:n]\).
+\end{proof}
+
+\begin{remark}
+Las proyecciones apolares de \cref{thm:projective-chain} y el mapa polar exterior
+coinciden en los dos valores extremos, pero no deben confundirse como una única
+familia de proyecciones móviles. La primera estructura lee coordenadas de \(K_P\);
+la segunda procede del diferencial de la forma binaria.
+\end{remark}
+
+% =============================================================================
+\section{Puntos fijos, multiplicadores y caracterización por unicidad}
+% =============================================================================
+
+\subsection{El divisor de raíces es el divisor de puntos fijos}
+
+La identidad de Euler produce una caracterización extraordinariamente compacta.
+
+\begin{theorem}[Divisor de puntos fijos]\label{thm:fixed-divisor}
+Sea \(F\) una forma binaria de grado \(m\) sin factores repetidos, sobre un cuerpo de
+característica que no divide \(m\). Entonces \(\cD_F\) es un morfismo de grado
+\(m-1\) y sus puntos fijos son exactamente los ceros de \(F\).
+\end{theorem}
+
+\begin{proof}
+Si \(F\) es libre de cuadrados, \(F_X\) y \(F_Y\) no tienen factor común. En efecto,
+un factor lineal común dividiría, por Euler,
+\[
+XF_X+YF_Y=mF,
+\]
+y también dividiría ambas derivadas, lo que obligaría a que apareciera con
+multiplicidad al menos dos en \(F\). Por tanto, el mapa tiene grado \(m-1\).
+
+Un punto \([X:Y]\) es fijo si el vector \((-F_Y,F_X)\) es proporcional a
+\((X,Y)\). Esto equivale a que su determinante sea cero:
+\[
+\det\begin{pmatrix}X&-F_Y\\Y&F_X\end{pmatrix}
+=XF_X+YF_Y=mF(X,Y).
+\]
+Como \(m\ne0\) en el cuerpo, la condición es exactamente \(F(X,Y)=0\).
+\end{proof}
+
+\subsection{Multiplicadores iguales}
+
+En dinámica compleja, si \(z_0\) es un punto fijo de un mapa racional \(R\), el
+número \(R'(z_0)\) se llama multiplicador. Su módulo determina la estabilidad local:
+atractor si es menor que uno, repulsor si es mayor que uno e indiferente si es igual
+a uno.
+
+\begin{theorem}[Multiplicador en cada raíz]\label{thm:root-multiplier}
+Sea \(Q\) un polinomio de grado \(m\ge2\) con raíces simples. Para
+\[
+\Phi_Q(t)=t-m\frac{Q(t)}{Q'(t)},
+\]
+cada raíz \(\rho\) es un punto fijo con multiplicador
+\begin{equation}\label{eq:multiplier}
+\boxed{\Phi_Q'(\rho)=1-m.}
+\end{equation}
+En particular, para \(m=2\) el multiplicador es \(-1\), y para \(m\ge3\) todas las
+raíces son repulsoras sobre \(\CC\).
+\end{theorem}
+
+\begin{proof}
+Derivando,
+\[
+\Phi_Q'(t)
+=1-m\frac{(Q')^2-QQ''}{(Q')^2}.
+\]
+En una raíz simple \(\rho\), \(Q(\rho)=0\) y \(Q'(\rho)\ne0\). Por tanto,
+\[
+\Phi_Q'(\rho)=1-m.
+\]
+\end{proof}
+
+\subsection{Caracterización de Doyle--McMullen}
+
+La siguiente unicidad explica por qué el mapa polar es inevitable una vez se fijan el
+divisor de puntos fijos y los multiplicadores.
+
+\begin{theorem}[Unicidad por puntos fijos y multiplicadores]\label{thm:uniqueness}
+Sea \(Q\in\CC[t]\) mónico, de grado \(m\ge2\), con raíces simples y finitas. Existe
+un único mapa racional de grado \(m-1\) que fija todas las raíces de \(Q\) y tiene
+multiplicador \(1-m\) en cada una. Ese mapa es
+\[
+\Phi_Q(t)=t-m\frac{Q(t)}{Q'(t)}.
+\]
+\end{theorem}
+
+\begin{proof}
+Sea \(R=A/B\), con \(A,B\) coprimos y grados a lo sumo \(m-1\). Los puntos fijos
+son los ceros de
+\[
+A(t)-tB(t).
+\]
+Este polinomio tiene grado a lo sumo \(m\) y se anula en las \(m\) raíces de \(Q\),
+por lo que es proporcional a \(Q\). Multiplicando simultáneamente \(A\) y \(B\) por
+una constante, podemos normalizar
+\begin{equation}\label{eq:fixed-normalization}
+A(t)-tB(t)=-mQ(t).
+\end{equation}
+Sea \(\rho\) una raíz. Como \(A(\rho)=\rho B(\rho)\),
+\[
+R'(\rho)-1
+=\frac{A'(\rho)-\rho B'(\rho)-B(\rho)}{B(\rho)}.
+\]
+Al derivar \cref{eq:fixed-normalization}, el numerador es \(-mQ'(\rho)\). La
+condición \(R'(\rho)=1-m\) implica
+\[
+-m=\frac{-mQ'(\rho)}{B(\rho)},
+\]
+y por tanto \(B(\rho)=Q'(\rho)\) para las \(m\) raíces. Como \(B\) y \(Q'\)
+tienen grado a lo sumo \(m-1\), deben coincidir. Finalmente,
+\[
+A=tQ'-mQ.
+\]
+\end{proof}
+
+\begin{researchbox}[Lectura dinámica]
+El mapa de Newton ordinario
+\[
+N_Q(t)=t-\frac{Q(t)}{Q'(t)}
+\]
+hace superatractoras las raíces simples. El mapa polar
+\[
+\Phi_Q(t)=t-m\frac{Q(t)}{Q'(t)}
+\]
+hace que todas tengan el mismo multiplicador \(1-m\). No es un método numérico para
+buscar raíces cuando \(m>2\); su función es codificar el divisor de raíces de forma
+proyectivamente natural.
+\end{researchbox}
+
+\subsection{El caso cuadrático recupera la involución armónica}
+
+\begin{theorem}[La involución armónica es el primer mapa polar]\label{thm:quadratic-polar-harmonic}
+Sea \(Q(t)=(t-r)(t-s)\), con \(r\ne s\). Entonces
+\begin{equation}\label{eq:Phi2-harmonic}
+\Phi_Q(t)=t-2\frac{Q(t)}{Q'(t)}=h_{r,s}(t).
+\end{equation}
+Por tanto, la construcción parabólica de \cref{thm:parabola-harmonic} es el caso de
+grado dos del mapa polar exterior.
+\end{theorem}
+
+\begin{proof}
+Como
+\[
+Q(t)=t^2-(r+s)t+rs,
+\qquad
+Q'(t)=2t-(r+s),
+\]
+tenemos
+\[
+t-2\frac{Q(t)}{Q'(t)}
+=\frac{t(2t-r-s)-2(t^2-(r+s)t+rs)}{2t-r-s}
+=\frac{(r+s)t-2rs}{2t-r-s}.
+\]
+Multiplicando numerador y denominador por \(-1\), se obtiene
+\[
+\frac{2rs-(r+s)t}{r+s-2t}=h_{r,s}(t).
+\]
+\end{proof}
+
+El hecho de que \(h_{r,s}\) sea una involución también se deduce de la unicidad:
+una transformación de Möbius con dos puntos fijos y multiplicador \(-1\) en ellos
+tiene orden dos.
+
+% =============================================================================
+\section{El hessiano como divisor crítico}
+% =============================================================================
+
+\subsection{La teoría clásica de invariantes entra en la dinámica}
+
+El mapa polar está construido con las primeras derivadas de \(F\). Sus puntos
+críticos están gobernados por las segundas derivadas, como en la teoría clásica del
+hessiano de formas binarias \cite{Olver}.
+
+\begin{definition}[Hessiano de una forma binaria]
+Para una forma binaria \(F\), definimos
+\begin{equation}\label{eq:hessian}
+\Hess(F)=
+\det\begin{pmatrix}
+F_{XX}&F_{XY}\\
+F_{XY}&F_{YY}
+\end{pmatrix}
+=F_{XX}F_{YY}-F_{XY}^2.
+\end{equation}
+Es una forma binaria de grado \(2m-4\) si \(\deg F=m\).
+\end{definition}
+
+\begin{theorem}[Divisor crítico hessiano]\label{thm:hessian-critical}
+Sea \(F\) una forma binaria cuadrado-libre de grado \(m\ge2\). El divisor crítico del
+mapa \(\cD_F=[-F_Y:F_X]\) es el divisor de ceros de \(\Hess(F)\), contado con
+multiplicidad.
+\end{theorem}
+
+\begin{proof}
+Un levantamiento homogéneo de \(\cD_F\) es
+\[
+\cH_F=(-F_Y,F_X).
+\]
+Su matriz jacobiana es
+\[
+J\cH_F=
+\begin{pmatrix}
+-F_{XY}&-F_{YY}\\
+F_{XX}&F_{XY}
+\end{pmatrix}.
+\]
+El determinante es
+\[
+\det(J\cH_F)=F_{XX}F_{YY}-F_{XY}^2=\Hess(F).
+\]
+La anulación de este jacobiano homogéneo describe precisamente la ramificación del
+mapa proyectivizado. Su grado \(2m-4\) coincide con el número total de puntos críticos
+de un mapa de grado \(m-1\), según Riemann--Hurwitz.
+\end{proof}
+
+\begin{proposition}[Ecuación afín de los puntos críticos]\label{prop:critical-affine}
+Para \(F_Q(X,Y)=Y^mQ(X/Y)\),
+\begin{equation}\label{eq:hessian-affine}
+\Hess(F_Q)(t,1)
+=(m-1)\left[mQ(t)Q''(t)-(m-1)Q'(t)^2\right].
+\end{equation}
+Además,
+\begin{equation}\label{eq:Phi-derivative}
+\Phi_Q'(t)
+=\frac{mQ(t)Q''(t)-(m-1)Q'(t)^2}{Q'(t)^2}
+\end{equation}
+en la carta donde \(Q'(t)\ne0\).
+\end{proposition}
+
+\begin{proof}
+Ya sabemos que
+\[
+F_X=Q',
+\qquad
+F_Y=mQ-tQ'.
+\]
+Derivando nuevamente,
+\[
+F_{XX}=Q'',
+\qquad
+F_{XY}=(m-1)Q'-tQ'',
+\]
+\[
+F_{YY}=m(m-1)Q-2(m-1)tQ'+t^2Q''.
+\]
+Sustituyendo en \cref{eq:hessian} y cancelando los términos con \(t\), queda
+\cref{eq:hessian-affine}. La fórmula para \(\Phi_Q'\) se obtiene por derivación
+directa de \(t-mQ/Q'\).
+\end{proof}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=Latex,node distance=10mm and 12mm,every node/.style={align=center}]
+\node[draw=Navy,fill=Ice,rounded corners,minimum width=38mm,minimum height=13mm] (F) {forma binaria $F$};
+\node[draw=DeepBlue,fill=Sky,rounded corners,minimum width=43mm,minimum height=13mm,right=of F] (dF) {primeras derivadas\\$(-F_Y,F_X)$};
+\node[draw=Gold,fill=Warm,rounded corners,minimum width=43mm,minimum height=13mm,right=of dF] (map) {mapa polar $\cD_F$};
+\node[draw=Green,fill=Mint,rounded corners,minimum width=45mm,minimum height=13mm,below=of dF] (hess) {segundas derivadas\\$\Hess(F)$};
+\node[draw=Brick,fill=white,rounded corners,minimum width=45mm,minimum height=13mm,right=of hess] (crit) {divisor crítico};
+\draw[->,thick,DeepBlue] (F)--(dF);
+\draw[->,thick,Gold] (dF)--(map);
+\draw[->,thick,Green] (F)--(hess);
+\draw[->,thick,Brick] (hess)--(crit);
+\draw[->,thick,Slate,dashed] (map)--(crit);
+\end{tikzpicture}
+\caption{La forma binaria controla simultáneamente los puntos fijos mediante \(F=0\) y los puntos críticos mediante \(\Hess(F)=0\).}
+\label{fig:hessian-dynamics}
+\end{figure}
+
+\subsection{Compatibilidad con el teorema de puntos fijos racionales}
+
+Un mapa racional de grado \(d\) con puntos fijos simples y multiplicadores
+\(\lambda_i\) satisface la identidad holomorfa \cite{Milnor}
+\[
+\sum_i\frac{1}{1-\lambda_i}=1.
+\]
+En nuestro caso, \(d=m-1\), hay \(m=d+1\) puntos fijos y todos tienen
+\(\lambda_i=1-m=-d\). Por tanto,
+\[
+\sum_{i=1}^{m}\frac1{1-(1-m)}
+=m\cdot\frac1m=1.
+\]
+La igualdad de multiplicadores no contradice la dinámica global; encaja exactamente
+en la restricción universal sobre puntos fijos.
+
+% =============================================================================
+\section{Espacios de módulos y configuraciones de puntos}
+% =============================================================================
+
+\subsection{Una correspondencia de clases geométricas}
+
+La covariancia de \cref{thm:covariance} y la unicidad de \cref{thm:uniqueness}
+permiten describir un estrato especial del espacio de módulos de mapas racionales.
+
+Sea \(\cC_m\) el conjunto de configuraciones no ordenadas de \(m\) puntos distintos
+de \(\PP^1(\CC)\), consideradas módulo \(\PGL_2(\CC)\). Sea \(\cE_{m-1}\) el
+conjunto de clases de conjugación de mapas racionales de grado \(m-1\) con \(m\)
+puntos fijos distintos, todos de multiplicador \(1-m\).
+
+\begin{theorem}[Correspondencia modular en puntos geométricos]\label{thm:moduli-bijection}
+La asignación
+\begin{equation}\label{eq:moduli-map}
+\{F=0\}\longmapsto[\cD_F]
+\end{equation}
+induce una biyección natural
+\begin{equation}\label{eq:moduli-bijection}
+\boxed{\cC_m\simeq\cE_{m-1}.}
+\end{equation}
+En particular, para \(m\ge3\), ambas familias tienen dimensión \(m-3\).
+\end{theorem}
+
+\begin{proof}
+La covariancia muestra que configuraciones proyectivamente equivalentes producen
+mapas conjugados. El divisor de puntos fijos de \(\cD_F\) es exactamente el divisor
+de ceros de \(F\), por \cref{thm:fixed-divisor}; por tanto, la asignación es
+inyectiva sobre clases geométricas. Recíprocamente, un mapa perteneciente a
+\(\cE_{m-1}\) tiene un divisor de \(m\) puntos fijos. La unicidad de
+\cref{thm:uniqueness}, después de elegir una carta que evite \(\infty\), muestra que
+el mapa es el polar asociado a ese divisor. La dimensión de configuraciones de
+\(m\) puntos en \(\PP^1\), módulo el grupo tridimensional \(\PGL_2\), es \(m-3\).
+\end{proof}
+
+\begin{remark}
+El teorema se formula deliberadamente como biyección de clases geométricas. Convertirla
+en un isomorfismo preciso de espacios o pilas de módulos requiere controlar
+estabilizadores, compactificaciones y configuraciones degeneradas; esa refinación
+pertenece a una continuación del proyecto.
+\end{remark}
+
+\subsection{Grado tres: una única clase cuadrática}
+
+Cuando \(m=3\), cualquier triple de puntos distintos de \(\PP^1\) es proyectivamente
+equivalente a las raíces cúbicas de la unidad. Para
+\[
+F_0(X,Y)=X^3-Y^3,
+\]
+se tiene
+\[
+\cD_{F_0}([X:Y])=[3Y^2:3X^2]=[Y^2:X^2].
+\]
+En coordenada afín,
+\[
+z\longmapsto\frac1{z^2}.
+\]
+
+\begin{corollary}[Clasificación del caso cúbico]\label{cor:cubic-conjugacy}
+Para todo polinomio cúbico con tres raíces distintas, el mapa
+\[
+\Phi_P(z)=z-3\frac{P(z)}{P'(z)}
+\]
+es conjugado por una transformación de Möbius a \(z\mapsto1/z^2\).
+\end{corollary}
+
+\begin{proof}
+Una transformación de Möbius lleva las tres raíces a las raíces de \(X^3-Y^3\). La
+covariancia de \cref{thm:covariance} transporta el mapa polar a
+\(z\mapsto1/z^2\).
+\end{proof}
+
+\subsection{Grado cuatro: aparece el parámetro de razón doble}
+
+Para cuatro puntos, la razón doble deja un parámetro modular. Normalicemos la
+configuración como
+\[
+\{0,1,\lambda,\infty\},
+\qquad \lambda\in\CC\setminus\{0,1\}.
+\]
+La forma binaria es
+\[
+F_\lambda(X,Y)=XY(X-Y)(X-\lambda Y).
+\]
+Un cálculo directo produce
+\begin{align}
+-F_{\lambda,Y}
+&=-X^3+2(\lambda+1)X^2Y-3\lambda XY^2,\\
+F_{\lambda,X}
+&=3X^2Y-2(\lambda+1)XY^2+\lambda Y^3.
+\end{align}
+Por tanto, en la carta afín,
+\begin{equation}\label{eq:quartic-normal-map}
+\Phi_\lambda(z)=
+\frac{-z^3+2(\lambda+1)z^2-3\lambda z}
+{3z^2-2(\lambda+1)z+\lambda}.
+\end{equation}
+Fija \(0,1,\lambda,\infty\), todos con multiplicador \(-3\). El parámetro
+\(\lambda\) se identifica sólo hasta las seis transformaciones anharmónicas que
+corresponden a permutar cuatro puntos.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=Latex]
+\draw[Slate,thick] (-5,0)--(5,0);
+\foreach \x/\lab/\col in {-3.7/{0}/Brick,-1.2/{1}/DeepBlue,1.8/{\lambda}/Gold,4.2/{\infty}/Green}{
+  \fill[\col] (\x,0) circle (2.5pt);
+  \node[above=2mm,font=\small\bfseries,text=\col] at (\x,0) {$\lab$};
+}
+\draw[decorate,decoration={brace,amplitude=7pt},Navy]
+ (-3.7,-.35)--(1.8,-.35)
+ node[midway,below=8pt,font=\small] {la razón doble conserva un parámetro};
+\node[draw=Navy,fill=Ice,rounded corners,align=center] at (0,-1.65)
+ {$\displaystyle \Phi_\lambda(z)=
+\frac{-z^3+2(\lambda+1)z^2-3\lambda z}
+{3z^2-2(\lambda+1)z+\lambda}$};
+\end{tikzpicture}
+\caption{A partir de cuatro raíces, la configuración ya no puede eliminarse completamente mediante una transformación proyectiva.}
+\label{fig:quartic-moduli}
+\end{figure}
+
+% =============================================================================
+\section{Raíces múltiples y versión ponderada}
+% =============================================================================
+
+\subsection{Cancelación del factor común}
+
+Sea
+\begin{equation}\label{eq:multiple-P}
+P(t)=\prod_{i=1}^{s}(t-r_i)^{m_i},
+\qquad
+m_i\ge1,
+\qquad
+\sum_{i=1}^{s}m_i=n,
+\end{equation}
+con raíces distintas \(r_i\). Entonces
+\[
+\frac{P'(t)}{P(t)}=\sum_{i=1}^{s}\frac{m_i}{t-r_i}.
+\]
+El mapa afín formal sigue siendo
+\begin{equation}\label{eq:weighted-Phi}
+\Phi_P(t)=t-\frac{n}{\displaystyle\sum_{i=1}^{s}\frac{m_i}{t-r_i}}.
+\end{equation}
+Las derivadas homogéneas \(F_X,F_Y\) tienen el factor común
+\[
+\prod_{i=1}^{s}(X-r_iY)^{m_i-1}.
+\]
+Después de cancelarlo, se obtiene un mapa de grado \(s-1\), no de grado \(n-1\).
+
+\begin{theorem}[Mapa polar de un divisor con multiplicidades]\label{thm:weighted-map}
+Para \(P\) como en \cref{eq:multiple-P}, el mapa reducido asociado a
+\(t-nP/P'\) tiene grado \(s-1\). Cada raíz distinta \(r_i\) es un punto fijo con
+multiplicador
+\begin{equation}\label{eq:weighted-multiplier}
+\boxed{\Phi_P'(r_i)=1-\frac{n}{m_i}.}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Escribamos \(G(t)=\prod_{i=1}^{s}(t-r_i)\). Entonces
+\[
+P'(t)=\frac{P(t)}{G(t)}
+\sum_{i=1}^{s}m_i\prod_{j\ne i}(t-r_j).
+\]
+El factor \(P/G\) se cancela en numerador y denominador de \(t-nP/P'\). El
+denominador restante tiene grado \(s-1\) y no se anula en ninguna \(r_i\), por lo
+que no hay cancelaciones adicionales. Cerca de \(r_i\),
+\[
+\frac{P(t)}{P'(t)}=\frac{t-r_i}{m_i}+O((t-r_i)^2).
+\]
+Por tanto,
+\[
+\Phi_P(t)=r_i+\left(1-\frac{n}{m_i}\right)(t-r_i)+O((t-r_i)^2).
+\]
+\end{proof}
+
+\begin{remark}
+La multiplicidad deja de ser un dato invisible: se transforma en el multiplicador
+dinámico. Una raíz con multiplicidad grande puede ser atractora; una raíz simple
+tiene multiplicador \(1-n\). Si todas las raíces coinciden, \(s=1\) y el mapa se
+reduce al mapa constante igual a esa raíz.
+\end{remark}
+
+\subsection{Apolaridad con multiplicidades}
+
+Cuando las raíces se repiten, repetir el mismo hiperplano osculador no añade
+condiciones lineales. La multiplicidad debe codificarse mediante jets, es decir,
+mediante derivadas sucesivas de la parametrización.
+
+Para un subespacio proyectivo \(W\subset\PP^n\), escribiremos
+\[
+W^\perp=\{[X]\in\PP^n:B_n(w,X)=0\text{ para todo }[w]\in W\}.
+\]
+La no degeneración de \(B_n\) implica que, si \(W\) tiene dimensión proyectiva
+\(d\), entonces \(W^\perp\) tiene dimensión \(n-d-1\).
+
+\begin{theorem}[Intersección apolar confluyente]\label{thm:confluent-apolar}
+Sea
+\[
+P(t)=\prod_{i=1}^{s}(t-r_i)^{m_i},
+\qquad r_i\ne r_j\ (i\ne j),
+\qquad \sum_{i=1}^{s}m_i=n.
+\]
+Entonces
+\begin{equation}\label{eq:confluent-intersection}
+\boxed{
+K_P=\bigcap_{i=1}^{s}
+\left(\Osc_{r_i}^{m_i-1}(\nu_n)\right)^\perp.}
+\end{equation}
+Cada factor de la intersección tiene codimensión \(m_i\); las multiplicidades suman
+\(n\), y la intersección resultante es el único punto proyectivo \(K_P\).
+\end{theorem}
+
+\begin{proof}
+Un punto \(X\) pertenece a
+\(\left(\Osc_{r_i}^{m_i-1}(\nu_n)\right)^\perp\) si y sólo si
+\[
+B_n(\nu_n^{(j)}(r_i),X)=0,
+\qquad 0\le j\le m_i-1.
+\]
+Como la bilinearidad permite derivar dentro del primer argumento, estas condiciones
+son equivalentes a que el polinomio
+\[
+F_X(t)=B_n(\nu_n(t),X)
+\]
+tenga un cero de orden al menos \(m_i\) en \(r_i\). Por tanto, si \(X\) pertenece
+a todos los factores de \cref{eq:confluent-intersection}, entonces \(P\mid F_X\).
+El polinomio \(F_X\) tiene grado a lo sumo \(n\) y no es idénticamente nulo para un
+punto proyectivo \(X\); como \(P\) es mónico de grado \(n\), existe
+\(\lambda\ne0\) tal que \(F_X=\lambda P\). La segunda identidad maestra da
+\(P(t)=B_n(\nu_n(t),K_P)\), y la comparación de coeficientes produce
+\(X=\lambda K_P\). Recíprocamente, la identidad maestra muestra que \(K_P\)
+satisface todas las condiciones de orden de anulación.
+\end{proof}
+
+\begin{remark}
+La formulación esquemática dice que un divisor de longitud \(n\) sobre la curva
+racional normal determina, por apolaridad, un punto dual. El teorema anterior contiene
+la versión lineal exacta que se necesita aquí; una compactificación modular exigiría
+además organizar estas condiciones en familias cuando los puntos colisionan.
+\end{remark}
+
+% =============================================================================
+\section{Una tentación geométrica falsa y su corrección}
+% =============================================================================
+
+Una investigación rigurosa no sólo debe demostrar lo correcto; también debe aislar
+las generalizaciones seductoras que fallan.
+
+En el caso \(o=0\), proyectar \(K_P\) desde \(\Osc_0^{n-2}\) hacia la tangente en
+\(\infty\) produce \(-nP(0)/P'(0)\). Es tentador reemplazar \(0\) por un punto
+variable \(o\) y concluir que la proyección desde \(\Osc_o^{n-2}\) produciría
+\[
+o-n\frac{P(o)}{P'(o)}.
+\]
+Eso no es correcto en las coordenadas tangentes usadas aquí.
+
+\begin{proposition}[Resultado de la proyección móvil]\label{prop:false-generalization}
+Con la identificación afín \([X_0:X_1]\mapsto X_0/X_1\) de la tangente
+\(T_\infty\), la proyección de \(K_P\) desde \(\Osc_o^{n-2}(\nu_n)\) hacia
+\(T_\infty\) produce
+\begin{equation}\label{eq:moving-projection}
+\Psi_P(o)=no-n\frac{P(o)}{P'(o)}
+=(n-1)o+\Phi_P(o),
+\end{equation}
+no \(\Phi_P(o)\).
+\end{proposition}
+
+\begin{proofmap}[Idea de la verificación]
+Trasladar \(o\) a \(0\) cambia el polinomio a \(P(o+u)\). La proyección en la
+coordenada local \(u\) produce \(-nP(o)/P'(o)\). Sin embargo, la representación de
+grado \(n\) actúa sobre la tangente en \(\infty\) con peso \(n\): una traslación
+\(u\mapsto u+o\) suma \(no\), no \(o\), a la coordenada \(X_0/X_1\). Al deshacer la
+traslación aparece \cref{eq:moving-projection}.
+\end{proofmap}
+
+Para \(n=2\), la proyección móvil produce \(o+h_{r,s}(o)\), mientras que el mapa
+polar es \(h_{r,s}(o)\). Esta diferencia muestra por qué el mapa exterior y la familia
+de proyecciones no deben identificarse sin controlar la representación tangente.
+
+\begin{warning}
+La coincidencia de dos construcciones en \(0\) y \(\infty\) no autoriza a suponer que
+coinciden para un parámetro variable. La corrección anterior es importante: evita
+convertir una observación verdadera en un teorema falso por extrapolación.
+\end{warning}
+
+% =============================================================================
+\section{Ejemplos comparativos}
+% =============================================================================
+
+\subsection[Dos raíces: 1 y 4]{Dos raíces: \(1\) y \(4\)}
+
+Para
+\[
+P(t)=(t-1)(t-4)=t^2-5t+4,
+\]
+se tiene
+\[
+a_0=1,
+\qquad a_1=\frac52,
+\qquad a_2=4.
+\]
+Por tanto,
+\[
+\cN_1=\frac52=\AM,
+\qquad
+\cN_2=\frac{4}{5/2}=\frac85=\HM,
+\qquad
+\cN_1\cN_2=4=\GM^2.
+\]
+El mapa polar es
+\[
+\Phi_P(t)=t-2\frac{t^2-5t+4}{2t-5}
+=\frac{8-5t}{5-2t}=h_{1,4}(t).
+\]
+La parábola, la apolaridad y la dinámica racional describen exactamente la misma
+involución.
+
+\subsection{Cuatro raíces en progresión geométrica}
+
+Tomemos \(r=(1,2,4,8)\). Entonces
+\[
+e_1=15,
+\qquad e_2=70,
+\qquad e_3=120,
+\qquad e_4=64.
+\]
+Los coeficientes normalizados son
+\[
+a_0=1,
+\quad a_1=\frac{15}{4},
+\quad a_2=\frac{35}{3},
+\quad a_3=30,
+\quad a_4=64.
+\]
+La cadena queda
+\[
+\cN_1=\frac{15}{4}=3.75,
+\qquad
+\cN_2=\frac{28}{9}\approx3.111,
+\qquad
+\cN_3=\frac{18}{7}\approx2.571,
+\qquad
+\cN_4=\frac{32}{15}\approx2.133.
+\]
+Su producto es
+\[
+\frac{15}{4}\cdot\frac{28}{9}\cdot\frac{18}{7}\cdot\frac{32}{15}=64,
+\]
+y por tanto su media geométrica es \(64^{1/4}=2\sqrt2\), igual a la media geométrica
+de \(1,2,4,8\).
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+ ybar,width=0.88\textwidth,height=0.43\textwidth,
+ ymin=0,ymax=4.25,bar width=18pt,
+ symbolic x coords={N1,N2,N3,N4},
+ xtick=data,xticklabels={$\cN_1$,$\cN_2$,$\cN_3$,$\cN_4$},ylabel={valor},
+ nodes near coords,nodes near coords align={vertical},
+ grid=major,grid style={SoftGray},
+ every axis plot/.append style={fill=DeepBlue!45,draw=DeepBlue}]
+\addplot coordinates {(N1,3.75) (N2,3.111111) (N3,2.571429) (N4,2.133333)};
+\addplot[sharp plot,Brick,very thick,mark=none,nodes near coords={}] coordinates {(N1,2.828427) (N4,2.828427)};
+\node[text=Brick,font=\small\bfseries] at (axis cs:N3,2.98) {$\GM=2\sqrt2$};
+\end{axis}
+\end{tikzpicture}
+\caption{La cadena es decreciente. La media geométrica puede quedar entre peldaños; su papel exacto es multiplicativo, no necesariamente posicional.}
+\label{fig:four-root-chain}
+\end{figure}
+
+\subsection{Una configuración simétrica compleja}
+
+Sea
+\[
+P(t)=t^n-1.
+\]
+La forma binaria es \(F(X,Y)=X^n-Y^n\), y
+\[
+\cD_F([X:Y])=[Y^{n-1}:X^{n-1}].
+\]
+En coordenada afín,
+\begin{equation}\label{eq:power-reciprocal}
+\Phi_P(z)=\frac{1}{z^{n-1}}.
+\end{equation}
+Los puntos fijos son las raíces \(n\)-ésimas de la unidad, y cada multiplicador es
+\(-(n-1)\). El hessiano es proporcional a
+\[
+X^{n-2}Y^{n-2},
+\]
+de modo que los únicos puntos críticos son \(0\) y \(\infty\), cada uno con
+multiplicidad \(n-2\). Este ejemplo es el modelo de máxima simetría.
+
+% =============================================================================
+\section{Qué parte es clásica y qué parte constituye el programa de investigación}
+% =============================================================================
+
+\subsection{Inventario honesto}
+
+\begin{longtable}{>{\RaggedRight\arraybackslash}p{0.28\textwidth}
+                  >{\RaggedRight\arraybackslash}p{0.31\textwidth}
+                  >{\RaggedRight\arraybackslash}p{0.32\textwidth}}
+\toprule
+\textbf{Componente} & \textbf{Estatus matemático} & \textbf{Papel en este manuscrito}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Componente} & \textbf{Estatus matemático} & \textbf{Papel en este manuscrito}\\
+\midrule
+\endhead
+Razón doble e involución armónica & Clásico en geometría proyectiva & Punto de entrada elemental y caso \(n=2\).\\
+\addlinespace
+Parábola que recupera \(\AM\) y \(\HM\) & Identidad elemental con lectura proyectiva & Realización visual rigurosa de \(h_{r,s}\).\\
+\addlinespace
+Curva racional normal y apolaridad & Teoría clásica de formas binarias & Produce el punto \(K_P\) y sus hiperplanos duales.\\
+\addlinespace
+Intersección de hiperplanos osculadores & Clásico; aparece en literatura moderna sobre curvas racionales normales & Se usa para interpretar \(K_P\) como compresión geométrica de raíces.\\
+\addlinespace
+Desigualdades de Newton--Maclaurin & Clásicas & Demuestran la monotonía de la cadena.\\
+\addlinespace
+Mapa \(t-nP/P'\) y unicidad por multiplicadores & Explícito en Doyle--McMullen y relacionado con el diferencial de formas binarias & Nivel superior de la torre polar.\\
+\addlinespace
+Divisor crítico hessiano & Clásico en teoría de invariantes y mapas gradiente & Conecta dinámica con el hessiano de \(F\).\\
+\addlinespace
+Cadena \(\cN_k=a_k/a_{k-1}\) como espectro de proyecciones de \(K_P\) & Síntesis específica desarrollada aquí; prioridad absoluta no afirmada & Une todas las medias entre \(\AM\) y \(\HM\).\\
+\addlinespace
+Identidad \(\cN_k=\Phi_{Q_k}(0)\) para la torre derivada & Deducción estructural central de este trabajo & Conecta apolaridad, derivadas y dinámica.\\
+\addlinespace
+Interpretación de \(\cN_k\) como \(\HM\) de raíces de \(P^{(n-k)}\) & Consecuencia exacta de la torre normalizada & Proporciona una lectura nueva y calculable de cada peldaño.\\
+\addlinespace
+Producto de las medias armónicas derivadas igual a \(\GM^n\) & Identidad telescópica dentro del nuevo marco & Integra la media geométrica sin forzarla a ser un peldaño.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Qué sería necesario para una publicación de investigación}
+
+El manuscrito ya contiene teoremas completos y una arquitectura coherente. Para
+convertirlo en un artículo de investigación sometible a una revista especializada,
+serían necesarios al menos cuatro pasos adicionales:
+
+\begin{enumerate}[leftmargin=9mm]
+\item \textbf{Búsqueda bibliográfica de prioridad.} Rastrear de forma sistemática
+MathSciNet, zbMATH y literatura clásica de invariantes para determinar si la cadena
+\(a_k/a_{k-1}\), su interpretación mediante derivadas y su realización osculadora ya
+aparecen conjuntamente.
+\item \textbf{Formulación functorial.} Construir la torre \(Q_k\) y las proyecciones
+\(\pi_k\) sin coordenadas, mediante fibrados de jets sobre \(\PP^1\), banderas de
+osculación y cocientes de representaciones de \(\SL_2\).
+\item \textbf{Teoría modular.} Elevar la biyección de \cref{thm:moduli-bijection} a
+una afirmación sobre variedades o pilas, incluyendo divisores con multiplicidad y
+compactificaciones estables.
+\item \textbf{Dinámica crítica.} Estudiar cómo la configuración de raíces determina
+las órbitas del divisor hessiano y clasificar las configuraciones para las cuales el
+mapa polar es poscríticamente finito.
+\end{enumerate}
+
+% =============================================================================
+\section{Direcciones de investigación y conjeturas prudentes}
+% =============================================================================
+
+\subsection{Problema A: caracterización axiomática de la cadena}
+
+Las medias \(\cN_k\) poseen simetría, homogeneidad, idempotencia, monotonía,
+dualidad recíproca y producto telescópico. Es natural preguntar si estas propiedades,
+junto con una compatibilidad adecuada con la eliminación de variables o con la torre
+derivada, caracterizan la cadena.
+
+\begin{researchbox}[Problema A]
+Clasificar las familias de medias
+\(M_1,\dots,M_n\) sobre \((0,\infty)^n\) que satisfacen simultáneamente:
+\[
+M_1=\AM,
+\qquad M_n=\HM,
+\qquad M_1\ge\cdots\ge M_n,
+\qquad \prod_{k=1}^{n}M_k=\GM^n,
+\]
+y una dualidad
+\[
+M_k(r^{-1})=M_{n-k+1}(r)^{-1}.
+\]
+¿Bajo qué axiomas adicionales resulta forzoso que \(M_k=\cN_k\)?
+\end{researchbox}
+
+\subsection{Problema B: una demostración puramente intercalatoria}
+
+La monotonía \(\cN_k\ge\cN_{k+1}\) se demostró mediante Newton. La interpretación
+como medias armónicas de raíces derivadas sugiere una prueba diferente.
+
+\begin{researchbox}[Problema B]
+Sea \(Q_{k+1}'=(k+1)Q_k\), con todos los ceros positivos y reales. Encontrar una
+prueba directa, basada únicamente en intercalación o en transporte de medidas de
+raíces, de
+\[
+\HM(\operatorname{Roots}Q_k)
+\ge
+\HM(\operatorname{Roots}Q_{k+1}).
+\]
+Una prueba de este tipo podría revelar un mecanismo geométrico detrás de las
+desigualdades de Newton.
+\end{researchbox}
+
+\subsection{Problema C: dinámica del hessiano}
+
+El divisor de raíces fija los puntos fijos; el hessiano fija los puntos críticos. La
+dinámica global depende de cómo se relacionan ambos divisores.
+
+\begin{researchbox}[Problema C]
+Clasificar las formas binarias cuadrado-libres \(F\) para las cuales el mapa
+\(\cD_F\) es poscríticamente finito. En particular:
+\begin{enumerate}[leftmargin=8mm]
+\item determinar cuándo los ceros de \(\Hess(F)\) tienen órbitas finitas;
+\item describir el papel de los grupos finitos de simetría de la configuración de
+raíces;
+\item estudiar si existen familias no rígidas con relaciones críticas persistentes.
+\end{enumerate}
+\end{researchbox}
+
+\subsection{Problema D: compactificación modular}
+
+Cuando las raíces colisionan, el grado del mapa polar disminuye después de cancelar
+factores comunes. Esto indica que la frontera natural del espacio modular no vive en
+un único espacio \(\operatorname{Rat}_{n-1}\), sino en una unión estratificada por el
+número de raíces distintas.
+
+\begin{researchbox}[Problema D]
+Construir una compactificación del locus \(\cE_{n-1}\) que registre simultáneamente:
+\begin{itemize}[leftmargin=8mm]
+\item colisiones de puntos en el divisor de raíces;
+\item descenso de grado del mapa polar;
+\item multiplicadores ponderados \(1-n/m_i\);
+\item datos de osculación confluyente del punto \(K_P\).
+\end{itemize}
+\end{researchbox}
+
+\subsection{Problema E: varias variables}
+
+En dos variables, la forma de área identifica el diferencial de una forma binaria con
+un vector y produce un auto-mapa de \(\PP^1\). En dimensión mayor, el gradiente de
+una forma homogénea produce un mapa polar
+\[
+\PP^{d-1}\dashrightarrow(\PP^{d-1})^*,
+\]
+pero ya no existe una identificación canónica con el espacio original sin estructura
+adicional.
+
+\begin{researchbox}[Problema E]
+Buscar análogos de la cadena \(\cN_k\) para polinomios hiperbólicos de varias
+variables, usando gradientes, conos de hiperbicidad, polarización y desigualdades
+lorentzianas. El objetivo no sería trasladar literalmente la media armónica, sino
+identificar cocientes de coeficientes con significado geométrico y propiedades de
+monotonía comparables.
+\end{researchbox}
+
+\begin{figure}[p]
+\centering
+\begin{tikzpicture}[>=Latex,node distance=11mm and 13mm,every node/.style={align=center}]
+\node[draw=Navy,fill=Ice,rounded corners,minimum width=42mm,minimum height=14mm] (core)
+ {núcleo probado\\cadena + torre polar};
+\node[draw=Gold,fill=Warm,rounded corners,minimum width=43mm,minimum height=14mm,above left=of core] (axiom)
+ {caracterización\\axiomática};
+\node[draw=Green,fill=Mint,rounded corners,minimum width=43mm,minimum height=14mm,above right=of core] (inter)
+ {intercalación\\y desigualdades};
+\node[draw=Brick,fill=white,rounded corners,minimum width=43mm,minimum height=14mm,below left=of core] (dyn)
+ {dinámica crítica\\del hessiano};
+\node[draw=DeepBlue,fill=Sky,rounded corners,minimum width=43mm,minimum height=14mm,below right=of core] (mod)
+ {módulos y\\compactificaciones};
+\node[draw=Slate,fill=SoftGray,rounded corners,minimum width=43mm,minimum height=14mm,below=20mm of core] (multi)
+ {formas hiperbólicas\\en varias variables};
+\foreach \x in {axiom,inter,dyn,mod,multi}{\draw[-{Latex[length=2.5mm]},thick,Slate] (core)--(\x);}
+\end{tikzpicture}
+\caption{Agenda de investigación que emerge del núcleo demostrado. Las flechas señalan extensiones, no resultados ya establecidos.}
+\label{fig:research-roadmap}
+\end{figure}
+
+% =============================================================================
+\section{Conclusiones}
+% =============================================================================
+
+El recorrido comenzó con una construcción elemental en una parábola y terminó en una
+red que conecta geometría proyectiva, polinomios simétricos, apolaridad, derivadas,
+formas binarias y dinámica racional.
+
+La primera conclusión es que la aparición simultánea de la media aritmética y la
+media armónica no es accidental. En grado dos, ambas son imágenes de \(\infty\) y
+\(0\) bajo la involución armónica fijada por las raíces. La parábola realiza esa
+involución mediante secantes que pasan por el vértice.
+
+La segunda conclusión es que el fenómeno no termina en dos raíces. El punto apolar
+\[
+K_P=[a_n:a_{n-1}:\cdots:a_0]
+\]
+comprime todos los polinomios simétricos normalizados. Las banderas osculadoras
+opuestas en \(0\) y \(\infty\) aíslan cada ventana
+\([a_k:a_{k-1}]\), y su coordenada es la media
+\[
+\cN_k=\frac{a_k}{a_{k-1}}.
+\]
+Las desigualdades de Newton convierten estas lecturas en una cadena decreciente desde
+\(\AM\) hasta \(\HM\), mientras que el producto telescópico recupera \(\GM^n\).
+
+La tercera conclusión es la existencia de una torre dinámica:
+\[
+Q_k=\frac{k!}{n!}P^{(n-k)},
+\qquad
+\Phi_k=t-\frac{Q_k}{Q_{k-1}}.
+\]
+Cada peldaño de la cadena satisface
+\[
+\cN_k=\Phi_k(0),
+\]
+y, para raíces positivas, es la media armónica de las raíces de \(Q_k\). Todas las
+capas conservan la media aritmética original. Así, la cadena puede entenderse como
+una secuencia de medias armónicas de configuraciones derivadas que se intercalan.
+
+La cuarta conclusión es que el nivel superior
+\[
+\Phi_P=t-nP/P'
+\]
+es un objeto proyectivo clásico asociado al diferencial exterior de la forma binaria
+de raíces. Sus puntos fijos son las raíces, todos con multiplicador \(1-n\), y sus
+puntos críticos forman el divisor hessiano. Esta estructura produce una
+correspondencia natural entre configuraciones de puntos en \(\PP^1\) y un locus de
+mapas racionales con multiplicadores fijos.
+
+Finalmente, el análisis mostró un principio metodológico: una identidad elegante no
+debe confundirse con una novedad profunda, pero tampoco debe descartarse por ser
+algebraicamente sencilla. Su valor puede estar en revelar que objetos clásicos,
+considerados por separado, forman una arquitectura no evidente. La cadena apolar y la
+torre polar constituyen precisamente esa arquitectura.
+
+\Needspace{0.48\textheight}
+\begin{keybox}[Teorema-síntesis]
+Para raíces positivas \(r_1,\dots,r_n\), sea
+\[
+P(t)=\prod_{i=1}^{n}(t-r_i),
+\qquad
+Q_k(t)=\frac{k!}{n!}P^{(n-k)}(t),
+\qquad
+\Phi_k(t)=t-\frac{Q_k(t)}{Q_{k-1}(t)}.
+\]
+Entonces
+\[
+\boxed{
+\AM=\Phi_1(0)\ge\Phi_2(0)\ge\cdots\ge\Phi_n(0)=\HM,}
+\]
+\[
+\boxed{
+\prod_{k=1}^{n}\Phi_k(0)=\GM^n,}
+\]
+y \(\Phi_k(0)\) es simultáneamente:
+\begin{enumerate}[leftmargin=8mm]
+\item el cociente \([a_k:a_{k-1}]\) leído desde el punto apolar \(K_P\);
+\item la media armónica de las raíces de \(Q_k\);
+\item la imagen del origen bajo el mapa polar exterior de la forma binaria asociada a
+\(Q_k\).
+\end{enumerate}
+\end{keybox}
+
+% =============================================================================
+\FloatBarrier
+\appendix
+\section{Formulario de identidades}
+% =============================================================================
+
+\begin{align*}
+P(t)&=\prod_{i=1}^{n}(t-r_i)
+=\sum_{k=0}^{n}(-1)^ke_kt^{n-k},\\
+a_k&=\frac{e_k}{\binom nk},\\
+\cN_k&=\frac{a_k}{a_{k-1}}
+=\frac{k}{n-k+1}\frac{e_k}{e_{k-1}},\\
+\cN_1&=\AM,\\
+\cN_n&=\HM,\\
+\prod_{k=1}^{n}\cN_k&=\GM^n,\\
+\cN_k(r^{-1})&=\cN_{n-k+1}(r)^{-1},\\
+Q_k(t)&=\frac{k!}{n!}P^{(n-k)}(t),\\
+Q_k'&=kQ_{k-1},\\
+Q_k(0)&=(-1)^ka_k,\\
+\Phi_k(t)&=t-k\frac{Q_k(t)}{Q_k'(t)}
+=t-\frac{Q_k(t)}{Q_{k-1}(t)},\\
+\Phi_k(0)&=\cN_k,\\
+\Phi_P(t)&=t-n\frac{P(t)}{P'(t)},\\
+\Phi_P'(r_i)&=1-n\qquad(r_i\text{ simple}),\\
+\Phi_Q'(t)&=\frac{mQQ''-(m-1)(Q')^2}{(Q')^2},\\
+\Hess(F_Q)(t,1)&=(m-1)\bigl[mQQ''-(m-1)(Q')^2\bigr].
+\end{align*}
+
+% =============================================================================
+\section{Detalles computacionales verificables}
+% =============================================================================
+
+Las identidades principales son simbólicas y no dependen de experimentos. Sin
+embargo, para verificar ejemplos o explorar conjeturas puede emplearse el siguiente
+pseudocódigo algebraico.
+
+\begin{verbatim}
+Entrada: raíces positivas r[1],...,r[n]
+1. Construir P(t) = producto_i (t-r[i]).
+2. Para k=0,...,n:
+       e[k] = coeficiente de (-1)^k t^(n-k) en P.
+       a[k] = e[k] / binomial(n,k).
+3. Para k=1,...,n:
+       N[k] = a[k]/a[k-1].
+       Q[k] = (k!/n!) * derivada(P,n-k).
+       Phi[k](t) = t - Q[k](t)/Q[k-1](t).
+4. Verificar:
+       Phi[k](0) == N[k].
+       N[k] >= N[k+1].
+       producto_k N[k] == producto_i r[i].
+5. Para cada k, hallar las raíces rho[k,*] de Q[k] y verificar:
+       N[k] == media_armonica(rho[k,*]).
+\end{verbatim}
+
+% =============================================================================
+\section{Referencias comentadas}
+% =============================================================================
+
+\begin{thebibliography}{99}
+
+\bibitem{Berger}
+M.~Berger,
+\emph{Geometry I},
+Springer, Berlín, 1987.
+\newblock Referencia general para geometría clásica y proyectiva.
+
+\bibitem{CaminataCarliniSchaffler}
+A.~Caminata, E.~Carlini y L.~Schaffler,
+\emph{Simplices Osculating Rational Normal Curves},
+Vietnam Journal of Mathematics \textbf{54} (2026), 627--640; publicado en línea el 16 de abril de 2025.
+\newblock Desarrolla configuraciones de hiperplanos osculadores de curvas racionales normales y ofrece un contexto moderno para la geometría usada aquí.
+
+\bibitem{Coxeter}
+H.~S.~M. Coxeter,
+\emph{Projective Geometry}, segunda edición,
+Springer, Nueva York, 1987.
+\newblock Fuente clásica para razón doble, división armónica y transformaciones proyectivas.
+
+\bibitem{Dolgachev}
+I.~Dolgachev,
+\emph{Classical Algebraic Geometry: A Modern View},
+Cambridge University Press, Cambridge, 2012.
+\newblock Tratamiento moderno de geometría algebraica clásica, formas binarias e invariantes.
+
+\bibitem{DoyleMcMullen}
+P.~Doyle y C.~McMullen,
+\emph{Solving the Quintic by Iteration},
+Acta Mathematica \textbf{163} (1989), 151--180. DOI: 10.1007/BF02392735.
+\newblock En su discusión de mapas racionales con simetría aparece el mapa asociado al diferencial de una forma binaria y la caracterización de \(t-nP/P'\) por sus puntos fijos y multiplicadores.
+
+\bibitem{GraceYoung}
+J.~H. Grace y A.~Young,
+\emph{The Algebra of Invariants},
+Cambridge University Press, Cambridge, 1903; reimpresión Chelsea.
+\newblock Fuente histórica de teoría clásica de invariantes y formas binarias.
+
+\bibitem{HardyLittlewoodPolya}
+G.~H. Hardy, J.~E. Littlewood y G.~Pólya,
+\emph{Inequalities}, segunda edición,
+Cambridge University Press, Cambridge, 1952.
+\newblock Referencia clásica para desigualdades entre medias y polinomios simétricos.
+
+\bibitem{Harris}
+J.~Harris,
+\emph{Algebraic Geometry: A First Course},
+Springer, Nueva York, 1992.
+\newblock Introducción a curvas racionales normales, dualidad y geometría proyectiva algebraica.
+
+\bibitem{IarrobinoKanev}
+A.~Iarrobino y V.~Kanev,
+\emph{Power Sums, Gorenstein Algebras, and Determinantal Loci},
+Lecture Notes in Mathematics 1721, Springer, Berlín, 1999.
+\newblock Contexto profundo para apolaridad y álgebra de formas.
+
+\bibitem{MarshallOlkinArnold}
+A.~W. Marshall, I.~Olkin y B.~C. Arnold,
+\emph{Inequalities: Theory of Majorization and Its Applications},
+segunda edición, Springer, Nueva York, 2011.
+\newblock Marco moderno para desigualdades simétricas y mayoración.
+
+\bibitem{Milnor}
+J.~Milnor,
+\emph{Dynamics in One Complex Variable}, tercera edición,
+Princeton University Press, Princeton, 2006.
+\newblock Referencia estándar para dinámica de mapas racionales, puntos fijos, multiplicadores y puntos críticos.
+
+\bibitem{Olver}
+P.~J. Olver,
+\emph{Classical Invariant Theory},
+Cambridge University Press, Cambridge, 1999.
+\newblock Presentación sistemática de invariantes, covariantes, hessianos y formas binarias.
+
+\bibitem{Silverman}
+J.~H. Silverman,
+\emph{The Arithmetic of Dynamical Systems},
+Springer, Nueva York, 2007.
+\newblock Contexto aritmético y modular de los mapas racionales.
+
+\end{thebibliography}
+
+\vfill
+\begin{center}
+\begin{tikzpicture}
+\draw[Gold,line width=0.9pt] (0,0)--(10,0);
+\node[below=3mm,font=\small\sffamily,text=Slate,align=center] at (5,0)
+ {Fin del manuscrito\\Versión de investigación, julio de 2026};
+\end{tikzpicture}
+\end{center}
+
+\end{document}

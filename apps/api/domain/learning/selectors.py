@@ -345,9 +345,22 @@ def learning_outline(enrollment: CourseEnrollment) -> dict[str, Any]:
             source_activity_id = uuid.UUID(activity["id"])
             row = activity_progress_by_source.get(source_activity_id)
             instance = activity_instance_by_source.get(source_activity_id)
+            lesson_unit_id = (
+                uuid.UUID(activity["binding"]["unit_id"])
+                if activity["type"] == "lesson"
+                and isinstance(activity.get("binding"), dict)
+                and isinstance(activity["binding"].get("unit_id"), str)
+                else None
+            )
             activity["source_activity_id"] = source_activity_id
             activity["id"] = instance.id if instance else source_activity_id
-            activity["status"] = row.status if row else ActivityProgressStatus.AVAILABLE
+            activity["status"] = (
+                row.status
+                if row
+                else states.get(lesson_unit_id, ProgressStatus.NOT_STARTED)
+                if lesson_unit_id
+                else ActivityProgressStatus.AVAILABLE
+            )
             activity["is_current"] = activity["type"] == "lesson" and activity[
                 "binding"
             ].get("unit_id") == str(progress.last_unit_id)

@@ -75,34 +75,37 @@ export function CourseCurriculum({
               const accessibleTitle = `${module.position}.${activity.position} ${activity.title}`;
               const content = (
                 <>
-                  <ActivityState status={activity.status} />
                   {variant === 'player' ? (
                     <span className="course-curriculum__item-title">
                       <ActivityKind type={activity.type} />
                       <span className="sr-only">
                         {activityTypeLabel(activity.type)}:{' '}
                       </span>
-                      <strong>
+                      <strong title={accessibleTitle}>
                         {module.position}.{activity.position} {activity.title}
                       </strong>
+                      <ActivityState status={activity.status} />
                     </span>
                   ) : (
-                    <span>
-                      <strong>
-                        {module.position}.{activity.position} {activity.title}
-                      </strong>
-                      {activity.summary ? (
-                        <small>{activity.summary}</small>
-                      ) : null}
-                      <small className="course-curriculum__kind">
-                        <ActivityKind type={activity.type} />
-                        {activityTypeLabel(activity.type)}
-                        {activity.required ? ' · Obligatoria' : ' · Opcional'}
-                      </small>
-                      {blocked && activity.blocked_reason ? (
-                        <small>{activity.blocked_reason}</small>
-                      ) : null}
-                    </span>
+                    <>
+                      <ActivityState status={activity.status} />
+                      <span>
+                        <strong>
+                          {module.position}.{activity.position} {activity.title}
+                        </strong>
+                        {activity.summary ? (
+                          <small>{activity.summary}</small>
+                        ) : null}
+                        <small className="course-curriculum__kind">
+                          <ActivityKind type={activity.type} />
+                          {activityTypeLabel(activity.type)}
+                          {activity.required ? ' · Obligatoria' : ' · Opcional'}
+                        </small>
+                        {blocked && activity.blocked_reason ? (
+                          <small>{activity.blocked_reason}</small>
+                        ) : null}
+                      </span>
+                    </>
                   )}
                   {variant === 'course' &&
                   activity.estimated_duration_minutes ? (

@@ -63,9 +63,16 @@ function Import-LocalEnvironment {
 function Test-Endpoint([string]$Uri) {
     try {
         # A cold Next.js development route can compile for more than two
-        # seconds even though its registered listener is healthy.
-        $response = Invoke-WebRequest -Uri $Uri -TimeoutSec 8 -SkipHttpErrorCheck
-        return $response.StatusCode -ge 200 -and $response.StatusCode -lt 500
+        # seconds even though its registered listener is healthy.  Do not
+        # follow the unauthenticated frontend redirect: the launcher has no
+        # browser cookie and only needs to verify the local listener.
+        $response = Invoke-WebRequest `
+            -Uri $Uri `
+            -TimeoutSec 8 `
+            -SkipHttpErrorCheck `
+            -MaximumRedirection 0 `
+            -ErrorAction SilentlyContinue
+        return $response.StatusCode -ge 200 -and $response.StatusCode -lt 400
     }
     catch {
         return $false
@@ -233,7 +240,7 @@ function Start-Development {
         -RedirectStandardError $apiErrorLog
     $webProcess = Start-Process `
         -FilePath 'node.exe' `
-        -ArgumentList @($nextExecutable, 'dev', '--webpack', '--hostname', $webBindAddress, '--port', '3000') `
+        -ArgumentList @($nextExecutable, 'dev', '--hostname', $webBindAddress, '--port', '3000') `
         -WorkingDirectory $webDirectory `
         -PassThru `
         -WindowStyle Hidden `

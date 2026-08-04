@@ -13,7 +13,10 @@ import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 
 import { CourseCurriculum } from '@/components/learning/course-curriculum';
-import { LearningProgress } from '@/components/learning/learning-progress';
+import {
+  LearningProgress,
+  learningProgressSummary,
+} from '@/components/learning/learning-progress';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -59,8 +62,7 @@ export function LearningPlayerShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     stageMode !== 'document',
   );
-  const completedActivities = outline.progress.completion.completed_required;
-  const totalActivities = outline.progress.completion.total_required;
+  const progressSummary = learningProgressSummary(outline.progress);
 
   return (
     <main
@@ -158,12 +160,12 @@ export function LearningPlayerShell({
             <ListTree />
             Contenido del curso
             <progress
-              aria-label={`${completedActivities} de ${totalActivities} actividades completadas`}
-              max={Math.max(1, totalActivities)}
-              value={completedActivities}
+              aria-label={`${progressSummary.completed} de ${progressSummary.total} ${progressSummary.noun} completadas`}
+              max={Math.max(1, progressSummary.total)}
+              value={progressSummary.completed}
             />
             <span>
-              {completedActivities}/{totalActivities}
+              {progressSummary.completed}/{progressSummary.total}
             </span>
           </summary>
           <div>
@@ -187,32 +189,65 @@ export function LearningPlayerShell({
 }
 
 export function LearningPlayerNavigation({
+  children,
   label,
   next,
   previous,
 }: Readonly<{
+  children?: ReactNode;
   label: string;
   next: LearningPlayerNavigationItem | null;
   previous: LearningPlayerNavigationItem | null;
 }>) {
   return (
     <nav aria-label={label} className="learning-player__navigation">
-      {previous ? (
-        <Button asChild size="icon" variant="outline">
-          <Link aria-label={`Anterior: ${previous.title}`} href={previous.href}>
+      <div className="learning-player__navigation-previous">
+        {previous ? (
+          <Button asChild size="icon" variant="outline">
+            <Link
+              aria-label={`Lección anterior: ${previous.title}`}
+              href={previous.href}
+            >
+              <ChevronLeft />
+              <span className="sr-only">Anterior</span>
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            aria-label="No hay una lección anterior"
+            disabled
+            size="icon"
+            type="button"
+            variant="outline"
+          >
             <ChevronLeft />
-            <span className="sr-only">Anterior</span>
-          </Link>
-        </Button>
-      ) : null}
-      {next ? (
-        <Button asChild size="icon" variant="outline">
-          <Link aria-label={`Siguiente: ${next.title}`} href={next.href}>
+          </Button>
+        )}
+      </div>
+      <div className="learning-player__navigation-completion">{children}</div>
+      <div className="learning-player__navigation-next">
+        {next ? (
+          <Button asChild size="icon" variant="outline">
+            <Link
+              aria-label={`Lección siguiente: ${next.title}`}
+              href={next.href}
+            >
+              <ChevronRight />
+              <span className="sr-only">Siguiente</span>
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            aria-label="No hay una lección siguiente"
+            disabled
+            size="icon"
+            type="button"
+            variant="outline"
+          >
             <ChevronRight />
-            <span className="sr-only">Siguiente</span>
-          </Link>
-        </Button>
-      ) : null}
+          </Button>
+        )}
+      </div>
     </nav>
   );
 }

@@ -2033,6 +2033,18 @@
   }
 
   .course-curriculum[data-variant='player']
+    .course-curriculum__item-title
+    strong {
+    @apply min-w-0 flex-1 truncate;
+  }
+
+  .course-curriculum[data-variant='player']
+    .course-curriculum__item-title
+    .course-curriculum__state {
+    @apply ml-auto;
+  }
+
+  .course-curriculum[data-variant='player']
     .course-curriculum__module
     > details
     > ol
@@ -2060,12 +2072,57 @@
     @apply mx-auto w-full max-w-6xl;
   }
 
+  .learning-player__lesson:has(.learning-native-video[data-size='normal']) {
+    @apply max-w-4xl;
+  }
+
+  .learning-player__lesson:has(.learning-native-video[data-size='wide']) {
+    @apply max-w-6xl;
+  }
+
+  .learning-player__lesson:has(.learning-native-video[data-size='full']) {
+    @apply max-w-none;
+  }
+
   .learning-native-video {
     @apply overflow-hidden rounded-xl bg-black shadow-[0_18px_48px_rgb(15_23_42_/_0.18)];
   }
 
   .learning-native-video video {
     @apply block outline-none;
+  }
+
+  .learning-native-video__settings {
+    @apply flex flex-wrap items-center justify-between gap-3 border-t border-white/15 bg-slate-950 px-3 py-2.5 text-slate-100 sm:px-4;
+  }
+
+  .learning-native-video__settings fieldset {
+    @apply flex min-w-0 items-center gap-2;
+  }
+
+  .learning-native-video__settings legend,
+  .learning-native-video__quality > span {
+    @apply sr-only;
+  }
+
+  .learning-native-video__settings fieldset > div {
+    @apply flex flex-wrap items-center gap-1;
+  }
+
+  .learning-native-video__settings button[data-variant='ghost'] {
+    @apply text-slate-300 hover:bg-white/10 hover:text-white;
+  }
+
+  .learning-native-video__settings button[data-variant='secondary'] {
+    @apply bg-white text-slate-950 hover:bg-slate-100;
+  }
+
+  .learning-native-video__quality {
+    @apply flex shrink-0 items-center;
+  }
+
+  .learning-native-video__quality select {
+    @apply h-9 rounded-lg border border-white/20 bg-slate-900 px-2.5 text-sm font-medium text-white outline-none transition focus-visible:border-white focus-visible:ring-2 focus-visible:ring-white/60 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .learning-player__delivery-resource {
@@ -2298,11 +2355,23 @@
   }
 
   .learning-player__navigation {
-    @apply mx-auto mt-3 flex max-w-5xl justify-end gap-2;
+    @apply mx-auto mt-5 grid w-full max-w-6xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 pb-3;
   }
 
-  .learning-player__navigation a {
-    @apply size-9 rounded-full bg-white shadow-sm;
+  .learning-player__navigation-previous {
+    @apply justify-self-start;
+  }
+
+  .learning-player__navigation-next {
+    @apply justify-self-end;
+  }
+
+  .learning-player__navigation-completion {
+    @apply min-w-0;
+  }
+
+  .learning-player__navigation :is(a, button) {
+    @apply shadow-sm;
   }
 
   .learning-player__navigation svg {
@@ -2310,6 +2379,14 @@
   }
 
   .learning-unit-control--compact button {
+    @apply whitespace-nowrap;
+  }
+
+  .learning-unit-control--navigation {
+    @apply grid justify-items-center gap-2;
+  }
+
+  .learning-unit-control--navigation button {
     @apply whitespace-nowrap;
   }
 

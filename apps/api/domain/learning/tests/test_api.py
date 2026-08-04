@@ -570,6 +570,39 @@ class LearningApiTests(LearningFixtureMixin, TestCase):
         self.assertIn("delivery", unit_response.json())
         self.assertNotIn("content", unit_response.json())
 
+    def test_individual_lesson_completion_updates_the_outline_state(self) -> None:
+        (
+            _owner,
+            learner,
+            organization,
+            _membership,
+            _revision,
+            _module,
+            unit,
+            _publication,
+            _release,
+            enrollment,
+        ) = self.learning_context()
+        client = APIClient()
+        client.force_authenticate(learner)
+        base = (
+            f"/api/v1/organizations/{organization.slug}/learning/me/"
+            f"enrollments/{enrollment.id}"
+        )
+        initial = client.get(f"{base}/units/{unit.id}/")
+        self.assertEqual(initial.status_code, 200, initial.data)
+        completed = client.post(
+            f"{base}/units/{unit.id}/complete/",
+            {"expected_progress_version": initial.data["progress"]["progress_version"]},
+            format="json",
+        )
+        self.assertEqual(completed.status_code, 200, completed.data)
+        outline = client.get(f"{base}/outline/")
+        self.assertEqual(outline.status_code, 200, outline.data)
+        activity = outline.data["modules"][0]["activities"][0]
+        self.assertEqual(activity["source_activity_id"], unit.id)
+        self.assertEqual(activity["status"], "completed")
+
     def test_admin_lists_accept_explicit_created_at_ordering(self) -> None:
         (
             owner,
