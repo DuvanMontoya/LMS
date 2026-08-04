@@ -92,6 +92,11 @@
   el smoke OTLP completo, dashboards, métricas, trazas y logs. La siguiente
   ejecución remota queda como evidencia pendiente de la misma espera de
   preparación bajo Linux.
+- El control integral posterior alcanzó el cliente de plataforma y detectó un
+  snapshot OpenAPI pendiente: se había añadido la descripción del contrato en
+  `info` sin regenerar el archivo versionado. `platform:client:generate` y su
+  comprobación inmediata pasaron; TypeScript ya era idéntico y sólo cambió el
+  snapshot JSON. La próxima ejecución remota verificará ese contrato cerrado.
 
 ## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
 
