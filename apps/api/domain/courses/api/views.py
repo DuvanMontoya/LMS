@@ -47,6 +47,7 @@ from ..models import (
     CourseRevision,
     CourseTeachingException,
     CourseUnit,
+    MediaCMSVideoBinding,
 )
 from ..policies import (
     can_manage_course,
@@ -72,12 +73,14 @@ from ..services import (
     archive_unit,
     assign_course_teaching_exception,
     close_course_teaching_exception,
+    configure_mediacms_video_binding,
     confirm_completion_policy,
     create_activity,
     create_course,
     create_module,
     create_unit,
     move_activity_to_module,
+    remove_mediacms_video_binding,
     replace_activity_availability_rules,
     replace_activity_learning_objectives,
     replace_activity_order,
@@ -114,6 +117,8 @@ from .serializers import (
     ExpectedVersionSerializer,
     GradeCategorySerializer,
     GradingSchemeResponseSerializer,
+    MediaCMSVideoBindingInputSerializer,
+    MediaCMSVideoBindingSerializer,
     ModuleCreateSerializer,
     ModuleMutationSerializer,
     ModuleSerializer,
@@ -1407,6 +1412,7 @@ class UnitDetailView(APIView):
         expected_version = data.pop("expected_version")
         topic_ids = data.pop("topic_ids", None)
         objective_ids = data.pop("learning_objective_ids", None)
+        media_friendly_token = data.pop("mediacms_video_friendly_token", None)
         try:
             topics = None
             if topic_ids is not None:
@@ -1434,7 +1440,95 @@ class UnitDetailView(APIView):
                 expected_version=expected_version,
                 topics=topics,
                 learning_objectives=learning_objectives,
+                media_friendly_token=media_friendly_token,
                 **data,
+            )
+        except CourseDomainError as error:
+            return _domain_error(error)
+        payload = UnitSerializer(unit).data
+        payload["lock_version"] = locked.lock_version
+        return Response(payload)
+
+
+class MediaCMSVideoBindingView(APIView):
+    @extend_schema(responses={200: MediaCMSVideoBindingSerializer})
+    def get(
+        self,
+        request: Request,
+        slug: str,
+        course_slug: str,
+        revision_id: str,
+        unit_id: str,
+    ) -> Response:
+        organization = _organization(request, slug)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        unit = _unit(revision, unit_id)
+        try:
+            binding = unit.mediacms_video_binding
+        except MediaCMSVideoBinding.DoesNotExist as error:
+            raise Http404 from error
+        return Response(MediaCMSVideoBindingSerializer(binding).data)
+
+    @extend_schema(
+        request=MediaCMSVideoBindingInputSerializer,
+        responses={200: MediaCMSVideoBindingSerializer},
+    )
+    def put(
+        self,
+        request: Request,
+        slug: str,
+        course_slug: str,
+        revision_id: str,
+        unit_id: str,
+    ) -> Response:
+        organization = _organization(request, slug)
+        _require_manage(request, organization)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        serializer = MediaCMSVideoBindingInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            binding, locked = configure_mediacms_video_binding(
+                actor=request.user,
+                organization=organization,
+                unit=_unit(revision, unit_id),
+                **serializer.validated_data,
+            )
+        except CourseDomainError as error:
+            return _domain_error(error)
+        payload = MediaCMSVideoBindingSerializer(binding).data
+        payload["lock_version"] = locked.lock_version
+        return Response(payload)
+
+    @extend_schema(
+        request=ExpectedVersionSerializer,
+        responses={200: UnitMutationSerializer},
+    )
+    def delete(
+        self,
+        request: Request,
+        slug: str,
+        course_slug: str,
+        revision_id: str,
+        unit_id: str,
+    ) -> Response:
+        organization = _organization(request, slug)
+        _require_manage(request, organization)
+        revision = _revision(
+            request, _course(request, organization, course_slug), revision_id
+        )
+        serializer = ExpectedVersionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        unit = _unit(revision, unit_id)
+        try:
+            locked = remove_mediacms_video_binding(
+                actor=request.user,
+                organization=organization,
+                unit=unit,
+                **serializer.validated_data,
             )
         except CourseDomainError as error:
             return _domain_error(error)

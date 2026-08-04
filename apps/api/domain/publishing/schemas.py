@@ -12,7 +12,7 @@ from referencing import Registry, Resource
 
 from .exceptions import ReleaseSnapshotInvalid
 
-CURRENT_RELEASE_SCHEMA_VERSION = 4
+CURRENT_RELEASE_SCHEMA_VERSION = 5
 REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
 SCHEMA_ROOT = REPOSITORY_ROOT / "schemas"
 
@@ -28,7 +28,7 @@ def _walk(value: object):
             pending.extend(current)
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=5)
 def release_schema(version: int) -> dict[str, Any]:
     schema = json.loads(
         (
@@ -56,7 +56,7 @@ def release_schema(version: int) -> dict[str, Any]:
     return schema
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=5)
 def release_validator(version: int) -> Draft202012Validator:
     content_version = min(version, 2)
     content_schema_id = f"urn:lms:content:unit-document:{content_version}"
@@ -81,6 +81,7 @@ def validate_release_snapshot(snapshot: object) -> None:
         2,
         3,
         4,
+        5,
     }:
         raise ReleaseSnapshotInvalid("La versión del snapshot no está soportada.")
     version = int(snapshot["schema_version"])

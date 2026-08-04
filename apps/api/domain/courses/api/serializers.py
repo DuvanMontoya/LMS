@@ -27,6 +27,7 @@ from ..models import (
     CourseUnit,
     CourseUnitLearningObjective,
     CourseUnitTopic,
+    MediaCMSVideoBinding,
 )
 
 
@@ -517,6 +518,7 @@ class GradingSchemeResponseSerializer(serializers.Serializer):
 
 class UnitSerializer(serializers.ModelSerializer):
     module_id = serializers.UUIDField(source="module.id", read_only=True)
+    mediacms_video = serializers.SerializerMethodField()
 
     class Meta:
         model = CourseUnit
@@ -527,6 +529,7 @@ class UnitSerializer(serializers.ModelSerializer):
             "summary",
             "estimated_duration_minutes",
             "lesson_kind",
+            "mediacms_video",
             "status",
             "position",
             "created_at",
@@ -534,6 +537,14 @@ class UnitSerializer(serializers.ModelSerializer):
             "archived_at",
         )
         read_only_fields = fields
+
+    @extend_schema_field(serializers.DictField(allow_null=True))
+    def get_mediacms_video(self, instance: CourseUnit) -> dict[str, str] | None:
+        try:
+            binding = instance.mediacms_video_binding
+        except MediaCMSVideoBinding.DoesNotExist:
+            return None
+        return {"media_friendly_token": binding.media_friendly_token}
 
 
 class UnitMutationSerializer(UnitSerializer):
@@ -563,12 +574,36 @@ class UnitUpdateSerializer(ExpectedVersionSerializer):
     estimated_duration_minutes = serializers.IntegerField(
         min_value=1, required=False, allow_null=True
     )
+    mediacms_video_friendly_token = serializers.RegexField(
+        regex=r"^$|^[A-Za-z0-9][A-Za-z0-9_-]{0,149}$",
+        max_length=150,
+        required=False,
+        allow_blank=True,
+        trim_whitespace=True,
+    )
     topic_ids = serializers.ListField(
         child=serializers.UUIDField(), allow_empty=True, max_length=200, required=False
     )
     learning_objective_ids = serializers.ListField(
         child=serializers.UUIDField(), allow_empty=True, max_length=200, required=False
     )
+
+
+class MediaCMSVideoBindingInputSerializer(ExpectedVersionSerializer):
+    media_friendly_token = serializers.RegexField(
+        regex=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,149}$",
+        max_length=150,
+        trim_whitespace=True,
+    )
+
+
+class MediaCMSVideoBindingSerializer(serializers.ModelSerializer):
+    unit_id = serializers.UUIDField(read_only=True)
+
+    class Meta:
+        model = MediaCMSVideoBinding
+        fields = ("unit_id", "media_friendly_token", "updated_at")
+        read_only_fields = fields
 
 
 class UnitTopicSerializer(serializers.ModelSerializer):

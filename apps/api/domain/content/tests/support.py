@@ -11,7 +11,7 @@ from domain.courses.tests.support import CourseFixtureMixin
 
 
 class ContentFixtureMixin(CourseFixtureMixin):
-    def unit_context(self):
+    def unit_context(self, *, lesson_kind: str = "document"):
         owner, organization, subject, objective, topic, revision = (
             self.course_revision()
         )
@@ -28,6 +28,7 @@ class ContentFixtureMixin(CourseFixtureMixin):
             module=module,
             expected_version=revision.lock_version,
             title="Dominio y rango",
+            lesson_kind=lesson_kind,
         )
         revision = replace_unit_learning_objectives(
             actor=owner,

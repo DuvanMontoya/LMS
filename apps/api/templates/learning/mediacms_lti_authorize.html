@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="3" />
+    <title>Abriendo vídeo…</title>
+  </head>
+  <body>
+    <p>Abriendo el vídeo de forma segura…</p>
+    <form action="{{ redirect_uri }}" id="lti-launch" method="post">
+      <input name="id_token" type="hidden" value="{{ id_token }}" />
+      <input name="state" type="hidden" value="{{ state }}" />
+      <button type="submit">Continuar</button>
+    </form>
+    <script>document.getElementById('lti-launch').submit();</script>
+  </body>
+</html>

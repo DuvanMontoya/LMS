@@ -7,7 +7,8 @@ from django.db import DatabaseError, transaction
 from django.test import TestCase
 
 from domain.content.models import UnitContentDocument
-from domain.courses.choices import AuthoringStatus
+from domain.courses.choices import AuthoringStatus, LessonKind
+from domain.courses.models import MediaCMSVideoBinding
 from domain.courses.services import (
     approve_revision,
     confirm_completion_policy,
@@ -30,6 +31,35 @@ from .support import PublishingFixtureMixin
 
 
 class PublicationServiceTests(PublishingFixtureMixin, TestCase):
+    def test_video_binding_is_release_pinned_and_copied_into_a_new_draft(self) -> None:
+        (
+            owner,
+            organization,
+            revision,
+            _module,
+            unit,
+            _objective,
+            _topic,
+            publication,
+            release,
+        ) = self.published_context(lesson_kind=LessonKind.MEDIACMS_VIDEO)
+        snapshot_unit = release.snapshot["modules"][0]["units"][0]
+        self.assertEqual(snapshot_unit["lesson_kind"], LessonKind.MEDIACMS_VIDEO)
+        self.assertEqual(
+            snapshot_unit["media"],
+            {"provider": "mediacms_lti", "media_friendly_token": "ak7uPO2Vn"},
+        )
+        draft = create_draft_from_release(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            release_number=release.number,
+            expected_publication_version=publication.lock_version,
+        )
+        draft_binding = MediaCMSVideoBinding.objects.get(unit__module__revision=draft)
+        self.assertEqual(draft_binding.media_friendly_token, "ak7uPO2Vn")
+        self.assertNotEqual(draft_binding.unit_id, unit.id)
+
     def test_publish_builds_complete_snapshot_and_is_naturally_idempotent(self) -> None:
         owner, organization, revision, _module, unit, *_ = (
             self.approved_revision_context()

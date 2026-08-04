@@ -576,9 +576,16 @@ class LearningUnitSerializer(serializers.Serializer):
     topics = serializers.ListField(child=serializers.DictField())
     learning_objectives = serializers.ListField(child=serializers.DictField())
     content = serializers.DictField()
+    media = serializers.DictField(allow_null=True, required=False)
     progress = ProgressSerializer()
     navigation = serializers.DictField()
     assets = serializers.ListField(child=serializers.DictField(), required=False)
+
+
+class MediaCMSLaunchSerializer(serializers.Serializer):
+    provider = serializers.CharField()
+    launch_url = serializers.CharField()
+    expires_in_seconds = serializers.IntegerField(min_value=1)
 
 
 class LearningActivitySerializer(serializers.Serializer):

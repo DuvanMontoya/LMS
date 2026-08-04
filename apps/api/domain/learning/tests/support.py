@@ -22,7 +22,7 @@ from domain.publishing.tests.support import PublishingFixtureMixin
 
 
 class LearningFixtureMixin(PublishingFixtureMixin):
-    def learning_context(self):
+    def learning_context(self, *, lesson_kind: str = "document"):
         (
             owner,
             organization,
@@ -33,7 +33,7 @@ class LearningFixtureMixin(PublishingFixtureMixin):
             topic,
             publication,
             release,
-        ) = self.published_context()
+        ) = self.published_context(lesson_kind=lesson_kind)
         learner = get_user_model().objects.create_user(
             email="learning-learner@example.test",
             password="StrongLearningPassword!42",

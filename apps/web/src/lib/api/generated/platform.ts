@@ -669,6 +669,11 @@ export interface paths {
     get: operations['organizations_courses_revisions_units_learning_objectives_list'];
     put: operations['organizations_courses_revisions_units_learning_objectives_update'];
   };
+  '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/mediacms-video/': {
+    get: operations['organizations_courses_revisions_units_mediacms_video_retrieve'];
+    put: operations['organizations_courses_revisions_units_mediacms_video_update'];
+    delete: operations['organizations_courses_revisions_units_mediacms_video_destroy'];
+  };
   '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/restore/': {
     post: operations['organizations_courses_revisions_units_restore_create'];
   };
@@ -820,6 +825,9 @@ export interface paths {
   };
   '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/units/{unit_id}/complete/': {
     post: operations['organizations_learning_me_enrollments_units_complete_create'];
+  };
+  '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/units/{unit_id}/mediacms-launch/': {
+    get: operations['organizations_learning_me_enrollments_units_mediacms_launch_retrieve'];
   };
   '/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/units/{unit_id}/open/': {
     post: operations['organizations_learning_me_enrollments_units_open_create'];
@@ -3558,6 +3566,9 @@ export interface components {
       learning_objectives: {
         [key: string]: unknown;
       }[];
+      media?: {
+        [key: string]: unknown;
+      } | null;
       module: {
         [key: string]: unknown;
       };
@@ -3876,6 +3887,22 @@ export interface components {
     MaterializeCourseGroupLiveClassesResult: {
       already_scheduled_count: number;
       created_count: number;
+    };
+    MediaCMSLaunch: {
+      expires_in_seconds: number;
+      launch_url: string;
+      provider: string;
+    };
+    MediaCMSVideoBinding: {
+      media_friendly_token: string;
+      /** Format: uuid */
+      unit_id: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    MediaCMSVideoBindingInput: {
+      expected_version: number;
+      media_friendly_token: string;
     };
     MemberProfile: {
       address?: string;
@@ -4304,6 +4331,9 @@ export interface components {
       id: string;
       learning_objectives: readonly components['schemas']['UnitObjective'][];
       lesson_kind: string;
+      mediacms_video: {
+        [key: string]: unknown;
+      } | null;
       /** Format: uuid */
       module_id: string;
       position: number | null;
@@ -5393,6 +5423,9 @@ export interface components {
       /** Format: uuid */
       id: string;
       lesson_kind: string;
+      mediacms_video: {
+        [key: string]: unknown;
+      } | null;
       /** Format: uuid */
       module_id: string;
       position: number | null;
@@ -5420,6 +5453,9 @@ export interface components {
       id: string;
       lesson_kind: string;
       lock_version: number;
+      mediacms_video: {
+        [key: string]: unknown;
+      } | null;
       /** Format: uuid */
       module_id: string;
       position: number | null;
@@ -5457,6 +5493,7 @@ export interface components {
       estimated_duration_minutes?: number | null;
       expected_version: number;
       learning_objective_ids?: string[];
+      mediacms_video_friendly_token?: string;
       summary?: string;
       title?: string;
       topic_ids?: string[];
@@ -11161,6 +11198,64 @@ export interface operations {
       };
     };
   };
+  organizations_courses_revisions_units_mediacms_video_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MediaCMSVideoBinding'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_mediacms_video_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MediaCMSVideoBindingInput'];
+        'application/x-www-form-urlencoded': components['schemas']['MediaCMSVideoBindingInput'];
+        'multipart/form-data': components['schemas']['MediaCMSVideoBindingInput'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MediaCMSVideoBinding'];
+        };
+      };
+    };
+  };
+  organizations_courses_revisions_units_mediacms_video_destroy: {
+    parameters: {
+      path: {
+        course_slug: string;
+        revision_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['UnitMutation'];
+        };
+      };
+    };
+  };
   organizations_courses_revisions_units_restore_create: {
     parameters: {
       path: {
@@ -12430,6 +12525,27 @@ export interface operations {
         };
       };
       409: {
+        content: {
+          'application/json': components['schemas']['Error'];
+        };
+      };
+    };
+  };
+  organizations_learning_me_enrollments_units_mediacms_launch_retrieve: {
+    parameters: {
+      path: {
+        enrollment_id: string;
+        slug: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['MediaCMSLaunch'];
+        };
+      };
+      404: {
         content: {
           'application/json': components['schemas']['Error'];
         };

@@ -53,11 +53,28 @@ class CourseApiTests(CourseFixtureMixin, TestCase):
         )
         self.assertEqual(updated.status_code, 200, updated.data)
         self.assertEqual(updated.data["lesson_kind"], LessonKind.MEDIACMS_VIDEO)
+        configured = client.patch(
+            f"{revision_url}units/{unit.data['id']}/",
+            {
+                "expected_version": updated.data["lock_version"],
+                "mediacms_video_friendly_token": "ak7uPO2Vn",
+            },
+            format="json",
+        )
+        self.assertEqual(configured.status_code, 200, configured.data)
+        self.assertEqual(
+            configured.data["mediacms_video"],
+            {"media_friendly_token": "ak7uPO2Vn"},
+        )
         outline = client.get(f"{revision_url}outline/")
         self.assertEqual(outline.status_code, 200, outline.data)
         self.assertEqual(
             outline.data["modules"][0]["units"][0]["lesson_kind"],
             LessonKind.MEDIACMS_VIDEO,
+        )
+        self.assertEqual(
+            outline.data["modules"][0]["units"][0]["mediacms_video"],
+            {"media_friendly_token": "ak7uPO2Vn"},
         )
 
     def test_patch_unit_saves_information_and_alignment_once(self) -> None:

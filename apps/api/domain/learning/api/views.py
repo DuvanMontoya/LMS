@@ -6,8 +6,16 @@ from collections.abc import Callable
 from typing import Any
 
 from django.db.models import Count, Q, QuerySet
-from django.http import Http404
-from django.shortcuts import get_object_or_404
+from django.http import (
+    Http404,
+    HttpResponseBadRequest,
+    HttpResponseBase,
+    HttpResponseForbidden,
+    JsonResponse,
+)
+from django.shortcuts import get_object_or_404, render
+from django.utils.decorators import method_decorator
+from django.views.decorators.clickjacking import xframe_options_exempt
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
@@ -19,6 +27,13 @@ from rest_framework.views import APIView
 from domain.courses.models import Course
 from domain.learning.assets import learning_asset_descriptors
 from domain.learning.exceptions import LearningDomainError
+from domain.learning.mediacms import (
+    authorize_mediacms_launch,
+    issue_mediacms_launch,
+    lti_authorization_allowed,
+    lti_id_token,
+    lti_jwks,
+)
 from domain.learning.models import (
     AcademicGroup,
     AcademicGroupMember,
@@ -101,6 +116,7 @@ from .serializers import (
     LearningAssetAccessSerializer,
     LearningOutlineSerializer,
     LearningUnitSerializer,
+    MediaCMSLaunchSerializer,
     MyLearningSerializer,
     PaginatedAcademicGroupRosterSerializer,
     PaginatedAcademicGroupSerializer,
@@ -995,6 +1011,95 @@ class MyUnitView(APIView):
 
         result = _domain_call(payload)
         return result if isinstance(result, Response) else Response(result)
+
+
+class MediaCMSLaunchView(APIView):
+    @extend_schema(responses={200: MediaCMSLaunchSerializer, 404: ErrorSerializer})
+    def get(
+        self,
+        request: Request,
+        slug: str,
+        enrollment_id: uuid.UUID,
+        unit_id: uuid.UUID,
+    ) -> Response:
+        organization = _organization(request, slug)
+        enrollment = my_enrollment(request.user, organization, enrollment_id)
+        from domain.learning.access import require_learning_access
+
+        result = _domain_call(
+            lambda: issue_mediacms_launch(
+                actor=request.user,
+                access=require_learning_access(
+                    actor=request.user, enrollment=enrollment
+                ),
+                unit_id=unit_id,
+            )
+        )
+        return result if isinstance(result, Response) else Response(result)
+
+
+class MediaCMSJWKSView(APIView):
+    authentication_classes: list[object] = []
+    permission_classes: list[object] = []
+
+    @extend_schema(exclude=True)
+    def get(self, request: Request) -> JsonResponse:
+        del request
+        response = JsonResponse(lti_jwks())
+        response["Cache-Control"] = "no-store"
+        return response
+
+
+@method_decorator(xframe_options_exempt, name="dispatch")
+class MediaCMSLTIAuthorizeView(APIView):
+    """OIDC platform response rendered inside the existing LMS frame."""
+
+    @extend_schema(exclude=True)
+    def get(self, request: Request) -> Response | HttpResponseBase:
+        if not request.user.is_authenticated:
+            return HttpResponseForbidden("La sesión de la LMS es obligatoria.")
+        client_id = request.query_params.get("client_id", "")
+        redirect_uri = request.query_params.get("redirect_uri", "")
+        response_mode = request.query_params.get("response_mode", "")
+        response_type = request.query_params.get("response_type", "")
+        scope = request.query_params.get("scope", "")
+        state = request.query_params.get("state", "")
+        nonce = request.query_params.get("nonce", "")
+        login_hint = request.query_params.get("login_hint", "")
+        if (
+            not state
+            or not nonce
+            or not login_hint
+            or not lti_authorization_allowed(
+                client_id=client_id,
+                redirect_uri=redirect_uri,
+                response_mode=response_mode,
+                response_type=response_type,
+                scope=scope,
+            )
+        ):
+            return HttpResponseBadRequest("Solicitud LTI inválida.")
+        try:
+            authorization = authorize_mediacms_launch(
+                actor=request.user, login_hint=login_hint
+            )
+            id_token = lti_id_token(
+                actor=request.user,
+                nonce=nonce,
+                authorization=authorization,
+            )
+        except LearningDomainError:
+            return HttpResponseForbidden(
+                "El vídeo no está disponible para esta matrícula."
+            )
+        response = render(
+            request._request,  # pyright: ignore[reportPrivateUsage]
+            "learning/mediacms_lti_authorize.html",
+            {"id_token": id_token, "redirect_uri": redirect_uri, "state": state},
+        )
+        response["Cache-Control"] = "no-store"
+        response["Referrer-Policy"] = "no-referrer"
+        return response
 
 
 class MyAssetAccessView(APIView):

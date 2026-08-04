@@ -479,6 +479,58 @@ class CourseUnit(models.Model):
         self.summary = _clean_plain_text(self.summary, "summary")
 
 
+class MediaCMSVideoBinding(models.Model):
+    """Opaque MediaCMS resource selected for a video lesson.
+
+    The binding deliberately stores no delivery URL.  A release snapshots this
+    token and learning turns it into a short-lived LTI launch only after
+    enrolment access has been checked.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    unit = models.OneToOneField(
+        CourseUnit,
+        on_delete=models.PROTECT,
+        related_name="mediacms_video_binding",
+    )
+    media_friendly_token = models.CharField(max_length=150)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="mediacms_video_bindings_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="mediacms_video_bindings_updated",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["media_friendly_token"],
+                name="course_mcms_token_ix",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.unit_id}:{self.media_friendly_token}"
+
+    def clean(self) -> None:
+        super().clean()
+        self.media_friendly_token = self.media_friendly_token.strip()
+        if not self.media_friendly_token:
+            raise ValidationError(
+                {"media_friendly_token": "El código de MediaCMS es obligatorio."}
+            )
+        if self.unit.lesson_kind != LessonKind.MEDIACMS_VIDEO:
+            raise ValidationError(
+                {"unit": "Sólo una lección de vídeo puede vincular MediaCMS."}
+            )
+
+
 class CourseRevisionSubject(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     revision = models.ForeignKey(

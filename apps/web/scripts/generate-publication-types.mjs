@@ -26,7 +26,7 @@ if (process.argv.slice(2).some((argument) => argument !== '--check')) {
 }
 
 const outputs = [];
-for (const version of [1, 2, 4]) {
+for (const version of [1, 2, 4, 5]) {
   const releaseSourcePath = path.join(
     repositoryRoot,
     'schemas',

@@ -1,13 +1,17 @@
 import uuid
 from datetime import timedelta
+from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
+from cryptography.hazmat.primitives.asymmetric import rsa
 from django.contrib.auth import get_user_model
 from django.db import connection
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from domain.courses.choices import LessonKind
 from domain.learning.choices import (
     AcademicGroupLevel,
     AcademicGroupRole,
@@ -31,6 +35,75 @@ from .support import LearningFixtureMixin
 
 
 class LearningApiTests(LearningFixtureMixin, TestCase):
+    @patch(
+        "domain.learning.mediacms._private_key",
+        return_value=rsa.generate_private_key(public_exponent=65537, key_size=2048),
+    )
+    @override_settings(
+        MEDIACMS_LTI_ENABLED=True,
+        MEDIACMS_LTI_TOOL_ORIGIN="http://localhost:8091",
+        LMS_LTI_ISSUER="http://localhost:3000",
+        LMS_LTI_CLIENT_ID="lms-local-mediacms",
+        LMS_LTI_DEPLOYMENT_ID="lms-local-mediacms-v1",
+        LMS_LTI_KEY_ID="lms-local-mediacms-v1",
+        LMS_LTI_PRIVATE_KEY_PEM="",
+        LMS_LTI_LAUNCH_TTL_SECONDS=300,
+    )
+    def test_video_launch_is_release_pinned_and_requires_the_enrolled_learner(
+        self, _private_key: object
+    ) -> None:
+        (
+            owner,
+            learner,
+            organization,
+            _membership,
+            _revision,
+            _module,
+            unit,
+            _publication,
+            _release,
+            enrollment,
+        ) = self.learning_context(lesson_kind=LessonKind.MEDIACMS_VIDEO)
+        launch_url = (
+            f"/api/v1/organizations/{organization.slug}/learning/me/"
+            f"enrollments/{enrollment.id}/units/{unit.id}/mediacms-launch/"
+        )
+        learner_client = APIClient()
+        learner_client.force_authenticate(learner)
+        launch = learner_client.get(launch_url)
+        self.assertEqual(launch.status_code, 200, launch.data)
+        self.assertEqual(launch.data["provider"], "mediacms_lti")
+        self.assertGreater(launch.data["expires_in_seconds"], 0)
+        parameters = parse_qs(urlparse(launch.data["launch_url"]).query)
+        self.assertEqual(parameters["client_id"], ["lms-local-mediacms"])
+        self.assertEqual(parameters["iss"], ["http://localhost:3000"])
+        self.assertIn("login_hint", parameters)
+        authorize = learner_client.get(
+            "/api/v1/lti/authorize/",
+            {
+                "client_id": "lms-local-mediacms",
+                "redirect_uri": "http://localhost:8091/lti/launch/",
+                "response_mode": "form_post",
+                "response_type": "id_token",
+                "scope": "openid",
+                "state": "test-state",
+                "nonce": "test-nonce",
+                "login_hint": parameters["login_hint"][0],
+            },
+        )
+        self.assertEqual(authorize.status_code, 200)
+        self.assertNotIn("X-Frame-Options", authorize.headers)
+        self.assertContains(authorize, 'name="id_token"')
+        self.assertContains(authorize, 'name="state"')
+        self.assertContains(authorize, 'value="test-state"')
+        denied_client = APIClient()
+        denied_client.force_authenticate(owner)
+        denied = denied_client.get(launch_url)
+        self.assertEqual(denied.status_code, 404, denied.data)
+        jwks = self.client.get("/api/v1/lti/jwks/")
+        self.assertEqual(jwks.status_code, 200, jwks.content)
+        self.assertEqual(jwks.json()["keys"][0]["kid"], "lms-local-mediacms-v1")
+
     def test_course_group_activity_options_are_scoped_to_assigned_staff(self) -> None:
         (
             owner,

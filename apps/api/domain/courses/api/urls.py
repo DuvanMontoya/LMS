@@ -72,6 +72,10 @@ urlpatterns = [
     path(REVISION + "grading-scheme/", views.GradingSchemeView.as_view()),
     path(REVISION + "units/<uuid:unit_id>/", views.UnitDetailView.as_view()),
     path(
+        REVISION + "units/<uuid:unit_id>/mediacms-video/",
+        views.MediaCMSVideoBindingView.as_view(),
+    ),
+    path(
         REVISION + "units/<uuid:unit_id>/archive/",
         views.ArchiveUnitView.as_view(),
     ),

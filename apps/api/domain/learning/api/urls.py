@@ -42,8 +42,11 @@ urlpatterns = [
     path(ACTIVITY, views.MyActivityView.as_view()),
     path(ME + "assets/access/", views.MyAssetAccessView.as_view()),
     path(UNIT, views.MyUnitView.as_view()),
+    path(UNIT + "mediacms-launch/", views.MediaCMSLaunchView.as_view()),
     path(UNIT + "open/", views.OpenUnitView.as_view()),
     path(UNIT + "complete/", views.CompleteUnitView.as_view()),
     path(UNIT + "reopen/", views.ReopenUnitView.as_view()),
     path(ME + "position/", views.PositionView.as_view()),
+    path("lti/jwks/", views.MediaCMSJWKSView.as_view()),
+    path("lti/authorize/", views.MediaCMSLTIAuthorizeView.as_view()),
 ]

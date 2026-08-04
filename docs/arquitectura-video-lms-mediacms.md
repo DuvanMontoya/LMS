@@ -61,8 +61,9 @@ flowchart LR
 
 ### LMS
 
-El repositorio ya tiene un diseño sólido, pero todavía no una conexión de
-producción a Contabo:
+El repositorio ya tiene un diseño sólido. La conexión a Contabo sigue sin
+autorizarse para producción, pero la entrega local de MediaCMS ya existe y se
+verificó de extremo a extremo:
 
 - `domain.assets` es propietario de `AssetVersion`, cuarentena, Boto3,
   ClamAV, FFmpeg, URLs firmadas y entrega basada en matrícula/release.
@@ -71,8 +72,41 @@ producción a Contabo:
 - La configuración de producción rechaza endpoints S3 personalizados y
   credenciales estáticas; por tanto no puede apuntarse al endpoint Contabo
   simplemente llenando variables de entorno.
-- No hay integración MediaCMS/LTI implementada en el LMS. MediaCMS no debe
-  convertirse en una segunda autoridad de matrículas o de permisos.
+- `domain.courses` conserva solamente el `media_friendly_token` opaco de una
+  unidad de vídeo. `domain.publishing` lo fija en el snapshot v5 y
+  `domain.learning` sólo inicia LTI tras comprobar matrícula efectiva y
+  release asignado (ADR 0043).
+- La LMS firma un `id_token` RS256 de vida corta y MediaCMS consulta el JWKS
+  público local. No se comparten cookies, claves de servicio, URLs HLS ni
+  URLs firmadas con contenido académico o con el navegador.
+- El adaptador local exige que el iframe solicite exactamente el token firmado
+  para esa unidad/release y que el usuario pertenezca al contexto LTI creado
+  para ese release. Sólo entonces crea la asociación privada MediaCMS--grupo
+  y la permisión normal de MediaCMS que Nginx utiliza al servir el archivo.
+  Una URL de otro token en esa misma sesión devuelve `403`.
+
+## Uso local de vídeo en una lección
+
+1. Iniciar MediaCMS con `pnpm mediacms:up` y entrar en
+   `http://localhost:8091/` con las credenciales que están en
+   `.local/mediacms/.env`.
+2. Subir el MP4 en MediaCMS, esperar a que termine la codificación y copiar su
+   **código MediaCMS** (`media_friendly_token`). El medio permanece en estado
+   privado; no se publica el catálogo ni se marca una URL pública.
+3. En la revisión editable del curso, crear o elegir una unidad **Vídeo
+   MediaCMS**, pegar ese código en “Código de vídeo de MediaCMS” y guardar la
+   configuración. El readiness no permite aprobar una unidad de vídeo que no
+   tenga código.
+4. Completar revisión, aprobación y publicación normal. Un estudiante con una
+   matrícula activa al release abre la unidad y recibe un lanzamiento LTI
+   efímero; el grupo privado de MediaCMS se vincula automáticamente en el
+   primer lanzamiento válido. No hace falta copiar enlaces de MediaCMS a la
+   lección.
+
+La prueba local del 2026-08-03 recorrió exactamente este flujo en Chrome:
+la unidad publicada mostró el reproductor dentro del aula y un MP4 privado de
+28 s avanzó mientras se reproducía. Se probó además que solicitar otro token
+en la misma sesión LTI se deniega.
 
 La integración correcta requiere un adaptador de almacenamiento productivo que
 soporte endpoint S3 compatible y secretos gestionados, más una prueba contra
@@ -123,9 +157,11 @@ reproducciones y medición desde Colombia, no por anticipación.
    de prueba; no relajar cuarentena, checksums ni URLs firmadas.
 4. Desplegar MediaCMS en un Compose independiente, PostgreSQL/Redis propios,
    volumen local persistente y ruta Caddy `media.tu-dominio`.
-5. Integrar explícitamente LMS--MediaCMS (preferiblemente LTI 1.3 o un
-   contrato server-to-server diseñado para el LMS), sin compartir cookies ni
-   dar al navegador claves de servicio.
+5. Promover el adaptador LMS--MediaCMS LTI 1.3 ya validado localmente a una
+   configuración de dominio/TLS real, sin compartir cookies ni dar al
+   navegador claves de servicio. Antes de ello, resolver la revocación de las
+   permisiones LTI persistentes que crea MediaCMS cuando una matrícula se
+   suspende, revoca o cambia de release.
 6. Ejecutar pruebas reales: carga, transcodificación, acceso autorizado/no
    autorizado a manifest y segmentos HLS, 40 espectadores, restauración desde
    backup y rotación de credenciales.
@@ -137,4 +173,5 @@ reproducciones y medición desde Colombia, no por anticipación.
 - [Contabo: endpoint y credenciales S3](https://help.contabo.com/en/support/solutions/articles/103000275473-where-can-i-find-s3-connection-setting-for-object-storage-)
 - [Contabo: alcance de compatibilidad S3](https://help.contabo.com/en/support/solutions/articles/103000275459-is-contabo-object-storage-compatible-with-s3-storage-)
 - [MediaCMS: capacidades y requisitos](https://github.com/mediacms-io/mediacms)
+- [MediaCMS v8.1.3](https://github.com/mediacms-io/mediacms/releases/tag/v8.1.3)
 - [MediaCMS settings actuales](https://raw.githubusercontent.com/mediacms-io/mediacms/main/cms/settings.py)

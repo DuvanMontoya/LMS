@@ -5338,6 +5338,11 @@
             "items": { "additionalProperties": {}, "type": "object" },
             "type": "array"
           },
+          "media": {
+            "additionalProperties": {},
+            "nullable": true,
+            "type": "object"
+          },
           "module": { "additionalProperties": {}, "type": "object" },
           "navigation": { "additionalProperties": {}, "type": "object" },
           "progress": { "$ref": "#/components/schemas/Progress" },
@@ -6033,6 +6038,40 @@
           "created_count": { "type": "integer" }
         },
         "required": ["already_scheduled_count", "created_count"],
+        "type": "object"
+      },
+      "MediaCMSLaunch": {
+        "properties": {
+          "expires_in_seconds": { "minimum": 1, "type": "integer" },
+          "launch_url": { "type": "string" },
+          "provider": { "type": "string" }
+        },
+        "required": ["expires_in_seconds", "launch_url", "provider"],
+        "type": "object"
+      },
+      "MediaCMSVideoBinding": {
+        "properties": {
+          "media_friendly_token": { "readOnly": true, "type": "string" },
+          "unit_id": { "format": "uuid", "readOnly": true, "type": "string" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": ["media_friendly_token", "unit_id", "updated_at"],
+        "type": "object"
+      },
+      "MediaCMSVideoBindingInput": {
+        "properties": {
+          "expected_version": { "minimum": 1, "type": "integer" },
+          "media_friendly_token": {
+            "maxLength": 150,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,149}$",
+            "type": "string"
+          }
+        },
+        "required": ["expected_version", "media_friendly_token"],
         "type": "object"
       },
       "MemberProfile": {
@@ -6851,6 +6890,12 @@
             "type": "array"
           },
           "lesson_kind": { "readOnly": true, "type": "string" },
+          "mediacms_video": {
+            "additionalProperties": {},
+            "nullable": true,
+            "readOnly": true,
+            "type": "object"
+          },
           "module_id": { "format": "uuid", "readOnly": true, "type": "string" },
           "position": { "nullable": true, "readOnly": true, "type": "integer" },
           "status": { "readOnly": true, "type": "string" },
@@ -6877,6 +6922,7 @@
           "id",
           "learning_objectives",
           "lesson_kind",
+          "mediacms_video",
           "module_id",
           "position",
           "status",
@@ -9090,6 +9136,12 @@
           },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
           "lesson_kind": { "readOnly": true, "type": "string" },
+          "mediacms_video": {
+            "additionalProperties": {},
+            "nullable": true,
+            "readOnly": true,
+            "type": "object"
+          },
           "module_id": { "format": "uuid", "readOnly": true, "type": "string" },
           "position": { "nullable": true, "readOnly": true, "type": "integer" },
           "status": { "readOnly": true, "type": "string" },
@@ -9107,6 +9159,7 @@
           "estimated_duration_minutes",
           "id",
           "lesson_kind",
+          "mediacms_video",
           "module_id",
           "position",
           "status",
@@ -9155,6 +9208,12 @@
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
           "lesson_kind": { "readOnly": true, "type": "string" },
           "lock_version": { "readOnly": true, "type": "integer" },
+          "mediacms_video": {
+            "additionalProperties": {},
+            "nullable": true,
+            "readOnly": true,
+            "type": "object"
+          },
           "module_id": { "format": "uuid", "readOnly": true, "type": "string" },
           "position": { "nullable": true, "readOnly": true, "type": "integer" },
           "status": { "readOnly": true, "type": "string" },
@@ -9173,6 +9232,7 @@
           "id",
           "lesson_kind",
           "lock_version",
+          "mediacms_video",
           "module_id",
           "position",
           "status",
@@ -9243,6 +9303,16 @@
             "items": { "format": "uuid", "type": "string" },
             "maxItems": 200,
             "type": "array"
+          },
+          "mediacms_video_friendly_token": {
+            "oneOf": [
+              {
+                "maxLength": 150,
+                "pattern": "^$|^[A-Za-z0-9][A-Za-z0-9_-]{0,149}$",
+                "type": "string"
+              },
+              { "maxLength": 0, "type": "string" }
+            ]
           },
           "summary": { "maxLength": 1200, "type": "string" },
           "title": { "maxLength": 200, "type": "string" },
@@ -21116,6 +21186,155 @@
         "tags": ["organizations"]
       }
     },
+    "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/mediacms-video/": {
+      "delete": {
+        "operationId": "organizations_courses_revisions_units_mediacms_video_destroy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UnitMutation" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "get": {
+        "operationId": "organizations_courses_revisions_units_mediacms_video_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaCMSVideoBinding"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "operationId": "organizations_courses_revisions_units_mediacms_video_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaCMSVideoBindingInput"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaCMSVideoBindingInput"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaCMSVideoBindingInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaCMSVideoBinding"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
     "/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/restore/": {
       "post": {
         "operationId": "organizations_courses_revisions_units_restore_create",
@@ -23649,6 +23868,51 @@
             "description": ""
           },
           "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{slug}/learning/me/enrollments/{enrollment_id}/units/{unit_id}/mediacms-launch/": {
+      "get": {
+        "operationId": "organizations_learning_me_enrollments_units_mediacms_launch_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "enrollment_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MediaCMSLaunch" }
+              }
+            },
+            "description": ""
+          },
+          "404": {
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Error" }

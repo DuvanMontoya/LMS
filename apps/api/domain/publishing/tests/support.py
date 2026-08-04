@@ -7,6 +7,7 @@ from domain.content.services import save_unit_content
 from domain.content.tests.support import ContentFixtureMixin, full_document
 from domain.courses.services import (
     approve_revision,
+    configure_mediacms_video_binding,
     confirm_completion_policy,
     replace_unit_topics,
     submit_revision_for_review,
@@ -17,9 +18,9 @@ from domain.publishing.services import publish_approved_revision
 
 
 class PublishingFixtureMixin(ContentFixtureMixin):
-    def approved_revision_context(self):
+    def approved_revision_context(self, *, lesson_kind: str = "document"):
         owner, organization, revision, module, unit, objective, topic = (
-            self.unit_context()
+            self.unit_context(lesson_kind=lesson_kind)
         )
         revision = replace_unit_topics(
             actor=owner,
@@ -37,6 +38,14 @@ class PublishingFixtureMixin(ContentFixtureMixin):
             schema_version=1,
             content=full_document(),
         )
+        if lesson_kind == "mediacms_video":
+            _, revision = configure_mediacms_video_binding(
+                actor=owner,
+                organization=organization,
+                unit=unit,
+                expected_version=revision.lock_version,
+                media_friendly_token="ak7uPO2Vn",
+            )
         _, revision = confirm_completion_policy(
             actor=owner,
             organization=organization,
@@ -75,8 +84,8 @@ class PublishingFixtureMixin(ContentFixtureMixin):
         )
         return owner, organization, revision, module, unit, objective, topic
 
-    def published_context(self):
-        context = self.approved_revision_context()
+    def published_context(self, *, lesson_kind: str = "document"):
+        context = self.approved_revision_context(lesson_kind=lesson_kind)
         owner, organization, revision, *_ = context
         result = publish_approved_revision(
             actor=owner,

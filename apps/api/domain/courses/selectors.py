@@ -136,7 +136,7 @@ def revision_visible_to_actor(
 
 def revision_outline_queryset(course: Course) -> QuerySet[CourseRevision]:
     unit_queryset = (
-        CourseUnit.objects.select_related("module")
+        CourseUnit.objects.select_related("module", "mediacms_video_binding")
         .prefetch_related(
             Prefetch(
                 "topic_alignments",

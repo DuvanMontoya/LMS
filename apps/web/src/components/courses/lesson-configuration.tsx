@@ -11,6 +11,7 @@ import {
   Save,
   Search,
   Target,
+  Video,
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +36,7 @@ type TopicTree = components['schemas']['Topic'][];
 export type LessonConfigurationInput = {
   estimatedDurationMinutes: number | null;
   learningObjectiveIds: string[];
+  mediaCmsFriendlyToken?: string;
   summary: string;
   title: string;
   topicIds: string[];
@@ -51,6 +53,7 @@ export function LessonConfiguration({
   alignedSubjects,
   isSaving,
   lesson,
+  mediaCmsAuthoringUrl,
   objectives,
   onArchive,
   onSave,
@@ -60,6 +63,7 @@ export function LessonConfiguration({
   alignedSubjects: readonly RevisionSubject[];
   isSaving: boolean;
   lesson: Lesson;
+  mediaCmsAuthoringUrl?: string;
   objectives: Objective[];
   onArchive: () => void;
   onSave: (input: LessonConfigurationInput) => Promise<void>;
@@ -70,6 +74,9 @@ export function LessonConfiguration({
   const [summary, setSummary] = useState(lesson.summary);
   const [duration, setDuration] = useState(
     lesson.estimated_duration_minutes?.toString() ?? '',
+  );
+  const [mediaCmsFriendlyToken, setMediaCmsFriendlyToken] = useState(
+    lesson.mediacms_video?.media_friendly_token ?? '',
   );
   const [selectedTopicIds, setSelectedTopicIds] = useState(
     lesson.topics.map((item) => item.topic.id),
@@ -161,6 +168,10 @@ export function LessonConfiguration({
         onSave({
           estimatedDurationMinutes: duration ? Number(duration) : null,
           learningObjectiveIds: selectedObjectiveIds,
+          mediaCmsFriendlyToken:
+            lesson.lesson_kind === 'mediacms_video'
+              ? mediaCmsFriendlyToken.trim()
+              : undefined,
           summary,
           title,
           topicIds: selectedTopicIds,
@@ -234,6 +245,55 @@ export function LessonConfiguration({
                 </span>
               </div>
             </div>
+            {lesson.lesson_kind === 'mediacms_video' ? (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Video className="size-4 text-primary" />
+                  Vídeo privado de MediaCMS
+                </div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Carga y procesa el vídeo en MediaCMS. Luego copia el código
+                  que aparece después de <code>?m=</code> en su página.
+                </p>
+                <Label
+                  className="mt-3 block"
+                  htmlFor={`lesson-mediacms-token-${lesson.id}`}
+                >
+                  Código del vídeo
+                </Label>
+                <Input
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  className="mt-1 font-mono"
+                  id={`lesson-mediacms-token-${lesson.id}`}
+                  maxLength={150}
+                  onChange={(event) =>
+                    setMediaCmsFriendlyToken(event.target.value)
+                  }
+                  pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,149}"
+                  placeholder="Ej. ak7uPO2Vn"
+                  spellCheck={false}
+                  value={mediaCmsFriendlyToken}
+                />
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {mediaCmsAuthoringUrl ? (
+                    <Button asChild size="sm" type="button" variant="outline">
+                      <a
+                        href={mediaCmsAuthoringUrl}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        Abrir MediaCMS
+                        <ExternalLink data-icon="inline-end" />
+                      </a>
+                    </Button>
+                  ) : null}
+                  <span className="text-xs text-muted-foreground">
+                    Se guarda con esta misma versión de la lección.
+                  </span>
+                </div>
+              </div>
+            ) : null}
           </div>
         </section>
 

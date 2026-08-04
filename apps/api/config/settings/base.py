@@ -174,6 +174,39 @@ if _frontend_parsed.hostname in {"127.0.0.1", "localhost"}:
 ASSET_S3_ALLOWED_ORIGINS = tuple(CSRF_TRUSTED_ORIGINS)
 
 
+def _environment_flag(variable_name: str, default: bool = False) -> bool:
+    value = os.environ.get(variable_name)
+    if value is None:
+        return default
+    if value.strip().lower() in {"1", "true", "yes"}:
+        return True
+    if value.strip().lower() in {"0", "false", "no"}:
+        return False
+    raise RuntimeError(f"{variable_name} must be a boolean.")
+
+
+# MediaCMS is a separate delivery system.  These values become effective only
+# when an LTI client is explicitly enabled; production must supply its key and
+# HTTPS origins through environment variables.
+MEDIACMS_LTI_ENABLED = _environment_flag("MEDIACMS_LTI_ENABLED")
+MEDIACMS_LTI_TOOL_ORIGIN = os.environ.get("MEDIACMS_LTI_TOOL_ORIGIN", "").rstrip("/")
+LMS_LTI_ISSUER = os.environ.get("LMS_LTI_ISSUER", "").rstrip("/")
+LMS_LTI_CLIENT_ID = os.environ.get("LMS_LTI_CLIENT_ID", "")
+LMS_LTI_DEPLOYMENT_ID = os.environ.get("LMS_LTI_DEPLOYMENT_ID", "")
+LMS_LTI_KEY_ID = os.environ.get("LMS_LTI_KEY_ID", "lms-mediacms-v1")
+LMS_LTI_PRIVATE_KEY_PEM = os.environ.get("LMS_LTI_PRIVATE_KEY_PEM", "")
+LMS_LTI_LAUNCH_TTL_SECONDS = int(os.environ.get("LMS_LTI_LAUNCH_TTL_SECONDS", "120"))
+if MEDIACMS_LTI_ENABLED and (
+    not MEDIACMS_LTI_TOOL_ORIGIN
+    or not LMS_LTI_ISSUER
+    or not LMS_LTI_CLIENT_ID
+    or not LMS_LTI_DEPLOYMENT_ID
+):
+    raise RuntimeError(
+        "MediaCMS LTI requires issuer, client, deployment and tool origin."
+    )
+
+
 ALLAUTH_TRUSTED_PROXY_COUNT = 0
 
 _redis_host = os.environ.get("REDIS_HOST", "127.0.0.1")

@@ -77,7 +77,7 @@ services:
       ENABLE_MIGRATIONS: "yes"
       ENABLE_NGINX: "no"
       ENABLE_UWSGI: "no"
-      FRONTEND_HOST: http://127.0.0.1:${MEDIACMS_PORT:?MEDIACMS_PORT is required}
+      FRONTEND_HOST: http://localhost:${MEDIACMS_PORT:?MEDIACMS_PORT is required}
       MEDIACMS_REDIS_PASSWORD: ${MEDIACMS_REDIS_PASSWORD:?MEDIACMS_REDIS_PASSWORD is required}
       POSTGRES_HOST: db
       POSTGRES_NAME: ${MEDIACMS_POSTGRES_DB:?MEDIACMS_POSTGRES_DB is required}
@@ -97,7 +97,11 @@ services:
     security_opt: [no-new-privileges:true]
     volumes: &mediacms_volumes
       - ./infrastructure/mediacms/local_settings.py:/home/mediacms.io/mediacms/deploy/docker/local_settings.py:ro
+      - ./infrastructure/mediacms/mediacms_local_urls.py:/home/mediacms.io/mediacms/mediacms_local_urls.py:ro
       - ./infrastructure/mediacms/templates/account/login.html:/home/mediacms.io/mediacms/templates/account/login.html:ro
+      - ./infrastructure/mediacms/nginx_http_only.conf:/home/mediacms.io/mediacms/deploy/docker/nginx_http_only.conf:ro
+      - ./infrastructure/mediacms/default-avatar.jpg:/opt/mediacms-local/default-avatar.jpg:ro
+      - ./infrastructure/mediacms/default-banner.jpg:/opt/mediacms-local/default-banner.jpg:ro
       - mediacms_media:/home/mediacms.io/mediacms/media_files
       - mediacms_static:/home/mediacms.io/mediacms/static
 

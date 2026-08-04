@@ -48,3 +48,14 @@ ASSET_S3_SECRET_ACCESS_KEY = os.environ.get("ASSET_S3_SECRET_ACCESS_KEY", "test"
 ASSET_S3_FORCE_PATH_STYLE = (
     os.environ.get("ASSET_S3_FORCE_PATH_STYLE", "true").lower() == "true"
 )
+
+# Loopback LTI exists only for the local review surface.  The signing key is
+# intentionally ephemeral unless a developer supplies LMS_LTI_PRIVATE_KEY_PEM.
+MEDIACMS_LTI_ENABLED = os.environ.get("MEDIACMS_LTI_ENABLED", "true").lower() == "true"
+MEDIACMS_LTI_TOOL_ORIGIN = os.environ.get(
+    "MEDIACMS_LTI_TOOL_ORIGIN", "http://localhost:8091"
+).rstrip("/")
+LMS_LTI_ISSUER = os.environ.get("LMS_LTI_ISSUER", "http://localhost:3000").rstrip("/")
+LMS_LTI_CLIENT_ID = os.environ.get("LMS_LTI_CLIENT_ID", "lms-local-mediacms")
+LMS_LTI_DEPLOYMENT_ID = os.environ.get("LMS_LTI_DEPLOYMENT_ID", "lms-local-mediacms-v1")
+LMS_LTI_KEY_ID = os.environ.get("LMS_LTI_KEY_ID", "lms-local-mediacms-v1")

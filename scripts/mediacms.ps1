@@ -1,8 +1,12 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('Init', 'Build', 'Up', 'Status', 'Logs', 'Smoke', 'Down')]
-    [string]$Action
+    [ValidateSet('Init', 'Build', 'Up', 'Status', 'Logs', 'Smoke', 'ConfigureAdmin', 'ConfigureLti', 'Down')]
+    [string]$Action,
+
+    [string]$AdminUser,
+    [string]$AdminEmail,
+    [string]$AdminPassword
 )
 
 $ErrorActionPreference = 'Stop'
@@ -70,6 +74,44 @@ function Get-LocalEnvironment {
     return $values
 }
 
+function Set-LocalAdministratorCredentials(
+    [string]$User,
+    [string]$Email,
+    [string]$Password
+) {
+    if ([string]::IsNullOrWhiteSpace($User) -or $User -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$') {
+        throw 'AdminUser must contain 3 to 64 letters, numbers, dots, underscores, or hyphens.'
+    }
+    if ([string]::IsNullOrWhiteSpace($Email) -or $Email -notmatch '^[^@\s]+@[^@\s]+\.[^@\s]+$') {
+        throw 'AdminEmail must be a valid email address.'
+    }
+    if ([string]::IsNullOrWhiteSpace($Password) -or $Password.Length -lt 16) {
+        throw 'AdminPassword must contain at least 16 characters.'
+    }
+
+    $replacementValues = @{
+        MEDIACMS_ADMIN_USER = $User
+        MEDIACMS_ADMIN_EMAIL = $Email
+        MEDIACMS_ADMIN_PASSWORD = $Password
+    }
+    $found = @{}
+    $updatedLines = foreach ($line in Get-Content -LiteralPath $environmentFile) {
+        $replacement = $null
+        foreach ($key in $replacementValues.Keys) {
+            if ($line.StartsWith("$key=")) {
+                $replacement = "$key=$($replacementValues[$key])"
+                $found[$key] = $true
+                break
+            }
+        }
+        if ($null -eq $replacement) { $line } else { $replacement }
+    }
+    foreach ($key in $replacementValues.Keys) {
+        if (-not $found.ContainsKey($key)) { throw "Missing $key in .local/mediacms/.env." }
+    }
+    Set-Content -LiteralPath $environmentFile -Value $updatedLines -Encoding utf8NoBOM
+}
+
 function Initialize-LocalEnvironment {
     New-Item -ItemType Directory -Path $stateDirectory -Force | Out-Null
     if (-not (Test-Path -LiteralPath $environmentFile)) {
@@ -112,6 +154,51 @@ function Wait-ForPortal([int]$Port) {
     throw 'MediaCMS portal did not respond before the local timeout.'
 }
 
+function Install-DefaultProfileMedia {
+    # Official MediaCMS model defaults reference these two media files but the
+    # upstream Docker image does not seed its named media volume with them.
+    # Copy only absent files so a future custom avatar or channel banner stays
+    # untouched while new local volumes remain deterministic.
+    $installCommand = @'
+install -d -m 0755 /home/mediacms.io/mediacms/media_files/userlogos
+if [ ! -s /home/mediacms.io/mediacms/media_files/userlogos/user.jpg ]; then
+    install -m 0644 /opt/mediacms-local/default-avatar.jpg /home/mediacms.io/mediacms/media_files/userlogos/user.jpg
+fi
+if [ ! -s /home/mediacms.io/mediacms/media_files/userlogos/banner.jpg ]; then
+    install -m 0644 /opt/mediacms-local/default-banner.jpg /home/mediacms.io/mediacms/media_files/userlogos/banner.jpg
+fi
+chown www-data:www-data /home/mediacms.io/mediacms/media_files/userlogos/user.jpg /home/mediacms.io/mediacms/media_files/userlogos/banner.jpg
+'@.Trim()
+    Invoke-Compose @('exec', '-T', 'web', 'sh', '-ec', $installCommand)
+}
+
+function Configure-LocalLtiPlatform {
+    # The platform configuration contains no credential.  The private signing
+    # key stays exclusively in the LMS process; MediaCMS consumes the public
+    # JWKS through Docker's documented host gateway.
+    $configurationCommand = @'
+from lti.models import LTIPlatform
+
+platform, _ = LTIPlatform.objects.update_or_create(
+    platform_id="http://localhost:3000",
+    client_id="lms-local-mediacms",
+    defaults={
+        "name": "LMS local",
+        "auth_login_url": "http://localhost:3000/api/v1/lti/authorize/",
+        "auth_token_url": "http://localhost:3000/api/v1/lti/authorize/",
+        "auth_audience": None,
+        "key_set_url": "http://host.docker.internal:8010/api/v1/lti/jwks/",
+        "deployment_ids": ["lms-local-mediacms-v1"],
+        "enable_nrps": False,
+        "enable_deep_linking": False,
+        "remove_from_groups_on_unenroll": False,
+    },
+)
+print(f"Configured local LTI platform: {platform.name}")
+'@
+    Invoke-Compose @('exec', '-T', 'web', 'python', 'manage.py', 'shell', '-c', $configurationCommand)
+}
+
 Set-Location $repositoryRoot
 switch ($Action) {
     'Init' {
@@ -130,7 +217,14 @@ switch ($Action) {
         Assert-PinnedSource
         Get-LocalEnvironment | Out-Null
         Invoke-Compose @('up', '--detach', '--wait', '--wait-timeout', '180')
-        Write-Host 'Private local MediaCMS is ready at http://127.0.0.1:8091/.'
+        # Python processes do not reload bind-mounted local policy and URL
+        # modules on their own.  Restart only the web service so an ``Up``
+        # operation always applies the reviewed local access/LTI policy.
+        Invoke-Compose @('restart', 'web')
+        Invoke-Compose @('up', '--detach', '--wait', '--wait-timeout', '180')
+        Install-DefaultProfileMedia
+        Configure-LocalLtiPlatform
+        Write-Host 'Private local MediaCMS is ready at http://localhost:8091/.'
     }
     'Status' {
         Get-LocalEnvironment | Out-Null
@@ -152,11 +246,55 @@ switch ($Action) {
         if ($signupPage.Content -notmatch '<h1>Sign Up Closed</h1>' -or $signupPage.Content -match 'id="signup_form"') {
             throw 'The MediaCMS self-registration endpoint is not closed.'
         }
+        $anonymousMediaAuth = Invoke-WebRequest -Uri "http://127.0.0.1:$portalPort/api/v1/media-auth" -TimeoutSec 10 -UseBasicParsing -SkipHttpErrorCheck -Headers @{
+            'X-Original-URI' = '/media/original/user/unknown/00000000000000000000000000000000.mp4'
+        }
+        if ($anonymousMediaAuth.StatusCode -ne 403) {
+            throw "The protected media authorization endpoint returned $($anonymousMediaAuth.StatusCode) instead of 403 for an anonymous request."
+        }
         Invoke-Compose @('exec', '-T', 'db', 'psql', '-U', $environment['MEDIACMS_POSTGRES_USER'], '-d', $environment['MEDIACMS_POSTGRES_DB'], '-c', 'SELECT 1 AS mediacms_database_ready;')
         Invoke-Compose @('exec', '-T', 'redis', 'sh', '-ec', 'REDISCLI_AUTH="$MEDIACMS_REDIS_PASSWORD" redis-cli --no-auth-warning ping')
         Invoke-Compose @('exec', '-T', 'web', 'python', 'manage.py', 'check')
         Invoke-Compose @('exec', '-T', 'web', 'python', 'manage.py', 'shell', '-c', 'from users.models import User; assert User.objects.filter(is_superuser=True).exists(); print("MediaCMS administrator exists.")')
-        Write-Host 'MediaCMS smoke passed: private portal with registration closed, PostgreSQL, authenticated Redis, Django checks, and administrator.'
+        Write-Host 'MediaCMS smoke passed: private portal with registration closed, anonymous media denial, PostgreSQL, authenticated Redis, Django checks, and administrator.'
+    }
+    'ConfigureAdmin' {
+        Get-LocalEnvironment | Out-Null
+        Set-LocalAdministratorCredentials -User $AdminUser -Email $AdminEmail -Password $AdminPassword
+        $administratorProvisioning = @'
+import os
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+admin = User.objects.filter(is_superuser=True).order_by("id").first()
+if admin is None:
+    admin = User()
+admin.username = os.environ["LOCAL_MEDIACMS_ADMIN_USER"]
+admin.email = os.environ["LOCAL_MEDIACMS_ADMIN_EMAIL"]
+admin.is_active = True
+admin.is_staff = True
+admin.is_superuser = True
+if not admin.logo:
+    admin.logo.name = "userlogos/user.jpg"
+admin.set_password(os.environ["LOCAL_MEDIACMS_ADMIN_PASSWORD"])
+admin.save()
+User.objects.filter(is_superuser=True).exclude(pk=admin.pk).update(is_active=False)
+print("MediaCMS local administrator configured.")
+'@
+        Invoke-Compose @(
+            'exec', '-T',
+            '-e', "LOCAL_MEDIACMS_ADMIN_USER=$AdminUser",
+            '-e', "LOCAL_MEDIACMS_ADMIN_EMAIL=$AdminEmail",
+            '-e', "LOCAL_MEDIACMS_ADMIN_PASSWORD=$AdminPassword",
+            'web', 'python', 'manage.py', 'shell', '-c', $administratorProvisioning
+        )
+        Write-Host 'Configured the local MediaCMS administrator in .local/mediacms/.env and in MediaCMS.'
+    }
+    'ConfigureLti' {
+        Assert-PinnedSource
+        Get-LocalEnvironment | Out-Null
+        Configure-LocalLtiPlatform
+        Write-Host 'Configured the local LMS to MediaCMS LTI registration.'
     }
     'Down' {
         Get-LocalEnvironment | Out-Null

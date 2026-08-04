@@ -20,7 +20,12 @@ from domain.content.models import ContentAssetReference, UnitContentDocument
 from domain.content.schemas import CURRENT_CONTENT_SCHEMA_VERSION, migrate_document
 from domain.content.validators import validate_content
 from domain.courses.activity_extensions import activity_binding_snapshot
-from domain.courses.choices import AuthoringStatus, CourseStatus, StructureStatus
+from domain.courses.choices import (
+    AuthoringStatus,
+    CourseStatus,
+    LessonKind,
+    StructureStatus,
+)
 from domain.courses.models import (
     CourseActivity,
     CourseActivityAvailabilityRule,
@@ -34,6 +39,7 @@ from domain.courses.models import (
     CourseUnit,
     CourseUnitLearningObjective,
     CourseUnitTopic,
+    MediaCMSVideoBinding,
 )
 
 from .canonical import canonical_json_bytes, deep_json_copy
@@ -74,6 +80,7 @@ def release_revision_queryset():
     )
     units = (
         CourseUnit.objects.filter(status=StructureStatus.ACTIVE)
+        .select_related("mediacms_video_binding")
         .prefetch_related(
             Prefetch("topic_alignments", queryset=topic_links),
             Prefetch("objective_alignments", queryset=objective_links),
@@ -171,6 +178,21 @@ def _content_snapshot(unit: CourseUnit) -> dict[str, Any]:
     }
 
 
+def _media_snapshot(unit: CourseUnit) -> dict[str, str] | None:
+    if unit.lesson_kind != LessonKind.MEDIACMS_VIDEO:
+        return None
+    try:
+        binding = unit.mediacms_video_binding
+    except MediaCMSVideoBinding.DoesNotExist as error:
+        raise ReleaseSnapshotInvalid(
+            f"La unidad de vídeo {unit.id} no tiene un vídeo MediaCMS seleccionado."
+        ) from error
+    return {
+        "provider": "mediacms_lti",
+        "media_friendly_token": binding.media_friendly_token,
+    }
+
+
 def build_release_snapshot(
     *,
     revision: CourseRevision,
@@ -251,6 +273,7 @@ def build_release_snapshot(
                     "topics": topics,
                     "learning_objectives": unit_objectives,
                     "content": _content_snapshot(unit),
+                    "media": _media_snapshot(unit),
                 }
             )
             unit_count += 1

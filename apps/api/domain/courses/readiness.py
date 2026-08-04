@@ -4,8 +4,14 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from types import MappingProxyType
 
-from .choices import ActivityType, CourseStatus, StructureStatus, SubjectAlignmentType
-from .models import CourseCompletionPolicy, CourseRevision
+from .choices import (
+    ActivityType,
+    CourseStatus,
+    LessonKind,
+    StructureStatus,
+    SubjectAlignmentType,
+)
+from .models import CourseCompletionPolicy, CourseRevision, MediaCMSVideoBinding
 
 type ReadinessIssue = dict[str, str]
 type ReadinessProvider = Callable[[CourseRevision], list[ReadinessIssue]]
@@ -108,6 +114,7 @@ def revision_readiness_issues(revision: CourseRevision) -> list[ReadinessIssue]:
         .prefetch_related(
             "units__topic_alignments__topic",
             "units__objective_alignments__learning_objective",
+            "units__mediacms_video_binding",
             "activities__objective_alignments__learning_objective",
             "activities__availability_rules__prerequisite_activity",
             "activities__availability_rules__learning_objective",
@@ -208,6 +215,22 @@ def revision_readiness_issues(revision: CourseRevision) -> list[ReadinessIssue]:
                     )
         for unit in units:
             unit_path = f"{module_path}.units.{unit.id}"
+            if unit.lesson_kind == LessonKind.MEDIACMS_VIDEO:
+                try:
+                    binding = unit.mediacms_video_binding
+                except MediaCMSVideoBinding.DoesNotExist:
+                    add(
+                        "mediacms_video_binding_required",
+                        f"{unit_path}.mediacms_video",
+                        "Una lección de vídeo MediaCMS debe seleccionar un vídeo.",
+                    )
+                else:
+                    if not binding.media_friendly_token:
+                        add(
+                            "mediacms_video_binding_required",
+                            f"{unit_path}.mediacms_video",
+                            "Una lección de vídeo MediaCMS debe seleccionar un vídeo.",
+                        )
             objective_links = list(unit.objective_alignments.all())
             if not objective_links:
                 add(

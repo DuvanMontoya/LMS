@@ -50,6 +50,16 @@ if ASSET_S3_ACCESS_KEY_ID or ASSET_S3_SECRET_ACCESS_KEY:  # noqa: F405
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+if MEDIACMS_LTI_ENABLED:  # noqa: F405
+    if (
+        not LMS_LTI_PRIVATE_KEY_PEM  # noqa: F405
+        or not LMS_LTI_ISSUER.startswith("https://")  # noqa: F405
+        or not MEDIACMS_LTI_TOOL_ORIGIN.startswith("https://")  # noqa: F405
+    ):
+        raise RuntimeError(
+            "MediaCMS LTI production requires HTTPS origins and an RSA private key."
+        )
 SECURE_HSTS_SECONDS = 31_536_000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True

@@ -241,7 +241,7 @@ export function StructureEditor({
       return;
     }
     if (['127.0.0.1', 'localhost'].includes(window.location.hostname)) {
-      setMediaCmsAuthoringUrl('http://127.0.0.1:8091/');
+      setMediaCmsAuthoringUrl('http://localhost:8091/');
     }
   }, []);
 
@@ -391,6 +391,7 @@ export function StructureEditor({
           estimated_duration_minutes: input.estimatedDurationMinutes,
           expected_version: version,
           learning_objective_ids: input.learningObjectiveIds,
+          mediacms_video_friendly_token: input.mediaCmsFriendlyToken,
           summary: input.summary,
           title: input.title,
           topic_ids: input.topicIds,
@@ -905,6 +906,9 @@ export function StructureEditor({
                                             alignedSubjects={outline.subjects}
                                             isSaving={updateStructure.isPending}
                                             lesson={lesson}
+                                            mediaCmsAuthoringUrl={
+                                              mediaCmsAuthoringUrl
+                                            }
                                             objectives={objectives}
                                             onArchive={() =>
                                               setArchived(

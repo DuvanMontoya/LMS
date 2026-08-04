@@ -514,6 +514,7 @@ def learning_unit(enrollment: CourseEnrollment, unit_id: uuid.UUID) -> dict[str,
         "topics": unit["topics"],
         "learning_objectives": unit["learning_objectives"],
         "content": unit["content"]["document"],
+        "media": unit.get("media"),
         "progress": progress_payload(progress),
         "navigation": navigation,
     }

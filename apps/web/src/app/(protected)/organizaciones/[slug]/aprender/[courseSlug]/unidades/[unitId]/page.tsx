@@ -2,6 +2,7 @@ import { BookOpenText } from 'lucide-react';
 
 import { AcademicDocument } from '@/components/content/academic-document';
 import { LearningPositionTracker } from '@/components/learning/learning-position-tracker';
+import { MediaCMSVideoPlayer } from '@/components/learning/mediacms-video-player';
 import {
   LearningPlayerNavigation,
   LearningPlayerShell,
@@ -49,6 +50,9 @@ export default async function LearningUnitPage({
     record(data.payload.unit) && typeof data.payload.unit.status === 'string'
       ? data.payload.unit.status
       : 'not_started';
+  const hasMediaCMSVideo =
+    record(data.payload.media) &&
+    data.payload.media.provider === 'mediacms_lti';
   const unitNumber = outlineData.outline.modules
     .flatMap((module) => module.units)
     .findIndex((unit) => unit.id === unitId);
@@ -107,6 +111,14 @@ export default async function LearningUnitPage({
               </div>
             ) : null}
           </header>
+
+          {hasMediaCMSVideo ? (
+            <MediaCMSVideoPlayer
+              enrollmentId={enrollment.enrollment_id}
+              slug={slug}
+              unitId={unitId}
+            />
+          ) : null}
 
           <div className="learning-player__document">
             <AcademicDocument

@@ -30,9 +30,9 @@ from .choices import (
     ActivityCompletionMethod,
     ActivityType,
     AuthoringStatus,
-    LessonKind,
     AvailabilityRuleType,
     CourseStatus,
+    LessonKind,
     StructureStatus,
     SubjectAlignmentType,
 )
@@ -69,6 +69,7 @@ from .models import (
     CourseUnit,
     CourseUnitLearningObjective,
     CourseUnitTopic,
+    MediaCMSVideoBinding,
 )
 from .policies import (
     can_approve_revision,
@@ -832,6 +833,90 @@ def create_unit(
 
 
 @transaction.atomic
+def configure_mediacms_video_binding(
+    *,
+    actor: Any,
+    organization: Organization,
+    unit: CourseUnit,
+    expected_version: int,
+    media_friendly_token: str,
+) -> tuple[MediaCMSVideoBinding, CourseRevision]:
+    """Set the opaque MediaCMS resource on an editable video unit."""
+
+    _require_manage(actor, organization)
+    locked_unit = (
+        CourseUnit.objects.select_for_update()
+        .select_related("module__revision__course__organization")
+        .get(pk=unit.pk)
+    )
+    locked = _lock_revision(
+        actor=actor,
+        revision=locked_unit.module.revision,
+        organization=organization,
+        expected_version=expected_version,
+    )
+    _require_editable(locked)
+    _require(
+        locked_unit.status == StructureStatus.ACTIVE
+        and locked_unit.module.status == StructureStatus.ACTIVE,
+        CourseStructureInvalid,
+        "La unidad o su módulo están archivados.",
+    )
+    _require(
+        locked_unit.lesson_kind == LessonKind.MEDIACMS_VIDEO,
+        CourseStructureInvalid,
+        "La unidad no es una lección de vídeo MediaCMS.",
+    )
+    binding, created = MediaCMSVideoBinding.objects.select_for_update().get_or_create(
+        unit=locked_unit,
+        defaults={
+            "media_friendly_token": media_friendly_token,
+            "created_by": actor,
+            "updated_by": actor,
+        },
+    )
+    if not created:
+        binding.media_friendly_token = media_friendly_token
+        binding.updated_by = actor
+    binding.full_clean()
+    if created:
+        binding.save()
+    else:
+        binding.save(update_fields=["media_friendly_token", "updated_by", "updated_at"])
+    return binding, _finish(locked, actor)
+
+
+@transaction.atomic
+def remove_mediacms_video_binding(
+    *,
+    actor: Any,
+    organization: Organization,
+    unit: CourseUnit,
+    expected_version: int,
+) -> CourseRevision:
+    _require_manage(actor, organization)
+    locked_unit = (
+        CourseUnit.objects.select_for_update()
+        .select_related("module__revision__course__organization")
+        .get(pk=unit.pk)
+    )
+    locked = _lock_revision(
+        actor=actor,
+        revision=locked_unit.module.revision,
+        organization=organization,
+        expected_version=expected_version,
+    )
+    _require_editable(locked)
+    _require(
+        locked_unit.lesson_kind == LessonKind.MEDIACMS_VIDEO,
+        CourseStructureInvalid,
+        "La unidad no es una lección de vídeo MediaCMS.",
+    )
+    MediaCMSVideoBinding.objects.select_for_update().filter(unit=locked_unit).delete()
+    return _finish(locked, actor)
+
+
+@transaction.atomic
 def create_activity(
     *,
     actor: Any,
@@ -1295,6 +1380,7 @@ def update_unit(
     expected_version: int,
     topics: Sequence[Topic] | None = None,
     learning_objectives: Sequence[LearningObjective] | None = None,
+    media_friendly_token: str | None = None,
     **changes: object,
 ) -> tuple[CourseUnit, CourseRevision]:
     _require_manage(actor, organization)
@@ -1325,6 +1411,12 @@ def update_unit(
         _validate_unit_topics(locked, topics)
     if learning_objectives is not None:
         _validate_unit_learning_objectives(locked, learning_objectives)
+    if media_friendly_token is not None:
+        _require(
+            locked_unit.lesson_kind == LessonKind.MEDIACMS_VIDEO,
+            CourseStructureInvalid,
+            "Sólo una lección de vídeo puede vincular MediaCMS.",
+        )
     for field, value in changes.items():
         setattr(locked_unit, field, value)
     if changes:
@@ -1351,6 +1443,32 @@ def update_unit(
         _replace_locked_unit_learning_objectives(
             locked_unit, learning_objectives, actor
         )
+    if media_friendly_token is not None:
+        token = media_friendly_token.strip()
+        binding = (
+            MediaCMSVideoBinding.objects.select_for_update()
+            .filter(unit=locked_unit)
+            .first()
+        )
+        if not token:
+            if binding:
+                binding.delete()
+        elif binding:
+            binding.media_friendly_token = token
+            binding.updated_by = actor
+            binding.full_clean()
+            binding.save(
+                update_fields=["media_friendly_token", "updated_by", "updated_at"]
+            )
+        else:
+            binding = MediaCMSVideoBinding(
+                unit=locked_unit,
+                media_friendly_token=token,
+                created_by=actor,
+                updated_by=actor,
+            )
+            binding.full_clean()
+            binding.save()
     return locked_unit, _finish(locked, actor)
 
 
@@ -1932,6 +2050,7 @@ def clone_approved_revision_structure(
             "objective_alignments",
             "modules__units__topic_alignments",
             "modules__units__objective_alignments",
+            "modules__units__mediacms_video_binding",
             "modules__activities__objective_alignments",
             "modules__activities__availability_rules",
             "grade_categories__graded_activities",
@@ -2068,6 +2187,18 @@ def clone_approved_revision_structure(
                 updated_by=actor,
             )
             units_by_source_id[source_unit.id] = unit
+            if source_unit.lesson_kind == LessonKind.MEDIACMS_VIDEO:
+                try:
+                    source_binding = source_unit.mediacms_video_binding
+                except MediaCMSVideoBinding.DoesNotExist:
+                    source_binding = None
+                if source_binding is not None:
+                    MediaCMSVideoBinding.objects.create(
+                        unit=unit,
+                        media_friendly_token=source_binding.media_friendly_token,
+                        created_by=actor,
+                        updated_by=actor,
+                    )
             CourseUnitTopic.objects.bulk_create(
                 [
                     CourseUnitTopic(
