@@ -48,6 +48,10 @@ ALLOW_MEDIA_REPLACEMENT = False
 # a persistent signing key, and real platform registration are configured.
 USE_RBAC = True
 USE_LTI = True
+# The pinned container stores Bento4 outside the upstream default source tree.
+# Without this explicit path MediaCMS silently skips HLS generation and forces
+# an original-file player.  HLS remains an internal, authenticated data plane.
+MP4HLS_COMMAND = "/home/mediacms.io/bento4/bin/mp4hls"
 # This is a server-to-server, bearer-only validation gate.  It runs for every
 # protected source, encoded file or HLS segment and intentionally has no
 # positive cache: an enrollment suspension, revocation or release upgrade must
@@ -63,6 +67,12 @@ LMS_MEDIA_ACCESS_VALIDATION_TIMEOUT_SECONDS = float(
 LMS_MEDIA_ACCESS_SESSION_TTL_SECONDS = int(
     os.environ.get("LMS_MEDIA_ACCESS_SESSION_TTL_SECONDS", "28800")
 )
+# The author-side picker may communicate only with the LMS origin.  It never
+# receives a bearer and lists only media owned by the authenticated MediaCMS
+# user in the popup.
+LMS_MEDIA_PICKER_ALLOWED_ORIGIN = os.environ.get(
+    "LMS_MEDIA_PICKER_ALLOWED_ORIGIN", "http://localhost:3000"
+).rstrip("/")
 
 REDIS_LOCATION = (
     "redis://:"

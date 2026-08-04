@@ -8,6 +8,7 @@ import json
 import re
 import time
 import uuid
+from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, cast
 from urllib.parse import urlencode
@@ -28,6 +29,14 @@ from .snapshots import snapshot_unit
 LTI_CLAIM = "https://purl.imsglobal.org/spec/lti/claim"
 LAUNCH_SALT = "lms.learning.mediacms-launch.v1"
 MEDIA_ACCESS_TOKEN_USE = "mediacms_media_access"
+
+
+@dataclass(frozen=True)
+class NativeMediaCMSDelivery:
+    """Server-only capability for the LMS media proxy."""
+
+    media_access_token: str
+    media_friendly_token: str
 
 
 def _b64url(value: bytes) -> str:
@@ -235,6 +244,26 @@ def _media_access_token(*, actor: User, authorization: dict[str, Any]) -> str:
             "unit_id": str(unit_id),
             "v": 1,
         }
+    )
+
+
+def issue_mediacms_native_delivery(
+    *, actor: User, access: LearningAccess, unit_id: uuid.UUID
+) -> NativeMediaCMSDelivery:
+    """Issue a capability for one proxy request, never for browser delivery."""
+
+    _assert_enabled()
+    media = _media_from_snapshot(access.assignment.release, unit_id)
+    authorization: dict[str, Any] = {
+        "access": access,
+        "media": media,
+        "unit_id": unit_id,
+    }
+    return NativeMediaCMSDelivery(
+        media_access_token=_media_access_token(
+            actor=actor, authorization=authorization
+        ),
+        media_friendly_token=media["media_friendly_token"],
     )
 
 

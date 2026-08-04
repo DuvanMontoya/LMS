@@ -1,0 +1,1 @@
+Generated from pdfjs-dist@6.2.108 (Apache-2.0) by scripts/copy-mathjax-assets.mjs. Do not edit.

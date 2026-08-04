@@ -143,6 +143,42 @@ class LearningApiTests(LearningFixtureMixin, TestCase):
         self.assertEqual(assertion_claims["iat"], 1_699_999_995)
         self.assertEqual(assertion_claims["exp"], 1_700_000_300)
 
+        class HlsResponse:
+            status = 200
+            headers = {"Content-Type": "application/vnd.apple.mpegurl"}
+
+            def __init__(self) -> None:
+                self._body = (
+                    b"#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=800000\n720/index.m3u8\n"
+                )
+
+            def close(self) -> None:
+                return None
+
+            def read(self, size: int = -1) -> bytes:
+                if size < 0:
+                    result, self._body = self._body, b""
+                    return result
+                result, self._body = self._body[:size], self._body[size:]
+                return result
+
+        stream_url = (
+            f"/api/v1/organizations/{organization.slug}/learning/me/"
+            f"enrollments/{enrollment.id}/units/{unit.id}/mediacms-stream/"
+        )
+        with patch(
+            "domain.learning.api.views.urlopen", return_value=HlsResponse()
+        ) as upstream:
+            stream = learner_client.get(stream_url)
+        self.assertEqual(stream.status_code, 200, stream.content)
+        self.assertIn(b"mediacms-stream/?path=720%2Findex.m3u8", stream.content)
+        self.assertNotIn(b"lms_media_access", stream.content)
+        request_sent = upstream.call_args.args[0]
+        self.assertNotIn("media_access", request_sent.full_url)
+        self.assertIn("X-lms-media-access", request_sent.headers)
+        denied_stream = denied_client.get(stream_url)
+        self.assertEqual(denied_stream.status_code, 404, denied_stream.content)
+
         def media_access_token(current_actor, current_enrollment, current_unit):
             descriptor = issue_mediacms_launch(
                 actor=current_actor,

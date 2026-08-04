@@ -41,9 +41,9 @@ existe todavía un issuer, JWKS ni registro de plataforma verificable.
    catálogo público, compartir y originales, y guarda PostgreSQL, Redis,
    media y estáticos en volúmenes locales.
 4. La modalidad `mediacms_video` abre el flujo de autoría de MediaCMS y se
-   entrega sólo mediante el lanzamiento LTI de `domain.learning`, conforme a
-   ADR 0043. Un enlace directo eludiría la matrícula y el release fijado, por
-   lo que queda prohibido.
+   entrega con una capacidad derivada de LTI de `domain.learning`, conforme a
+   ADR 0043 y ADR 0044. Un enlace directo eludiría la matrícula y el release
+   fijado, por lo que queda prohibido.
 5. MediaCMS se consume sin modificar desde su fuente oficial y está licenciado
    bajo GNU AGPL-3.0. La responsable de plataforma debe realizar una revisión
    legal antes de una puesta en producción, de distribuir una imagen derivada o

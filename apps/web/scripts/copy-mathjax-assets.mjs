@@ -55,6 +55,33 @@ for (const asset of mathLiveFiles) {
   await cp(from, to);
 }
 
+const pdfWorkerSource = join(
+  root,
+  'node_modules',
+  'pdfjs-dist',
+  'build',
+  'pdf.worker.min.mjs',
+);
+const pdfWorkerTarget = join(
+  root,
+  'public',
+  'vendor',
+  'pdfjs',
+  'pdf.worker.min.mjs',
+);
+if (check) {
+  const [expected, actual] = await Promise.all([
+    readFile(pdfWorkerSource),
+    readFile(pdfWorkerTarget).catch(() => null),
+  ]);
+  if (!actual || !expected.equals(actual)) {
+    throw new Error('PDF.js worker is missing or stale.');
+  }
+} else {
+  await mkdir(dirname(pdfWorkerTarget), { recursive: true });
+  await cp(pdfWorkerSource, pdfWorkerTarget);
+}
+
 if (!check) {
   await writeFile(
     join(target, 'NOTICE.txt'),
@@ -63,5 +90,9 @@ if (!check) {
   await writeFile(
     join(root, 'public', 'vendor', 'mathlive', 'NOTICE.txt'),
     'Generated from mathlive@0.110.0 (MIT) by scripts/copy-mathjax-assets.mjs. Do not edit.\n',
+  );
+  await writeFile(
+    join(root, 'public', 'vendor', 'pdfjs', 'NOTICE.txt'),
+    'Generated from pdfjs-dist@6.2.108 (Apache-2.0) by scripts/copy-mathjax-assets.mjs. Do not edit.\n',
   );
 }

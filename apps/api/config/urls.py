@@ -18,7 +18,11 @@ Including another URLconf
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
-from drf_spectacular.views import SpectacularAPIView
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 
 urlpatterns = [
     path("api/v1/", include("domain.identity.api.urls")),
@@ -36,6 +40,16 @@ urlpatterns = [
     path("api/v1/", include("domain.notifications.api.urls")),
     path("api/v1/", include("domain.integrations.api.urls")),
     path("api/v1/schema/", SpectacularAPIView.as_view(), name="platform-schema"),
+    path(
+        "api/v1/docs/",
+        SpectacularSwaggerView.as_view(url_name="platform-schema"),
+        name="platform-swagger-ui",
+    ),
+    path(
+        "api/v1/redoc/",
+        SpectacularRedocView.as_view(url_name="platform-schema"),
+        name="platform-redoc",
+    ),
     path("admin/", admin.site.urls),
     path("health/", include("config.health.urls")),
     path("accounts/", include("allauth.urls")),

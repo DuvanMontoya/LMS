@@ -1,5 +1,3 @@
-import { BookOpenText } from 'lucide-react';
-
 import { AcademicDocument } from '@/components/content/academic-document';
 import { AcademicAsset } from '@/components/content/academic-asset';
 import { LearningPositionTracker } from '@/components/learning/learning-position-tracker';
@@ -9,7 +7,6 @@ import {
   LearningPlayerShell,
 } from '@/components/learning/learning-player-shell';
 import { LearningUnitControls } from '@/components/learning/learning-unit-controls';
-import { Badge } from '@/components/ui/badge';
 import { parseAssetDescriptors } from '@/lib/assets/descriptors';
 import type { LMSUnitAcademicDocumentVersion2 } from '@/lib/content/generated/unit-document-v2';
 import {
@@ -36,9 +33,8 @@ export default async function LearningUnitPage({
     getLearningOutline(slug, enrollment.enrollment_id),
   ]);
   const unit = record(data.payload.unit) ? data.payload.unit : null;
-  const lessonModule = record(data.payload.module) ? data.payload.module : null;
   const delivery = record(data.payload.delivery) ? data.payload.delivery : null;
-  if (!unit || !lessonModule || !delivery || typeof unit.title !== 'string') {
+  if (!unit || !delivery || typeof unit.title !== 'string') {
     throw new Error('El contrato de entrega de la lección es inválido.');
   }
   const lessonKind =
@@ -123,37 +119,6 @@ export default async function LearningUnitPage({
         title={unit.title}
       >
         <article className="learning-player__lesson">
-          <header className="learning-player__lesson-heading">
-            <p>
-              Módulo {String(lessonModule.position ?? '')} ·{' '}
-              {String(lessonModule.title ?? '')}
-            </p>
-            <h1>{unit.title}</h1>
-            {isDocument && typeof unit.summary === 'string' && unit.summary ? (
-              <div>{unit.summary}</div>
-            ) : null}
-            {isDocument &&
-            Array.isArray(data.payload.topics) &&
-            data.payload.topics.length ? (
-              <div className="learning-player__topics">
-                {data.payload.topics.map((topic) => (
-                  <Badge
-                    key={
-                      record(topic) && typeof topic.id === 'string'
-                        ? topic.id
-                        : String(topic)
-                    }
-                    variant="outline"
-                  >
-                    {record(topic) && typeof topic.title === 'string'
-                      ? topic.title
-                      : 'Tema'}
-                  </Badge>
-                ))}
-              </div>
-            ) : null}
-          </header>
-
           {isMediaCMSVideo ? (
             <MediaCMSVideoPlayer
               enrollmentId={enrollment.enrollment_id}
@@ -192,36 +157,6 @@ export default async function LearningUnitPage({
                 }}
               />
             </div>
-          ) : null}
-
-          {isDocument &&
-          Array.isArray(data.payload.learning_objectives) &&
-          data.payload.learning_objectives.length ? (
-            <details className="learning-player__objectives">
-              <summary>
-                <BookOpenText />
-                <div>
-                  <strong>Objetivos de esta lección</strong>
-                  <small>Información académica complementaria</small>
-                </div>
-              </summary>
-              <ul>
-                {data.payload.learning_objectives.map((objective) => (
-                  <li
-                    key={
-                      record(objective) && typeof objective.id === 'string'
-                        ? objective.id
-                        : String(objective)
-                    }
-                  >
-                    {record(objective) &&
-                    typeof objective.statement === 'string'
-                      ? objective.statement
-                      : 'Objetivo de aprendizaje'}
-                  </li>
-                ))}
-              </ul>
-            </details>
           ) : null}
         </article>
 

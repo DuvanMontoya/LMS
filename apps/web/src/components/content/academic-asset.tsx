@@ -4,6 +4,7 @@ import { Download, RefreshCcw } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { PdfDocumentReader } from '@/components/content/pdf-document-reader';
 import { platformBrowserClient } from '@/lib/api/platform-browser-client';
 import type { AssetAccessDescriptor } from '@/lib/assets/api';
 import { formatBytes } from '@/lib/assets/labels';
@@ -178,21 +179,12 @@ export function AcademicAsset({
         </video>
       ) : null}
       {kind === 'document' && source.mime_type === 'application/pdf' ? (
-        <div className="bg-muted/10 p-2 sm:p-4">
-          <iframe
-            className="h-[36rem] w-full rounded border bg-white"
-            src={source.url}
-            title={`Vista previa de ${String(attrs.label ?? 'documento')}`}
-          />
-          <div className="mt-3 flex justify-end">
-            <Button asChild size="sm" variant="outline">
-              <a href={source.url} rel="noreferrer" target="_blank">
-                <Download data-icon="inline-start" />
-                Abrir PDF
-              </a>
-            </Button>
-          </div>
-        </div>
+        <PdfDocumentReader
+          key={source.url}
+          onError={onMediaError}
+          source={source.url}
+          title={String(attrs.label ?? 'Documento PDF')}
+        />
       ) : null}
       {kind === 'dataset' ||
       (kind === 'document' && source.mime_type !== 'application/pdf') ? (

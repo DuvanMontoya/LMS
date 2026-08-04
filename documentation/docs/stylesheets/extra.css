@@ -1,0 +1,32 @@
+:root {
+  --md-primary-fg-color: #2f5fca;
+  --md-primary-fg-color--light: #6588de;
+  --md-primary-fg-color--dark: #1d438f;
+  --md-accent-fg-color: #2f5fca;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-hue: 224;
+}
+
+.md-typeset table:not([class]) {
+  display: block;
+  overflow-x: auto;
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 0.5rem;
+}
+
+.mermaid-diagram {
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  padding: 1rem;
+  text-align: center;
+}
+
+.mermaid-diagram svg {
+  height: auto;
+  max-width: 100%;
+}

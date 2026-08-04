@@ -253,6 +253,10 @@
     "api:migrate": "pwsh -NoProfile -File scripts/django.ps1 -Action Migrate",
     "api:createsuperuser": "pwsh -NoProfile -File scripts/django.ps1 -Action CreateSuperuser",
     "api:health": "pwsh -NoProfile -File scripts/django.ps1 -Action Health",
+    "docs:serve": "pwsh -NoProfile -File scripts/documentation.ps1 -Action Serve",
+    "docs:build": "pwsh -NoProfile -File scripts/documentation.ps1 -Action Build",
+    "docs:check": "pwsh -NoProfile -File scripts/documentation.ps1 -Action Check",
+    "docs:openapi:generate": "pwsh -NoProfile -File scripts/documentation.ps1 -Action GenerateOpenApi",
     "api:test:migrations": "pwsh -NoProfile -File scripts/django.ps1 -Action TestMigrations",
     "auth:check": "pwsh -NoProfile -File scripts/auth.ps1 -Action Check",
     "auth:routes": "pwsh -NoProfile -File scripts/auth.ps1 -Action Routes",
@@ -286,6 +290,7 @@
     "test": "pnpm run api:test && pnpm run web:test"
   },
   "devDependencies": {
+    "mermaid": "11.16.0",
     "pyright": "1.1.411"
   },
   "pnpm": {

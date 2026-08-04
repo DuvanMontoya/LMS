@@ -18,7 +18,9 @@ param(
     [string]$Action,
     [string]$AppLabel,
     [switch]$WithDatabase,
-    [switch]$SkipPlan
+    [switch]$SkipPlan,
+    [ValidateRange(1, 65535)]
+    [int]$DevPort = 8000
 )
 
 $ErrorActionPreference = 'Stop'
@@ -59,6 +61,22 @@ function Import-LocalInfrastructureEnvironment {
         }
         [Environment]::SetEnvironmentVariable($parts[0], $parts[1], 'Process')
     }
+}
+
+function Import-LocalMediaCmsSigningKey {
+    $keyFile = Join-Path $repositoryRoot '.local/mediacms/lms-lti-private-key.pem'
+    if (-not (Test-Path -LiteralPath $keyFile)) {
+        return
+    }
+
+    # The local MediaCMS initializer creates this ignored durable key.  Loading
+    # it for every Django command keeps LTI assertions valid across the
+    # development server's autoreloads; the key is never printed or committed.
+    [Environment]::SetEnvironmentVariable(
+        'LMS_LTI_PRIVATE_KEY_PEM',
+        [IO.File]::ReadAllText($keyFile),
+        'Process'
+    )
 }
 
 function Invoke-Django([string[]]$Arguments) {
@@ -146,6 +164,7 @@ function Invoke-CleanMigrationTest {
 
 Set-Location $repositoryRoot
 Import-LocalInfrastructureEnvironment
+Import-LocalMediaCmsSigningKey
 
 switch ($Action) {
     'Check' {
@@ -213,7 +232,7 @@ switch ($Action) {
     'Dev' {
         Assert-PostgreSQLHealthy
         Assert-RedisHealthy
-        Invoke-Django @('runserver', '127.0.0.1:8000')
+        Invoke-Django @('runserver', "127.0.0.1:$DevPort")
     }
     'Test' {
         Assert-PostgreSQLHealthy

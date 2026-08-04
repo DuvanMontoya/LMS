@@ -5,6 +5,10 @@ autenticación usa sesiones Django y CSRF; la autorización institucional se
 resuelve por organización, membresía y capacidades. No hay JWT, roles globales
 en el usuario ni almacenamiento de permisos en el navegador.
 
+La documentación oficial se encuentra en [`documentation/`](documentation/docs/index.md).
+Después de preparar la infraestructura local, ábrala con `pnpm docs:serve` o
+valídela completamente con `pnpm docs:check`.
+
 ## Requisitos locales
 
 - Windows PowerShell 7+, Docker Desktop, Node 24.18.0, pnpm 10.33.2,
@@ -80,7 +84,7 @@ Con los servicios activos, crea las cuentas de demostración exclusivamente en
 la base de desarrollo local:
 
 ```powershell
-pnpm organizations:demo -- -DemoPassword 'DemoLms!2026Organization'
+pnpm organizations:demo -- -DemoPassword '<contraseña-local-temporal-no-versionada>'
 pnpm catalog:demo
 pnpm courses:demo
 ```
@@ -88,15 +92,18 @@ pnpm courses:demo
 El comando se niega a ejecutarse fuera de `DEBUG=True`, marca los correos como
 verificados y nunca debe usarse en producción. Puedes iniciar sesión con:
 
-| Rol | Correo | Contraseña |
-| --- | --- | --- |
-| Propietario | `owner@demo.local` | `DemoLms!2026Organization` |
-| Administrador | `administrator@demo.local` | `DemoLms!2026Organization` |
-| Estudiante | `learner@demo.local` | `DemoLms!2026Organization` |
-| Autor | `author@demo.local` | `DemoLms!2026Organization` |
-| Revisor | `reviewer@demo.local` | `DemoLms!2026Organization` |
-| Instructor | `instructor@demo.local` | `DemoLms!2026Organization` |
-| Owner externo | `external@demo.local` | `DemoLms!2026Organization` |
+| Rol | Correo de demostración local |
+| --- | --- |
+| Propietario | `owner@demo.local` |
+| Administrador | `administrator@demo.local` |
+| Estudiante | `learner@demo.local` |
+| Autor | `author@demo.local` |
+| Revisor | `reviewer@demo.local` |
+| Instructor | `instructor@demo.local` |
+| Owner externo | `external@demo.local` |
+
+La contraseña es la que se acaba de proporcionar de forma local al comando;
+no se registra, documenta ni versiona. Estos datos no existen en producción.
 
 La organización principal es `Organización de demostración` y se abre en
 `/organizaciones/organizacion-demo`. El owner puede administrar miembros; el
@@ -221,12 +228,12 @@ pnpm courses:demo
 ```
 
 Abre [el inicio de sesión local](http://127.0.0.1:3000/auth/iniciar-sesion) e
-ingresa con `owner@demo.local` y `DemoLms!2026Organization`. La redirección
-lleva a la organización demo; desde allí abre **Currículo**. Para comprobar los
-permisos visualmente, cierra sesión y usa `reviewer@demo.local` o
-`learner@demo.local` con la misma contraseña: verán sólo contenido activo y no
-aparecerán controles de escritura. Estas credenciales son únicamente datos demo
-locales, reproducibles con `DEBUG=True`; no existen en producción.
+ingresa con una de las cuentas demo y la contraseña local temporal que acabas de
+proporcionar al bootstrap. La redirección lleva a la organización demo; desde
+allí abre **Currículo**. Para comprobar permisos visualmente, cierra sesión y
+usa una cuenta de revisor o estudiante: verán sólo contenido activo y no
+aparecerán controles de escritura. Estas cuentas son datos demo locales,
+reproducibles con `DEBUG=True`; no existen en producción.
 
 La portada de Currículo muestra los conteos de áreas, disciplinas y asignaturas,
 además de búsqueda por nombre y filtro de estado. El espacio de cada asignatura

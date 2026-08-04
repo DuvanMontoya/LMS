@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "allauth.headless",
     "rest_framework",
     "drf_spectacular",
+    "drf_spectacular_sidecar",
     "django_filters",
     "domain.identity",
     "domain.organizations",
@@ -214,6 +215,18 @@ LMS_LTI_MEDIA_ACCESS_AUDIENCE = os.environ.get(
 LMS_LTI_MEDIA_ACCESS_VALIDATION_URL = os.environ.get(
     "LMS_LTI_MEDIA_ACCESS_VALIDATION_URL", ""
 ).rstrip("/")
+try:
+    MEDIACMS_NATIVE_STREAM_TIMEOUT_SECONDS = float(
+        os.environ.get("MEDIACMS_NATIVE_STREAM_TIMEOUT_SECONDS", "5")
+    )
+except ValueError as error:
+    raise RuntimeError(
+        "MEDIACMS_NATIVE_STREAM_TIMEOUT_SECONDS must be numeric."
+    ) from error
+if not 1 <= MEDIACMS_NATIVE_STREAM_TIMEOUT_SECONDS <= 30:
+    raise RuntimeError(
+        "MEDIACMS_NATIVE_STREAM_TIMEOUT_SECONDS must be between 1 and 30 seconds."
+    )
 try:
     LMS_LTI_MEDIA_ACCESS_TTL_SECONDS = int(
         os.environ.get("LMS_LTI_MEDIA_ACCESS_TTL_SECONDS", "28800")
@@ -470,8 +483,18 @@ REST_FRAMEWORK = {
 }
 SPECTACULAR_SETTINGS = {
     "TITLE": "LMS Platform API",
+    "DESCRIPTION": (
+        "Contrato HTTP de la plataforma académica. Las operaciones requieren una "
+        "sesión Django y la autorización institucional correspondiente."
+    ),
     "VERSION": "0.2.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Ship pinned, self-hosted Swagger UI and ReDoc assets. No documentation
+    # route pulls executable JavaScript from a floating CDN version.
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAuthenticated"],
     # Every PATCH view validates an explicit serializer without partial=True.
     # Preserve required fields such as expected_version in the generated client.
     "COMPONENT_SPLIT_PATCH": False,

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://duvanmontoya.github.io/LMS/sitemap.xml

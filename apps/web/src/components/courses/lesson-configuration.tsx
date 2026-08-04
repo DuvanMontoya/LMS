@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Archive,
@@ -80,6 +80,15 @@ function searchable(value: string) {
     .toLocaleLowerCase('es-CO');
 }
 
+function mediaCmsOrigin(value: string | undefined) {
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
 export function LessonConfiguration({
   alignedSubjects,
   courseSlug,
@@ -119,6 +128,8 @@ export function LessonConfiguration({
     const token = media?.media_friendly_token;
     return typeof token === 'string' ? token : '';
   });
+  const [mediaPickerError, setMediaPickerError] = useState('');
+  const mediaPickerWindow = useRef<Window | null>(null);
   const [selectedTopicIds, setSelectedTopicIds] = useState(
     lesson.topics.map((item) => item.topic.id),
   );
@@ -135,6 +146,10 @@ export function LessonConfiguration({
   const primarySubject =
     alignedSubjects.find((item) => item.alignment_type === 'primary') ??
     alignedSubjects[0];
+  const mediaCmsPickerOrigin = useMemo(
+    () => mediaCmsOrigin(mediaCmsAuthoringUrl),
+    [mediaCmsAuthoringUrl],
+  );
   const [activeSubjectId, setActiveSubjectId] = useState(
     primarySubject?.subject.id ?? '',
   );
@@ -313,6 +328,54 @@ export function LessonConfiguration({
   const deliveryResourceMutationError =
     bindDeliveryResource.error ?? removeDeliveryResource.error;
 
+  useEffect(() => {
+    if (lesson.lesson_kind !== 'mediacms_video' || !mediaCmsPickerOrigin) {
+      return;
+    }
+    function receiveMediaSelection(event: MessageEvent<unknown>) {
+      if (
+        event.origin !== mediaCmsPickerOrigin ||
+        event.source !== mediaPickerWindow.current ||
+        !record(event.data) ||
+        event.data.channel !== 'lms-mediacms-picker-v1' ||
+        typeof event.data.mediaFriendlyToken !== 'string' ||
+        !/^[A-Za-z0-9_-]{1,64}$/.test(event.data.mediaFriendlyToken)
+      ) {
+        return;
+      }
+      setMediaCmsFriendlyToken(event.data.mediaFriendlyToken);
+      setMediaPickerError('');
+      mediaPickerWindow.current = null;
+    }
+    window.addEventListener('message', receiveMediaSelection);
+    return () => window.removeEventListener('message', receiveMediaSelection);
+  }, [lesson.lesson_kind, mediaCmsPickerOrigin]);
+
+  function openMediaPicker() {
+    if (!mediaCmsAuthoringUrl || !mediaCmsPickerOrigin) {
+      setMediaPickerError(
+        'El selector de MediaCMS no está configurado para este entorno.',
+      );
+      return;
+    }
+    const pickerUrl = new URL('/lti/media-picker/', mediaCmsAuthoringUrl);
+    pickerUrl.searchParams.set('origin', window.location.origin);
+    const popup = window.open(
+      pickerUrl.toString(),
+      'lms-mediacms-picker',
+      'popup,width=760,height=680',
+    );
+    if (!popup) {
+      setMediaPickerError(
+        'El navegador bloqueó el selector. Permite la ventana emergente e inténtalo de nuevo.',
+      );
+      return;
+    }
+    mediaPickerWindow.current = popup;
+    setMediaPickerError('');
+    popup.focus();
+  }
+
   function toggle(current: string[], id: string, checked: boolean) {
     return checked
       ? [...new Set([...current, id])]
@@ -411,30 +474,14 @@ export function LessonConfiguration({
                   Vídeo privado de MediaCMS
                 </div>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Carga y procesa el vídeo en MediaCMS. Luego copia el código
-                  que aparece después de <code>?m=</code> en su página.
+                  Elige un vídeo privado ya procesado. La LMS vincula sólo ese
+                  vídeo a esta lección.
                 </p>
-                <Label
-                  className="mt-3 block"
-                  htmlFor={`lesson-mediacms-token-${lesson.id}`}
-                >
-                  Código del vídeo
-                </Label>
-                <Input
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  className="mt-1 font-mono"
-                  id={`lesson-mediacms-token-${lesson.id}`}
-                  maxLength={150}
-                  onChange={(event) =>
-                    setMediaCmsFriendlyToken(event.target.value)
-                  }
-                  pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,149}"
-                  placeholder="Ej. ak7uPO2Vn"
-                  spellCheck={false}
-                  value={mediaCmsFriendlyToken}
-                />
                 <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Button onClick={openMediaPicker} size="sm" type="button">
+                    <Video data-icon="inline-start" />
+                    {mediaCmsFriendlyToken ? 'Cambiar vídeo' : 'Elegir vídeo'}
+                  </Button>
                   {mediaCmsAuthoringUrl ? (
                     <Button asChild size="sm" type="button" variant="outline">
                       <a
@@ -447,10 +494,17 @@ export function LessonConfiguration({
                       </a>
                     </Button>
                   ) : null}
-                  <span className="text-xs text-muted-foreground">
-                    Se guarda con esta misma versión de la lección.
-                  </span>
                 </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {mediaCmsFriendlyToken
+                    ? 'Vídeo seleccionado y listo para guardar con esta misma versión.'
+                    : 'Aún no has seleccionado un vídeo.'}
+                </p>
+                {mediaPickerError ? (
+                  <p className="mt-2 text-xs text-destructive" role="alert">
+                    {mediaPickerError}
+                  </p>
+                ) : null}
               </div>
             ) : null}
             {resourceLessonKind(lesson.lesson_kind) ? (

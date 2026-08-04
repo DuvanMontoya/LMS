@@ -1,0 +1,76 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'documentation/**'
+      - 'apps/api/**'
+      - 'apps/web/**'
+      - 'scripts/documentation.ps1'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/documentation.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'documentation/**'
+      - 'apps/api/**'
+      - 'apps/web/**'
+      - 'scripts/documentation.ps1'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/documentation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: documentation-pages
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.test
+      FRONTEND_ORIGIN: http://127.0.0.1:3000
+      REDIS_PASSWORD: documentation-validation-only
+      INTEGRATIONS_MASTER_KEYS: test-2026-bW9jay1rZXktbWF0ZXJpYWwtMzItYnl0ZXMtZm9yLXRlc3RzISE=
+      INTEGRATIONS_ACTIVE_KEY_ID: test-2026
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13.13'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.11.19'
+      - name: Sync locked API and documentation dependencies
+        run: uv sync --locked --directory apps/api --group docs
+      - name: Generate and validate OpenAPI
+        run: >-
+          uv run --directory apps/api python manage.py spectacular
+          --file "$GITHUB_WORKSPACE/documentation/docs/api/schema.yaml"
+          --validate --fail-on-warn
+      - name: Build documentation with strict links and anchors
+        run: >-
+          uv run --directory apps/api --group docs zensical build --clean --strict
+          --config-file "$GITHUB_WORKSPACE/documentation/zensical.toml"
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: documentation/site
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-24.04
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

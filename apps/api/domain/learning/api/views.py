@@ -1,10 +1,17 @@
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportIndexIssue=false, reportOptionalSubscript=false, reportOptionalMemberAccess=false, reportOptionalIterable=false, reportCallIssue=false, reportUnknownLambdaType=false, reportAttributeAccessIssue=false
 from __future__ import annotations
 
+import posixpath
+import re
 import uuid
 from collections.abc import Callable
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urlencode
+from urllib.request import Request as UrlRequest
+from urllib.request import urlopen
 
+from django.conf import settings
 from django.db.models import Count, Q, QuerySet
 from django.http import (
     Http404,
@@ -13,6 +20,7 @@ from django.http import (
     HttpResponseBase,
     HttpResponseForbidden,
     JsonResponse,
+    StreamingHttpResponse,
 )
 from django.shortcuts import get_object_or_404, render
 from django.utils.decorators import method_decorator
@@ -31,6 +39,7 @@ from domain.learning.exceptions import LearningDomainError
 from domain.learning.mediacms import (
     authorize_mediacms_launch,
     issue_mediacms_launch,
+    issue_mediacms_native_delivery,
     lti_authorization_allowed,
     lti_id_token,
     lti_jwks,
@@ -1013,6 +1022,177 @@ class MyUnitView(APIView):
 
         result = _domain_call(payload)
         return result if isinstance(result, Response) else Response(result)
+
+
+_HLS_URI_ATTRIBUTE = re.compile(r'URI="([^"]+)"')
+
+
+def _safe_mediacms_stream_path(value: str) -> str:
+    """Accept only a relative HLS path; never turn a query into a backend URL."""
+
+    if not value:
+        return ""
+    if len(value) > 500 or "\x00" in value or "\\" in value:
+        raise ValueError("invalid media path")
+    normalized = posixpath.normpath(value)
+    if (
+        normalized in {".", ".."}
+        or normalized.startswith("../")
+        or normalized.startswith("/")
+    ):
+        raise ValueError("invalid media path")
+    return normalized
+
+
+def _proxy_hls_path(*, request_path: str, manifest_path: str, reference: str) -> str:
+    """Convert an HLS-internal relative URL into another authenticated LMS URL."""
+
+    if not reference or "://" in reference or reference.startswith("/"):
+        raise ValueError("unsafe HLS reference")
+    target = _safe_mediacms_stream_path(
+        posixpath.join(posixpath.dirname(manifest_path), reference)
+    )
+    return f"{request_path}?{urlencode({'path': target})}"
+
+
+def _rewrite_hls_manifest(
+    *, request_path: str, manifest_path: str, content: bytes
+) -> bytes:
+    """Ensure a browser receives only same-origin segment and key URLs."""
+
+    try:
+        lines = content.decode("utf-8").splitlines()
+    except UnicodeDecodeError as error:
+        raise ValueError("invalid HLS manifest") from error
+    rewritten: list[str] = []
+    for line in lines:
+        if not line:
+            rewritten.append(line)
+            continue
+        if line.startswith("#"):
+
+            def replace_uri(match: re.Match[str]) -> str:
+                return f'URI="{_proxy_hls_path(request_path=request_path, manifest_path=manifest_path, reference=match.group(1))}"'
+
+            rewritten.append(_HLS_URI_ATTRIBUTE.sub(replace_uri, line))
+            continue
+        rewritten.append(
+            _proxy_hls_path(
+                request_path=request_path,
+                manifest_path=manifest_path,
+                reference=line,
+            )
+        )
+    return ("\n".join(rewritten) + "\n").encode("utf-8")
+
+
+class MediaCMSNativeStreamView(APIView):
+    """Same-origin HLS gateway with per-request enrollment revalidation.
+
+    The LMS keeps the signed capability server-side.  MediaCMS receives it
+    only through the internal request header, so neither the page nor the HLS
+    manifest exposes a reusable upstream bearer.
+    """
+
+    @extend_schema(exclude=True)
+    def get(
+        self,
+        request: Request,
+        slug: str,
+        enrollment_id: uuid.UUID,
+        unit_id: uuid.UUID,
+    ) -> HttpResponseBase:
+        try:
+            stream_path = _safe_mediacms_stream_path(
+                request.query_params.get("path", "")
+            )
+        except ValueError:
+            return HttpResponseBadRequest("Ruta de vídeo inválida.")
+        organization = _organization(request, slug)
+        enrollment = my_enrollment(request.user, organization, enrollment_id)
+        from domain.learning.access import require_learning_access
+
+        try:
+            delivery = issue_mediacms_native_delivery(
+                actor=request.user,
+                access=require_learning_access(
+                    actor=request.user, enrollment=enrollment
+                ),
+                unit_id=unit_id,
+            )
+        except LearningDomainError:
+            return HttpResponseForbidden(
+                "El vídeo no está disponible para esta matrícula."
+            )
+
+        query = urlencode({"path": stream_path}) if stream_path else ""
+        upstream_url = (
+            f"{settings.MEDIACMS_LTI_TOOL_ORIGIN}/lti/native/"
+            f"{quote(delivery.media_friendly_token, safe='')}/"
+        )
+        if query:
+            upstream_url = f"{upstream_url}?{query}"
+        headers = {
+            "Accept": request.headers.get("Accept", "*/*")[:512],
+            "X-LMS-Media-Access": delivery.media_access_token,
+        }
+        range_header = request.headers.get("Range", "")
+        if range_header and len(range_header) <= 128 and "\r" not in range_header:
+            headers["Range"] = range_header
+        try:
+            upstream = urlopen(
+                UrlRequest(upstream_url, headers=headers, method="GET"),
+                timeout=settings.MEDIACMS_NATIVE_STREAM_TIMEOUT_SECONDS,
+            )
+        except HTTPError as error:
+            if error.code == 403:
+                return HttpResponseForbidden(
+                    "El vídeo no está disponible para esta matrícula."
+                )
+            if error.code == 404:
+                raise Http404("Vídeo no encontrado.") from error
+            return HttpResponse(status=502)
+        except (URLError, TimeoutError, ValueError):
+            return HttpResponse(status=502)
+
+        content_type = upstream.headers.get("Content-Type", "application/octet-stream")
+        if (
+            "mpegurl" in content_type
+            or stream_path.endswith(".m3u8")
+            or not stream_path
+        ):
+            try:
+                body = _rewrite_hls_manifest(
+                    request_path=request.path,
+                    manifest_path=stream_path,
+                    content=upstream.read(524_289),
+                )
+                if len(body) > 524_288:
+                    raise ValueError("manifest too large")
+            except ValueError:
+                upstream.close()
+                return HttpResponse(status=502)
+            upstream.close()
+            response = HttpResponse(body, content_type="application/vnd.apple.mpegurl")
+        else:
+
+            def stream_body() -> Any:
+                try:
+                    while chunk := upstream.read(64 * 1024):
+                        yield chunk
+                finally:
+                    upstream.close()
+
+            response = StreamingHttpResponse(stream_body(), status=upstream.status)
+            for header in ("Content-Length", "Content-Range", "Accept-Ranges", "ETag"):
+                if value := upstream.headers.get(header):
+                    response[header] = value
+            response["Content-Type"] = content_type
+        response["Cache-Control"] = "private, no-store"
+        response["Referrer-Policy"] = "no-referrer"
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Cross-Origin-Resource-Policy"] = "same-origin"
+        return response
 
 
 class MediaCMSLaunchView(APIView):

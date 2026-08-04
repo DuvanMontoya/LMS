@@ -1,5 +1,35 @@
 # Project status
 
+## Documentación oficial, OpenAPI y portal Zensical — verificado localmente 2026-08-03
+
+- Se añadió `documentation/` con portal Zensical `0.0.51` fijado por uv,
+  navegación en español, búsqueda local, Mermaid `11.16.0` servido localmente,
+  modo claro/oscuro, enlaces de edición y construcción estricta. El renderizador
+  local evita el cargador CDN dinámico del tema.
+- `drf-spectacular==0.30.0` conserva el contrato OpenAPI; Swagger y ReDoc usan
+  `drf-spectacular-sidecar==2026.8.1` bloqueado en vez de CDN. Las rutas
+  interactivas requieren sesión Django autenticada.
+- `pnpm docs:openapi:generate`, `pnpm docs:build`, `pnpm docs:check` y
+  `pnpm docs:serve` son la interfaz documentada. La salida estática no entra a
+  Git. El workflow de GitHub Pages queda preparado, sin secreto ni dominio
+  personalizado.
+- `pnpm docs:check` genera el esquema con `--validate --fail-on-warn` y
+  construye Zensical en modo estricto. Las pruebas PostgreSQL de autorización
+  de OpenAPI pasan 2/2 y la comprobación de navegador cubre render Mermaid,
+  búsqueda y 390 px sin desbordamiento horizontal.
+- La sincronización de dependencias informó avisos preexistentes de pares en
+  la cadena Vite/Rolldown de `apps/web` y un lifecycle bloqueado de
+  `@sentry/cli`. No se ocultaron con flags ni se sustituyeron dependencias
+  fuera del alcance: plataforma debe resolverlos en su actualización dedicada.
+  El portal no ejecuta ese lifecycle y su Mermaid se copia desde la versión
+  exacta declarada.
+- El 2026-08-04, una consulta autenticada y de sólo lectura confirmó que el
+  remoto `main` aún está en `0dd3cdf` y que GitHub Pages no está configurado
+  para el repositorio (la API devolvió `404`). El workflow está listo, pero no
+  se habilitó Pages, no se creó commit ni se publicó el árbol local mezclado;
+  la URL esperada no se declara desplegada hasta que esa secuencia termine
+  correctamente.
+
 ## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
 
 - **Entrega exclusiva por modalidad (2026-08-03):** ADR 0042 conserva la actividad canónica `lesson` y
@@ -82,6 +112,30 @@
   texto de otra modalidad. La prueba puntual de lanzamiento LTI pasó 1/1;
   Django, migraciones, Pyright, ESLint, Prettier, TypeScript, contratos de
   publicación y contratos de contenido también pasaron.
+- **Entrega nativa y limpia (2026-08-03):** ADR 0044 sustituye la superficie
+  visible LTI/`iframe` por un elemento `video` propio de la LMS: HLS nativo o
+  `hls.js` 1.6.16 solicita sólo rutas same-origin de la LMS. Cada manifest,
+  segmento o rango vuelve a comprobar matrícula efectiva, release y unidad;
+  la capacidad RS256 nunca llega al navegador, al DOM, al historial ni al
+  snapshot. MediaCMS valida internamente esa capacidad antes de abrir el HLS
+  privado. `scripts/django.ps1` carga la clave LTI local ignorada para que un
+  autoreload no invalide firmas. Se eliminó el encabezado duplicado del área
+  de entrega y el temario del aula alinea icono y título en una sola línea.
+  El lector de PDF usa `pdfjs-dist` 6.2.108 y worker local, dibuja canvas,
+  conserva scroll y aplica zoom con Ctrl/⌘+rueda; no usa `iframe`, `object` ni
+  el visor del navegador. En Chrome real, la unidad publicada cargó el vídeo
+  de 27.96 s con `readyState=4`, sin `iframe`, alerta ni token expuesto, y las
+  solicitudes de manifiesto y segmentos quedaron en `localhost:3000`.
+  La configuración de una lección de vídeo abre un selector emergente de
+  MediaCMS, limitado al origen LMS configurado y a vídeos HLS privados que
+  pertenezcan al usuario MediaCMS autenticado; devuelve sólo el identificador
+  de vídeo con `postMessage` validado por origen, sin contraseña de servicio,
+  ruta física, URL HLS ni catálogo de otro autor. La prueba directa del
+  selector autenticado fue 200 y el intento con origen ajeno fue 403.
+  El borrador de validación conserva PDF, diapositivas, audio, `.tex` y `.md`,
+  pero no se publica ni se matricula artificialmente sólo para una captura:
+  sus contratos se verifican por backend/TypeScript hasta que un autor decida
+  publicarlo como contenido académico local.
 - **Límite explícito antes de producción:** el lanzamiento de vídeo para
   estudiantes está validado sólo en `localhost`. Producción sigue bloqueada
   hasta tener TLS real, issuer/JWKS y client registration reales bajo los

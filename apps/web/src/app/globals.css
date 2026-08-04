@@ -1061,7 +1061,10 @@
     @apply bg-primary/5;
   }
 
-  .course-curriculum__module > ol :is(a, span[aria-disabled='true']) > span {
+  .course-curriculum__module
+    > ol
+    :is(a, span[aria-disabled='true'])
+    > span:not(.course-curriculum__item-title) {
     @apply grid min-w-0 flex-1;
   }
 
@@ -2014,8 +2017,13 @@
     @apply line-clamp-1 text-[0.8125rem] leading-4;
   }
 
-  .course-curriculum[data-variant='player'] .course-curriculum__item-title {
-    @apply flex min-w-0 flex-1 items-center gap-2;
+  .course-curriculum[data-variant='player']
+    .course-curriculum__module
+    > details
+    > ol
+    :is(a, span[aria-disabled='true'])
+    > .course-curriculum__item-title {
+    @apply !flex !min-w-0 !flex-1 !items-center !gap-2;
   }
 
   .course-curriculum[data-variant='player']
@@ -2049,7 +2057,34 @@
   }
 
   .learning-player__lesson {
-    @apply mx-auto max-w-5xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_16px_46px_rgb(15_23_42_/_0.06)];
+    @apply mx-auto w-full max-w-6xl;
+  }
+
+  .learning-native-video {
+    @apply overflow-hidden rounded-xl bg-black shadow-[0_18px_48px_rgb(15_23_42_/_0.18)];
+  }
+
+  .learning-native-video video {
+    @apply block outline-none;
+  }
+
+  .learning-player__delivery-resource {
+    @apply mx-auto max-w-6xl;
+  }
+
+  .pdf-document-reader {
+    @apply overflow-auto rounded-xl border border-slate-200 bg-slate-100 shadow-[0_12px_32px_rgb(15_23_42_/_0.08)] focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2;
+    max-height: min(78svh, 72rem);
+    overscroll-behavior: contain;
+  }
+
+  .pdf-document-reader__pages {
+    @apply divide-y divide-slate-200;
+    min-width: max-content;
+  }
+
+  .pdf-document-reader__skeleton {
+    @apply min-h-96 animate-pulse bg-slate-100;
   }
 
   .learning-player__lesson-heading {
