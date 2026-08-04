@@ -1,6 +1,6 @@
 # Project status
 
-## Documentación oficial, OpenAPI y portal Zensical — verificado localmente 2026-08-03
+## Documentación oficial, OpenAPI y portal Zensical — verificado localmente y en CI 2026-08-04
 
 - Se añadió `documentation/` con portal Zensical `0.0.51` fijado por uv,
   navegación en español, búsqueda local, Mermaid `11.16.0` servido localmente,
@@ -30,6 +30,10 @@
   y artefacto; su job de despliegue queda condicionado a la variable no secreta
   `DOCS_PAGES_ENABLED=true`, que sólo debe configurarse después de que el plan
   permita Pages. La URL esperada no se declara desplegada.
+- La ejecución remota `30882760562` del 2026-08-04 pasó: checkout,
+  Python/uv bloqueados, generación OpenAPI, Zensical estricto y
+  `upload-pages-artifact` concluyeron correctamente. `deploy` fue omitido por
+  la guarda anterior, no por una falsa publicación ni por un fallo de build.
 
 ## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
 
