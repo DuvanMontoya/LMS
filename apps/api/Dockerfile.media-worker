@@ -17,13 +17,13 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp/ffmpeg-build
-RUN curl --fail --location --proto '=https' --tlsv1.2 \
+RUN curl --fail --location --proto '=https' --tlsv1.2 --retry 5 --retry-all-errors --retry-delay 2 \
         --output ffmpeg.tar.xz \
         "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" \
-    && curl --fail --location --proto '=https' --tlsv1.2 \
+    && curl --fail --location --proto '=https' --tlsv1.2 --retry 5 --retry-all-errors --retry-delay 2 \
         --output ffmpeg.tar.xz.asc \
         "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz.asc" \
-    && curl --fail --location --proto '=https' --tlsv1.2 \
+    && curl --fail --location --proto '=https' --tlsv1.2 --retry 5 --retry-all-errors --retry-delay 2 \
         --output ffmpeg-devel.asc \
         "https://ffmpeg.org/ffmpeg-devel.asc" \
     && gpg --batch --import ffmpeg-devel.asc \

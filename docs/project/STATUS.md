@@ -68,6 +68,19 @@
   formato multilínea. La validación lee ahora cada archivo completo con `-Raw`;
   se comprobará localmente y en la siguiente ejecución remota sin excluir
   ningún dashboard ni smoke.
+- La ejecución posterior `30884826047` superó esa validación y los smokes de
+  observabilidad, pero el runner sufrió un reinicio transitorio de conexión al
+  descargar el tarball oficial de FFmpeg para el worker. Se mantienen versión
+  exacta, HTTPS, TLS 1.2 y verificación GPG; las tres descargas ahora reintentan
+  cinco veces ante errores de transporte con espera explícita, según la opción
+  oficial de curl. No se sustituye el origen por un mirror no verificado ni se
+  reutiliza un binario sin comprobar su firma.
+- La comprobación estática nativa `docker build --check` del Dockerfile pasó
+  sin advertencias. Una reconstrucción local completa agotó el límite de diez
+  minutos de la herramienta mientras compilaba FFmpeg, sin informar error de
+  Docker ni del código; por ello no se toma como PASS de build. La siguiente
+  ejecución Linux de CI es la evidencia pendiente del build completo con los
+  reintentos nuevos.
 
 ## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
 
