@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('Init', 'Build', 'Up', 'Status', 'Logs', 'Smoke', 'ConfigureAdmin', 'ConfigureLti', 'Down')]
+    [ValidateSet('Init', 'InitializeLtiKey', 'Build', 'Up', 'Status', 'Logs', 'Smoke', 'ConfigureAdmin', 'ConfigureLti', 'Down')]
     [string]$Action,
 
     [string]$AdminUser,
@@ -140,6 +140,8 @@ function Initialize-LocalLtiSigningKey {
         return
     }
 
+    New-Item -ItemType Directory -Path $stateDirectory -Force | Out-Null
+
     # A local key is durable across Django restarts but stays under the ignored
     # .local state directory.  It is never copied into MediaCMS: the tool gets
     # only the corresponding public JWKS from the LMS.
@@ -256,6 +258,10 @@ print(f"Redacted local LTI media capabilities from {updated} audit record(s).")
 
 Set-Location $repositoryRoot
 switch ($Action) {
+    'InitializeLtiKey' {
+        Initialize-LocalLtiSigningKey
+        Write-Host 'The ignored local LMS LTI signing key is ready for verification.'
+    }
     'Init' {
         Assert-PinnedSource
         Initialize-LocalEnvironment

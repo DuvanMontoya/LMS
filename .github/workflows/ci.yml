@@ -42,7 +42,7 @@ jobs:
           pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Init
           pwsh -NoProfile -File scripts/infrastructure.ps1 -Action Up
       - name: Initialize the local LTI verification key
-        run: pnpm run mediacms:init
+        run: pwsh -NoProfile -File scripts/mediacms.ps1 -Action InitializeLtiKey
       - name: Backend checks
         run: |
           pnpm run api:check

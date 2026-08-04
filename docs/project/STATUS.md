@@ -50,8 +50,13 @@
   inicializaba la clave LTI local requerida por `api:check:production`.
 - `infra:pull` descarga ahora sólo las imágenes externas necesarias antes de
   bloquear sus digests y CI ejecuta `mediacms:init` antes de los checks de
-  backend. Sintaxis PowerShell, YAML e inicialización local pasaron; falta la
-  ejecución integral remota de esta corrección antes de declarar CI verde.
+  backend. La ejecución `30883399420` confirmó infraestructura verde, pero
+  mostró que `mediacms:init` también exige el árbol fuente local de MediaCMS,
+  que no corresponde a CI. CI usa ahora `InitializeLtiKey`, una operación
+  mínima que crea sólo la clave RSA ignorada y no requiere fuente, contenedor
+  ni credenciales MediaCMS. Sintaxis PowerShell, YAML e inicialización local
+  pasaron; falta la ejecución integral remota de esta corrección antes de
+  declarar CI verde.
 
 ## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
 
