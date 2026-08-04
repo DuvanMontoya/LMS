@@ -44,9 +44,14 @@
 - `ci.yml` usa ahora `checkout@v6`, `pnpm/action-setup@v6` y
   `setup-node@v6` en el orden correcto, con caché explícita del lockfile.
   `setup-local-infrastructure.ps1` genera una contraseña local aleatoria de
-  Grafana y conserva valores existentes. Sintaxis PowerShell, YAML y la
-  inicialización local pasaron; falta la ejecución integral remota antes de
-  declarar CI verde.
+  Grafana y conserva valores existentes. La ejecución `30883173837` confirmó
+  ese bootstrap, pero descubrió dos pasos posteriores: `infra:pull` no bajaba
+  las imágenes de media/observabilidad que `infra:lock` inspecciona, y CI no
+  inicializaba la clave LTI local requerida por `api:check:production`.
+- `infra:pull` descarga ahora sólo las imágenes externas necesarias antes de
+  bloquear sus digests y CI ejecuta `mediacms:init` antes de los checks de
+  backend. Sintaxis PowerShell, YAML e inicialización local pasaron; falta la
+  ejecución integral remota de esta corrección antes de declarar CI verde.
 
 ## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
 

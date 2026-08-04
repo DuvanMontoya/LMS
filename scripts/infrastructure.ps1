@@ -197,6 +197,8 @@ switch ($Action) {
         Get-EnvironmentValues | Out-Null
         Invoke-Compose $baseComposeArguments @('pull')
         Invoke-Compose $baseComposeArguments @('--profile', 'live', 'pull', 'livekit')
+        Invoke-Compose $baseComposeArguments @('--profile', 'media', 'pull', 'localstack', 'clamav')
+        Invoke-Compose $baseComposeArguments @('--profile', 'observability', 'pull', 'otel-collector', 'prometheus', 'jaeger', 'loki', 'grafana')
         Write-Host 'Approved exact image tags were pulled. Run Lock to review and record their current digests.'
     }
     'Lock' {
