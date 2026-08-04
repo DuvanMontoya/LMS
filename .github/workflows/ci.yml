@@ -16,19 +16,21 @@ jobs:
       DJANGO_INTERNAL_ORIGIN: http://127.0.0.1:8000
       AUTH_SESSION_COOKIE_NAME: sessionid
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13.13'
       - uses: astral-sh/setup-uv@v7
         with:
           version: '0.11.19'
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '24.18.0'
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: '10.33.2'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.18.0'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - name: Sync Python dependencies
         run: uv sync --locked --directory apps/api
       - name: Install JavaScript dependencies
@@ -210,7 +212,7 @@ jobs:
   infrastructure:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13.13'

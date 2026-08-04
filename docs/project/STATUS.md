@@ -35,6 +35,19 @@
   `upload-pages-artifact` concluyeron correctamente. `deploy` fue omitido por
   la guarda anterior, no por una falsa publicación ni por un fallo de build.
 
+## Reparación del CI general — en verificación remota 2026-08-04
+
+- El log de CI `30882928042` mostró que `actions/setup-node` intentaba usar la
+  caché de pnpm antes de instalar pnpm. También reveló que el generador de
+  `infrastructure/local/.env` omitía las variables obligatorias de Grafana,
+  por lo que Compose no podía validar observabilidad.
+- `ci.yml` usa ahora `checkout@v6`, `pnpm/action-setup@v6` y
+  `setup-node@v6` en el orden correcto, con caché explícita del lockfile.
+  `setup-local-infrastructure.ps1` genera una contraseña local aleatoria de
+  Grafana y conserva valores existentes. Sintaxis PowerShell, YAML y la
+  inicialización local pasaron; falta la ejecución integral remota antes de
+  declarar CI verde.
+
 ## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
 
 - **Entrega exclusiva por modalidad (2026-08-03):** ADR 0042 conserva la actividad canónica `lesson` y

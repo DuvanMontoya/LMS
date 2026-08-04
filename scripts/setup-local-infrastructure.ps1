@@ -28,6 +28,15 @@ if (Test-Path -LiteralPath $environmentFile) {
             Add-Content -LiteralPath $environmentFile -Value "$($entry.Key)=$($entry.Value)" -Encoding utf8NoBOM
         }
     }
+    $grafanaDefaults = [ordered]@{
+        'GRAFANA_ADMIN_USER' = 'admin'
+        'GRAFANA_ADMIN_PASSWORD' = New-CryptographicSecret
+    }
+    foreach ($entry in $grafanaDefaults.GetEnumerator()) {
+        if (-not (Select-String -LiteralPath $environmentFile -Pattern "^$($entry.Key)=" -Quiet)) {
+            Add-Content -LiteralPath $environmentFile -Value "$($entry.Key)=$($entry.Value)" -Encoding utf8NoBOM
+        }
+    }
     if (-not (Select-String -LiteralPath $environmentFile -Pattern '^LIVEKIT_API_KEY=' -Quiet)) {
         Add-Content -LiteralPath $environmentFile -Value "`n# Self-hosted LiveKit development service.`nLIVEKIT_ENABLED=true`nLIVEKIT_URL=ws://127.0.0.1:7880`nNEXT_PUBLIC_LIVEKIT_URL=ws://127.0.0.1:7880`nLIVEKIT_API_KEY=$(New-CryptographicSecret)`nLIVEKIT_API_SECRET=$(New-CryptographicSecret)`nLIVEKIT_WEBHOOK_URL=http://host.docker.internal:8010/api/v1/livekit/webhook/" -Encoding utf8NoBOM
     }
@@ -47,6 +56,7 @@ New-Item -ItemType Directory -Path $environmentDirectory -Force | Out-Null
 
 $postgresPassword = New-CryptographicSecret
 $redisPassword = New-CryptographicSecret
+$grafanaPassword = New-CryptographicSecret
 $content = @"
 # Generated locally by scripts/setup-local-infrastructure.ps1. Do not commit.
 COMPOSE_PROJECT_NAME=lms
@@ -68,6 +78,9 @@ AWS_SECRET_ACCESS_KEY=test
 AWS_DEFAULT_REGION=us-east-1
 ASSET_QUARANTINE_BUCKET=lms-assets-quarantine
 ASSET_PRIVATE_BUCKET=lms-assets-private
+
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=$grafanaPassword
 
 LIVEKIT_ENABLED=true
 LIVEKIT_URL=ws://127.0.0.1:7880
