@@ -71,6 +71,14 @@ export interface paths {
     get: operations['organizations_courses_revisions_units_content_retrieve'];
     put: operations['organizations_courses_revisions_units_content_update'];
   };
+  '/api/v1/organizations/{organization_slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/content/delivery-resource/': {
+    /** @description Authoring endpoint for a non-document lesson's one private file. */
+    get: operations['organizations_courses_revisions_units_content_delivery_resource_retrieve'];
+    /** @description Authoring endpoint for a non-document lesson's one private file. */
+    put: operations['organizations_courses_revisions_units_content_delivery_resource_update'];
+    /** @description Authoring endpoint for a non-document lesson's one private file. */
+    delete: operations['organizations_courses_revisions_units_content_delivery_resource_destroy'];
+  };
   '/api/v1/organizations/{organization_slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/content/validate/': {
     post: operations['organizations_courses_revisions_units_content_validate_create'];
   };
@@ -3557,18 +3565,15 @@ export interface components {
       assets?: {
         [key: string]: unknown;
       }[];
-      content: {
+      course: {
         [key: string]: unknown;
       };
-      course: {
+      delivery: {
         [key: string]: unknown;
       };
       learning_objectives: {
         [key: string]: unknown;
       }[];
-      media?: {
-        [key: string]: unknown;
-      } | null;
       module: {
         [key: string]: unknown;
       };
@@ -3602,6 +3607,26 @@ export interface components {
       | 'pdf'
       | 'slides'
       | 'audio';
+    LessonResource: {
+      asset_kind: string;
+      /** Format: uuid */
+      asset_version_id: string;
+      detected_mime_type: string;
+      extension: string;
+      original_filename: string;
+      size_bytes: number;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    LessonResourceInput: {
+      /** Format: uuid */
+      asset_version_id: string;
+      expected_version: number;
+    };
+    LessonResourceResponse: {
+      lock_version: number;
+      resource: components['schemas']['LessonResource'] | null;
+    };
     LibraryCourse: {
       /** Format: uuid */
       course_id: string;
@@ -4326,6 +4351,8 @@ export interface components {
       content_version: number | null;
       /** Format: date-time */
       created_at: string;
+      /** @default document_missing */
+      delivery_status: string;
       estimated_duration_minutes: number | null;
       /** Format: uuid */
       id: string;
@@ -6511,6 +6538,110 @@ export interface operations {
         };
       };
       413: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+    };
+  };
+  /** @description Authoring endpoint for a non-document lesson's one private file. */
+  organizations_courses_revisions_units_content_delivery_resource_retrieve: {
+    parameters: {
+      path: {
+        course_slug: string;
+        organization_slug: string;
+        revision_id: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LessonResourceResponse'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+    };
+  };
+  /** @description Authoring endpoint for a non-document lesson's one private file. */
+  organizations_courses_revisions_units_content_delivery_resource_update: {
+    parameters: {
+      path: {
+        course_slug: string;
+        organization_slug: string;
+        revision_id: string;
+        unit_id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LessonResourceInput'];
+        'application/x-www-form-urlencoded': components['schemas']['LessonResourceInput'];
+        'multipart/form-data': components['schemas']['LessonResourceInput'];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LessonResourceResponse'];
+        };
+      };
+      400: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      409: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+    };
+  };
+  /** @description Authoring endpoint for a non-document lesson's one private file. */
+  organizations_courses_revisions_units_content_delivery_resource_destroy: {
+    parameters: {
+      query: {
+        expected_version: number;
+      };
+      path: {
+        course_slug: string;
+        organization_slug: string;
+        revision_id: string;
+        unit_id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LessonResourceResponse'];
+        };
+      };
+      403: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      404: {
+        content: {
+          'application/json': components['schemas']['ContentError'];
+        };
+      };
+      409: {
         content: {
           'application/json': components['schemas']['ContentError'];
         };

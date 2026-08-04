@@ -18,13 +18,13 @@ debilita esa ruta de autorización. Por eso no es el primer despliegue correcto.
 
 ## Recursos comprobados
 
-| Recurso | Estado actual | Lectura operativa |
-|---|---:|---|
-| VPS | 10 vCPU, 35 GiB RAM | Suficiente para LMS, MediaCMS y transcodificación moderada. |
-| Disco local | 461 GiB libres de 492 GiB | Adecuado para la biblioteca activa y sus rendiciones. |
-| Salida medida | ~480 Mbit/s sostenidos; planificar 360 Mbit/s | 40 alumnos a 720p (~2.8 Mbit/s) consumen ~112 Mbit/s; a 1080p (~4.5 Mbit/s), ~180 Mbit/s. |
-| Object Storage | 250 GB en EU, 0 B usados, autoescalado desactivado | Capacidad inicial de archivo/respaldo; no basta para crecer sin control si se duplican todas las rendiciones. |
-| Bucket existente | `archivos`, `https://eu2.contabostorage.com/archivos`, público inactivo | No exponerlo públicamente. Es S3 compatible, no una implementación idéntica a AWS S3. |
+| Recurso          |                                                           Estado actual | Lectura operativa                                                                                             |
+| ---------------- | ----------------------------------------------------------------------: | ------------------------------------------------------------------------------------------------------------- |
+| VPS              |                                                     10 vCPU, 35 GiB RAM | Suficiente para LMS, MediaCMS y transcodificación moderada.                                                   |
+| Disco local      |                                               461 GiB libres de 492 GiB | Adecuado para la biblioteca activa y sus rendiciones.                                                         |
+| Salida medida    |                           ~480 Mbit/s sostenidos; planificar 360 Mbit/s | 40 alumnos a 720p (~2.8 Mbit/s) consumen ~112 Mbit/s; a 1080p (~4.5 Mbit/s), ~180 Mbit/s.                     |
+| Object Storage   |                      250 GB en EU, 0 B usados, autoescalado desactivado | Capacidad inicial de archivo/respaldo; no basta para crecer sin control si se duplican todas las rendiciones. |
+| Bucket existente | `archivos`, `https://eu2.contabostorage.com/archivos`, público inactivo | No exponerlo públicamente. Es S3 compatible, no una implementación idéntica a AWS S3.                         |
 
 El VPS ya aloja la pila Laila y Caddy ocupa 80/443. Cualquier servicio nuevo
 debe convivir con ella: Caddy sigue como único borde TLS y enruta un subdominio

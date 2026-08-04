@@ -8,6 +8,7 @@ from typing import Any
 from django.db.models import Count, Q, QuerySet
 from django.http import (
     Http404,
+    HttpResponse,
     HttpResponseBadRequest,
     HttpResponseBase,
     HttpResponseForbidden,
@@ -33,6 +34,7 @@ from domain.learning.mediacms import (
     lti_authorization_allowed,
     lti_id_token,
     lti_jwks,
+    validate_mediacms_media_access,
 )
 from domain.learning.models import (
     AcademicGroup,
@@ -1047,6 +1049,28 @@ class MediaCMSJWKSView(APIView):
         del request
         response = JsonResponse(lti_jwks())
         response["Cache-Control"] = "no-store"
+        return response
+
+
+class MediaCMSMediaAccessView(APIView):
+    """Fail-closed validation endpoint consumed only by MediaCMS' server gate."""
+
+    authentication_classes: list[object] = []
+    permission_classes: list[object] = []
+
+    @extend_schema(exclude=True)
+    def get(self, request: Request) -> HttpResponseBase:
+        authorization = request.headers.get("Authorization", "")
+        scheme, _, token = authorization.partition(" ")
+        if scheme != "Bearer" or not token or token.strip() != token:
+            return HttpResponseForbidden("Credencial de vídeo ausente.")
+        try:
+            validate_mediacms_media_access(token)
+        except LearningDomainError:
+            return HttpResponseForbidden("El acceso al vídeo ya no está vigente.")
+        response = HttpResponse(status=204)
+        response["Cache-Control"] = "no-store"
+        response["Referrer-Policy"] = "no-referrer"
         return response
 
 

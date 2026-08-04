@@ -42,7 +42,8 @@ def learning_asset_descriptors(
     requested_ids: tuple[uuid.UUID, ...] | None = None,
 ) -> list[dict[str, Any]]:
     unit = snapshot_unit(access.assignment.release, unit_id)
-    allowed_in_unit = _asset_ids_in_document(unit["content"]["document"])
+    delivery = unit.get("delivery")
+    allowed_in_unit = _asset_ids_in_delivery(delivery)
     if requested_ids is None and not allowed_in_unit:
         return []
     selected = tuple(sorted(requested_ids or tuple(allowed_in_unit), key=str))
@@ -79,3 +80,22 @@ def learning_asset_descriptors(
         asdict(asset_access_descriptor(version=versions[version_id]))
         for version_id in selected
     ]
+
+
+def _asset_ids_in_delivery(delivery: object) -> frozenset[uuid.UUID]:
+    if not isinstance(delivery, dict):
+        return frozenset()
+    if delivery.get("kind") == "asset":
+        value = delivery.get("asset_version_id")
+        if isinstance(value, str):
+            try:
+                return frozenset({uuid.UUID(value)})
+            except ValueError:
+                return frozenset()
+        return frozenset()
+    if delivery.get("kind") != "document":
+        return frozenset()
+    content = delivery.get("content")
+    if not isinstance(content, dict):
+        return frozenset()
+    return _asset_ids_in_document(content.get("document"))

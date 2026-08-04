@@ -69,12 +69,13 @@ servicio vuelve a comprobar responsabilidad por asignatura o una
 `CourseTeachingException` activa, incluso si se omite el selector HTTP.
 
 La modalidad inmutable `CourseUnit.lesson_kind` es metadato estructural de
-`courses`, no un segundo tipo de actividad ni una URL de entrega. Describe la
-autoría esperada (`document`, vídeo de MediaCMS, fuente LaTeX o Markdown, PDF,
-diapositivas o audio) sin permitir que `courses` importe `assets`, `content`,
-`publishing` ni `learning`. MediaCMS queda fuera del monolito como catálogo
-privado de autoría; no recibe matrícula, release ni progreso y su futuro
-binding LTI exige una decisión y una superficie HTTPS verificable. Véase ADR 0042.
+`courses`, no un segundo tipo de actividad ni una URL de entrega. Describe una
+única entrega excluyente: JSON semántico sólo para `document`, binding LTI sólo
+para vídeo MediaCMS y una `AssetVersion` READY sólo para LaTeX, Markdown, PDF,
+diapositivas o audio. `courses` no importa `assets`, `content`, `publishing` ni
+`learning`; `content` posee el vínculo de archivo y `publishing` el snapshot
+discriminado. MediaCMS queda fuera del monolito como catálogo privado de
+autoría; no recibe matrícula, release ni progreso. Véanse ADR 0042 y ADR 0043.
 
 Sólo servicios de `content` escriben sus tablas y siempre lo hacen dentro de una
 transacción que bloquea la revisión y la unidad propietarias. El módulo no posee

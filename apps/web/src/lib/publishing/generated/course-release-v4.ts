@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* Generated from schemas/publication/course-release-v4.schema.json. Do not edit. */
 
 export type Node =

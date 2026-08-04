@@ -86,7 +86,13 @@ def snapshot_node_ids(
     release: CourseRelease, unit_id: uuid.UUID
 ) -> frozenset[uuid.UUID]:
     unit = snapshot_unit(release, unit_id)
-    document = unit["content"]["document"]
+    delivery = unit.get("delivery")
+    if not isinstance(delivery, dict) or delivery.get("kind") != "document":
+        return frozenset()
+    content = delivery.get("content")
+    if not isinstance(content, dict):
+        return frozenset()
+    document = content.get("document")
     node_ids: set[uuid.UUID] = set()
     for node in _nodes(document):
         attrs = node.get("attrs")

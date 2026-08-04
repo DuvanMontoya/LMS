@@ -171,6 +171,18 @@ switch ($Action) {
         [Environment]::SetEnvironmentVariable('ASSET_S3_PUBLIC_ENDPOINT', $null, 'Process')
         [Environment]::SetEnvironmentVariable('ASSET_S3_ACCESS_KEY_ID', $null, 'Process')
         [Environment]::SetEnvironmentVariable('ASSET_S3_SECRET_ACCESS_KEY', $null, 'Process')
+        $localLtiKeyPath = Join-Path $repositoryRoot '.local/mediacms/lms-lti-private-key.pem'
+        if (-not (Test-Path -LiteralPath $localLtiKeyPath)) {
+            throw 'Missing local LTI private key. Run pnpm mediacms:init before api:check:production.'
+        }
+        [Environment]::SetEnvironmentVariable('MEDIACMS_LTI_ENABLED', 'true', 'Process')
+        [Environment]::SetEnvironmentVariable('MEDIACMS_LTI_TOOL_ORIGIN', 'https://mediacms.invalid', 'Process')
+        [Environment]::SetEnvironmentVariable('LMS_LTI_ISSUER', 'https://lms.invalid', 'Process')
+        [Environment]::SetEnvironmentVariable('LMS_LTI_CLIENT_ID', 'lms-production-check-mediacms', 'Process')
+        [Environment]::SetEnvironmentVariable('LMS_LTI_DEPLOYMENT_ID', 'lms-production-check-mediacms-v1', 'Process')
+        [Environment]::SetEnvironmentVariable('LMS_LTI_KEY_ID', 'lms-production-check-mediacms-v1', 'Process')
+        [Environment]::SetEnvironmentVariable('LMS_LTI_PRIVATE_KEY_PEM', [IO.File]::ReadAllText($localLtiKeyPath), 'Process')
+        [Environment]::SetEnvironmentVariable('LMS_LTI_MEDIA_ACCESS_VALIDATION_URL', 'https://lms.invalid/api/v1/lti/media-access/', 'Process')
         Invoke-Django @('check', '--deploy')
     }
     'MakeMigrationsCheck' { Invoke-Django @('makemigrations', '--check', '--dry-run') }

@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Archive,
   ArchiveRestore,
@@ -74,12 +74,12 @@ const lessonKindOptions: readonly {
   {
     kind: 'document',
     label: 'Documento',
-    description: 'Contenido académico y recursos privados.',
+    description: 'Documento académico estructurado y sus recursos privados.',
   },
   {
     kind: 'mediacms_video',
     label: 'Video MediaCMS',
-    description: 'Autoría privada; el lanzamiento seguro se prepara aparte.',
+    description: 'Únicamente el reproductor privado de MediaCMS.',
   },
   {
     kind: 'latex_source',
@@ -89,7 +89,7 @@ const lessonKindOptions: readonly {
   {
     kind: 'markdown_source',
     label: 'Markdown (.md)',
-    description: 'Archivo fuente UTF-8 y contenido semántico.',
+    description: 'Únicamente un archivo fuente Markdown UTF-8.',
   },
   {
     kind: 'pdf',
@@ -104,13 +104,18 @@ const lessonKindOptions: readonly {
   {
     kind: 'audio',
     label: 'Audio',
-    description: 'Reproductor con transcripción obligatoria en contenido.',
+    description: 'Únicamente un reproductor de audio privado.',
   },
 ];
-const contentStatusLabels: Record<string, string> = {
-  empty: 'Contenido vacío',
-  missing: 'Sin contenido',
-  ready: 'Contenido listo',
+const deliveryStatusLabels: Record<string, string> = {
+  document_empty: 'Documento vacío',
+  document_missing: 'Sin documento',
+  document_ready: 'Documento listo',
+  mediacms_missing: 'Sin vídeo MediaCMS',
+  mediacms_ready: 'Vídeo MediaCMS listo',
+  resource_invalid: 'Archivo no apto',
+  resource_missing: 'Sin archivo',
+  resource_ready: 'Archivo listo',
 };
 
 function statusLabel(value: string) {
@@ -217,7 +222,9 @@ export function StructureEditor({
   const [version, setVersion] = useState(outline.revision.lock_version);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [mediaCmsAuthoringUrl, setMediaCmsAuthoringUrl] = useState('');
+  const mediaCmsAuthoringUrl =
+    process.env.NEXT_PUBLIC_MEDIACMS_AUTHORING_URL?.trim() ??
+    (process.env.NODE_ENV === 'development' ? 'http://localhost:8091/' : '');
   const moduleTitle = useRef<HTMLInputElement>(null);
   const path = { courseSlug, revisionId: outline.revision.id, slug };
   const createModule = useCreateModule(path);
@@ -233,17 +240,6 @@ export function StructureEditor({
   const liveClassBindingByActivityId = new Map(
     liveClassBindings.map((binding) => [binding.activity_id, binding]),
   );
-
-  useEffect(() => {
-    const configured = process.env.NEXT_PUBLIC_MEDIACMS_AUTHORING_URL?.trim();
-    if (configured) {
-      setMediaCmsAuthoringUrl(configured);
-      return;
-    }
-    if (['127.0.0.1', 'localhost'].includes(window.location.hostname)) {
-      setMediaCmsAuthoringUrl('http://localhost:8091/');
-    }
-  }, []);
 
   function failed(cause: unknown) {
     setError(
@@ -391,7 +387,11 @@ export function StructureEditor({
           estimated_duration_minutes: input.estimatedDurationMinutes,
           expected_version: version,
           learning_objective_ids: input.learningObjectiveIds,
-          mediacms_video_friendly_token: input.mediaCmsFriendlyToken,
+          ...(input.mediaCmsFriendlyToken === undefined
+            ? {}
+            : {
+                mediacms_video_friendly_token: input.mediaCmsFriendlyToken,
+              }),
           summary: input.summary,
           title: input.title,
           topic_ids: input.topicIds,
@@ -520,8 +520,11 @@ export function StructureEditor({
   const readyLessonCount = modules.reduce(
     (total, courseModule) =>
       total +
-      courseModule.units.filter((unit) => unit.content_status === 'ready')
-        .length,
+      courseModule.units.filter((unit) =>
+        ['document_ready', 'mediacms_ready', 'resource_ready'].includes(
+          unit.delivery_status,
+        ),
+      ).length,
     0,
   );
   const alignedLessonCount = modules.reduce(
@@ -567,8 +570,8 @@ export function StructureEditor({
             value: activityCount,
           },
           {
-            label: 'Contenido listo',
-            note: 'Lecciones con versión',
+            label: 'Entregas listas',
+            note: 'Lecciones listas para publicar',
             value: readyLessonCount,
           },
           {
@@ -851,9 +854,9 @@ export function StructureEditor({
                               <div className="mt-2">
                                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                   <span>
-                                    {contentStatusLabels[
-                                      lesson.content_status
-                                    ] ?? lesson.content_status}
+                                    {deliveryStatusLabels[
+                                      lesson.delivery_status
+                                    ] ?? lesson.delivery_status}
                                   </span>
                                   <span aria-hidden="true">·</span>
                                   <span>
@@ -866,7 +869,8 @@ export function StructureEditor({
                                       ? 'objetivo'
                                       : 'objetivos'}
                                   </span>
-                                  {lesson.content_version ? (
+                                  {lesson.lesson_kind === 'document' &&
+                                  lesson.content_version ? (
                                     <>
                                       <span aria-hidden="true">·</span>
                                       <span>
@@ -877,16 +881,22 @@ export function StructureEditor({
                                 </div>
                                 {lesson.status === 'active' ? (
                                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                                    <Button asChild size="sm" variant="outline">
-                                      <Link
-                                        href={`/organizaciones/${slug}/cursos/${courseSlug}/unidades/${lesson.id}/contenido`}
+                                    {lesson.lesson_kind === 'document' ? (
+                                      <Button
+                                        asChild
+                                        size="sm"
+                                        variant="outline"
                                       >
-                                        <BookOpenText />
-                                        {canManage && editable
-                                          ? 'Editar contenido'
-                                          : 'Ver contenido'}
-                                      </Link>
-                                    </Button>
+                                        <Link
+                                          href={`/organizaciones/${slug}/cursos/${courseSlug}/unidades/${lesson.id}/contenido`}
+                                        >
+                                          <BookOpenText />
+                                          {canManage && editable
+                                            ? 'Editar documento'
+                                            : 'Ver documento'}
+                                        </Link>
+                                      </Button>
+                                    ) : null}
                                     {canManage && editable ? (
                                       <details className="w-full overflow-hidden rounded-lg border bg-muted/10">
                                         <summary
@@ -904,6 +914,7 @@ export function StructureEditor({
                                         <div className="border-t p-2 sm:p-3">
                                           <LessonConfiguration
                                             alignedSubjects={outline.subjects}
+                                            courseSlug={courseSlug}
                                             isSaving={updateStructure.isPending}
                                             lesson={lesson}
                                             mediaCmsAuthoringUrl={
@@ -917,6 +928,14 @@ export function StructureEditor({
                                                 false,
                                               )
                                             }
+                                            onDeliverySaved={(
+                                              lockVersion,
+                                              message,
+                                            ) => {
+                                              setVersion(lockVersion);
+                                              setMessage(message);
+                                              router.refresh();
+                                            }}
                                             onSave={(input) =>
                                               saveUnitConfiguration(
                                                 lesson.id,
@@ -924,6 +943,8 @@ export function StructureEditor({
                                               )
                                             }
                                             organizationSlug={slug}
+                                            revisionId={outline.revision.id}
+                                            revisionVersion={version}
                                             topics={topics}
                                           />
                                         </div>

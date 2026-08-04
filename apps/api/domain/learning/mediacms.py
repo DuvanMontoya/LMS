@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 import time
 import uuid
 from functools import lru_cache
 from typing import Any, cast
 from urllib.parse import urlencode
 
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from django.conf import settings
@@ -25,6 +27,7 @@ from .snapshots import snapshot_unit
 
 LTI_CLAIM = "https://purl.imsglobal.org/spec/lti/claim"
 LAUNCH_SALT = "lms.learning.mediacms-launch.v1"
+MEDIA_ACCESS_TOKEN_USE = "mediacms_media_access"
 
 
 def _b64url(value: bytes) -> str:
@@ -33,7 +36,8 @@ def _b64url(value: bytes) -> str:
 
 def _media_from_snapshot(release: object, unit_id: uuid.UUID) -> dict[str, str]:
     unit = snapshot_unit(cast(Any, release), unit_id)
-    media = unit.get("media")
+    delivery = unit.get("delivery")
+    media = delivery.get("media") if isinstance(delivery, dict) else None
     if (
         not isinstance(media, dict)
         or media.get("provider") != "mediacms_lti"
@@ -186,6 +190,151 @@ def _sign_jwt(claims: dict[str, object]) -> str:
     return f"{segments[0]}.{segments[1]}.{_b64url(signature)}"
 
 
+def _issued_at(now: int) -> int:
+    """Leave a bounded margin for the independently clocked LTI tool.
+
+    The token still expires from the actual issuance time, so this consumes a
+    few seconds of its usable lifetime instead of extending the authorization
+    window.  It prevents an otherwise valid assertion from being rejected when
+    the tool's UTC clock trails the LMS by a small amount.
+    """
+
+    return now - settings.LMS_LTI_TOKEN_CLOCK_SKEW_SECONDS
+
+
+def _b64url_decode(value: str) -> bytes:
+    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+
+
+def _media_access_token(*, actor: User, authorization: dict[str, Any]) -> str:
+    """Sign a bearer scoped to one live enrollment/release/unit/media tuple.
+
+    This is intentionally separate from the LTI id_token.  MediaCMS keeps it
+    server-side in its Django session and calls the LMS on every protected-file
+    request.  The LMS signature prevents a browser from minting or broadening
+    a capability, while the database check makes suspension, revocation and a
+    release upgrade effective immediately.
+    """
+
+    access = cast(LearningAccess, authorization["access"])
+    unit_id = cast(uuid.UUID, authorization["unit_id"])
+    media = cast(dict[str, str], authorization["media"])
+    now = int(time.time())
+    issued_at = _issued_at(now)
+    return _sign_jwt(
+        {
+            "aud": settings.LMS_LTI_MEDIA_ACCESS_AUDIENCE,
+            "enrollment_id": str(access.enrollment.id),
+            "exp": now + settings.LMS_LTI_MEDIA_ACCESS_TTL_SECONDS,
+            "iat": issued_at,
+            "iss": settings.LMS_LTI_ISSUER,
+            "media_friendly_token": media["media_friendly_token"],
+            "release_id": str(access.assignment.release_id),
+            "sub": str(actor.id),
+            "token_use": MEDIA_ACCESS_TOKEN_USE,
+            "unit_id": str(unit_id),
+            "v": 1,
+        }
+    )
+
+
+def _decode_media_access_token(value: str) -> dict[str, str]:
+    """Verify the LMS-signed media capability without a shared secret."""
+
+    try:
+        header_part, payload_part, signature_part = value.split(".")
+        header = json.loads(_b64url_decode(header_part))
+        payload = json.loads(_b64url_decode(payload_part))
+        signature = _b64url_decode(signature_part)
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise LearningAccessDenied("La credencial de vídeo es inválida.") from error
+    if not isinstance(header, dict) or header != {
+        "alg": "RS256",
+        "kid": settings.LMS_LTI_KEY_ID,
+        "typ": "JWT",
+    }:
+        raise LearningAccessDenied("La credencial de vídeo es inválida.")
+    try:
+        _private_key().public_key().verify(
+            signature,
+            f"{header_part}.{payload_part}".encode("ascii"),
+            padding.PKCS1v15(),
+            hashes.SHA256(),
+        )
+    except InvalidSignature as error:
+        raise LearningAccessDenied("La credencial de vídeo es inválida.") from error
+    expected_keys = {
+        "aud",
+        "enrollment_id",
+        "exp",
+        "iat",
+        "iss",
+        "media_friendly_token",
+        "release_id",
+        "sub",
+        "token_use",
+        "unit_id",
+        "v",
+    }
+    if (
+        not isinstance(payload, dict)
+        or set(payload) != expected_keys
+        or payload.get("v") != 1
+        or payload.get("aud") != settings.LMS_LTI_MEDIA_ACCESS_AUDIENCE
+        or payload.get("iss") != settings.LMS_LTI_ISSUER
+        or payload.get("token_use") != MEDIA_ACCESS_TOKEN_USE
+        or not isinstance(payload.get("exp"), int)
+        or not isinstance(payload.get("iat"), int)
+    ):
+        raise LearningAccessDenied("La credencial de vídeo es inválida.")
+    now = int(time.time())
+    if payload["iat"] > now + 60 or payload["exp"] <= now:
+        raise LearningAccessDenied("La credencial de vídeo expiró.")
+    string_keys = expected_keys - {"aud", "exp", "iat", "iss", "token_use", "v"}
+    if not all(isinstance(payload.get(key), str) for key in string_keys):
+        raise LearningAccessDenied("La credencial de vídeo es inválida.")
+    try:
+        uuid.UUID(cast(str, payload["sub"]))
+        uuid.UUID(cast(str, payload["enrollment_id"]))
+        uuid.UUID(cast(str, payload["release_id"]))
+        uuid.UUID(cast(str, payload["unit_id"]))
+    except (TypeError, ValueError) as error:
+        raise LearningAccessDenied("La credencial de vídeo es inválida.") from error
+    media_token = cast(str, payload["media_friendly_token"])
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", media_token):
+        raise LearningAccessDenied("La credencial de vídeo es inválida.")
+    return cast(dict[str, str], payload)
+
+
+def validate_mediacms_media_access(value: str) -> None:
+    """Require the original, still-effective learning authorization.
+
+    This is called by MediaCMS' protected-file gate.  Do not cache a positive
+    result: enrollment lifecycle and release assignment are deliberately
+    re-read from PostgreSQL for every request.
+    """
+
+    _assert_enabled()
+    payload = _decode_media_access_token(value)
+    try:
+        actor = User.objects.get(pk=payload["sub"])
+        enrollment = CourseEnrollment.objects.select_related(
+            "membership__user",
+            "organization",
+            "course",
+            "current_release_assignment__release",
+        ).get(pk=payload["enrollment_id"], membership__user=actor)
+        unit_id = uuid.UUID(payload["unit_id"])
+    except (User.DoesNotExist, CourseEnrollment.DoesNotExist, ValueError) as error:
+        raise LearningAccessDenied("La matrícula del vídeo ya no es válida.") from error
+    access = require_learning_access(actor=actor, enrollment=enrollment)
+    if str(access.assignment.release_id) != payload["release_id"]:
+        raise LearningAccessDenied("La matrícula ya no apunta al release del vídeo.")
+    media = _media_from_snapshot(access.assignment.release, unit_id)
+    if media["media_friendly_token"] != payload["media_friendly_token"]:
+        raise LearningAccessDenied("El vídeo ya no coincide con el release.")
+
+
 def lti_id_token(*, actor: User, nonce: str, authorization: dict[str, Any]) -> str:
     """Build a minimal LTI 1.3 resource-link assertion for MediaCMS."""
 
@@ -194,6 +343,7 @@ def lti_id_token(*, actor: User, nonce: str, authorization: dict[str, Any]) -> s
     unit_id = cast(uuid.UUID, authorization["unit_id"])
     media = cast(dict[str, str], authorization["media"])
     now = int(time.time())
+    issued_at = _issued_at(now)
     name = actor.get_full_name() or actor.email
     context_id = str(access.assignment.release_id)
     resource_link_id = f"release-{context_id}-unit-{unit_id}"
@@ -203,7 +353,7 @@ def lti_id_token(*, actor: User, nonce: str, authorization: dict[str, Any]) -> s
         "exp": now + settings.LMS_LTI_LAUNCH_TTL_SECONDS,
         "family_name": actor.last_name,
         "given_name": actor.first_name,
-        "iat": now,
+        "iat": issued_at,
         "iss": settings.LMS_LTI_ISSUER,
         "name": name,
         "nonce": nonce,
@@ -215,6 +365,9 @@ def lti_id_token(*, actor: User, nonce: str, authorization: dict[str, Any]) -> s
         },
         f"{LTI_CLAIM}/custom": {
             "embed_share_media": "0",
+            "lms_media_access_token": _media_access_token(
+                actor=actor, authorization=authorization
+            ),
             "media_friendly_token": media["media_friendly_token"],
         },
         f"{LTI_CLAIM}/deployment_id": settings.LMS_LTI_DEPLOYMENT_ID,

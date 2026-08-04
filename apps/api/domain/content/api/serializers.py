@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from ..models import UnitContentVersion
+from ..models import UnitContentVersion, UnitLessonResource
 
 
 class ContentWriteSerializer(serializers.Serializer):
@@ -73,6 +73,50 @@ class ContentVersionDetailSerializer(ContentVersionSummarySerializer):
 
 class RestoreContentSerializer(serializers.Serializer):
     expected_document_version = serializers.IntegerField(min_value=1)
+
+
+class LessonResourceInputSerializer(serializers.Serializer):
+    expected_version = serializers.IntegerField(min_value=1)
+    asset_version_id = serializers.UUIDField()
+
+
+class LessonResourceDeleteSerializer(serializers.Serializer):
+    expected_version = serializers.IntegerField(min_value=1)
+
+
+class LessonResourceSerializer(serializers.ModelSerializer):
+    asset_version_id = serializers.UUIDField(read_only=True)
+    asset_kind = serializers.CharField(
+        source="asset_version.asset.kind", read_only=True
+    )
+    original_filename = serializers.CharField(
+        source="asset_version.original_filename", read_only=True
+    )
+    detected_mime_type = serializers.CharField(
+        source="asset_version.detected_mime_type", read_only=True
+    )
+    extension = serializers.CharField(source="asset_version.extension", read_only=True)
+    size_bytes = serializers.IntegerField(
+        source="asset_version.size_bytes", read_only=True
+    )
+
+    class Meta:
+        model = UnitLessonResource
+        fields = (
+            "asset_version_id",
+            "asset_kind",
+            "original_filename",
+            "detected_mime_type",
+            "extension",
+            "size_bytes",
+            "updated_at",
+        )
+        read_only_fields = fields
+
+
+class LessonResourceResponseSerializer(serializers.Serializer):
+    resource = LessonResourceSerializer(allow_null=True)
+    lock_version = serializers.IntegerField(min_value=1)
 
 
 class ContentErrorSerializer(serializers.Serializer):

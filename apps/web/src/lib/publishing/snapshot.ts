@@ -2,11 +2,18 @@ import type {
   Course,
   LearningObjective,
   Subject,
-  Unit,
 } from '@/lib/publishing/generated/course-release-v1';
 
-export type PublishedUnitView = Unit & {
+export type PublishedUnitView = {
+  delivery: Record<string, unknown>;
+  estimated_duration_minutes: number | null;
+  id: string;
+  learning_objectives: readonly LearningObjective[];
+  lesson_kind: string;
   module: { id: string; position: number; title: string };
+  summary: string;
+  title: string;
+  topics: readonly { id: string; title: string }[];
 };
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -31,11 +38,11 @@ export function requirePublishedUnit(value: unknown): PublishedUnitView {
     !record(value) ||
     typeof value.id !== 'string' ||
     typeof value.title !== 'string' ||
+    typeof value.summary !== 'string' ||
+    typeof value.lesson_kind !== 'string' ||
     !Array.isArray(value.topics) ||
     !Array.isArray(value.learning_objectives) ||
-    !record(value.content) ||
-    !record(value.content.document) ||
-    value.content.document.type !== 'doc' ||
+    !record(value.delivery) ||
     !record(value.module) ||
     typeof value.module.id !== 'string' ||
     typeof value.module.title !== 'string' ||

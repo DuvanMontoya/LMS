@@ -5332,16 +5332,11 @@
             "items": { "additionalProperties": {}, "type": "object" },
             "type": "array"
           },
-          "content": { "additionalProperties": {}, "type": "object" },
           "course": { "additionalProperties": {}, "type": "object" },
+          "delivery": { "additionalProperties": {}, "type": "object" },
           "learning_objectives": {
             "items": { "additionalProperties": {}, "type": "object" },
             "type": "array"
-          },
-          "media": {
-            "additionalProperties": {},
-            "nullable": true,
-            "type": "object"
           },
           "module": { "additionalProperties": {}, "type": "object" },
           "navigation": { "additionalProperties": {}, "type": "object" },
@@ -5354,8 +5349,8 @@
           "unit": { "additionalProperties": {}, "type": "object" }
         },
         "required": [
-          "content",
           "course",
+          "delivery",
           "learning_objectives",
           "module",
           "navigation",
@@ -5378,6 +5373,54 @@
           "audio"
         ],
         "type": "string"
+      },
+      "LessonResource": {
+        "properties": {
+          "asset_kind": { "readOnly": true, "type": "string" },
+          "asset_version_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "detected_mime_type": { "readOnly": true, "type": "string" },
+          "extension": { "readOnly": true, "type": "string" },
+          "original_filename": { "readOnly": true, "type": "string" },
+          "size_bytes": { "readOnly": true, "type": "integer" },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_kind",
+          "asset_version_id",
+          "detected_mime_type",
+          "extension",
+          "original_filename",
+          "size_bytes",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "LessonResourceInput": {
+        "properties": {
+          "asset_version_id": { "format": "uuid", "type": "string" },
+          "expected_version": { "minimum": 1, "type": "integer" }
+        },
+        "required": ["asset_version_id", "expected_version"],
+        "type": "object"
+      },
+      "LessonResourceResponse": {
+        "properties": {
+          "lock_version": { "minimum": 1, "type": "integer" },
+          "resource": {
+            "allOf": [{ "$ref": "#/components/schemas/LessonResource" }],
+            "nullable": true
+          }
+        },
+        "required": ["lock_version", "resource"],
+        "type": "object"
       },
       "LibraryCourse": {
         "properties": {
@@ -6878,6 +6921,11 @@
             "readOnly": true,
             "type": "string"
           },
+          "delivery_status": {
+            "default": "document_missing",
+            "readOnly": true,
+            "type": "string"
+          },
           "estimated_duration_minutes": {
             "nullable": true,
             "readOnly": true,
@@ -6918,6 +6966,7 @@
           "content_updated_at",
           "content_version",
           "created_at",
+          "delivery_status",
           "estimated_duration_minutes",
           "id",
           "learning_objectives",
@@ -11165,6 +11214,224 @@
             "description": ""
           },
           "413": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      }
+    },
+    "/api/v1/organizations/{organization_slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/content/delivery-resource/": {
+      "delete": {
+        "description": "Authoring endpoint for a non-document lesson's one private file.",
+        "operationId": "organizations_courses_revisions_units_content_delivery_resource_destroy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "query",
+            "name": "expected_version",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "in": "path",
+            "name": "organization_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonResourceResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentError" }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentError" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "get": {
+        "description": "Authoring endpoint for a non-document lesson's one private file.",
+        "operationId": "organizations_courses_revisions_units_content_delivery_resource_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "organization_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonResourceResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentError" }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [{ "cookieAuth": [] }],
+        "tags": ["organizations"]
+      },
+      "put": {
+        "description": "Authoring endpoint for a non-document lesson's one private file.",
+        "operationId": "organizations_courses_revisions_units_content_delivery_resource_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "organization_slug",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": { "format": "uuid", "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LessonResourceInput" }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": { "$ref": "#/components/schemas/LessonResourceInput" }
+            },
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/LessonResourceInput" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonResourceResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentError" }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentError" }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentError" }
+              }
+            },
+            "description": ""
+          },
+          "409": {
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ContentError" }

@@ -137,6 +137,47 @@ class UnitContentVersion(models.Model):
         raise ValidationError("Las versiones de contenido no se eliminan.")
 
 
+class UnitLessonResource(models.Model):
+    """One release-pinned private asset for a non-document lesson.
+
+    This is mutable only while its owning course revision is editable.  A
+    publication copies its immutable AssetVersion identifier into the release
+    snapshot; it never carries an object key or a signed URL.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    unit = models.OneToOneField(
+        CourseUnit,
+        on_delete=models.PROTECT,
+        related_name="lesson_resource",
+    )
+    asset_version = models.ForeignKey(
+        AssetVersion,
+        on_delete=models.PROTECT,
+        related_name="lesson_resource_bindings",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="lesson_resources_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="lesson_resources_updated",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["asset_version"], name="content_lesson_res_asset_ix")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.unit_id}:{self.asset_version_id}"
+
+
 class ContentAssetReference(models.Model):
     class ReferenceRole(models.TextChoices):
         PRIMARY = "primary", "Primary"

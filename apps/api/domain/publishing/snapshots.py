@@ -16,7 +16,13 @@ from domain.catalog.models import (
     TopicConcept,
 )
 from domain.content.canonical import content_digest
-from domain.content.models import ContentAssetReference, UnitContentDocument
+from domain.content.exceptions import ContentDeliveryInvalid
+from domain.content.lesson_resources import validate_lesson_resource
+from domain.content.models import (
+    ContentAssetReference,
+    UnitContentDocument,
+    UnitLessonResource,
+)
 from domain.content.schemas import CURRENT_CONTENT_SCHEMA_VERSION, migrate_document
 from domain.content.validators import validate_content
 from domain.courses.activity_extensions import activity_binding_snapshot
@@ -80,11 +86,18 @@ def release_revision_queryset():
     )
     units = (
         CourseUnit.objects.filter(status=StructureStatus.ACTIVE)
-        .select_related("mediacms_video_binding")
+        .select_related(
+            "mediacms_video_binding",
+            "lesson_resource__asset_version__asset",
+        )
         .prefetch_related(
             Prefetch("topic_alignments", queryset=topic_links),
             Prefetch("objective_alignments", queryset=objective_links),
             Prefetch("content_document", queryset=documents),
+            Prefetch(
+                "lesson_resource__asset_version__variants",
+                queryset=AssetVariant.objects.order_by("role", "created_at"),
+            ),
         )
         .order_by("position", "id")
     )
@@ -193,6 +206,40 @@ def _media_snapshot(unit: CourseUnit) -> dict[str, str] | None:
     }
 
 
+def _resource_snapshot(unit: CourseUnit) -> tuple[dict[str, str], Any]:
+    try:
+        resource = unit.lesson_resource
+    except UnitLessonResource.DoesNotExist as error:
+        raise ReleaseSnapshotInvalid(
+            f"La unidad {unit.id} no tiene el archivo requerido por su modalidad."
+        ) from error
+    version = resource.asset_version
+    try:
+        validate_lesson_resource(unit=unit, version=version)
+    except ContentDeliveryInvalid as error:
+        raise ReleaseSnapshotInvalid(
+            f"El archivo de la unidad {unit.id} no cumple su modalidad."
+        ) from error
+    return (
+        {
+            "kind": "asset",
+            "asset_version_id": str(version.id),
+        },
+        version,
+    )
+
+
+def _delivery_snapshot(unit: CourseUnit) -> tuple[dict[str, Any], Any | None]:
+    if unit.lesson_kind == LessonKind.DOCUMENT:
+        return {"kind": "document", "content": _content_snapshot(unit)}, None
+    if unit.lesson_kind == LessonKind.MEDIACMS_VIDEO:
+        media = _media_snapshot(unit)
+        assert media is not None
+        return {"kind": "mediacms_lti", "media": media}, None
+    resource, version = _resource_snapshot(unit)
+    return resource, version
+
+
 def build_release_snapshot(
     *,
     revision: CourseRevision,
@@ -236,12 +283,16 @@ def build_release_snapshot(
     for module in revision.modules.all():
         units: list[dict[str, Any]] = []
         for unit in module.units.all():
-            document = unit.content_document
-            if document.current_version is not None:
-                for reference in document.current_version.asset_references.all():
-                    asset_versions[str(reference.asset_version_id)] = (
-                        reference.asset_version
-                    )
+            delivery, delivery_asset = _delivery_snapshot(unit)
+            if unit.lesson_kind == LessonKind.DOCUMENT:
+                document = unit.content_document
+                if document.current_version is not None:
+                    for reference in document.current_version.asset_references.all():
+                        asset_versions[str(reference.asset_version_id)] = (
+                            reference.asset_version
+                        )
+            elif delivery_asset is not None:
+                asset_versions[str(delivery_asset.id)] = delivery_asset
             topics = [
                 {
                     "id": str(link.topic_id),
@@ -272,8 +323,7 @@ def build_release_snapshot(
                     "position": unit.position,
                     "topics": topics,
                     "learning_objectives": unit_objectives,
-                    "content": _content_snapshot(unit),
-                    "media": _media_snapshot(unit),
+                    "delivery": delivery,
                 }
             )
             unit_count += 1
@@ -537,7 +587,15 @@ def snapshot_metrics(snapshot: dict[str, Any]) -> dict[str, int]:
     return {
         "module_count": len(modules),
         "unit_count": len(units),
-        "word_count": sum(unit["content"]["word_count"] for unit in units),
+        "word_count": sum(
+            unit["delivery"]["content"]["word_count"]
+            if snapshot["schema_version"] >= 6
+            and unit["delivery"]["kind"] == "document"
+            else unit["content"]["word_count"]
+            if snapshot["schema_version"] < 6
+            else 0
+            for unit in units
+        ),
     }
 
 
@@ -638,6 +696,8 @@ def release_unit(snapshot: object, unit_id: str) -> dict[str, Any]:
         for unit in module["units"]:
             if unit["id"] == unit_id:
                 result = deep_json_copy(unit)
+                if snapshot["schema_version"] < 6:
+                    result["delivery"] = _legacy_unit_delivery(result)
                 result["module"] = {
                     "id": module["id"],
                     "title": module["title"],
@@ -645,6 +705,19 @@ def release_unit(snapshot: object, unit_id: str) -> dict[str, Any]:
                 }
                 return result
     raise ReleaseSnapshotInvalid("La unidad no existe en el snapshot.")
+
+
+def _legacy_unit_delivery(unit: dict[str, Any]) -> dict[str, Any]:
+    """Adapt pre-v6 immutable releases without rewriting their historic payload."""
+
+    if unit.get("lesson_kind") == LessonKind.MEDIACMS_VIDEO:
+        media = unit.get("media")
+        if isinstance(media, dict):
+            return {"kind": "mediacms_lti", "media": media}
+    content = unit.get("content")
+    if isinstance(content, dict):
+        return {"kind": "document", "content": content}
+    raise ReleaseSnapshotInvalid("La entrega de la unidad histórica es inválida.")
 
 
 def release_previous_next(snapshot: object, unit_id: str) -> dict[str, Any | None]:

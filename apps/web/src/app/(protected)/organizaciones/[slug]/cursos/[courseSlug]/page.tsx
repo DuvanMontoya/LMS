@@ -33,8 +33,10 @@ export default async function CourseWorkspacePage({
   const capabilities = data.access.capabilities;
   const canManage = capabilities.includes('course.authoring.manage');
   const units = data.outline.modules.flatMap((module) => module.units);
-  const readyUnits = units.filter(
-    (unit) => unit.content_status === 'ready',
+  const readyUnits = units.filter((unit) =>
+    ['document_ready', 'mediacms_ready', 'resource_ready'].includes(
+      unit.delivery_status,
+    ),
   ).length;
 
   return (
@@ -125,7 +127,7 @@ export default async function CourseWorkspacePage({
           value={`${data.outline.modules.length} módulos · ${units.length} unidades`}
         />
         <CourseFact
-          label="Contenido listo"
+          label="Entregas listas"
           value={`${readyUnits} de ${units.length} unidades`}
         />
       </dl>
@@ -173,8 +175,8 @@ export default async function CourseWorkspacePage({
             <p className="academic-kicker">Programa actual</p>
             <h2>Estructura del curso</h2>
             <p>
-              Abre una unidad para editar su documento académico, recursos y
-              actividades.
+              Cada lección entrega una sola modalidad: documento, vídeo, archivo
+              o audio.
             </p>
           </div>
           <span>
@@ -201,18 +203,30 @@ export default async function CourseWorkspacePage({
                     <Badge
                       className="course-workspace__unit-status"
                       variant={
-                        unit.content_status === 'ready'
+                        [
+                          'document_ready',
+                          'mediacms_ready',
+                          'resource_ready',
+                        ].includes(unit.delivery_status)
                           ? 'secondary'
                           : 'outline'
                       }
                     >
-                      {unit.content_status === 'ready'
-                        ? `Contenido v${unit.content_version}`
-                        : unit.content_status === 'empty'
-                          ? 'Contenido vacío'
-                          : 'Sin contenido'}
+                      {unit.delivery_status === 'document_ready'
+                        ? `Documento v${unit.content_version}`
+                        : unit.delivery_status === 'document_empty'
+                          ? 'Documento vacío'
+                          : unit.delivery_status === 'mediacms_ready'
+                            ? 'Vídeo listo'
+                            : unit.delivery_status === 'mediacms_missing'
+                              ? 'Sin vídeo'
+                              : unit.delivery_status === 'resource_ready'
+                                ? 'Archivo listo'
+                                : unit.delivery_status === 'resource_invalid'
+                                  ? 'Archivo no apto'
+                                  : 'Sin archivo'}
                     </Badge>
-                    {data.canAuthor ? (
+                    {data.canAuthor && unit.lesson_kind === 'document' ? (
                       <Button asChild size="icon-xs" variant="ghost">
                         <Link
                           aria-label={`Abrir ${unit.title}`}

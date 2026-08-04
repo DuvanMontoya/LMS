@@ -47,6 +47,7 @@ export function AssetPickerDialog({
   allowedKinds = ['image', 'audio', 'video', 'document', 'dataset'],
   iconOnly = false,
   onInsert,
+  resourceOnly = false,
   slug,
   triggerLabel = 'Imagen o recurso',
 }: Readonly<{
@@ -54,6 +55,7 @@ export function AssetPickerDialog({
   allowedKinds?: readonly InsertableAssetKind[];
   iconOnly?: boolean;
   onInsert: (node: Record<string, unknown>) => void;
+  resourceOnly?: boolean;
   slug: string;
   triggerLabel?: string;
 }>) {
@@ -99,8 +101,9 @@ export function AssetPickerDialog({
     const versionId = selected?.current_version?.id;
     if (!selected || !versionId) return;
     const common = { assetVersionId: versionId, nodeId: crypto.randomUUID() };
-    const attrs =
-      kind === 'image'
+    const attrs = resourceOnly
+      ? common
+      : kind === 'image'
         ? {
             ...common,
             altText: allowDecorative && decorative ? '' : altText.trim(),
@@ -129,33 +132,40 @@ export function AssetPickerDialog({
                 description: description.trim(),
                 label: label.trim(),
               };
-    onInsert({
-      attrs,
-      type:
-        kind === 'image'
-          ? 'imageAsset'
-          : kind === 'audio'
-            ? 'audioAsset'
-            : kind === 'video'
-              ? 'videoAsset'
-              : kind === 'document'
-                ? 'documentAsset'
-                : 'datasetAsset',
-    });
+    onInsert(
+      resourceOnly
+        ? { attrs, type: 'lessonResource' }
+        : {
+            attrs,
+            type:
+              kind === 'image'
+                ? 'imageAsset'
+                : kind === 'audio'
+                  ? 'audioAsset'
+                  : kind === 'video'
+                    ? 'videoAsset'
+                    : kind === 'document'
+                      ? 'documentAsset'
+                      : 'datasetAsset',
+          },
+    );
     setOpen(false);
   }
 
   const accessibilityValid =
     selected &&
-    (kind === 'image'
-      ? (allowDecorative && decorative) || Boolean(altText.trim())
-      : kind === 'audio'
-        ? Boolean(title.trim() && transcript.trim())
-        : kind === 'video'
-          ? Boolean(
-              title.trim() && transcript.trim() && (silent || captionVersionId),
-            )
-          : Boolean(label.trim()));
+    (resourceOnly ||
+      (kind === 'image'
+        ? (allowDecorative && decorative) || Boolean(altText.trim())
+        : kind === 'audio'
+          ? Boolean(title.trim() && transcript.trim())
+          : kind === 'video'
+            ? Boolean(
+                title.trim() &&
+                transcript.trim() &&
+                (silent || captionVersionId),
+              )
+            : Boolean(label.trim())));
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
@@ -172,10 +182,15 @@ export function AssetPickerDialog({
       </DialogTrigger>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Añadir archivo</DialogTitle>
+          <DialogTitle>
+            {resourceOnly
+              ? 'Seleccionar archivo de la lección'
+              : 'Añadir archivo'}
+          </DialogTitle>
           <DialogDescription>
-            Sube uno desde este equipo o reutiliza una versión lista de
-            Recursos.
+            {resourceOnly
+              ? 'Selecciona una versión lista. La lección entregará sólo este archivo.'
+              : 'Sube uno desde este equipo o reutiliza una versión lista de Recursos.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -433,7 +448,9 @@ export function AssetPickerDialog({
               onClick={insert}
               type="button"
             >
-              Añadir al contenido
+              {resourceOnly
+                ? 'Usar como archivo de la lección'
+                : 'Añadir al contenido'}
             </Button>
           ) : null}
         </DialogFooter>

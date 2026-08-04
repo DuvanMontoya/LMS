@@ -7,7 +7,12 @@ from uuid import UUID
 
 from django.db import IntegrityError, transaction
 
-from domain.courses.choices import EDITABLE_AUTHORING_STATUSES, CourseStatus
+from domain.assets.models import AssetVersion
+from domain.courses.choices import (
+    EDITABLE_AUTHORING_STATUSES,
+    CourseStatus,
+    LessonKind,
+)
 from domain.courses.models import CourseRevision, CourseUnit
 from domain.courses.policies import can_manage_course
 from domain.organizations.models import Organization
@@ -16,12 +21,15 @@ from .asset_references import create_asset_references, validate_asset_references
 from .canonical import deep_json_copy
 from .exceptions import (
     ContentAccessDenied,
+    ContentDeliveryInvalid,
     ContentDocumentConflict,
+    ContentNotApplicable,
     ContentNotEditable,
     ContentRestoreInvalid,
     ContentVersionNotFound,
 )
-from .models import UnitContentDocument, UnitContentVersion
+from .lesson_resources import validate_lesson_resource
+from .models import UnitContentDocument, UnitContentVersion, UnitLessonResource
 from .schemas import CURRENT_CONTENT_SCHEMA_VERSION, migrate_document
 from .validators import ValidatedContent, validate_content
 
@@ -36,6 +44,15 @@ class SaveContentResult:
 def _require(condition: bool, error: type[Exception], message: str) -> None:
     if not condition:
         raise error(message)
+
+
+def _finish_revision(revision: CourseRevision, actor: Any) -> CourseRevision:
+    """Advance authoring concurrency after a delivery-resource mutation."""
+
+    revision.lock_version += 1
+    revision.updated_by = actor
+    revision.save(update_fields=["lock_version", "updated_by", "updated_at"])
+    return revision
 
 
 def _lock_context(
@@ -144,6 +161,11 @@ def save_unit_content(
     _locked_revision, locked_unit = _lock_context(
         actor=actor, organization=organization, revision=revision, unit=unit
     )
+    _require(
+        locked_unit.lesson_kind == LessonKind.DOCUMENT,
+        ContentNotApplicable,
+        "Sólo una lección de documento admite contenido semántico.",
+    )
     document = _locked_document(locked_unit)
     current_number = _expected_version(document, expected_document_version)
     validated = validate_content(content, schema_version=schema_version)
@@ -190,6 +212,11 @@ def restore_unit_content(
     _locked_revision, locked_unit = _lock_context(
         actor=actor, organization=organization, revision=revision, unit=unit
     )
+    _require(
+        locked_unit.lesson_kind == LessonKind.DOCUMENT,
+        ContentNotApplicable,
+        "Sólo una lección de documento admite contenido semántico.",
+    )
     document = _locked_document(locked_unit)
     current_number = _expected_version(document, expected_document_version)
     if document is None:
@@ -229,15 +256,22 @@ def clone_current_unit_documents(
     documents = list(
         UnitContentDocument.objects.select_for_update(of=("self",))
         .select_related("current_version")
-        .filter(unit_id__in=source_ids)
+        .filter(unit_id__in=source_ids, unit__lesson_kind=LessonKind.DOCUMENT)
     )
-    if len(documents) != len(source_ids):
+    document_source_ids = {
+        source_id
+        for source_id, unit in units_by_source_id.items()
+        if unit.lesson_kind == LessonKind.DOCUMENT
+    }
+    if len(documents) != len(document_source_ids):
         raise ContentRestoreInvalid(
-            "No todas las unidades fuente tienen un documento vigente."
+            "No todas las lecciones de documento tienen contenido vigente."
         )
     created: list[UnitContentDocument] = []
     by_source = {document.unit_id: document for document in documents}
     for source_id in source_ids:
+        if source_id not in document_source_ids:
+            continue
         source_document = by_source[source_id]
         source_version = source_document.current_version
         if source_version is None:
@@ -271,4 +305,110 @@ def clone_current_unit_documents(
         )
         create_asset_references(cloned_version, references)
         created.append(target_document)
+    return created
+
+
+@transaction.atomic
+def configure_unit_lesson_resource(
+    *,
+    actor: Any,
+    organization: Organization,
+    revision: CourseRevision,
+    unit: CourseUnit,
+    expected_version: int,
+    asset_version_id: UUID,
+) -> tuple[UnitLessonResource, CourseRevision]:
+    """Bind exactly one READY private asset to a typed lesson."""
+
+    locked_revision, locked_unit = _lock_context(
+        actor=actor, organization=organization, revision=revision, unit=unit
+    )
+    if locked_revision.lock_version != expected_version:
+        raise ContentDocumentConflict(
+            "La revisión cambió desde que abriste la configuración.",
+            current_version=locked_revision.lock_version,
+            path="expected_version",
+        )
+    version = (
+        AssetVersion.objects.select_for_update()
+        .select_related("asset__organization")
+        .filter(pk=asset_version_id)
+        .first()
+    )
+    if version is None:
+        raise ContentDeliveryInvalid(
+            "La versión de archivo no existe.", path="asset_version_id"
+        )
+    validate_lesson_resource(unit=locked_unit, version=version)
+    binding, created = UnitLessonResource.objects.select_for_update().get_or_create(
+        unit=locked_unit,
+        defaults={
+            "asset_version": version,
+            "created_by": actor,
+            "updated_by": actor,
+        },
+    )
+    if not created:
+        binding.asset_version = version
+        binding.updated_by = actor
+        binding.save(update_fields=["asset_version", "updated_by", "updated_at"])
+    return binding, _finish_revision(locked_revision, actor)
+
+
+@transaction.atomic
+def remove_unit_lesson_resource(
+    *,
+    actor: Any,
+    organization: Organization,
+    revision: CourseRevision,
+    unit: CourseUnit,
+    expected_version: int,
+) -> CourseRevision:
+    locked_revision, locked_unit = _lock_context(
+        actor=actor, organization=organization, revision=revision, unit=unit
+    )
+    if locked_revision.lock_version != expected_version:
+        raise ContentDocumentConflict(
+            "La revisión cambió desde que abriste la configuración.",
+            current_version=locked_revision.lock_version,
+            path="expected_version",
+        )
+    if locked_unit.lesson_kind == LessonKind.DOCUMENT:
+        raise ContentNotApplicable(
+            "Una lección de documento no tiene un archivo de entrega único."
+        )
+    if locked_unit.lesson_kind == LessonKind.MEDIACMS_VIDEO:
+        raise ContentNotApplicable(
+            "Una lección MediaCMS se configura con su vídeo privado."
+        )
+    UnitLessonResource.objects.select_for_update().filter(unit=locked_unit).delete()
+    return _finish_revision(locked_revision, actor)
+
+
+@transaction.atomic
+def clone_current_unit_lesson_resources(
+    *, actor: Any, units_by_source_id: dict[UUID, CourseUnit]
+) -> list[UnitLessonResource]:
+    """Clone typed-resource bindings; release snapshots pin the same immutable version."""
+
+    source_ids = list(units_by_source_id)
+    resources = list(
+        UnitLessonResource.objects.select_for_update(of=("self",))
+        .select_related("asset_version__asset", "unit")
+        .filter(unit_id__in=source_ids)
+    )
+    by_source_id = {resource.unit_id: resource for resource in resources}
+    created: list[UnitLessonResource] = []
+    for source_id in sorted(by_source_id, key=str):
+        source = by_source_id[source_id]
+        target = units_by_source_id[source_id]
+        validate_lesson_resource(unit=target, version=source.asset_version)
+        created.append(
+            UnitLessonResource.objects.create(
+                unit=target,
+                asset_version=source.asset_version,
+                created_by=actor,
+                updated_by=actor,
+            )
+        )
     return created

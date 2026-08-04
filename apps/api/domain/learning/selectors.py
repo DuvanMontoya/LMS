@@ -452,9 +452,10 @@ def learning_activity(
         unit = snapshot_unit(assignment.release, unit_id)
         payload["lesson"] = {
             "unit_id": unit_id,
+            "lesson_kind": unit["lesson_kind"],
             "topics": unit["topics"],
             "learning_objectives": unit["learning_objectives"],
-            "content": unit["content"]["document"],
+            "delivery": unit["delivery"],
         }
     return payload
 
@@ -507,14 +508,14 @@ def learning_unit(enrollment: CourseEnrollment, unit_id: uuid.UUID) -> dict[str,
             "id": unit["id"],
             "title": unit["title"],
             "summary": unit["summary"],
+            "lesson_kind": unit["lesson_kind"],
             "position": unit["position"],
             "status": state,
         },
         "release_number": assignment.release.number,
         "topics": unit["topics"],
         "learning_objectives": unit["learning_objectives"],
-        "content": unit["content"]["document"],
-        "media": unit.get("media"),
+        "delivery": unit["delivery"],
         "progress": progress_payload(progress),
         "navigation": navigation,
     }

@@ -660,6 +660,7 @@ class OutlineUnitSerializer(UnitSerializer):
         source="objective_alignments", many=True, read_only=True
     )
     content_status = serializers.CharField(default="missing", read_only=True)
+    delivery_status = serializers.CharField(default="document_missing", read_only=True)
     content_version = serializers.IntegerField(allow_null=True, read_only=True)
     content_updated_at = serializers.DateTimeField(allow_null=True, read_only=True)
 
@@ -669,6 +670,7 @@ class OutlineUnitSerializer(UnitSerializer):
             "topics",
             "learning_objectives",
             "content_status",
+            "delivery_status",
             "content_version",
             "content_updated_at",
         )

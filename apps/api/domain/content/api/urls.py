@@ -5,6 +5,7 @@ from .views import (
     UnitContentVersionDetailView,
     UnitContentVersionListView,
     UnitContentView,
+    UnitLessonResourceView,
     ValidateUnitContentView,
 )
 
@@ -15,6 +16,7 @@ BASE = (
 
 urlpatterns = [
     path(BASE, UnitContentView.as_view()),
+    path(BASE + "delivery-resource/", UnitLessonResourceView.as_view()),
     path(BASE + "validate/", ValidateUnitContentView.as_view()),
     path(BASE + "versions/", UnitContentVersionListView.as_view()),
     path(

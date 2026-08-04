@@ -5,13 +5,14 @@ import uuid
 from typing import Any
 
 from django.http import Http404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from domain.courses.choices import LessonKind
 from domain.courses.models import CourseRevision, CourseUnit
 from domain.courses.selectors import (
     course_visible_to_actor,
@@ -24,6 +25,7 @@ from ..exceptions import (
     ContentAccessDenied,
     ContentDocumentConflict,
     ContentDomainError,
+    ContentNotApplicable,
     ContentNotEditable,
     ContentRestoreInvalid,
     ContentTooDeep,
@@ -31,6 +33,7 @@ from ..exceptions import (
     ContentVersionNotFound,
 )
 from ..extraction import has_meaningful_content
+from ..models import UnitLessonResource
 from ..policies import can_edit_unit_content
 from ..schemas import CURRENT_CONTENT_SCHEMA_VERSION, empty_document
 from ..selectors import (
@@ -39,7 +42,12 @@ from ..selectors import (
     unit_content_version,
     unit_content_versions,
 )
-from ..services import restore_unit_content, save_unit_content
+from ..services import (
+    configure_unit_lesson_resource,
+    remove_unit_lesson_resource,
+    restore_unit_content,
+    save_unit_content,
+)
 from ..validators import validate_content
 from .serializers import (
     ContentCurrentSerializer,
@@ -49,6 +57,10 @@ from .serializers import (
     ContentVersionDetailSerializer,
     ContentVersionSummarySerializer,
     ContentWriteSerializer,
+    LessonResourceDeleteSerializer,
+    LessonResourceInputSerializer,
+    LessonResourceResponseSerializer,
+    LessonResourceSerializer,
     RestoreContentSerializer,
 )
 
@@ -88,7 +100,9 @@ def _error_response(error: ContentDomainError) -> Response:
         response_status = status.HTTP_404_NOT_FOUND
     elif isinstance(error, (ContentTooLarge, ContentTooDeep)):
         response_status = status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
-    elif isinstance(error, (ContentNotEditable, ContentRestoreInvalid)):
+    elif isinstance(
+        error, (ContentNotApplicable, ContentNotEditable, ContentRestoreInvalid)
+    ):
         response_status = status.HTTP_409_CONFLICT
     return Response(payload, status=response_status)
 
@@ -137,6 +151,13 @@ def _current_payload(
     }
 
 
+def _require_document_lesson(unit: CourseUnit) -> None:
+    if unit.lesson_kind != LessonKind.DOCUMENT:
+        raise ContentNotApplicable(
+            "Esta modalidad se entrega exclusivamente con su propio recurso."
+        )
+
+
 class UnitContentView(APIView):
     @extend_schema(
         responses={
@@ -155,6 +176,10 @@ class UnitContentView(APIView):
         _organization, revision, unit = _context(
             request, organization_slug, course_slug, revision_id, unit_id
         )
+        try:
+            _require_document_lesson(unit)
+        except ContentDomainError as error:
+            return _error_response(error)
         return Response(
             ContentCurrentSerializer(
                 _current_payload(request=request, revision=revision, unit=unit)
@@ -208,6 +233,126 @@ class UnitContentView(APIView):
         )
 
 
+class UnitLessonResourceView(APIView):
+    """Authoring endpoint for a non-document lesson's one private file."""
+
+    def _payload(self, unit: CourseUnit, lock_version: int) -> dict[str, Any]:
+        resource = (
+            UnitLessonResource.objects.filter(unit=unit)
+            .select_related("asset_version__asset")
+            .first()
+        )
+        return {
+            "resource": (
+                LessonResourceSerializer(resource).data
+                if resource is not None
+                else None
+            ),
+            "lock_version": lock_version,
+        }
+
+    @extend_schema(
+        responses={200: LessonResourceResponseSerializer, 404: ContentErrorSerializer}
+    )
+    def get(
+        self,
+        request: Request,
+        organization_slug: str,
+        course_slug: str,
+        revision_id: str,
+        unit_id: str,
+    ) -> Response:
+        _organization, revision, unit = _context(
+            request, organization_slug, course_slug, revision_id, unit_id
+        )
+        return Response(self._payload(unit, revision.lock_version))
+
+    @extend_schema(
+        request=LessonResourceInputSerializer,
+        responses={
+            200: LessonResourceResponseSerializer,
+            400: ContentErrorSerializer,
+            403: ContentErrorSerializer,
+            404: ContentErrorSerializer,
+            409: ContentErrorSerializer,
+        },
+    )
+    def put(
+        self,
+        request: Request,
+        organization_slug: str,
+        course_slug: str,
+        revision_id: str,
+        unit_id: str,
+    ) -> Response:
+        organization, revision, unit = _context(
+            request, organization_slug, course_slug, revision_id, unit_id
+        )
+        serializer = LessonResourceInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            resource, locked = configure_unit_lesson_resource(
+                actor=request.user,
+                organization=organization,
+                revision=revision,
+                unit=unit,
+                **serializer.validated_data,
+            )
+        except ContentDomainError as error:
+            return _error_response(error)
+        resource = (
+            type(resource)
+            .objects.select_related("asset_version__asset")
+            .get(pk=resource.pk)
+        )
+        return Response(
+            LessonResourceResponseSerializer(
+                {"resource": resource, "lock_version": locked.lock_version}
+            ).data
+        )
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="expected_version",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                required=True,
+            )
+        ],
+        responses={
+            200: LessonResourceResponseSerializer,
+            403: ContentErrorSerializer,
+            404: ContentErrorSerializer,
+            409: ContentErrorSerializer,
+        },
+    )
+    def delete(
+        self,
+        request: Request,
+        organization_slug: str,
+        course_slug: str,
+        revision_id: str,
+        unit_id: str,
+    ) -> Response:
+        organization, revision, unit = _context(
+            request, organization_slug, course_slug, revision_id, unit_id
+        )
+        serializer = LessonResourceDeleteSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        try:
+            locked = remove_unit_lesson_resource(
+                actor=request.user,
+                organization=organization,
+                revision=revision,
+                unit=unit,
+                **serializer.validated_data,
+            )
+        except ContentDomainError as error:
+            return _error_response(error)
+        return Response({"resource": None, "lock_version": locked.lock_version})
+
+
 class ValidateUnitContentView(APIView):
     @extend_schema(
         request=ContentValidateSerializer,
@@ -226,9 +371,13 @@ class ValidateUnitContentView(APIView):
         revision_id: str,
         unit_id: str,
     ) -> Response:
-        _organization, revision, _unit = _context(
+        _organization, revision, unit = _context(
             request, organization_slug, course_slug, revision_id, unit_id
         )
+        try:
+            _require_document_lesson(unit)
+        except ContentDomainError as error:
+            return _error_response(error)
         if not can_edit_unit_content(request.user, revision):
             raise PermissionDenied("content_permission_denied")
         serializer = ContentValidateSerializer(data=request.data)
@@ -262,6 +411,10 @@ class UnitContentVersionListView(APIView):
         _organization, revision, unit = _context(
             request, organization_slug, course_slug, revision_id, unit_id
         )
+        try:
+            _require_document_lesson(unit)
+        except ContentDomainError as error:
+            return _error_response(error)
         document = current_unit_content(request.user, revision, unit)
         current_number = (
             document.current_version.number
@@ -296,6 +449,10 @@ class UnitContentVersionDetailView(APIView):
         _organization, revision, unit = _context(
             request, organization_slug, course_slug, revision_id, unit_id
         )
+        try:
+            _require_document_lesson(unit)
+        except ContentDomainError as error:
+            return _error_response(error)
         try:
             version = unit_content_version(request.user, revision, unit, version_number)
         except Http404 as error:
@@ -340,6 +497,10 @@ class RestoreUnitContentView(APIView):
         organization, revision, unit = _context(
             request, organization_slug, course_slug, revision_id, unit_id
         )
+        try:
+            _require_document_lesson(unit)
+        except ContentDomainError as error:
+            return _error_response(error)
         serializer = RestoreContentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:

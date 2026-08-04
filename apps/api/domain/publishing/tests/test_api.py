@@ -42,7 +42,10 @@ class PublicationApiTests(PublishingFixtureMixin, TestCase):
         reader = client.get(f"{library_base}{revision.course.slug}/units/{unit.id}/")
         self.assertEqual(reader.status_code, 200, reader.data)
         self.assertEqual(reader.data["release_number"], release.number)
-        self.assertEqual(reader.data["unit"]["content"]["document"]["type"], "doc")
+        self.assertEqual(
+            reader.data["unit"]["delivery"]["content"]["document"]["type"],
+            "doc",
+        )
         self.assertEqual(client.patch(f"{course_base}releases/1/").status_code, 405)
         self.assertEqual(client.delete(f"{course_base}releases/1/").status_code, 405)
 

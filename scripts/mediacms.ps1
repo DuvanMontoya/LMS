@@ -134,6 +134,30 @@ function Initialize-LocalEnvironment {
     Get-LocalEnvironment | Out-Null
 }
 
+function Initialize-LocalLtiSigningKey {
+    $keyFile = Join-Path $stateDirectory 'lms-lti-private-key.pem'
+    if (Test-Path -LiteralPath $keyFile) {
+        return
+    }
+
+    # A local key is durable across Django restarts but stays under the ignored
+    # .local state directory.  It is never copied into MediaCMS: the tool gets
+    # only the corresponding public JWKS from the LMS.
+    $rsa = [System.Security.Cryptography.RSA]::Create()
+    try {
+        $rsa.KeySize = 3072
+        [System.IO.File]::WriteAllText(
+            $keyFile,
+            $rsa.ExportPkcs8PrivateKeyPem(),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+    }
+    finally {
+        $rsa.Dispose()
+    }
+    Write-Host 'Created the ignored persistent local LMS LTI signing key. Restart the LMS development process once if it was already running.'
+}
+
 function Invoke-Compose([string[]]$Command) {
     & docker compose @composeArguments @Command
     Assert-LastExitCode "docker compose $($Command -join ' ')"
@@ -199,11 +223,43 @@ print(f"Configured local LTI platform: {platform.name}")
     Invoke-Compose @('exec', '-T', 'web', 'python', 'manage.py', 'shell', '-c', $configurationCommand)
 }
 
+function Remove-LtiMediaAccessCapabilitiesFromAuditLog {
+    # Earlier local launches may have occurred before the URL adapter started
+    # redacting the bearer.  Retain the audit row, but remove only that
+    # sensitive custom-claim field.  Future launches are redacted before the
+    # upstream logger persists its diagnostic copy.
+    $scrubCommand = @'
+from django.db import transaction
+from lti.models import LTILaunchLog
+
+updated = 0
+with transaction.atomic():
+    for launch in LTILaunchLog.objects.exclude(claims__isnull=True).iterator():
+        claims = launch.claims
+        custom = (
+            claims.get("https://purl.imsglobal.org/spec/lti/claim/custom")
+            if isinstance(claims, dict)
+            else None
+        )
+        if isinstance(custom, dict) and "lms_media_access_token" in custom:
+            safe_claims = claims.copy()
+            safe_custom = custom.copy()
+            safe_custom.pop("lms_media_access_token", None)
+            safe_claims["https://purl.imsglobal.org/spec/lti/claim/custom"] = safe_custom
+            launch.claims = safe_claims
+            launch.save(update_fields=["claims"])
+            updated += 1
+print(f"Redacted local LTI media capabilities from {updated} audit record(s).")
+'@
+    Invoke-Compose @('exec', '-T', 'web', 'python', 'manage.py', 'shell', '-c', $scrubCommand)
+}
+
 Set-Location $repositoryRoot
 switch ($Action) {
     'Init' {
         Assert-PinnedSource
         Initialize-LocalEnvironment
+        Initialize-LocalLtiSigningKey
         Invoke-Compose @('config', '--quiet')
         Write-Host 'Pinned MediaCMS v8.1.3 local configuration is valid. Containers remain stopped.'
     }
@@ -216,6 +272,7 @@ switch ($Action) {
     'Up' {
         Assert-PinnedSource
         Get-LocalEnvironment | Out-Null
+        Initialize-LocalLtiSigningKey
         Invoke-Compose @('up', '--detach', '--wait', '--wait-timeout', '180')
         # Python processes do not reload bind-mounted local policy and URL
         # modules on their own.  Restart only the web service so an ``Up``
@@ -224,6 +281,7 @@ switch ($Action) {
         Invoke-Compose @('up', '--detach', '--wait', '--wait-timeout', '180')
         Install-DefaultProfileMedia
         Configure-LocalLtiPlatform
+        Remove-LtiMediaAccessCapabilitiesFromAuditLog
         Write-Host 'Private local MediaCMS is ready at http://localhost:8091/.'
     }
     'Status' {

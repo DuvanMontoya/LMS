@@ -4,13 +4,14 @@ from __future__ import annotations
 from django.core.exceptions import ObjectDoesNotExist
 
 from domain.assets.choices import AssetKind, AssetVersionStatus, VariantRole
-from domain.courses.choices import StructureStatus
+from domain.courses.choices import LessonKind, StructureStatus
 from domain.courses.models import CourseRevision, CourseUnit
 
 from .asset_references import ASSET_NODE_KINDS
 from .canonical import content_digest
-from .exceptions import ContentDomainError
+from .exceptions import ContentDeliveryInvalid, ContentDomainError
 from .extraction import has_meaningful_content, iter_nodes
+from .lesson_resources import lesson_resource_rule, validate_lesson_resource
 from .models import UnitContentDocument
 from .schemas import schema_registry
 from .validators import validate_content
@@ -30,6 +31,12 @@ def enrich_content_outline(revision: CourseRevision) -> None:
     }
     for module in revision.modules.all():
         for unit in module.units.all():
+            if unit.lesson_kind != LessonKind.DOCUMENT:
+                unit.content_status = "not_applicable"
+                unit.content_version = None
+                unit.content_updated_at = None
+                unit.delivery_status = _non_document_delivery_status(unit)
+                continue
             row = metadata.get(unit.id)
             if row is None or row["current_version__number"] is None:
                 unit.content_status = "missing"
@@ -41,6 +48,28 @@ def enrich_content_outline(revision: CourseRevision) -> None:
                 )
                 unit.content_version = row["current_version__number"]
                 unit.content_updated_at = row["updated_at"]
+            unit.delivery_status = f"document_{unit.content_status}"
+
+
+def _non_document_delivery_status(unit: CourseUnit) -> str:
+    if unit.lesson_kind == LessonKind.MEDIACMS_VIDEO:
+        try:
+            return (
+                "mediacms_ready"
+                if unit.mediacms_video_binding.media_friendly_token
+                else "mediacms_missing"
+            )
+        except ObjectDoesNotExist:
+            return "mediacms_missing"
+    try:
+        resource = unit.lesson_resource
+    except ObjectDoesNotExist:
+        return "resource_missing"
+    try:
+        validate_lesson_resource(unit=unit, version=resource.asset_version)
+    except ContentDeliveryInvalid:
+        return "resource_invalid"
+    return "resource_ready"
 
 
 def content_readiness_issues(revision: CourseRevision) -> list[dict[str, str]]:
@@ -52,10 +81,14 @@ def content_readiness_issues(revision: CourseRevision) -> list[dict[str, str]]:
             status=StructureStatus.ACTIVE,
         )
         .select_related("module", "content_document__current_version")
+        .select_related("lesson_resource__asset_version__asset")
         .order_by("module__position", "position", "id")
     )
     for unit in units:
         path = f"modules.{unit.module_id}.units.{unit.id}.content"
+        if unit.lesson_kind != LessonKind.DOCUMENT:
+            issues.extend(_lesson_resource_readiness_issues(unit))
+            continue
         try:
             document = unit.content_document
         except ObjectDoesNotExist:
@@ -109,6 +142,53 @@ def content_readiness_issues(revision: CourseRevision) -> list[dict[str, str]]:
             )
         issues.extend(_asset_readiness_issues(unit, current))
     return issues
+
+
+def _lesson_resource_readiness_issues(unit: CourseUnit) -> list[dict[str, str]]:
+    path = f"modules.{unit.module_id}.units.{unit.id}.delivery"
+    if unit.lesson_kind == LessonKind.MEDIACMS_VIDEO:
+        try:
+            has_media = bool(unit.mediacms_video_binding.media_friendly_token)
+        except ObjectDoesNotExist:
+            has_media = False
+        if has_media:
+            return []
+        return [
+            {
+                "code": "unit_delivery_mediacms_missing",
+                "path": path,
+                "message": f"La lección «{unit.title}» debe seleccionar un vídeo MediaCMS.",
+            }
+        ]
+    if lesson_resource_rule(unit.lesson_kind) is None:
+        return [
+            {
+                "code": "unit_delivery_kind_invalid",
+                "path": path,
+                "message": "La modalidad de la lección no tiene una entrega válida.",
+            }
+        ]
+    try:
+        resource = unit.lesson_resource
+    except ObjectDoesNotExist:
+        return [
+            {
+                "code": "unit_delivery_resource_missing",
+                "path": path,
+                "message": f"La lección «{unit.title}» debe seleccionar un único archivo listo.",
+            }
+        ]
+    try:
+        validate_lesson_resource(unit=unit, version=resource.asset_version)
+    except ContentDeliveryInvalid:
+        return [
+            {
+                "code": "unit_delivery_resource_invalid",
+                "path": path,
+                "message": f"El archivo de «{unit.title}» ya no cumple la modalidad seleccionada.",
+            }
+        ]
+    return []
 
 
 def _asset_readiness_issues(

@@ -2,13 +2,16 @@
 
 ## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
 
-- **Decisión y modelo:** ADR 0042 conserva la actividad canónica `lesson` y
+- **Entrega exclusiva por modalidad (2026-08-03):** ADR 0042 conserva la actividad canónica `lesson` y
   añade en `CourseUnit` una única modalidad estructural inmutable: Documento,
   Video MediaCMS, LaTeX (`.tex`), Markdown (`.md`), PDF, Diapositivas o Audio.
-  ADR 0043 fija el binding opaco de vídeo en el snapshot v5 y reserva la
-  entrega para `domain.learning` después de validar matrícula y release. No
-  se almacenan URLs de entrega, cookies, claves ni paths HLS en contenido o
-  releases; los demás archivos siguen pasando por `domain.assets`.
+  El schema de publicación v6 fija una unión `delivery`: documento semántico
+  sólo para Documento, binding LTI sólo para Video MediaCMS y una única
+  `AssetVersion` READY para los cinco tipos de archivo. `content.0004` añade
+  el vínculo auditable de esa versión y el backend rechaza el editor semántico
+  en cualquier otra modalidad. Los snapshots v1–v5 no se reescriben; se
+  adaptan en lectura para compatibilidad. No se almacenan URLs de entrega,
+  cookies, claves ni paths HLS en contenido o releases.
 - **MediaCMS local:** se construyó desde el release oficial exacto v8.1.3
   (`a3fe375a8302f5b26fac214ef2346dd92fec7361`), con PostgreSQL, Redis con
   contraseña, workers de colas y persistencia en volúmenes locales. Sólo se
@@ -25,7 +28,23 @@
   protocolo, permite el iframe del autorizador LMS y exige el token exacto,
   el grupo del contexto `release + unit` y una sesión LTI válida antes de
   asociar el vídeo privado con ese grupo. No se puede sustituir el token por
-  otro vídeo privado.
+  otro vídeo privado. La clave local RSA de 3072 bits se genera una sola vez
+  bajo `.local/mediacms/lms-lti-private-key.pem`, fuera de Git, de forma que
+  JWKS y los lanzamientos sobreviven los reinicios locales.
+- **Reloj LTI acotado:** los `id_token` y capacidades de media retroceden su
+  claim `iat` cinco segundos para tolerar el desfase entre procesos LMS y
+  MediaCMS; `exp` conserva el instante real de emisión, por lo que el margen
+  disminuye —nunca amplía— la ventana autorizada. La variable
+  `LMS_LTI_TOKEN_CLOCK_SKEW_SECONDS` está validada entre 0 y 60 segundos.
+- **Revocación LTI de datos:** cada petición de archivo original, codificado o
+  HLS pasa por la compuerta interna de MediaCMS y revalida en la LMS una
+  capacidad RS256 limitada a usuario, matrícula, release, unidad y vídeo. No
+  hay caché positiva de esa decisión. Al suspender, revocar o cambiar el
+  release asignado, el siguiente acceso se deniega y se eliminan la
+  `MediaPermission`, la membresía RBAC y el permiso de archivos cacheado que
+  hubieran quedado en MediaCMS. La capacidad nunca queda en una cookie,
+  snapshot ni auditoría: vive sólo en Redis ligado a la sesión LTI y
+  `mediacms:up` también sanea registros locales heredados.
 - **Evidencia:** `pnpm mediacms:init`, `mediacms:build`, `mediacms:up` y el
   smoke final pasaron. Este último verifica PostgreSQL, Redis autenticado,
   `manage.py check`, superusuario y el cierre efectivo del registro. La
@@ -49,15 +68,28 @@
   Tras eliminar a propósito la categoría y la permisión que se habían usado
   para el diagnóstico, la misma prueba volvió a pasar desde cero. Una pestaña
   temporal que intentó `/lti/embed/not-authorized-token/` recibió el mensaje
-  de denegación LTI y se cerró. Se conservó una sola copia del medio.
+  de denegación LTI y se cerró. Se conservó una sola copia del medio. La
+  verificación final de revocación cubrió API (10/10: suspensión, reactivación,
+  cambio de release y revocación), configuración productiva fail-closed y
+  Chrome real: el reproductor privado cargó 28 s, la suspensión devolvió 404
+  al alumno y, al reactivar, el mismo reproductor volvió a cargar.
+- **Cierre de modalidades (2026-08-03):** se publicó el release local 5 del
+  curso demo con schema v6 y se reasignó su matrícula demo. La verificación
+  directa confirma `mediacms_lti`, ausencia de `content` y de `document` para
+  la unidad de vídeo, además de integridad válida del release y de su cadena.
+  En la sesión actual de Chrome, la ruta de aprendizaje carga el reproductor
+  real de MediaCMS con el MP4 de 28 s, sin documento académico, editor ni
+  texto de otra modalidad. La prueba puntual de lanzamiento LTI pasó 1/1;
+  Django, migraciones, Pyright, ESLint, Prettier, TypeScript, contratos de
+  publicación y contratos de contenido también pasaron.
 - **Límite explícito antes de producción:** el lanzamiento de vídeo para
   estudiantes está validado sólo en `localhost`. Producción sigue bloqueada
-  hasta tener HTTPS, issuer/JWKS y client registration reales, una clave RSA
-  persistente protegida y una sincronización de revocación de las
-  `MediaPermission` LTI de MediaCMS al suspender, revocar o cambiar una
-  matrícula. No se tocó el VPS/DNS ni la llave SSH, y continúa pendiente la
-  revisión legal de AGPL-3.0 antes de distribuir o exponer una instancia por
-  red.
+  hasta tener TLS real, issuer/JWKS y client registration reales bajo los
+  dominios definitivos, y una clave RSA persistente protegida por el gestor de
+  secretos de producción. La revocación de permisos LTI ya está resuelta y
+  comprobada localmente; no se tocó el VPS/DNS ni la llave SSH. Continúa
+  pendiente la revisión legal de AGPL-3.0 antes de distribuir o exponer una
+  instancia por red.
 
 ## Navegación institucional y secuencia de trabajo — en curso 2026-08-02
 

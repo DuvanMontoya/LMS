@@ -53,14 +53,16 @@ const outline: components['schemas']['Outline'] = {
       units: [
         {
           archived_at: null,
-          content_status: 'Contenido académico pendiente',
+          content_status: 'missing',
           content_updated_at: null,
           content_version: null,
           created_at: '2026-07-29T00:00:00Z',
           estimated_duration_minutes: null,
           id: '00000000-0000-0000-0000-000000000004',
+          delivery_status: 'document_missing',
           lesson_kind: 'document',
           learning_objectives: [],
+          mediacms_video: null,
           module_id: '00000000-0000-0000-0000-000000000003',
           position: 1,
           status: 'active',
@@ -124,10 +126,8 @@ describe('StructureEditor', () => {
     expect(
       screen.getByRole('heading', { name: 'Estructura del curso' }),
     ).toBeInTheDocument();
-    expect(
-      screen.getAllByText(/Contenido académico pendiente/),
-    ).not.toHaveLength(0);
-    expect(screen.getByRole('link', { name: 'Ver contenido' })).toHaveAttribute(
+    expect(screen.getAllByText(/Sin documento/)).not.toHaveLength(0);
+    expect(screen.getByRole('link', { name: 'Ver documento' })).toHaveAttribute(
       'href',
       '/organizaciones/institucion/cursos/algebra/unidades/00000000-0000-0000-0000-000000000004/contenido',
     );

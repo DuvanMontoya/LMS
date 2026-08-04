@@ -2,6 +2,9 @@
 
 import os
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+
 from .base import *  # noqa: F403
 
 if not os.environ.get("DJANGO_SECRET_KEY"):
@@ -56,9 +59,26 @@ if MEDIACMS_LTI_ENABLED:  # noqa: F405
         not LMS_LTI_PRIVATE_KEY_PEM  # noqa: F405
         or not LMS_LTI_ISSUER.startswith("https://")  # noqa: F405
         or not MEDIACMS_LTI_TOOL_ORIGIN.startswith("https://")  # noqa: F405
+        or not LMS_LTI_MEDIA_ACCESS_VALIDATION_URL.startswith("https://")  # noqa: F405
     ):
         raise RuntimeError(
-            "MediaCMS LTI production requires HTTPS origins and an RSA private key."
+            "MediaCMS LTI production requires HTTPS origins, its access validation URL, and an RSA private key."
+        )
+    try:
+        _lti_private_key = serialization.load_pem_private_key(
+            LMS_LTI_PRIVATE_KEY_PEM.encode("utf-8"),  # noqa: F405
+            password=None,  # noqa: F405
+        )
+    except (TypeError, ValueError) as error:
+        raise RuntimeError(
+            "LMS_LTI_PRIVATE_KEY_PEM must be an unencrypted PEM RSA private key."
+        ) from error
+    if (
+        not isinstance(_lti_private_key, rsa.RSAPrivateKey)
+        or _lti_private_key.key_size < 2048
+    ):
+        raise RuntimeError(
+            "LMS_LTI_PRIVATE_KEY_PEM must be an RSA private key of at least 2048 bits."
         )
 SECURE_HSTS_SECONDS = 31_536_000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True

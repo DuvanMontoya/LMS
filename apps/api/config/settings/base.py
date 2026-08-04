@@ -196,6 +196,36 @@ LMS_LTI_DEPLOYMENT_ID = os.environ.get("LMS_LTI_DEPLOYMENT_ID", "")
 LMS_LTI_KEY_ID = os.environ.get("LMS_LTI_KEY_ID", "lms-mediacms-v1")
 LMS_LTI_PRIVATE_KEY_PEM = os.environ.get("LMS_LTI_PRIVATE_KEY_PEM", "")
 LMS_LTI_LAUNCH_TTL_SECONDS = int(os.environ.get("LMS_LTI_LAUNCH_TTL_SECONDS", "120"))
+try:
+    LMS_LTI_TOKEN_CLOCK_SKEW_SECONDS = int(
+        os.environ.get("LMS_LTI_TOKEN_CLOCK_SKEW_SECONDS", "5")
+    )
+except ValueError as error:
+    raise RuntimeError(
+        "LMS_LTI_TOKEN_CLOCK_SKEW_SECONDS must be an integer."
+    ) from error
+if not 0 <= LMS_LTI_TOKEN_CLOCK_SKEW_SECONDS <= 60:
+    raise RuntimeError(
+        "LMS_LTI_TOKEN_CLOCK_SKEW_SECONDS must be between 0 and 60 seconds."
+    )
+LMS_LTI_MEDIA_ACCESS_AUDIENCE = os.environ.get(
+    "LMS_LTI_MEDIA_ACCESS_AUDIENCE", "mediacms-lti-media-access"
+)
+LMS_LTI_MEDIA_ACCESS_VALIDATION_URL = os.environ.get(
+    "LMS_LTI_MEDIA_ACCESS_VALIDATION_URL", ""
+).rstrip("/")
+try:
+    LMS_LTI_MEDIA_ACCESS_TTL_SECONDS = int(
+        os.environ.get("LMS_LTI_MEDIA_ACCESS_TTL_SECONDS", "28800")
+    )
+except ValueError as error:
+    raise RuntimeError(
+        "LMS_LTI_MEDIA_ACCESS_TTL_SECONDS must be an integer."
+    ) from error
+if not 60 <= LMS_LTI_MEDIA_ACCESS_TTL_SECONDS <= 28800:
+    raise RuntimeError(
+        "LMS_LTI_MEDIA_ACCESS_TTL_SECONDS must be between 60 and 28800 seconds."
+    )
 if MEDIACMS_LTI_ENABLED and (
     not MEDIACMS_LTI_TOOL_ORIGIN
     or not LMS_LTI_ISSUER

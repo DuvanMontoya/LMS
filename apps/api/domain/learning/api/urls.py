@@ -49,4 +49,5 @@ urlpatterns = [
     path(ME + "position/", views.PositionView.as_view()),
     path("lti/jwks/", views.MediaCMSJWKSView.as_view()),
     path("lti/authorize/", views.MediaCMSLTIAuthorizeView.as_view()),
+    path("lti/media-access/", views.MediaCMSMediaAccessView.as_view()),
 ]

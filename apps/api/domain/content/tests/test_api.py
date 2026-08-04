@@ -83,3 +83,28 @@ class ContentApiTests(ContentFixtureMixin, TestCase):
 
         self.assertEqual(client.delete(base).status_code, 405)
         self.assertEqual(client.patch(f"{base}versions/1/").status_code, 405)
+
+    def test_non_document_content_routes_fail_closed(self) -> None:
+        owner, organization, revision, _module, unit, *_ = self.unit_context(
+            lesson_kind="mediacms_video"
+        )
+        client = self.client_for(owner)
+        base = (
+            f"/api/v1/organizations/{organization.slug}/courses/"
+            f"{revision.course.slug}/revisions/{revision.id}/units/{unit.id}/content/"
+        )
+
+        response = client.get(base)
+        self.assertEqual(response.status_code, 409, response.data)
+        self.assertEqual(response.data["code"], "content_not_applicable")
+        write = client.put(
+            base,
+            {
+                "expected_document_version": 0,
+                "schema_version": 1,
+                "content": full_document(),
+            },
+            format="json",
+        )
+        self.assertEqual(write.status_code, 409, write.data)
+        self.assertFalse(UnitContentDocument.objects.filter(unit=unit).exists())

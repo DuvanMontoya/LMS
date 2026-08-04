@@ -26,7 +26,7 @@ if (process.argv.slice(2).some((argument) => argument !== '--check')) {
 }
 
 const outputs = [];
-for (const version of [1, 2, 4, 5]) {
+for (const version of [1, 2, 4, 5, 6]) {
   const releaseSourcePath = path.join(
     repositoryRoot,
     'schemas',
@@ -89,7 +89,7 @@ for (const version of [1, 2, 4, 5]) {
   };
   const generatedType = await prettier.format(
     `${await compile(typeSchema, `CourseReleaseSnapshotV${version}`, {
-      bannerComment: `${version === 2 ? '/* eslint-disable @typescript-eslint/no-explicit-any */\n' : ''}/* Generated from schemas/publication/course-release-v${version}.schema.json. Do not edit. */`,
+      bannerComment: `${[2, 4, 5, 6].includes(version) ? '/* eslint-disable @typescript-eslint/no-explicit-any */\n' : ''}/* Generated from schemas/publication/course-release-v${version}.schema.json. Do not edit. */`,
       format: false,
       unknownAny: false,
     })}

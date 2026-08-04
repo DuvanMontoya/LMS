@@ -1,3 +1,5 @@
+import base64
+import json
 import uuid
 from datetime import timedelta
 from unittest.mock import patch
@@ -12,6 +14,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from domain.courses.choices import LessonKind
+from domain.learning.access import require_learning_access
 from domain.learning.choices import (
     AcademicGroupLevel,
     AcademicGroupRole,
@@ -19,14 +22,24 @@ from domain.learning.choices import (
     CohortStaffRole,
 )
 from domain.learning.exceptions import LearningPermissionDenied
+from domain.learning.mediacms import (
+    LTI_CLAIM,
+    authorize_mediacms_launch,
+    issue_mediacms_launch,
+    lti_id_token,
+)
 from domain.learning.models import CourseGroupActivity
 from domain.learning.services import (
     create_academic_group,
     create_academic_period,
     create_cohort,
     enroll_member,
+    reactivate_enrollment,
     replace_academic_group_roster,
     replace_cohort_staff,
+    revoke_enrollment,
+    suspend_enrollment,
+    upgrade_enrollment_release,
 )
 from domain.organizations.choices import RoleCode
 from domain.organizations.models import Membership
@@ -48,6 +61,10 @@ class LearningApiTests(LearningFixtureMixin, TestCase):
         LMS_LTI_KEY_ID="lms-local-mediacms-v1",
         LMS_LTI_PRIVATE_KEY_PEM="",
         LMS_LTI_LAUNCH_TTL_SECONDS=300,
+        LMS_LTI_TOKEN_CLOCK_SKEW_SECONDS=5,
+        LMS_LTI_MEDIA_ACCESS_AUDIENCE="mediacms-lti-media-access",
+        LMS_LTI_MEDIA_ACCESS_TTL_SECONDS=300,
+        LMS_LTI_MEDIA_ACCESS_VALIDATION_URL="http://localhost:3000/api/v1/lti/media-access",
     )
     def test_video_launch_is_release_pinned_and_requires_the_enrolled_learner(
         self, _private_key: object
@@ -57,11 +74,11 @@ class LearningApiTests(LearningFixtureMixin, TestCase):
             learner,
             organization,
             _membership,
-            _revision,
+            revision,
             _module,
             unit,
-            _publication,
-            _release,
+            publication,
+            release,
             enrollment,
         ) = self.learning_context(lesson_kind=LessonKind.MEDIACMS_VIDEO)
         launch_url = (
@@ -103,6 +120,115 @@ class LearningApiTests(LearningFixtureMixin, TestCase):
         jwks = self.client.get("/api/v1/lti/jwks/")
         self.assertEqual(jwks.status_code, 200, jwks.content)
         self.assertEqual(jwks.json()["keys"][0]["kid"], "lms-local-mediacms-v1")
+
+        descriptor = issue_mediacms_launch(
+            actor=learner,
+            access=require_learning_access(actor=learner, enrollment=enrollment),
+            unit_id=unit.id,
+        )
+        hint = parse_qs(urlparse(descriptor["launch_url"]).query)["login_hint"][0]
+        authorization = authorize_mediacms_launch(actor=learner, login_hint=hint)
+        with patch("domain.learning.mediacms.time.time", return_value=1_700_000_000):
+            assertion = lti_id_token(
+                actor=learner,
+                nonce="clock-skew-test",
+                authorization=authorization,
+            )
+        assertion_payload = assertion.split(".")[1]
+        assertion_claims = json.loads(
+            base64.urlsafe_b64decode(
+                assertion_payload + "=" * (-len(assertion_payload) % 4)
+            )
+        )
+        self.assertEqual(assertion_claims["iat"], 1_699_999_995)
+        self.assertEqual(assertion_claims["exp"], 1_700_000_300)
+
+        def media_access_token(current_actor, current_enrollment, current_unit):
+            descriptor = issue_mediacms_launch(
+                actor=current_actor,
+                access=require_learning_access(
+                    actor=current_actor, enrollment=current_enrollment
+                ),
+                unit_id=current_unit.id,
+            )
+            hint = parse_qs(urlparse(descriptor["launch_url"]).query)["login_hint"][0]
+            authorization = authorize_mediacms_launch(
+                actor=current_actor, login_hint=hint
+            )
+            id_token = lti_id_token(
+                actor=current_actor,
+                nonce="media-access-test",
+                authorization=authorization,
+            )
+            payload = id_token.split(".")[1]
+            claims = json.loads(
+                base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4))
+            )
+            return claims[f"{LTI_CLAIM}/custom"]["lms_media_access_token"]
+
+        def live_status(token: str) -> int:
+            response = self.client.get(
+                "/api/v1/lti/media-access/",
+                HTTP_AUTHORIZATION=f"Bearer {token}",
+            )
+            return response.status_code
+
+        original_token = media_access_token(learner, enrollment, unit)
+        self.assertEqual(live_status(original_token), 204)
+
+        enrollment = suspend_enrollment(
+            actor=owner,
+            enrollment=enrollment,
+            expected_version=enrollment.lock_version,
+        )
+        self.assertEqual(live_status(original_token), 403)
+        enrollment = reactivate_enrollment(
+            actor=owner,
+            enrollment=enrollment,
+            expected_version=enrollment.lock_version,
+        )
+        self.assertEqual(live_status(original_token), 204)
+
+        next_release = self.second_release(
+            owner=owner,
+            organization=organization,
+            revision=revision,
+            publication=publication,
+            release=release,
+        )
+        enrollment = upgrade_enrollment_release(
+            actor=owner,
+            enrollment=enrollment,
+            expected_enrollment_version=enrollment.lock_version,
+            target_release=next_release,
+        )
+        self.assertEqual(live_status(original_token), 403)
+
+        revoked_learner = get_user_model().objects.create_user(
+            email="revoked-media-access@example.test",
+            password="StrongLearningPassword!42",
+        )
+        revoked_membership = Membership.objects.create(
+            organization=organization,
+            user=revoked_learner,
+            status_changed_by=owner,
+            status_changed_at=timezone.now(),
+        )
+        revoked_enrollment = enroll_member(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            membership=revoked_membership,
+            release=release,
+        )
+        revoked_token = media_access_token(revoked_learner, revoked_enrollment, unit)
+        self.assertEqual(live_status(revoked_token), 204)
+        revoked_enrollment = revoke_enrollment(
+            actor=owner,
+            enrollment=revoked_enrollment,
+            expected_version=revoked_enrollment.lock_version,
+        )
+        self.assertEqual(live_status(revoked_token), 403)
 
     def test_course_group_activity_options_are_scoped_to_assigned_staff(self) -> None:
         (
@@ -405,7 +531,8 @@ class LearningApiTests(LearningFixtureMixin, TestCase):
             f"{base}/me/enrollments/{enrollment.id}/units/{unit.id}/"
         )
         self.assertEqual(unit_response.status_code, 200)
-        self.assertIn("content", unit_response.json())
+        self.assertIn("delivery", unit_response.json())
+        self.assertNotIn("content", unit_response.json())
 
     def test_admin_lists_accept_explicit_created_at_ordering(self) -> None:
         (

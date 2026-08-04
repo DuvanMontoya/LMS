@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from domain.content.exceptions import ContentDocumentConflict
+from domain.content.exceptions import ContentDocumentConflict, ContentNotApplicable
 from domain.content.models import UnitContentDocument, UnitContentVersion
 from domain.content.services import restore_unit_content, save_unit_content
 
@@ -11,6 +11,34 @@ from .support import ContentFixtureMixin, full_document
 
 
 class ContentVersioningTests(ContentFixtureMixin, TestCase):
+    def test_non_document_lesson_rejects_semantic_content_at_the_domain_boundary(
+        self,
+    ) -> None:
+        owner, organization, revision, _module, unit, *_ = self.unit_context(
+            lesson_kind="mediacms_video"
+        )
+
+        with self.assertRaises(ContentNotApplicable):
+            save_unit_content(
+                actor=owner,
+                organization=organization,
+                revision=revision,
+                unit=unit,
+                expected_document_version=0,
+                schema_version=1,
+                content=full_document(),
+            )
+        with self.assertRaises(ContentNotApplicable):
+            restore_unit_content(
+                actor=owner,
+                organization=organization,
+                revision=revision,
+                unit=unit,
+                expected_document_version=0,
+                version_number=1,
+            )
+        self.assertFalse(UnitContentDocument.objects.filter(unit=unit).exists())
+
     def test_first_save_noop_conflict_second_save_and_restore_are_append_only(
         self,
     ) -> None:

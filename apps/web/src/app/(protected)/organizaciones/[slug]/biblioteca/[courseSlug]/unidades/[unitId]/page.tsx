@@ -7,11 +7,16 @@ import {
 } from '@/components/learning/learning-player-shell';
 import { CoursePreviewPlayer } from '@/components/publishing/course-preview-player';
 import { Badge } from '@/components/ui/badge';
+import type { LMSUnitAcademicDocumentVersion2 } from '@/lib/content/generated/unit-document-v2';
 import { getLibraryUnit } from '@/lib/publishing/server';
 
 type PublishedUnitPageProps = Readonly<{
   params: Promise<{ courseSlug: string; slug: string; unitId: string }>;
 }>;
+
+function record(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
 
 export default async function PublishedUnitView({
   params,
@@ -32,6 +37,17 @@ export default async function PublishedUnitView({
         title: navigation.next.title,
       }
     : null;
+  const deliveryContent = record(data.unit.delivery.content)
+    ? data.unit.delivery.content
+    : null;
+  const isDocument =
+    data.unit.delivery.kind === 'document' &&
+    deliveryContent !== null &&
+    record(deliveryContent.document);
+  const document =
+    isDocument && deliveryContent
+      ? (deliveryContent.document as unknown as LMSUnitAcademicDocumentVersion2)
+      : null;
 
   return (
     <CoursePreviewPlayer
@@ -49,8 +65,10 @@ export default async function PublishedUnitView({
             Módulo {data.unit.module.position} · {data.unit.module.title}
           </p>
           <h1>{data.unit.title}</h1>
-          {data.unit.summary ? <div>{data.unit.summary}</div> : null}
-          {data.unit.topics.length ? (
+          {isDocument && data.unit.summary ? (
+            <div>{data.unit.summary}</div>
+          ) : null}
+          {isDocument && data.unit.topics.length ? (
             <div className="learning-player__topics">
               {data.unit.topics.map((topic) => (
                 <Badge key={topic.id} variant="outline">
@@ -61,11 +79,13 @@ export default async function PublishedUnitView({
           ) : null}
         </header>
 
-        <div className="learning-player__document">
-          <AcademicDocument document={data.unit.content.document} />
-        </div>
+        {document ? (
+          <div className="learning-player__document">
+            <AcademicDocument document={document} />
+          </div>
+        ) : null}
 
-        {data.unit.learning_objectives.length ? (
+        {isDocument && data.unit.learning_objectives.length ? (
           <details className="learning-player__objectives">
             <summary>
               <BookOpenText />

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* Generated from schemas/publication/course-release-v5.schema.json. Do not edit. */
+/* Generated from schemas/publication/course-release-v6.schema.json. Do not edit. */
 
 export type Unit = {
   [k: string]: any;
@@ -23,28 +23,17 @@ export type Unit = {
   learning_objectives: {
     [k: string]: any;
   }[];
-  content: {
-    schema_version: 2;
-    document_version: number;
-    digest: string;
-    character_count: number;
-    word_count: number;
-    node_count: number;
-    document: LMSUnitAcademicDocumentVersion2;
-  };
-  media: null | {
-    provider: 'mediacms_lti';
-    media_friendly_token: string;
-  };
+  delivery: Delivery;
 };
+export type Delivery = DocumentDelivery | MediaDelivery | AssetDelivery;
 export type Node =
   ImageAsset | AudioAsset | VideoAsset | DownloadAsset | LegacyNode;
 export type NodeId = string;
 export type AssetVersionId = string;
 export type PlainText = string;
 
-export interface LMSImmutableCourseReleaseVersion5 {
-  schema_version: 5;
+export interface LMSImmutableCourseReleaseVersion6 {
+  schema_version: 6;
   release_number: number;
   previous_release_digest: null | string;
   organization: {
@@ -104,26 +93,27 @@ export interface LMSImmutableCourseReleaseVersion5 {
   /**
    * @maxItems 500
    */
-  modules: {
-    id: string;
-    title: string;
-    description: string;
-    position: number;
-    /**
-     * @maxItems 5000
-     */
-    activities: Activity[];
-    /**
-     * @maxItems 5000
-     */
-    units: Unit[];
-  }[];
+  modules: Module[];
   assets: {
     [k: string]: any;
   }[];
 }
 export interface Reference {
   [k: string]: any;
+}
+export interface Module {
+  id: string;
+  title: string;
+  description: string;
+  position: number;
+  /**
+   * @maxItems 5000
+   */
+  activities: Activity[];
+  /**
+   * @maxItems 5000
+   */
+  units: Unit[];
 }
 export interface Activity {
   id: string;
@@ -134,16 +124,28 @@ export interface Activity {
   position: number;
   required: boolean;
   completion_policy: {
-    method: 'view' | 'manual' | 'attendance' | 'submission' | 'grade' | 'pass';
-    minimum_attendance_basis_points: number | null;
-    minimum_grade_basis_points: number | null;
+    [k: string]: any;
   };
   availability_rules: {
     [k: string]: any;
   }[];
-  learning_objectives: Reference[];
+  learning_objectives: {
+    [k: string]: any;
+  }[];
   binding: {
     [k: string]: any;
+  };
+}
+export interface DocumentDelivery {
+  kind: 'document';
+  content: {
+    schema_version: 2;
+    document_version: number;
+    digest: string;
+    character_count: number;
+    word_count: number;
+    node_count: number;
+    document: LMSUnitAcademicDocumentVersion2;
   };
 }
 /**
@@ -243,5 +245,16 @@ export interface LegacyNode {
       ];
   [k: string]: any;
 }
+export interface MediaDelivery {
+  kind: 'mediacms_lti';
+  media: {
+    provider: 'mediacms_lti';
+    media_friendly_token: string;
+  };
+}
+export interface AssetDelivery {
+  kind: 'asset';
+  asset_version_id: string;
+}
 
-export type CourseReleaseSnapshotV5 = LMSImmutableCourseReleaseVersion5;
+export type CourseReleaseSnapshotV6 = LMSImmutableCourseReleaseVersion6;

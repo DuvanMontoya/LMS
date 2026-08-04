@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import DatabaseError, transaction
 from django.test import TestCase
 
-from domain.content.models import UnitContentDocument
+from domain.content.models import UnitContentDocument, UnitLessonResource
 from domain.courses.choices import AuthoringStatus, LessonKind
 from domain.courses.models import MediaCMSVideoBinding
 from domain.courses.services import (
@@ -31,6 +32,37 @@ from .support import PublishingFixtureMixin
 
 
 class PublicationServiceTests(PublishingFixtureMixin, TestCase):
+    def test_typed_file_delivery_is_snapshot_only_and_cloned_without_document(
+        self,
+    ) -> None:
+        (
+            owner,
+            organization,
+            revision,
+            _module,
+            unit,
+            _objective,
+            _topic,
+            publication,
+            release,
+        ) = self.published_context(lesson_kind=LessonKind.PDF)
+        snapshot_unit = release.snapshot["modules"][0]["units"][0]
+        self.assertEqual(snapshot_unit["delivery"]["kind"], "asset")
+        self.assertNotIn("content", snapshot_unit)
+        self.assertFalse(UnitContentDocument.objects.filter(unit=unit).exists())
+
+        draft = create_draft_from_release(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            release_number=release.number,
+            expected_publication_version=publication.lock_version,
+        )
+        copied = UnitLessonResource.objects.get(unit__module__revision=draft)
+        self.assertEqual(
+            str(copied.asset_version_id), snapshot_unit["delivery"]["asset_version_id"]
+        )
+
     def test_video_binding_is_release_pinned_and_copied_into_a_new_draft(self) -> None:
         (
             owner,
@@ -46,9 +78,16 @@ class PublicationServiceTests(PublishingFixtureMixin, TestCase):
         snapshot_unit = release.snapshot["modules"][0]["units"][0]
         self.assertEqual(snapshot_unit["lesson_kind"], LessonKind.MEDIACMS_VIDEO)
         self.assertEqual(
-            snapshot_unit["media"],
-            {"provider": "mediacms_lti", "media_friendly_token": "ak7uPO2Vn"},
+            snapshot_unit["delivery"],
+            {
+                "kind": "mediacms_lti",
+                "media": {
+                    "provider": "mediacms_lti",
+                    "media_friendly_token": "ak7uPO2Vn",
+                },
+            },
         )
+        self.assertNotIn("content", snapshot_unit)
         draft = create_draft_from_release(
             actor=owner,
             organization=organization,
@@ -91,7 +130,10 @@ class PublicationServiceTests(PublishingFixtureMixin, TestCase):
         self.assertIsNone(first.release.snapshot["previous_release_digest"])
         snapshot_unit = first.release.snapshot["modules"][0]["units"][0]
         self.assertEqual(snapshot_unit["id"], str(unit.id))
-        self.assertEqual(snapshot_unit["content"]["document"]["type"], "doc")
+        self.assertEqual(
+            snapshot_unit["delivery"]["content"]["document"]["type"], "doc"
+        )
+        self.assertNotIn("content", snapshot_unit)
         self.assertTrue(verify_release(first.release).valid)
         self.assertTrue(verify_release_chain(revision.course).valid)
 
@@ -216,8 +258,11 @@ class PublicationServiceTests(PublishingFixtureMixin, TestCase):
             revision=draft,
             expected_version=draft.lock_version,
         )
+        reviewer = get_user_model().objects.get(
+            email="publication-reviewer@example.test"
+        )
         draft = approve_revision(
-            actor=owner,
+            actor=reviewer,
             organization=organization,
             revision=draft,
             expected_version=draft.lock_version,

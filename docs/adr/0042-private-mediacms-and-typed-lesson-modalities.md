@@ -8,8 +8,9 @@
 
 La LMS ya preserva dos límites necesarios: `CourseActivity` mantiene la
 secuencia académica de `lesson`, `live_class` y `assessment`; y
-`domain.content` fija un único documento semántico versionado a cada
-`CourseUnit`, con referencias a `AssetVersion` READY de `domain.assets`.
+`domain.content` fija el documento semántico versionado exclusivamente a una
+`CourseUnit` de modalidad `document`, con referencias a `AssetVersion` READY
+de `domain.assets`.
 Crear una actividad distinta por vídeo, LaTeX, Markdown, PDF, diapositivas o
 audio fragmentaría la secuencia y duplicaría contratos de finalización,
 publicación y aprendizaje.
@@ -26,22 +27,23 @@ existe todavía un issuer, JWKS ni registro de plataforma verificable.
    `document`, `mediacms_video`, `latex_source`, `markdown_source`, `pdf`,
    `slides` y `audio`. No se añade un nuevo `ActivityType` ni se cambia la
    identidad de `CourseActivity`.
-2. El archivo sigue perteneciendo a `domain.assets`: los documentos admiten
-   PDF, Markdown, LaTeX y presentaciones PPTX; audio y vídeo conservan sus
-   pipelines especializados. `domain.content` sigue guardando solamente JSON
-   semántico y UUID de versiones READY, nunca buckets, object keys ni enlaces
-   firmados. El renderer entrega el PDF en línea y los demás originales sólo
-   mediante URL temporal autorizada.
+2. La entrega es excluyente y queda fijada en el release: `document` contiene
+   sólo el JSON semántico; `mediacms_video` contiene sólo su binding LTI; y
+   `latex_source`, `markdown_source`, `pdf`, `slides` y `audio` contienen sólo
+   una referencia a una `AssetVersion` READY. `UnitLessonResource` pertenece a
+   `domain.content` porque es el vínculo de autoría a assets, no estructura de
+   curso. Valida organización, estado, MIME y extensión; audio exige además su
+   variante privada de reproducción. Ningún release almacena buckets, object
+   keys, URLs firmadas ni contenido adicional de otra modalidad.
 3. Se instala localmente MediaCMS desde la etiqueta oficial exacta `v8.1.3`,
    commit `a3fe375a8302f5b26fac214ef2346dd92fec7361`. Su Compose se separa de
    `lms_internal`, sólo publica `127.0.0.1:8091`, deshabilita registro,
    catálogo público, compartir y originales, y guarda PostgreSQL, Redis,
    media y estáticos en volúmenes locales.
-4. La modalidad `mediacms_video` abre el flujo de autoría de MediaCMS, pero no
-   habilita un enlace de entrega a estudiantes. El binding LTI/SSO se mantiene
-   explícitamente pendiente hasta disponer de HTTPS público, issuer/JWKS y
-   client registration probados. Un enlace directo eludiría la matrícula y el
-   release fijado, por lo que queda prohibido.
+4. La modalidad `mediacms_video` abre el flujo de autoría de MediaCMS y se
+   entrega sólo mediante el lanzamiento LTI de `domain.learning`, conforme a
+   ADR 0043. Un enlace directo eludiría la matrícula y el release fijado, por
+   lo que queda prohibido.
 5. MediaCMS se consume sin modificar desde su fuente oficial y está licenciado
    bajo GNU AGPL-3.0. La responsable de plataforma debe realizar una revisión
    legal antes de una puesta en producción, de distribuir una imagen derivada o
@@ -52,8 +54,12 @@ existe todavía un issuer, JWKS ni registro de plataforma verificable.
 
 ## Consecuencias
 
-- La interfaz ofrece los seis formatos solicitados al crear una lección sin
-  crear estructuras académicas paralelas.
+- La interfaz ofrece las siete modalidades solicitadas sin crear estructuras
+  académicas paralelas, y no presenta el editor semántico para modalidades que
+  no sean `document`.
+- El schema de publicación v6 usa una unión discriminada `delivery`. Los
+  snapshots v1–v5 permanecen inmutables y el lector los adapta sólo en memoria
+  para conservar la compatibilidad histórica.
 - Lecciones existentes migran a `document`, por lo que sus revisiones y
   snapshots siguen siendo válidos.
 - PDF se previsualiza sin convertir contenido; Markdown y LaTeX nunca se
@@ -70,7 +76,7 @@ existe todavía un issuer, JWKS ni registro de plataforma verificable.
 
 - Seis `ActivityType` independientes: rompe el orden canónico y propaga reglas
   de publicación, progreso y finalización duplicadas.
-- Guardar una URL de MediaCMS en JSON de contenido o en el release: evita
+- Guardar una URL de MediaCMS en JSON de contenido o en el release: elude
   autorización de matrícula, vence o revela la topología de almacenamiento.
 - Activar LTI 1.3 en HTTP local: el propio MediaCMS marca sus cookies LTI como
   `Secure` y `SameSite=None`; sin HTTPS sería un flujo ficticio e inseguro.

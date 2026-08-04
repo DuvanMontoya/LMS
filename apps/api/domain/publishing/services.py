@@ -9,7 +9,10 @@ from django.db import transaction
 from django.utils import timezone
 
 from domain.content.exceptions import ContentDomainError
-from domain.content.services import clone_current_unit_documents
+from domain.content.services import (
+    clone_current_unit_documents,
+    clone_current_unit_lesson_resources,
+)
 from domain.courses.choices import AuthoringStatus, CourseStatus
 from domain.courses.exceptions import (
     CourseAccessDenied,
@@ -362,6 +365,9 @@ def create_draft_from_release(
             actor=actor, source_revision=release.source_revision
         )
         clone_current_unit_documents(
+            actor=actor, units_by_source_id=clone.units_by_source_id
+        )
+        clone_current_unit_lesson_resources(
             actor=actor, units_by_source_id=clone.units_by_source_id
         )
     except CourseRevisionAlreadyOpen as error:

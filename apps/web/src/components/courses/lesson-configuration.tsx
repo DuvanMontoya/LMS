@@ -2,12 +2,16 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Archive,
   BookOpenCheck,
   ExternalLink,
+  FileAudio,
+  FileText,
   GraduationCap,
+  Link2,
+  LoaderCircle,
   Save,
   Search,
   Target,
@@ -15,11 +19,13 @@ import {
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { AssetPickerDialog } from '@/components/assets/asset-picker-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { platformBrowserClient } from '@/lib/api/platform-browser-client';
+import { apiErrorMessage } from '@/lib/api/api-error';
 import type { components } from '@/lib/api/generated/platform';
 import {
   type CourseTopicOption,
@@ -42,6 +48,31 @@ export type LessonConfigurationInput = {
   topicIds: string[];
 };
 
+type LessonResource = {
+  asset_kind: 'audio' | 'document';
+  asset_version_id: string;
+  detected_mime_type: string;
+  extension: string;
+  original_filename: string;
+  size_bytes: number | null;
+  updated_at: string;
+};
+
+type LessonResourceResponse = {
+  lock_version: number;
+  resource: LessonResource | null;
+};
+
+function record(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function resourceLessonKind(kind: Lesson['lesson_kind']) {
+  return ['latex_source', 'markdown_source', 'pdf', 'slides', 'audio'].includes(
+    kind,
+  );
+}
+
 function searchable(value: string) {
   return value
     .normalize('NFD')
@@ -51,23 +82,31 @@ function searchable(value: string) {
 
 export function LessonConfiguration({
   alignedSubjects,
+  courseSlug,
   isSaving,
   lesson,
   mediaCmsAuthoringUrl,
   objectives,
   onArchive,
+  onDeliverySaved,
   onSave,
   organizationSlug,
+  revisionId,
+  revisionVersion,
   topics,
 }: Readonly<{
   alignedSubjects: readonly RevisionSubject[];
+  courseSlug: string;
   isSaving: boolean;
   lesson: Lesson;
   mediaCmsAuthoringUrl?: string;
   objectives: Objective[];
   onArchive: () => void;
+  onDeliverySaved: (lockVersion: number, message: string) => void;
   onSave: (input: LessonConfigurationInput) => Promise<void>;
   organizationSlug: string;
+  revisionId: string;
+  revisionVersion: number;
   topics: CourseTopicOption[];
 }>) {
   const [title, setTitle] = useState(lesson.title);
@@ -75,9 +114,11 @@ export function LessonConfiguration({
   const [duration, setDuration] = useState(
     lesson.estimated_duration_minutes?.toString() ?? '',
   );
-  const [mediaCmsFriendlyToken, setMediaCmsFriendlyToken] = useState(
-    lesson.mediacms_video?.media_friendly_token ?? '',
-  );
+  const [mediaCmsFriendlyToken, setMediaCmsFriendlyToken] = useState(() => {
+    const media = record(lesson.mediacms_video) ? lesson.mediacms_video : null;
+    const token = media?.media_friendly_token;
+    return typeof token === 'string' ? token : '';
+  });
   const [selectedTopicIds, setSelectedTopicIds] = useState(
     lesson.topics.map((item) => item.topic.id),
   );
@@ -85,6 +126,7 @@ export function LessonConfiguration({
     lesson.learning_objectives.map((item) => item.learning_objective.id),
   );
   const [query, setQuery] = useState('');
+  const queryClient = useQueryClient();
   const subjectById = useMemo(
     () =>
       new Map(alignedSubjects.map((item) => [item.subject.id, item] as const)),
@@ -132,6 +174,119 @@ export function LessonConfiguration({
     },
     staleTime: 60_000,
   });
+  const deliveryResource = useQuery({
+    enabled: resourceLessonKind(lesson.lesson_kind),
+    queryFn: async () => {
+      const { data, error, response } = await platformBrowserClient.GET(
+        '/api/v1/organizations/{organization_slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/content/delivery-resource/',
+        {
+          params: {
+            path: {
+              course_slug: courseSlug,
+              organization_slug: organizationSlug,
+              revision_id: revisionId,
+              unit_id: lesson.id,
+            },
+          },
+        },
+      );
+      if (!response.ok || !data) {
+        throw new Error(
+          apiErrorMessage(
+            error,
+            'No fue posible consultar el archivo de la lección.',
+          ),
+        );
+      }
+      return data as unknown as LessonResourceResponse;
+    },
+    queryKey: [
+      'lesson-delivery-resource',
+      organizationSlug,
+      revisionId,
+      lesson.id,
+    ],
+    staleTime: 15_000,
+  });
+  const bindDeliveryResource = useMutation({
+    mutationFn: async (assetVersionId: string) => {
+      const { data, error, response } = await platformBrowserClient.PUT(
+        '/api/v1/organizations/{organization_slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/content/delivery-resource/',
+        {
+          body: {
+            asset_version_id: assetVersionId,
+            expected_version: revisionVersion,
+          },
+          params: {
+            path: {
+              course_slug: courseSlug,
+              organization_slug: organizationSlug,
+              revision_id: revisionId,
+              unit_id: lesson.id,
+            },
+          },
+        },
+      );
+      if (!response.ok || !data) {
+        throw new Error(
+          apiErrorMessage(
+            error,
+            'No fue posible vincular el archivo de la lección.',
+          ),
+        );
+      }
+      return data as unknown as LessonResourceResponse;
+    },
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({
+        queryKey: [
+          'lesson-delivery-resource',
+          organizationSlug,
+          revisionId,
+          lesson.id,
+        ],
+      });
+      onDeliverySaved(data.lock_version, 'Archivo de entrega actualizado.');
+    },
+  });
+  const removeDeliveryResource = useMutation({
+    mutationFn: async () => {
+      const { data, error, response } = await platformBrowserClient.DELETE(
+        '/api/v1/organizations/{organization_slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/content/delivery-resource/',
+        {
+          params: {
+            path: {
+              course_slug: courseSlug,
+              organization_slug: organizationSlug,
+              revision_id: revisionId,
+              unit_id: lesson.id,
+            },
+            query: { expected_version: revisionVersion },
+          },
+        },
+      );
+      if (!response.ok || !data) {
+        throw new Error(
+          apiErrorMessage(
+            error,
+            'No fue posible desvincular el archivo de la lección.',
+          ),
+        );
+      }
+      return data as unknown as LessonResourceResponse;
+    },
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({
+        queryKey: [
+          'lesson-delivery-resource',
+          organizationSlug,
+          revisionId,
+          lesson.id,
+        ],
+      });
+      onDeliverySaved(data.lock_version, 'Archivo de entrega desvinculado.');
+    },
+  });
   const activeTopics =
     activeSubject?.subject.id === primarySubject?.subject.id
       ? topics
@@ -155,6 +310,8 @@ export function LessonConfiguration({
   const hasCurriculumOptions =
     activeTopics.length > 0 || activeObjectives.length > 0;
   const alignmentCount = selectedTopicIds.length + selectedObjectiveIds.length;
+  const deliveryResourceMutationError =
+    bindDeliveryResource.error ?? removeDeliveryResource.error;
 
   function toggle(current: string[], id: string, checked: boolean) {
     return checked
@@ -164,19 +321,21 @@ export function LessonConfiguration({
 
   return (
     <form
-      action={() =>
-        onSave({
+      action={() => {
+        const input = {
           estimatedDurationMinutes: duration ? Number(duration) : null,
           learningObjectiveIds: selectedObjectiveIds,
-          mediaCmsFriendlyToken:
-            lesson.lesson_kind === 'mediacms_video'
-              ? mediaCmsFriendlyToken.trim()
-              : undefined,
           summary,
           title,
           topicIds: selectedTopicIds,
-        })
-      }
+        };
+        return lesson.lesson_kind === 'mediacms_video'
+          ? onSave({
+              ...input,
+              mediaCmsFriendlyToken: mediaCmsFriendlyToken.trim(),
+            })
+          : onSave(input);
+      }}
       className="mt-3 overflow-hidden rounded-xl border bg-card shadow-xs"
     >
       <header className="flex flex-wrap items-start justify-between gap-3 border-b bg-muted/15 px-4 py-4 sm:px-5">
@@ -293,6 +452,92 @@ export function LessonConfiguration({
                   </span>
                 </div>
               </div>
+            ) : null}
+            {resourceLessonKind(lesson.lesson_kind) ? (
+              <section className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      {lesson.lesson_kind === 'audio' ? (
+                        <FileAudio className="size-4 text-primary" />
+                      ) : (
+                        <FileText className="size-4 text-primary" />
+                      )}
+                      Archivo único de la lección
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Esta modalidad no muestra documento académico, texto
+                      adicional ni otros recursos.
+                    </p>
+                  </div>
+                  {bindDeliveryResource.isPending ||
+                  removeDeliveryResource.isPending ? (
+                    <LoaderCircle className="size-4 animate-spin text-primary" />
+                  ) : null}
+                </div>
+                {deliveryResource.isLoading ? (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Consultando archivo vinculado…
+                  </p>
+                ) : deliveryResource.error ? (
+                  <p className="mt-3 text-sm text-destructive">
+                    {deliveryResource.error instanceof Error
+                      ? deliveryResource.error.message
+                      : 'No fue posible consultar el archivo vinculado.'}
+                  </p>
+                ) : deliveryResource.data?.resource ? (
+                  <div className="mt-3 rounded-md border bg-background p-3 text-sm">
+                    <strong className="break-all">
+                      {deliveryResource.data.resource.original_filename}
+                    </strong>
+                    <p className="mt-1 font-mono text-xs text-muted-foreground">
+                      {deliveryResource.data.resource.detected_mime_type} ·{' '}
+                      {deliveryResource.data.resource.asset_version_id}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-amber-700">
+                    Aún no hay archivo. La revisión no podrá publicarse hasta
+                    seleccionar uno.
+                  </p>
+                )}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <AssetPickerDialog
+                    allowedKinds={
+                      lesson.lesson_kind === 'audio' ? ['audio'] : ['document']
+                    }
+                    onInsert={(node) => {
+                      const attrs = record(node.attrs) ? node.attrs : null;
+                      const assetVersionId = attrs?.assetVersionId;
+                      if (typeof assetVersionId === 'string') {
+                        bindDeliveryResource.mutate(assetVersionId);
+                      }
+                    }}
+                    resourceOnly
+                    slug={organizationSlug}
+                    triggerLabel="Seleccionar o subir archivo"
+                  />
+                  {deliveryResource.data?.resource ? (
+                    <Button
+                      disabled={removeDeliveryResource.isPending}
+                      onClick={() => removeDeliveryResource.mutate()}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      <Link2 data-icon="inline-start" />
+                      Desvincular
+                    </Button>
+                  ) : null}
+                  {deliveryResourceMutationError ? (
+                    <p className="basis-full text-sm text-destructive">
+                      {deliveryResourceMutationError instanceof Error
+                        ? deliveryResourceMutationError.message
+                        : 'No fue posible actualizar el archivo de la lección.'}
+                    </p>
+                  ) : null}
+                </div>
+              </section>
             ) : null}
           </div>
         </section>

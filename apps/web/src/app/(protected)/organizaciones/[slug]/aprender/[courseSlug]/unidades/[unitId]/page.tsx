@@ -1,6 +1,7 @@
 import { BookOpenText } from 'lucide-react';
 
 import { AcademicDocument } from '@/components/content/academic-document';
+import { AcademicAsset } from '@/components/content/academic-asset';
 import { LearningPositionTracker } from '@/components/learning/learning-position-tracker';
 import { MediaCMSVideoPlayer } from '@/components/learning/mediacms-video-player';
 import {
@@ -10,16 +11,18 @@ import {
 import { LearningUnitControls } from '@/components/learning/learning-unit-controls';
 import { Badge } from '@/components/ui/badge';
 import { parseAssetDescriptors } from '@/lib/assets/descriptors';
+import type { LMSUnitAcademicDocumentVersion2 } from '@/lib/content/generated/unit-document-v2';
 import {
   getEnrollmentForCourse,
   getLearningOutline,
   getLearningUnit,
 } from '@/lib/learning/server';
-import { requirePublishedUnit } from '@/lib/publishing/snapshot';
 
 function record(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
+
+type AcademicDocumentValue = Parameters<typeof AcademicDocument>[0]['document'];
 
 export default async function LearningUnitPage({
   params,
@@ -32,13 +35,42 @@ export default async function LearningUnitPage({
     getLearningUnit(slug, enrollment.enrollment_id, unitId),
     getLearningOutline(slug, enrollment.enrollment_id),
   ]);
-  const publishedUnit = requirePublishedUnit({
-    ...data.payload.unit,
-    content: { document: data.payload.content },
-    learning_objectives: data.payload.learning_objectives,
-    module: data.payload.module,
-    topics: data.payload.topics,
-  });
+  const unit = record(data.payload.unit) ? data.payload.unit : null;
+  const lessonModule = record(data.payload.module) ? data.payload.module : null;
+  const delivery = record(data.payload.delivery) ? data.payload.delivery : null;
+  if (!unit || !lessonModule || !delivery || typeof unit.title !== 'string') {
+    throw new Error('El contrato de entrega de la lección es inválido.');
+  }
+  const lessonKind =
+    typeof unit.lesson_kind === 'string' ? unit.lesson_kind : '';
+  const isDocument = delivery.kind === 'document';
+  const isMediaCMSVideo =
+    delivery.kind === 'mediacms_lti' &&
+    record(delivery.media) &&
+    delivery.media.provider === 'mediacms_lti';
+  const isAsset =
+    delivery.kind === 'asset' && typeof delivery.asset_version_id === 'string';
+  const document =
+    isDocument && record(delivery.content) && record(delivery.content.document)
+      ? (delivery.content
+          .document as unknown as LMSUnitAcademicDocumentVersion2)
+      : null;
+  const assetVersionId = isAsset ? String(delivery.asset_version_id) : null;
+  const assetDescriptors = parseAssetDescriptors(data.payload.assets);
+  const assetDescriptor = assetVersionId
+    ? assetDescriptors.find(
+        (asset) => asset.asset_version_id === assetVersionId,
+      )
+    : undefined;
+  if (assetVersionId && !assetDescriptor) {
+    throw new Error(
+      'No se encontró el descriptor privado del archivo de la lección.',
+    );
+  }
+  const assetDelivery =
+    assetVersionId && assetDescriptor
+      ? { assetVersionId, descriptor: assetDescriptor }
+      : null;
   const navigation = data.payload.navigation;
   const previous = record(navigation.previous) ? navigation.previous : null;
   const next = record(navigation.next) ? navigation.next : null;
@@ -50,9 +82,6 @@ export default async function LearningUnitPage({
     record(data.payload.unit) && typeof data.payload.unit.status === 'string'
       ? data.payload.unit.status
       : 'not_started';
-  const hasMediaCMSVideo =
-    record(data.payload.media) &&
-    data.payload.media.provider === 'mediacms_lti';
   const unitNumber = outlineData.outline.modules
     .flatMap((module) => module.units)
     .findIndex((unit) => unit.id === unitId);
@@ -91,28 +120,41 @@ export default async function LearningUnitPage({
         outlineHref={outlineHref}
         positionLabel={`Lección ${Math.max(1, unitNumber + 1)} de ${totalUnits}`}
         releaseNumber={data.payload.release_number}
-        title={publishedUnit.title}
+        title={unit.title}
       >
         <article className="learning-player__lesson">
           <header className="learning-player__lesson-heading">
             <p>
-              Módulo {publishedUnit.module.position} ·{' '}
-              {publishedUnit.module.title}
+              Módulo {String(lessonModule.position ?? '')} ·{' '}
+              {String(lessonModule.title ?? '')}
             </p>
-            <h1>{publishedUnit.title}</h1>
-            {publishedUnit.summary ? <div>{publishedUnit.summary}</div> : null}
-            {publishedUnit.topics.length ? (
+            <h1>{unit.title}</h1>
+            {isDocument && typeof unit.summary === 'string' && unit.summary ? (
+              <div>{unit.summary}</div>
+            ) : null}
+            {isDocument &&
+            Array.isArray(data.payload.topics) &&
+            data.payload.topics.length ? (
               <div className="learning-player__topics">
-                {publishedUnit.topics.map((topic) => (
-                  <Badge key={topic.id} variant="outline">
-                    {topic.title}
+                {data.payload.topics.map((topic) => (
+                  <Badge
+                    key={
+                      record(topic) && typeof topic.id === 'string'
+                        ? topic.id
+                        : String(topic)
+                    }
+                    variant="outline"
+                  >
+                    {record(topic) && typeof topic.title === 'string'
+                      ? topic.title
+                      : 'Tema'}
                   </Badge>
                 ))}
               </div>
             ) : null}
           </header>
 
-          {hasMediaCMSVideo ? (
+          {isMediaCMSVideo ? (
             <MediaCMSVideoPlayer
               enrollmentId={enrollment.enrollment_id}
               slug={slug}
@@ -120,19 +162,41 @@ export default async function LearningUnitPage({
             />
           ) : null}
 
-          <div className="learning-player__document">
-            <AcademicDocument
-              assets={parseAssetDescriptors(data.payload.assets)}
-              document={publishedUnit.content.document}
-              refreshContext={{
-                enrollmentId: enrollment.enrollment_id,
-                slug,
-                unitId,
-              }}
-            />
-          </div>
+          {isDocument && document ? (
+            <div className="learning-player__document">
+              <AcademicDocument
+                assets={assetDescriptors}
+                document={document as AcademicDocumentValue}
+                refreshContext={{
+                  enrollmentId: enrollment.enrollment_id,
+                  slug,
+                  unitId,
+                }}
+              />
+            </div>
+          ) : null}
 
-          {publishedUnit.learning_objectives.length ? (
+          {assetDelivery ? (
+            <div className="learning-player__delivery-resource">
+              <AcademicAsset
+                attrs={{
+                  assetVersionId: assetDelivery.assetVersionId,
+                  label: unit.title,
+                }}
+                descriptor={assetDelivery.descriptor}
+                kind={lessonKind === 'audio' ? 'audio' : 'document'}
+                refreshContext={{
+                  enrollmentId: enrollment.enrollment_id,
+                  slug,
+                  unitId,
+                }}
+              />
+            </div>
+          ) : null}
+
+          {isDocument &&
+          Array.isArray(data.payload.learning_objectives) &&
+          data.payload.learning_objectives.length ? (
             <details className="learning-player__objectives">
               <summary>
                 <BookOpenText />
@@ -142,8 +206,19 @@ export default async function LearningUnitPage({
                 </div>
               </summary>
               <ul>
-                {publishedUnit.learning_objectives.map((objective) => (
-                  <li key={objective.id}>{objective.statement}</li>
+                {data.payload.learning_objectives.map((objective) => (
+                  <li
+                    key={
+                      record(objective) && typeof objective.id === 'string'
+                        ? objective.id
+                        : String(objective)
+                    }
+                  >
+                    {record(objective) &&
+                    typeof objective.statement === 'string'
+                      ? objective.statement
+                      : 'Objetivo de aprendizaje'}
+                  </li>
                 ))}
               </ul>
             </details>

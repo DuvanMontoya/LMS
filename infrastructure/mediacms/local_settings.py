@@ -48,6 +48,21 @@ ALLOW_MEDIA_REPLACEMENT = False
 # a persistent signing key, and real platform registration are configured.
 USE_RBAC = True
 USE_LTI = True
+# This is a server-to-server, bearer-only validation gate.  It runs for every
+# protected source, encoded file or HLS segment and intentionally has no
+# positive cache: an enrollment suspension, revocation or release upgrade must
+# take effect on the next request.  Docker's documented host gateway reaches
+# the local LMS without publishing another port.
+LMS_MEDIA_ACCESS_VALIDATION_URL = os.environ.get(
+    "LMS_MEDIA_ACCESS_VALIDATION_URL",
+    "http://host.docker.internal:8010/api/v1/lti/media-access/",
+)
+LMS_MEDIA_ACCESS_VALIDATION_TIMEOUT_SECONDS = float(
+    os.environ.get("LMS_MEDIA_ACCESS_VALIDATION_TIMEOUT_SECONDS", "2")
+)
+LMS_MEDIA_ACCESS_SESSION_TTL_SECONDS = int(
+    os.environ.get("LMS_MEDIA_ACCESS_SESSION_TTL_SECONDS", "28800")
+)
 
 REDIS_LOCATION = (
     "redis://:"

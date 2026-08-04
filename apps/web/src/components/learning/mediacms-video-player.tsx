@@ -49,10 +49,15 @@ export function MediaCMSVideoPlayer({
 
   useEffect(() => {
     const controller = new AbortController();
-    void requestLaunch(controller.signal).catch(() => {
-      if (!controller.signal.aborted) setState({ status: 'error' });
-    });
-    return () => controller.abort();
+    const timer = window.setTimeout(() => {
+      void requestLaunch(controller.signal).catch(() => {
+        if (!controller.signal.aborted) setState({ status: 'error' });
+      });
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [reloadKey, requestLaunch]);
 
   return (

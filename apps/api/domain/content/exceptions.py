@@ -18,6 +18,14 @@ class ContentNotEditable(ContentDomainError):
     code = "content_not_editable"
 
 
+class ContentNotApplicable(ContentDomainError):
+    code = "content_not_applicable"
+
+
+class ContentDeliveryInvalid(ContentDomainError):
+    code = "content_delivery_invalid"
+
+
 class ContentDocumentConflict(ContentDomainError):
     code = "content_conflict"
 
