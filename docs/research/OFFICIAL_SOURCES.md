@@ -207,3 +207,14 @@ No se usaron blogs, tutoriales, previews ni tags flotantes como autoridad.
 
 No se usaron tutoriales, blogs, previews, paquetes Premium ni etiquetas
 flotantes como autoridad.
+
+## Lecciones fuente y matemática integrada — consulta 2026-08-04
+
+| Tema | Fuente oficial | Evidencia aplicada |
+| --- | --- | --- |
+| Tiptap Input Rules | https://tiptap.dev/docs/editor/api/input-rules | conversión de delimitadores durante la autoría |
+| Tiptap Extension API | https://tiptap.dev/docs/editor/extensions/custom-extensions/create-new/extension | reglas propias sin schema paralelo |
+| MathJax typesetting | https://docs.mathjax.org/en/latest/web/typeset.html | representación local de matemática inline y bloque |
+| react-markdown 10.1.0 | https://www.npmjs.com/package/react-markdown | componentes React, plugins remark y HTML omitido |
+| remark-math 6.0.0 | https://github.com/remarkjs/remark-math | delimitadores matemáticos en Markdown |
+| Registro npm | https://registry.npmjs.org/ | versiones exactas, peers y licencias de react-markdown/remark |

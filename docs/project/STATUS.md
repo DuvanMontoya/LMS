@@ -1,5 +1,51 @@
 # Project status
 
+## Lecciones fuente, carga de contenidos y estructura — verificación local 2026-08-04
+
+- Los doce archivos de `Leciones de prueba` quedaron representados en la
+  revisión draft del curso de validación: diez recursos privados READY, un
+  vídeo MediaCMS procesado y vinculado, y `flashcards.csv` fijado dentro de la
+  lección semántica. Los SHA-256 de los diez recursos y del CSV coinciden con
+  los archivos locales; la revisión contiene doce lecciones y conserva la
+  clase en vivo preexistente.
+- `latex_source` y `markdown_source` ya no son sólo descargas. La entrega al
+  estudiante lee el descriptor temporal autorizado y representa la fuente como
+  una lección web. No compila LaTeX, no genera PDF, no ejecuta TikZ y no guarda
+  HTML derivado. Los gráficos TeX no interpretados muestran una limitación
+  visible y la fuente original permanece disponible.
+- El editor de documentos eliminó los controles `Fórmula`/`Ecuación` y el panel
+  MathLive separado. `$…$` y `$$…$$` se convierten a los nodos matemáticos
+  canónicos antes del guardado explícito y MathJax los representa en el mismo
+  contenido.
+- La estructura usa una jerarquía más compacta, métricas sobrias, creación de
+  módulos progresiva, filas de actividad limpias, estados visibles y títulos
+  reales para las doce lecciones. No se inventaron alineaciones curriculares.
+- Se añadieron con pin exacto `react-markdown 10.1.0`, `remark-gfm 4.0.1` y
+  `remark-math 6.0.0`. La evaluación, compatibilidad, owner y alternativa de
+  retirada están documentados; LaTeX.js y DOMPurify fueron probados y retirados
+  por incompatibilidad con las fuentes reales y por no ser necesarios.
+- La verificación visual confirmó antes del reinicio la carga de recursos, el
+  guardado de contenido y el render matemático en autoría/vista previa. Tras el
+  reinicio, la herramienta de navegador bloqueó `localhost` por política
+  interna; no se eludió. La batería automatizada y el build son la evidencia
+  final de código de esta iteración.
+- Pasaron `pnpm web:test` (41 archivos, 116 pruebas), lint, TypeScript,
+  sincronización de tipos de contenido, instalación con lockfile congelado,
+  Prettier sobre todos los archivos modificados, `git diff --check` y el build
+  de producción Next (21 páginas estáticas y todas las rutas dinámicas).
+- La suite PostgreSQL de contenido pasó 26/27 y encontró un límite preexistente:
+  `test_outline_and_readiness_use_bounded_eager_queries` observó exactamente 15
+  consultas, mientras la aserción exige menos de 15. Esta iteración no modifica
+  consultas ni código backend; una repetición aislada agotó el tiempo durante
+  la preparación de la base temporal. No se relajó el umbral.
+- El `web:format:check` global sigue señalando únicamente
+  `public/vendor/pdfjs/pdf.worker.min.mjs`, un artefacto minificado no modificado;
+  los doce archivos TypeScript/TSX cambiados pasan Prettier. `pnpm audit --prod`
+  informa tres deudas transitivas fuera de las dependencias nuevas: `fast-uri`
+  `<3.1.5` vía Ajv, `brace-expansion` 4.x `<5.0.9` vía Sentry y PostCSS
+  `<=8.5.22` vía Next. Deben cerrarse en la actualización dedicada de sus
+  dependencias propietarias, sin overrides globales improvisados.
+
 ## Documentación oficial, OpenAPI y portal Zensical — verificado localmente y en CI 2026-08-04
 
 - Se añadió `documentation/` con portal Zensical `0.0.51` fijado por uv,
@@ -97,6 +143,23 @@
   `info` sin regenerar el archivo versionado. `platform:client:generate` y su
   comprobación inmediata pasaron; TypeScript ya era idéntico y sólo cambió el
   snapshot JSON. La próxima ejecución remota verificará ese contrato cerrado.
+
+## Autoría LaTeX integrada y estructura de curso — en validación 2026-08-04
+
+- **Decisión:** ADR 0046 elimina de los documentos académicos los botones y el
+  panel separado de `Fórmula`/`Ecuación`. La persona escribe `$…$` o `$$…$$`
+  directamente en el contenido; las reglas de Tiptap ya existentes lo
+  convierten a nodos semánticos y MathJax local lo representa en el navegador.
+  El schema, las versiones append-only y la validación de seguridad no cambian.
+- **Alcance:** `latex_source` conserva su significado de archivo `.tex`
+  completo y exclusivo según ADR 0042; no es una herramienta matemática. Los
+  contratos MathJSON de evaluaciones permanecen fuera de este cambio.
+- **UX/UI:** la ruta de estructura compacta la creación de módulos, refuerza la
+  jerarquía de módulos y actividades, comunica la preparación de cada entrega
+  con una señal visual sobria y reduce contenedores y bordes redundantes.
+- **Validación pendiente de este ciclo:** carga de los materiales locales,
+  suites focalizadas, typecheck/lint/formato, Chromium de escritorio, teclado,
+  axe y viewport de 390 px.
 
 ## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
 

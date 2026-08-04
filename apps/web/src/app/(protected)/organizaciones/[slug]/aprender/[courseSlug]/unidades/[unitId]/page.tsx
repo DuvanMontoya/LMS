@@ -2,6 +2,7 @@ import { AcademicDocument } from '@/components/content/academic-document';
 import { AcademicAsset } from '@/components/content/academic-asset';
 import { LearningPositionTracker } from '@/components/learning/learning-position-tracker';
 import { MediaCMSVideoPlayer } from '@/components/learning/mediacms-video-player';
+import { SourceLessonRenderer } from '@/components/learning/source-lesson-renderer';
 import {
   LearningPlayerNavigation,
   LearningPlayerShell,
@@ -67,6 +68,8 @@ export default async function LearningUnitPage({
     assetVersionId && assetDescriptor
       ? { assetVersionId, descriptor: assetDescriptor }
       : null;
+  const isSourceLesson =
+    lessonKind === 'latex_source' || lessonKind === 'markdown_source';
   const navigation = data.payload.navigation;
   const previous = record(navigation.previous) ? navigation.previous : null;
   const next = record(navigation.next) ? navigation.next : null;
@@ -131,7 +134,15 @@ export default async function LearningUnitPage({
             </div>
           ) : null}
 
-          {assetDelivery ? (
+          {assetDelivery && isSourceLesson ? (
+            <SourceLessonRenderer
+              descriptor={assetDelivery.descriptor}
+              lessonKind={lessonKind}
+              title={unit.title}
+            />
+          ) : null}
+
+          {assetDelivery && !isSourceLesson ? (
             <div className="learning-player__delivery-resource">
               <AcademicAsset
                 attrs={{

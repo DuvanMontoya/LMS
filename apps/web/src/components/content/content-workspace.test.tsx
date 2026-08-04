@@ -78,5 +78,14 @@ describe('ContentWorkspace editable mode', () => {
     expect(
       screen.getByRole('button', { name: 'Guardar contenido' }),
     ).toBeDisabled();
+    expect(
+      screen.queryByRole('button', { name: 'Fórmula' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Ecuación' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Escribe LaTeX directamente en el contenido/i),
+    ).toBeInTheDocument();
   });
 });

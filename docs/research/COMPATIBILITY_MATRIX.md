@@ -130,3 +130,16 @@ cambiar cualquier pin. LocalStack 4.14.0 no es recomendación productiva.
 
 La metadata compatible no sustituye `uv sync --locked`, `pnpm install
 --frozen-lockfile`, migración PostgreSQL, suites, build ni navegador real.
+
+## Renderizado de lecciones fuente — 2026-08-04
+
+| Combinación | Resultado | Evidencia requerida |
+| --- | --- | --- |
+| React 19.2.8 + `react-markdown 10.1.0` | Compatible por peer `react >=18` | TypeScript, Vitest y Next build |
+| `react-markdown 10.1.0` + `remark-gfm 4.0.1` + `remark-math 6.0.0` | Compatible en unified/remark | tablas/listas, delimitadores matemáticos y HTML crudo omitido |
+| `remark-math 6.0.0` + MathJax 4.1.3 local | Compatible mediante adaptador React explícito | matemática inline/bloque y ausencia de CDN |
+| `.tex` UTF-8 + parser de lectura acotado + MathJax 4.1.3 | Compatible sin compilación | corpus real, límites y aviso visible para TikZ no representado |
+
+La compatibilidad no significa soporte general de todos los paquetes TeX. La
+fuente original permanece descargable y cualquier entorno no interpretado debe
+quedar visible como limitación, nunca desaparecer silenciosamente.

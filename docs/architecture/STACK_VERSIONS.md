@@ -120,3 +120,15 @@ Celery continúa en 5.6.3. `django-storages`, python-magic, MinIO, HLS, OCR y
 transcripción no se incorporaron. LocalStack 4.14.0 es un pin de compatibilidad
 local anterior al requisito de token de versiones 2026.07; reevaluar antes de
 actualizar.
+
+## Lectura web de fuentes de lección — 2026-08-04
+
+| Componente | Versión exacta | Función |
+| --- | --- | --- |
+| react-markdown | 10.1.0 | árbol React seguro desde Markdown; HTML crudo omitido |
+| remark-gfm | 4.0.1 | tablas, tareas, tachado y autolinks GFM |
+| remark-math | 6.0.0 | reconocimiento de matemática inline/bloque para MathJax 4.1.3 |
+
+El `.tex` completo se procesa con un parser local de lectura y el MathJax ya
+aprobado; no se instala compilador TeX, LaTeX.js, TikZ runtime ni conversor a
+HTML persistido.

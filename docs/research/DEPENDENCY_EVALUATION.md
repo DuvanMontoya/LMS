@@ -200,3 +200,25 @@ Se rechazaron FullCalendar Premium/Scheduler, paquetes estándar v6 separados,
 autenticación, Google Calendar/Meet, Zoom/Jitsi, IA, transcripción y aplicación
 móvil. Los registros npm/PyPI y documentación oficial se consultaron el
 2026-07-31. Todos los pins son estables y no prerelease.
+
+## Renderizado de lecciones fuente — 2026-08-04
+
+| Dependencia exacta | Problema resuelto | Licencia/riesgo | Owner | Alternativa o retirada |
+| --- | --- | --- | --- | --- |
+| `react-markdown 10.1.0` | Convertir una lección Markdown completa en elementos React sin persistir HTML | MIT; requiere política explícita para HTML, enlaces e imágenes | content web | sustituir el adaptador por un parser CommonMark conservando el `AssetVersion` |
+| `remark-gfm 4.0.1` | Tablas, listas de tareas, tachado y autolinks usados por los documentos reales | MIT; extensión de CommonMark | content web | retirar GFM y conservar Markdown básico |
+| `remark-math 6.0.0` | Reconocer `$…$` y `$$…$$` dentro de Markdown para entregarlos al MathJax local | MIT; no valida por sí solo el LaTeX | content web | tokenizer local acotado sobre el mismo renderer |
+
+Las tres versiones están fijadas. `react-markdown` declara peer React `>=18`,
+satisfecho por React 19.2.8; GFM y math operan en el pipeline unificado sin DOM
+crudo. `skipHtml` descarta HTML de la fuente y el adaptador de imágenes evita
+peticiones remotas implícitas. El límite de lectura es 10 MiB y la descarga
+privada continúa siendo secundaria. No se añadió compilador LaTeX, ejecución de
+TikZ, KaTeX, rehype-raw ni sanitizer porque no resuelven el objetivo y ampliarían
+la superficie. `latex.js 0.12.6` y `dompurify 3.4.13` se probaron y retiraron:
+las clases/paquetes de los `.tex` reales exceden el subconjunto compatible.
+
+La instalación conservó visibles los avisos peer preexistentes de la cadena
+Vite/Rolldown y el lifecycle bloqueado de `@sentry/cli`; no se aprobaron scripts
+ni se usaron flags inseguros. Lint, tipos, tests y build son el control de
+compatibilidad de este adaptador.

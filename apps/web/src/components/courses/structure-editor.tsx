@@ -83,8 +83,9 @@ const lessonKindOptions: readonly {
   },
   {
     kind: 'latex_source',
-    label: 'LaTeX (.tex)',
-    description: 'Archivo fuente UTF-8; nunca se ejecuta en el servidor.',
+    label: 'Archivo LaTeX (.tex)',
+    description:
+      'Documento fuente completo para consulta; no es un editor de ecuaciones.',
   },
   {
     kind: 'markdown_source',
@@ -557,7 +558,7 @@ export function StructureEditor({
       <h2 className="sr-only" id="course-structure">
         Estructura del curso
       </h2>
-      <div className="grid overflow-hidden rounded-xl border bg-card shadow-xs sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid overflow-hidden rounded-2xl border bg-card shadow-xs sm:grid-cols-2 xl:grid-cols-4">
         {[
           {
             label: 'Módulos',
@@ -581,16 +582,20 @@ export function StructureEditor({
           },
         ].map((metric, index) => (
           <div
-            className="border-b p-4 last:border-b-0 sm:even:border-l xl:border-b-0 xl:border-l xl:first:border-l-0"
+            className="relative border-b px-4 py-3.5 last:border-b-0 sm:even:border-l xl:border-b-0 xl:border-l xl:first:border-l-0"
             key={metric.label}
           >
             <div className="flex items-baseline justify-between gap-3">
-              <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+              <span className="text-[0.6875rem] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
                 {String(index + 1).padStart(2, '0')} · {metric.label}
               </span>
-              <strong className="text-xl tabular-nums">{metric.value}</strong>
+              <strong className="text-2xl leading-none font-semibold tracking-tight tabular-nums">
+                {metric.value}
+              </strong>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">{metric.note}</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {metric.note}
+            </p>
           </div>
         ))}
       </div>
@@ -604,26 +609,25 @@ export function StructureEditor({
         </Alert>
       ) : null}
       {canManage && editable ? (
-        <div className="mt-5 rounded-xl border bg-card p-4 shadow-xs md:flex md:items-end md:justify-between md:gap-6">
-          <div className="mb-4 md:mb-0">
-            <p className="text-xs font-semibold tracking-wider text-primary uppercase">
-              {modules.some((module) => module.status === 'active')
-                ? 'Amplía el recorrido'
-                : 'Primer paso de esta revisión'}
-            </p>
-            <h3 className="mt-1 font-semibold">
-              {modules.some((module) => module.status === 'active')
-                ? 'Añade otro bloque pedagógico'
-                : 'Crea un bloque pedagógico'}
-            </h3>
-            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              Cada módulo reúne una etapa del aprendizaje. Después agregarás las
-              actividades en el orden exacto en que las verá el estudiante.
-            </p>
-          </div>
+        <details className="group mt-4 overflow-hidden rounded-xl border bg-card shadow-xs">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 marker:hidden transition-colors hover:bg-muted/20">
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">
+                {modules.some((module) => module.status === 'active')
+                  ? 'Organiza el recorrido por módulos'
+                  : 'Crea el primer módulo del curso'}
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                Cada módulo agrupa una etapa del aprendizaje.
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-2 text-sm font-semibold text-primary">
+              <Plus className="size-4" /> Nuevo módulo
+            </span>
+          </summary>
           <form
             action={addModule}
-            className="flex min-w-0 flex-1 flex-wrap gap-3 md:max-w-xl"
+            className="flex min-w-0 flex-wrap gap-3 border-t bg-muted/10 p-4"
           >
             <label className="academic-field min-w-56 flex-1">
               Nombre del módulo
@@ -641,29 +645,34 @@ export function StructureEditor({
               Crear módulo
             </Button>
           </form>
-        </div>
+        </details>
       ) : null}
       {modules.length ? (
         <ol className="mt-5 space-y-4">
           {modules.map((module, moduleIndex) => (
             <li
-              className="overflow-hidden rounded-lg border bg-card shadow-xs"
+              className="overflow-hidden rounded-2xl border bg-card shadow-xs"
               key={module.id}
             >
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b bg-muted/20 px-5 py-4">
-                <div>
-                  <p className="text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase">
-                    Módulo {module.position ?? 'archivado'}
-                  </p>
-                  <h3 className="mt-1 text-base font-semibold">
-                    {module.title}
-                  </h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {statusLabel(module.status)} · {module.activities.length}{' '}
-                    {module.activities.length === 1
-                      ? 'actividad'
-                      : 'actividades'}
-                  </p>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/15 px-4 py-3.5 sm:px-5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-xl border bg-background text-sm font-semibold text-primary shadow-xs">
+                    {module.position ?? '—'}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[0.6875rem] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                      Módulo
+                    </p>
+                    <h3 className="truncate text-base font-semibold">
+                      {module.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {statusLabel(module.status)} · {module.activities.length}{' '}
+                      {module.activities.length === 1
+                        ? 'actividad'
+                        : 'actividades'}
+                    </p>
+                  </div>
                 </div>
                 {canManage && editable ? (
                   <div className="flex flex-wrap gap-2">
@@ -759,7 +768,7 @@ export function StructureEditor({
                   </form>
                 </details>
               ) : null}
-              <section className="border-b bg-muted/5 px-5 py-4">
+              <section className="bg-muted/[0.03] px-4 py-4 sm:px-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h4 className="font-semibold">
@@ -770,12 +779,15 @@ export function StructureEditor({
                       mismo orden.
                     </p>
                   </div>
-                  <Badge variant="outline">
+                  <Badge
+                    className="rounded-full bg-background"
+                    variant="outline"
+                  >
                     {module.activities.length} actividades
                   </Badge>
                 </div>
                 {module.activities.length ? (
-                  <ol className="mt-3 grid gap-2">
+                  <ol className="mt-3 divide-y overflow-hidden rounded-xl border bg-background">
                     {module.activities.map((activity, activityIndex) => {
                       const lesson = activity.lesson_unit_id
                         ? module.units.find(
@@ -788,10 +800,10 @@ export function StructureEditor({
                           : undefined;
                       return (
                         <li
-                          className="flex items-start gap-3 rounded-lg border bg-background p-3 shadow-xs"
+                          className="group/activity flex items-start gap-3 p-3.5 transition-colors hover:bg-muted/[0.08] sm:p-4"
                           key={activity.id}
                         >
-                          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                          <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-primary/10 bg-primary/[0.07] text-primary">
                             {activity.activity_type === 'live_class' ? (
                               <Video className="size-4" />
                             ) : activity.activity_type === 'assessment' ? (
@@ -802,14 +814,17 @@ export function StructureEditor({
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <strong>
+                              <strong className="leading-5">
                                 {activity.position}. {activity.title}
                               </strong>
-                              <Badge className="rounded" variant="outline">
+                              <Badge className="rounded-full" variant="outline">
                                 {activityTypeLabel(activity.activity_type)}
                               </Badge>
                               {lesson ? (
-                                <Badge className="rounded" variant="secondary">
+                                <Badge
+                                  className="rounded-full"
+                                  variant="secondary"
+                                >
                                   {lessonKindLabel(lesson.lesson_kind)}
                                 </Badge>
                               ) : null}
@@ -852,8 +867,20 @@ export function StructureEditor({
                             ) : null}
                             {lesson ? (
                               <div className="mt-2">
-                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                  <span>
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                                  <span className="inline-flex items-center gap-1.5 font-medium text-foreground/75">
+                                    <span
+                                      aria-hidden="true"
+                                      className={
+                                        [
+                                          'document_ready',
+                                          'mediacms_ready',
+                                          'resource_ready',
+                                        ].includes(lesson.delivery_status)
+                                          ? 'size-1.5 rounded-full bg-emerald-500'
+                                          : 'size-1.5 rounded-full bg-amber-500'
+                                      }
+                                    />
                                     {deliveryStatusLabels[
                                       lesson.delivery_status
                                     ] ?? lesson.delivery_status}
@@ -898,10 +925,10 @@ export function StructureEditor({
                                       </Button>
                                     ) : null}
                                     {canManage && editable ? (
-                                      <details className="w-full overflow-hidden rounded-lg border bg-muted/10">
+                                      <details className="w-full overflow-hidden rounded-xl border bg-muted/[0.08]">
                                         <summary
                                           aria-label={`Configurar lección «${lesson.title}»`}
-                                          className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm font-medium marker:hidden hover:bg-muted/25"
+                                          className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-3 text-sm font-medium marker:hidden transition-colors hover:bg-muted/25"
                                         >
                                           <span className="flex items-center gap-2">
                                             <Settings2 className="size-4 text-primary" />
@@ -911,7 +938,7 @@ export function StructureEditor({
                                             Información · temas · objetivos
                                           </span>
                                         </summary>
-                                        <div className="border-t p-2 sm:p-3">
+                                        <div className="border-t bg-background p-2 sm:p-3">
                                           <LessonConfiguration
                                             alignedSubjects={outline.subjects}
                                             courseSlug={courseSlug}
@@ -1046,13 +1073,13 @@ export function StructureEditor({
                   <div
                     className={
                       canManageAssessments
-                        ? 'mt-3 grid gap-2 xl:grid-cols-3'
-                        : 'mt-3 grid gap-2 lg:grid-cols-2'
+                        ? 'mt-3 grid gap-2 rounded-xl border border-dashed bg-background/70 p-2 xl:grid-cols-3'
+                        : 'mt-3 grid gap-2 rounded-xl border border-dashed bg-background/70 p-2 lg:grid-cols-2'
                     }
                   >
-                    <details className="group rounded-lg border bg-background">
-                      <summary className="flex cursor-pointer list-none items-start gap-3 px-3 py-3 marker:hidden hover:bg-muted/20">
-                        <span className="rounded-md bg-primary/10 p-1.5 text-primary">
+                    <details className="group rounded-lg border border-transparent bg-background transition-colors open:border-border open:shadow-xs">
+                      <summary className="flex cursor-pointer list-none items-start gap-3 rounded-lg px-3 py-3 marker:hidden transition-colors hover:bg-muted/25">
+                        <span className="rounded-lg bg-primary/10 p-1.5 text-primary">
                           <BookOpenText className="size-4" />
                         </span>
                         <span>
@@ -1060,13 +1087,13 @@ export function StructureEditor({
                             Añadir lección
                           </span>
                           <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                            Contenido asincrónico y alineación
+                            Documento, archivo o multimedia
                           </span>
                         </span>
                       </summary>
                       <form
                         action={(formData) => addUnit(module.id, formData)}
-                        className="grid gap-3 border-t p-3"
+                        className="grid gap-3 border-t bg-muted/[0.06] p-3"
                       >
                         <label className="academic-field">
                           Título de la lección
@@ -1085,7 +1112,7 @@ export function StructureEditor({
                           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                             {lessonKindOptions.map((option) => (
                               <label
-                                className="cursor-pointer rounded-md border p-2.5 text-sm transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                                className="cursor-pointer rounded-lg border bg-background p-2.5 text-sm transition-all hover:border-primary/30 has-[:checked]:border-primary has-[:checked]:bg-primary/[0.06] has-[:checked]:shadow-xs"
                                 key={option.kind}
                               >
                                 <input

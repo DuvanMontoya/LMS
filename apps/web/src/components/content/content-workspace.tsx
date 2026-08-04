@@ -16,7 +16,6 @@ import {
   PencilLine,
   Quote,
   Save,
-  Sigma,
   Table2,
   Undo2,
   Unlink,
@@ -52,6 +51,8 @@ import {
 } from '@/lib/content/api';
 import { findDuplicateNodeIds } from '@/lib/content/editor/extensions';
 import { interactiveContentEditorExtensions } from '@/lib/content/editor/interactive-extensions';
+import { normalizeLatexDelimiters } from '@/lib/content/editor/latex-delimiters';
+import { canonicalEditorDocument } from '@/lib/content/editor/canonical-document';
 import type { LMSUnitAcademicDocumentVersion2 } from '@/lib/content/generated/unit-document-v2';
 import {
   contentSafetyError,
@@ -61,8 +62,6 @@ import {
 import { cn } from '@/lib/utils';
 
 import { AcademicDocument } from './academic-document';
-import { MathJaxFormula } from './mathjax-formula';
-import { MathLiveField } from './math-live-field';
 
 type ContentCurrent = components['schemas']['ContentCurrent'];
 type ContentVersion = components['schemas']['ContentVersionSummary'];
@@ -341,11 +340,6 @@ function EditableContent({
   const [pedagogyPanel, setPedagogyPanel] = useState(false);
   const [pedagogyKind, setPedagogyKind] = useState('definition');
   const [pedagogyTitle, setPedagogyTitle] = useState('');
-  const [mathPanel, setMathPanel] = useState(false);
-  const [mathDisplay, setMathDisplay] = useState(false);
-  const [mathLatex, setMathLatex] = useState('');
-  const [mathLabel, setMathLabel] = useState('');
-  const [mathPosition, setMathPosition] = useState<number>();
   const [codePanel, setCodePanel] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState('plaintext');
   const [codeCaption, setCodeCaption] = useState('');
@@ -398,19 +392,15 @@ function EditableContent({
         'El documento no es compatible con el schema del editor. Se conserva intacto en el servidor y no puede guardarse desde esta pantalla.',
       );
     },
-    onSelectionUpdate: ({ editor: activeEditor }) => {
-      const selection = activeEditor.state.selection;
-      const node = activeEditor.state.doc.nodeAt(selection.from);
-      if (!node || !['inlineMath', 'displayMath'].includes(node.type.name))
-        return;
-      setMathPosition(selection.from);
-      setMathDisplay(node.type.name === 'displayMath');
-      setMathLatex(String(node.attrs.latex ?? ''));
-      setMathLabel(String(node.attrs.label ?? ''));
-      setMathPanel(true);
-    },
     onUpdate: ({ editor: activeEditor, transaction }) => {
-      const validation = validateContentDocument(activeEditor.getJSON());
+      if (
+        !transaction.getMeta('latexDelimiterNormalization') &&
+        normalizeLatexDelimiters(activeEditor)
+      )
+        return;
+      const validation = validateContentDocument(
+        canonicalEditorDocument(activeEditor.getJSON()),
+      );
       if (validation.valid) setPreviewDocument(validation.document);
       if (transaction.getMeta('addToHistory') === false) return;
       setDirtyState('Cambios sin guardar');
@@ -422,7 +412,7 @@ function EditableContent({
     if (!editor || incompatible || dirtyState === 'Guardando') return;
     setError('');
     setMessage('');
-    const json = editor.getJSON();
+    const json = canonicalEditorDocument(editor.getJSON());
     const duplicates = findDuplicateNodeIds(json);
     if (duplicates.length) {
       setDirtyState('Error');
@@ -525,62 +515,6 @@ function EditableContent({
         cause instanceof Error ? cause.message : 'No fue posible cargar.',
       );
     }
-  }
-
-  function applyMath() {
-    const latex = mathLatex.trim();
-    if (!latex || latex.length > 10_000) {
-      setError('La fórmula debe contener entre 1 y 10 000 caracteres.');
-      return;
-    }
-    const mathSafetyError = contentSafetyError({
-      attrs: { latex },
-      type: mathDisplay ? 'displayMath' : 'inlineMath',
-    });
-    if (mathSafetyError) {
-      setError(mathSafetyError);
-      return;
-    }
-    if (
-      mathDisplay &&
-      mathLabel.trim() &&
-      !/^[A-Za-z0-9][A-Za-z0-9_.:-]*$/.test(mathLabel.trim())
-    ) {
-      setError(
-        'La etiqueta matemática debe comenzar con letra o número y usar sólo letras ASCII, números, punto, guion, guion bajo o dos puntos.',
-      );
-      return;
-    }
-    const attrs = {
-      label: mathDisplay ? mathLabel.trim() || null : undefined,
-      latex,
-      nodeId: crypto.randomUUID(),
-    };
-    if (mathPosition !== undefined) {
-      editor!.commands.command(({ state, tr }) => {
-        const node = state.doc.nodeAt(mathPosition);
-        if (!node || !['inlineMath', 'displayMath'].includes(node.type.name))
-          return false;
-        tr.setNodeMarkup(mathPosition, undefined, {
-          ...node.attrs,
-          label: mathDisplay ? mathLabel.trim() || null : undefined,
-          latex,
-        });
-        return true;
-      });
-    } else {
-      const chain = mathDisplay
-        ? blockInsertionChain(editor!)
-        : editor!.chain().focus();
-      chain
-        .insertContent({
-          attrs,
-          type: mathDisplay ? 'displayMath' : 'inlineMath',
-        })
-        .run();
-    }
-    setMathPanel(false);
-    setMathPosition(undefined);
   }
 
   return (
@@ -767,30 +701,6 @@ function EditableContent({
               Bloque académico
             </EditorButton>
             <EditorButton
-              onClick={() => {
-                setMathPosition(undefined);
-                setMathDisplay(false);
-                setMathLatex('');
-                setMathLabel('');
-                setMathPanel(true);
-              }}
-            >
-              <Sigma />
-              Fórmula
-            </EditorButton>
-            <EditorButton
-              onClick={() => {
-                setMathPosition(undefined);
-                setMathDisplay(true);
-                setMathLatex('');
-                setMathLabel('');
-                setMathPanel(true);
-              }}
-            >
-              <Sigma />
-              Ecuación
-            </EditorButton>
-            <EditorButton
               active={codePanel}
               onClick={() => setCodePanel((value) => !value)}
             >
@@ -825,6 +735,12 @@ function EditableContent({
               Rehacer
             </EditorButton>
           </div>
+
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            Escribe LaTeX directamente en el contenido: <code>$…$</code> en
+            línea o <code>$$…$$</code> en un párrafo independiente. El navegador
+            lo renderiza automáticamente.
+          </p>
 
           {linkPanel ? (
             <div className="mt-2 flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-end">
@@ -927,63 +843,6 @@ function EditableContent({
               >
                 Insertar bloque
               </Button>
-            </div>
-          ) : null}
-
-          {mathPanel ? (
-            <div className="mt-2 space-y-3 rounded-lg border bg-muted/20 p-4">
-              <div className="flex flex-wrap gap-4">
-                <label>
-                  <input
-                    checked={!mathDisplay}
-                    name="math-kind"
-                    onChange={() => setMathDisplay(false)}
-                    type="radio"
-                  />{' '}
-                  En línea
-                </label>
-                <label>
-                  <input
-                    checked={mathDisplay}
-                    name="math-kind"
-                    onChange={() => setMathDisplay(true)}
-                    type="radio"
-                  />{' '}
-                  En bloque
-                </label>
-              </div>
-              <MathLiveField onChange={setMathLatex} value={mathLatex} />
-              {mathDisplay ? (
-                <label className="block text-sm font-medium">
-                  Etiqueta opcional
-                  <Input
-                    className="mt-1.5"
-                    maxLength={120}
-                    onChange={(event) => setMathLabel(event.target.value)}
-                    value={mathLabel}
-                  />
-                </label>
-              ) : null}
-              <div className="rounded-lg border bg-card p-3">
-                <p className="mb-2 text-sm font-medium">Vista previa segura</p>
-                <MathJaxFormula display={mathDisplay} latex={mathLatex} />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={applyMath} type="button">
-                  <Sigma />
-                  Aplicar matemática
-                </Button>
-                <Button
-                  onClick={() => {
-                    setMathPanel(false);
-                    setMathPosition(undefined);
-                  }}
-                  type="button"
-                  variant="outline"
-                >
-                  Cancelar
-                </Button>
-              </div>
             </div>
           ) : null}
 
