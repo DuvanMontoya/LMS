@@ -44,7 +44,8 @@ Set-Location $root
 switch ($Action) {
     'Validate' {
         Invoke-Compose @('config', '--quiet')
-        Get-Content infrastructure/observability/grafana/dashboards/*.json | ConvertFrom-Json | Out-Null
+        Get-ChildItem -File infrastructure/observability/grafana/dashboards -Filter '*.json' |
+            ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json | Out-Null }
         Write-Host 'Observability Compose and dashboard JSON validate.'
     }
     'Pull' { Invoke-Compose (@('pull') + $services) }

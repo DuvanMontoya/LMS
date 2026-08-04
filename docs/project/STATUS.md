@@ -61,6 +61,13 @@
   eliminó ninguna prueba ni smoke posterior. Sintaxis PowerShell, YAML e
   inicialización local pasaron; falta la ejecución integral remota de esta
   corrección antes de declarar CI verde.
+- La ejecución integral `30883992826` confirmó el arranque de PostgreSQL,
+  Redis, Celery, LocalStack, ClamAV, buckets privados y media worker, pero
+  falló al validar los dashboards: `Get-Content` emitía líneas individuales y
+  `ConvertFrom-Json` no puede interpretar por separado el dashboard JSON con
+  formato multilínea. La validación lee ahora cada archivo completo con `-Raw`;
+  se comprobará localmente y en la siguiente ejecución remota sin excluir
+  ningún dashboard ni smoke.
 
 ## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
 
