@@ -54,9 +54,13 @@
   mostró que `mediacms:init` también exige el árbol fuente local de MediaCMS,
   que no corresponde a CI. CI usa ahora `InitializeLtiKey`, una operación
   mínima que crea sólo la clave RSA ignorada y no requiere fuente, contenedor
-  ni credenciales MediaCMS. Sintaxis PowerShell, YAML e inicialización local
-  pasaron; falta la ejecución integral remota de esta corrección antes de
-  declarar CI verde.
+  ni credenciales MediaCMS. La ejecución `30883622272` confirmó producción e
+  infraestructura, pero reveló un orden incorrecto: inicializaba S3 antes de
+  iniciar el perfil `media` con LocalStack y ClamAV.
+- El perfil `media` se construye e inicia ahora antes de `storage:init`; no se
+  eliminó ninguna prueba ni smoke posterior. Sintaxis PowerShell, YAML e
+  inicialización local pasaron; falta la ejecución integral remota de esta
+  corrección antes de declarar CI verde.
 
 ## MediaCMS privado y modalidades de lección — operativo localmente 2026-08-03
 

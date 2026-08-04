@@ -56,12 +56,12 @@ jobs:
           pnpm run async:up
           pnpm run async:status
           pnpm run async:smoke
+          pnpm run media:build
+          pnpm run media:up
           pnpm run storage:validate
           pnpm run storage:init
           pnpm run storage:status
           pnpm run storage:smoke
-          pnpm run media:build
-          pnpm run media:up
           pnpm run media:status
           pnpm run media:smoke
           pnpm run observability:validate
