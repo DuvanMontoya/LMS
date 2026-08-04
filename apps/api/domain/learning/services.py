@@ -208,18 +208,53 @@ def _materialize_course_group_activities(cohort: LearningCohort) -> None:
 def _initialize_activity_progress(
     *, progress: CourseProgress, cohort: LearningCohort, actor: object, now: datetime
 ) -> None:
-    for group_activity in cohort.activity_instances.all():
+    previous_by_source_id = {
+        row.group_activity.source_activity_id: row
+        for row in ActivityProgress.objects.filter(course_progress=progress)
+        .select_related("group_activity")
+        .order_by("state_changed_at", "id")
+    }
+    existing_activity_ids = set(
+        ActivityProgress.objects.filter(
+            course_progress=progress,
+            group_activity__course_group=cohort,
+        ).values_list("group_activity_id", flat=True)
+    )
+    for group_activity in cohort.activity_instances.exclude(
+        id__in=existing_activity_ids
+    ):
+        previous = previous_by_source_id.get(group_activity.source_activity_id)
         status = (
-            ActivityProgressStatus.LOCKED
-            if group_activity.availability_rules
-            else ActivityProgressStatus.AVAILABLE
+            previous.status
+            if previous is not None
+            else (
+                ActivityProgressStatus.LOCKED
+                if group_activity.availability_rules
+                else ActivityProgressStatus.AVAILABLE
+            )
         )
+        evidence = {
+            **(previous.evidence if previous is not None else {}),
+            "initialized_from_release": cohort.release.snapshot_digest,
+            **(
+                {"continued_from_activity_progress_id": str(previous.id)}
+                if previous is not None
+                else {}
+            ),
+        }
         activity_progress = ActivityProgress.objects.create(
             course_progress=progress,
             group_activity=group_activity,
             status=status,
-            evidence={"initialized_from_release": cohort.release.snapshot_digest},
-            source=ActivityProgressSource.MANUAL,
+            evidence=evidence,
+            source=(
+                previous.source
+                if previous is not None
+                else ActivityProgressSource.MANUAL
+            ),
+            policy_version=(previous.policy_version if previous is not None else 1),
+            started_at=(previous.started_at if previous is not None else None),
+            completed_at=(previous.completed_at if previous is not None else None),
             state_changed_at=now,
             state_changed_by=actor,
         )
@@ -227,13 +262,22 @@ def _initialize_activity_progress(
             activity_progress=activity_progress,
             previous_status="",
             new_status=status,
-            source=ActivityProgressSource.MANUAL,
-            policy_version=1,
-            evidence={"initialized": True},
+            source=activity_progress.source,
+            policy_version=activity_progress.policy_version,
+            evidence={
+                "initialized": True,
+                **(
+                    {"continued_from_activity_progress_id": str(previous.id)}
+                    if previous is not None
+                    else {}
+                ),
+            },
             actor=actor,
             occurred_at=now,
         )
-    _refresh_activity_availability(progress=progress, actor=actor, now=now)
+    _refresh_activity_availability(
+        progress=progress, actor=actor, now=now, cohort=cohort
+    )
 
 
 @transaction.atomic
@@ -790,6 +834,21 @@ def _assign_cohort(
             "lock_version",
         ]
     )
+    release_assignment = enrollment.current_release_assignment
+    if (
+        release_assignment is not None
+        and release_assignment.release_id == cohort.release_id
+    ):
+        progress = CourseProgress.objects.select_for_update().get(
+            release_assignment=release_assignment
+        )
+        _initialize_activity_progress(
+            progress=progress, cohort=cohort, actor=actor, now=now
+        )
+        _recalculate_progress(progress, now)
+        progress.lock_version += 1
+        progress.full_clean()
+        progress.save()
     return assignment
 
 
@@ -1501,13 +1560,20 @@ def _transition_activity_progress(
 
 
 def _refresh_activity_availability(
-    *, progress: CourseProgress, actor: object, now: datetime
+    *,
+    progress: CourseProgress,
+    actor: object,
+    now: datetime,
+    cohort: LearningCohort | None = None,
 ) -> None:
-    rows = list(
+    rows_query = (
         ActivityProgress.objects.select_for_update()
         .select_related("group_activity")
         .filter(course_progress=progress)
     )
+    if cohort is not None:
+        rows_query = rows_query.filter(group_activity__course_group=cohort)
+    rows = list(rows_query)
     by_source_id = {str(row.group_activity.source_activity_id): row for row in rows}
     completed = {
         ActivityProgressStatus.COMPLETED,
@@ -1702,6 +1768,12 @@ def completion_projection(
                 ).select_related("group_activity")
             )
         )
+    cached_enrollment = progress.release_assignment._state.fields_cache.get(
+        "enrollment"
+    )
+    cohort_id = cached_enrollment.cohort_id if cached_enrollment is not None else None
+    if cohort_id is not None:
+        rows = [row for row in rows if row.group_activity.course_group_id == cohort_id]
     completed_statuses = {
         ActivityProgressStatus.COMPLETED,
         ActivityProgressStatus.PASSED,
@@ -1839,11 +1911,15 @@ def completion_projection(
 
 
 def _recalculate_progress(progress: CourseProgress, now: datetime) -> None:
-    activity_rows = list(
-        ActivityProgress.objects.filter(course_progress=progress).select_related(
-            "group_activity"
+    activity_query = ActivityProgress.objects.filter(
+        course_progress=progress
+    ).select_related("group_activity")
+    cohort_id = progress.release_assignment.enrollment.cohort_id
+    if cohort_id is not None:
+        activity_query = activity_query.filter(
+            group_activity__course_group_id=cohort_id
         )
-    )
+    activity_rows = list(activity_query)
     if activity_rows:
         completed_statuses = {
             ActivityProgressStatus.COMPLETED,

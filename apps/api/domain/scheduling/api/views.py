@@ -21,9 +21,10 @@ from domain.courses.policies import (
 )
 from domain.learning.contracts import course_group_for_scheduling
 from domain.learning.models import CourseGroupActivity, LearningCohort
+from domain.organizations.capabilities import Capability
 from domain.organizations.choices import MembershipStatus
 from domain.organizations.models import Membership, Organization
-from domain.organizations.policies import active_membership
+from domain.organizations.policies import active_membership, has_capability
 from domain.organizations.selectors import organization_visible_to
 from domain.scheduling.calendar_extensions import external_calendar_events
 from domain.scheduling.course_activities import (
@@ -52,9 +53,9 @@ from domain.scheduling.services import (
     create_event_series,
     end_live_session,
     expel_participant,
-    mute_participant_audio,
     join_live_session,
     materialize_course_group_live_classes,
+    mute_participant_audio,
     reschedule_occurrence,
     start_live_recording,
     start_live_session,
@@ -595,6 +596,9 @@ class ParticipantOptionListView(APIView):
             {
                 "membership_id": membership.id,
                 "display": membership.user.get_full_name() or membership.user.email,
+                "can_host": has_capability(
+                    membership.user, organization, Capability.LIVE_SESSION_HOST
+                ),
             }
             for membership in memberships
         ]
@@ -909,9 +913,15 @@ class LiveAttendanceView(APIView):
     )
     def get(self, request: Request, slug: str, session_id: uuid.UUID) -> Response:
         organization = _organization(request, slug)
-        detail = live_session_detail(
-            actor=request.user, organization=organization, session_id=session_id
-        )
+        try:
+            detail = live_session_detail(
+                actor=request.user, organization=organization, session_id=session_id
+            )
+        except LiveSession.DoesNotExist:
+            return Response(
+                {"code": "not_found", "detail": "Clase no encontrada."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         if not detail["canModerate"]:
             return Response(
                 {"code": "permission_denied", "detail": "Acceso denegado."},

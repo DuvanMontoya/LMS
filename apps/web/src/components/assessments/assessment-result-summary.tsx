@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { AsyncResultStatus } from '@/components/assessments/async-result-status';
+import { LatexText } from '@/components/content/latex-text';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { AssessmentResult } from '@/lib/assessments/server';
@@ -89,9 +90,15 @@ export function AssessmentResultSummary({
                     {String(entry.score ?? '0')} /{' '}
                     {String(entry.maximum ?? '0')} puntos
                   </strong>
-                  {entry.message ? <p>{String(entry.message)}</p> : null}
+                  {entry.message ? (
+                    <p>
+                      <LatexText value={String(entry.message)} />
+                    </p>
+                  ) : null}
                   {entry.manual_feedback ? (
-                    <blockquote>{String(entry.manual_feedback)}</blockquote>
+                    <blockquote>
+                      <LatexText value={String(entry.manual_feedback)} />
+                    </blockquote>
                   ) : null}
                 </div>
               </li>

@@ -271,7 +271,9 @@ def update_question_revision(
 def _question_transition_allowed(from_status: str, to_status: str) -> bool:
     return (from_status, to_status) in {
         (AuthoringStatus.DRAFT, AuthoringStatus.IN_REVIEW),
+        (AuthoringStatus.DRAFT, AuthoringStatus.APPROVED),
         (AuthoringStatus.CHANGES_REQUESTED, AuthoringStatus.IN_REVIEW),
+        (AuthoringStatus.CHANGES_REQUESTED, AuthoringStatus.APPROVED),
         (AuthoringStatus.IN_REVIEW, AuthoringStatus.CHANGES_REQUESTED),
         (AuthoringStatus.IN_REVIEW, AuthoringStatus.APPROVED),
     }

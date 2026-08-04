@@ -1,6 +1,9 @@
 'use client';
 
+import { FileText, Minus, Plus, RotateCcw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { Button } from '@/components/ui/button';
 
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 
@@ -43,8 +46,32 @@ function PdfPage({
   scale: number;
 }>) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const [nearViewport, setNearViewport] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      typeof window.IntersectionObserver === 'undefined',
+  );
+  const [renderedHeight, setRenderedHeight] = useState<number | null>(null);
 
   useEffect(() => {
+    const page = pageRef.current;
+    if (!page) return;
+    if (typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setNearViewport(true);
+        observer.disconnect();
+      },
+      { rootMargin: '1000px 0px' },
+    );
+    observer.observe(page);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!nearViewport) return;
     let cancelled = false;
     let renderTask: { cancel: () => void; promise: Promise<void> } | null =
       null;
@@ -66,6 +93,7 @@ function PdfPage({
         canvas.height = Math.ceil(viewport.height * pixelRatio);
         canvas.style.width = `${Math.ceil(viewport.width)}px`;
         canvas.style.height = `${Math.ceil(viewport.height)}px`;
+        setRenderedHeight(Math.ceil(viewport.height));
         renderTask = page.render({
           canvas,
           canvasContext: context,
@@ -84,15 +112,32 @@ function PdfPage({
       cancelled = true;
       renderTask?.cancel();
     };
-  }, [availableWidth, document, onError, pageNumber, scale]);
+  }, [availableWidth, document, nearViewport, onError, pageNumber, scale]);
 
   return (
-    <div className="flex min-h-32 justify-center px-3 py-3 sm:px-6 sm:py-5">
-      <canvas
-        aria-label={`Página ${pageNumber}`}
-        className="max-w-none bg-white shadow-sm"
-        ref={canvasRef}
-      />
+    <div
+      aria-label={`Página ${pageNumber}`}
+      className="flex justify-center px-3 py-3 sm:px-6 sm:py-5"
+      ref={pageRef}
+      style={{
+        minHeight:
+          renderedHeight === null
+            ? Math.max(160, Math.round(availableWidth * 1.36 * scale))
+            : renderedHeight,
+      }}
+    >
+      {nearViewport ? (
+        <canvas
+          aria-label={`Contenido de la página ${pageNumber}`}
+          className="max-w-none bg-white shadow-sm"
+          ref={canvasRef}
+        />
+      ) : (
+        <div
+          aria-hidden="true"
+          className="pdf-document-reader__page-skeleton"
+        />
+      )}
     </div>
   );
 }
@@ -193,20 +238,67 @@ export function PdfDocumentReader({
         <div aria-hidden="true" className="pdf-document-reader__skeleton" />
       ) : null}
       {document && !failed ? (
-        <div className="pdf-document-reader__pages" ref={pagesRef}>
-          {availableWidth > 0
-            ? Array.from({ length: document.numPages }, (_, index) => (
-                <PdfPage
-                  availableWidth={availableWidth}
-                  document={document}
-                  key={`${document.fingerprints[0]}-${index + 1}-${scale}-${availableWidth}`}
-                  onError={handleError}
-                  pageNumber={index + 1}
-                  scale={scale}
-                />
-              ))
-            : null}
-        </div>
+        <>
+          <header className="pdf-document-reader__toolbar">
+            <div>
+              <FileText />
+              <span>
+                <strong>{title}</strong>
+                <small>
+                  {document.numPages}{' '}
+                  {document.numPages === 1 ? 'página' : 'páginas'}
+                </small>
+              </span>
+            </div>
+            <div aria-label="Zoom del documento" role="group">
+              <Button
+                aria-label="Reducir zoom"
+                disabled={scale <= MIN_SCALE}
+                onClick={() => setScale((current) => clampScale(current - 0.1))}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <Minus />
+              </Button>
+              <span aria-live="polite">{Math.round(scale * 100)} %</span>
+              <Button
+                aria-label="Aumentar zoom"
+                disabled={scale >= MAX_SCALE}
+                onClick={() => setScale((current) => clampScale(current + 0.1))}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <Plus />
+              </Button>
+              <Button
+                aria-label="Restablecer zoom"
+                disabled={scale === INITIAL_SCALE}
+                onClick={() => setScale(INITIAL_SCALE)}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <RotateCcw />
+              </Button>
+            </div>
+          </header>
+          <div className="pdf-document-reader__pages" ref={pagesRef}>
+            {availableWidth > 0
+              ? Array.from({ length: document.numPages }, (_, index) => (
+                  <PdfPage
+                    availableWidth={availableWidth}
+                    document={document}
+                    key={`${document.fingerprints[0]}-${index + 1}-${scale}-${availableWidth}`}
+                    onError={handleError}
+                    pageNumber={index + 1}
+                    scale={scale}
+                  />
+                ))
+              : null}
+          </div>
+        </>
       ) : null}
       {failed ? (
         <p className="p-5 text-sm text-destructive" role="alert">

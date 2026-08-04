@@ -402,10 +402,12 @@ class CohortListCreateView(APIView):
                 enrollment_count=Count(
                     "enrollment_assignments",
                     filter=Q(enrollment_assignments__ended_at__isnull=True),
+                    distinct=True,
                 ),
                 staff_count=Count(
                     "staff_assignments",
                     filter=Q(staff_assignments__ended_at__isnull=True),
+                    distinct=True,
                 ),
                 sync_learner_count=Count(
                     "academic_group__roster",
@@ -413,6 +415,7 @@ class CohortListCreateView(APIView):
                         academic_group__roster__role="learner",
                         academic_group__roster__status="active",
                     ),
+                    distinct=True,
                 ),
             ),
         ).qs

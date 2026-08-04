@@ -219,12 +219,25 @@ class QuestionVersionSerializer(serializers.ModelSerializer):
 
 
 class ApprovedQuestionVersionOptionSerializer(serializers.ModelSerializer):
+    bank_id = serializers.UUIDField(source="question.bank_id", read_only=True)
     bank_name = serializers.CharField(source="question.bank.name", read_only=True)
     code = serializers.CharField(source="question.code", read_only=True)
+    question_id = serializers.UUIDField(read_only=True)
+    usage_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = QuestionVersion
-        fields = ("id", "number", "type", "public", "bank_name", "code")
+        fields = (
+            "id",
+            "question_id",
+            "bank_id",
+            "number",
+            "type",
+            "public",
+            "bank_name",
+            "code",
+            "usage_count",
+        )
         read_only_fields = fields
 
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Maximize2, MonitorUp, Minimize2 } from 'lucide-react';
+import { LoaderCircle, Maximize2, MonitorUp, Minimize2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import type Hls from 'hls.js';
@@ -27,6 +27,7 @@ export function MediaCMSVideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [playerSize, setPlayerSize] = useState<PlayerSize>('normal');
   const [qualityOptions, setQualityOptions] = useState<QualityOption[]>([]);
   const [selectedQuality, setSelectedQuality] = useState('unavailable');
@@ -41,31 +42,35 @@ export function MediaCMSVideoPlayer({
     const video = videoRef.current as HTMLVideoElement;
     if (!video) return;
     setFailed(false);
+    setLoading(true);
     setQualityOptions([]);
     setSelectedQuality('unavailable');
     setQualityDescription('Detectando las resoluciones disponibles.');
 
     async function attach() {
       try {
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = source;
+          setQualityDescription(
+            'Este navegador selecciona automáticamente la resolución HLS.',
+          );
+          return;
+        }
         const { default: HlsClient } = await import('hls.js');
         if (!active) return;
         if (!HlsClient.isSupported()) {
-          if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = source;
-            setQualityDescription(
-              'Este navegador selecciona automáticamente la resolución HLS.',
-            );
-            return;
-          }
           setFailed(true);
+          setLoading(false);
           return;
         }
         const hlsClient = new HlsClient({
           backBufferLength: 30,
-          capLevelToPlayerSize: false,
+          capLevelToPlayerSize: true,
           enableWorker: true,
           lowLatencyMode: false,
-          maxBufferLength: 30,
+          maxBufferLength: 20,
+          startFragPrefetch: true,
+          startLevel: -1,
         });
         hls = hlsClient;
         hlsRef.current = hlsClient;
@@ -97,6 +102,7 @@ export function MediaCMSVideoPlayer({
             .sort((left, right) => right.height - left.height)
             .map(({ height, id }) => ({ id, label: `${height}p` }));
           setQualityOptions(options);
+          setLoading(false);
 
           if (options.length <= 1) {
             setSelectedQuality(
@@ -110,24 +116,10 @@ export function MediaCMSVideoPlayer({
             return;
           }
 
-          const preferred1080p = options.find(
-            (option) => option.label === '1080p',
-          );
-          if (preferred1080p) {
-            hlsClient.startLevel = preferred1080p.id;
-            hlsClient.currentLevel = preferred1080p.id;
-            hlsClient.nextLevel = preferred1080p.id;
-            setSelectedQuality(String(preferred1080p.id));
-            setQualityDescription(
-              '1080p es la resolución inicial porque está disponible.',
-            );
-            return;
-          }
-
           hlsClient.startLevel = -1;
           setSelectedQuality('auto');
           setQualityDescription(
-            'Resolución automática según la conexión; puedes elegir una disponible.',
+            'Inicio rápido con resolución automática según la conexión y el tamaño del reproductor.',
           );
         });
         hlsClient.on(HlsClient.Events.ERROR, (_event, data) => {
@@ -138,12 +130,16 @@ export function MediaCMSVideoPlayer({
             hls?.recoverMediaError();
           } else {
             setFailed(true);
+            setLoading(false);
           }
         });
         hlsClient.loadSource(source);
         hlsClient.attachMedia(video);
       } catch {
-        if (active) setFailed(true);
+        if (active) {
+          setFailed(true);
+          setLoading(false);
+        }
       }
     }
 
@@ -187,15 +183,31 @@ export function MediaCMSVideoPlayer({
       className="learning-native-video"
       data-size={playerSize}
     >
-      <video
-        className="aspect-video w-full bg-black"
-        controls
-        controlsList="nodownload"
-        onError={() => setFailed(true)}
-        playsInline
-        preload="metadata"
-        ref={videoRef}
-      />
+      <div className="learning-native-video__surface">
+        <video
+          className="aspect-video w-full bg-black"
+          controls
+          controlsList="nodownload"
+          onCanPlay={() => setLoading(false)}
+          onError={() => {
+            setFailed(true);
+            setLoading(false);
+          }}
+          onLoadedMetadata={() => setLoading(false)}
+          playsInline
+          preload="metadata"
+          ref={videoRef}
+        />
+        {loading && !failed ? (
+          <div className="learning-native-video__loading" role="status">
+            <LoaderCircle className="animate-spin" />
+            <span>
+              <strong>Preparando el video</strong>
+              <small>Cargando solo lo necesario para comenzar</small>
+            </span>
+          </div>
+        ) : null}
+      </div>
       <div className="learning-native-video__settings">
         <fieldset aria-label="Tamaño del reproductor">
           <legend>Tamaño</legend>

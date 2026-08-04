@@ -1,27 +1,80 @@
-import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import {
+  cp,
+  mkdir,
+  readFile,
+  readdir,
+  realpath,
+  writeFile,
+} from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const source = join(root, 'node_modules', 'mathjax');
 const target = join(root, 'public', 'vendor', 'mathjax');
-const assets = [
+const files = [
   'tex-svg.js',
   join('sre', 'speech-worker.js'),
   join('ui', 'safe.js'),
 ];
 const check = process.argv.includes('--check');
 
-for (const asset of assets) {
-  const from = join(source, asset);
-  const to = join(target, asset);
+const sreMathmapsSource = join(source, 'sre', 'mathmaps');
+const sreMathmaps = (
+  await readdir(sreMathmapsSource, { recursive: true, withFileTypes: true })
+)
+  .filter((entry) => entry.isFile())
+  .map((entry) => join(entry.parentPath, entry.name).slice(source.length + 1));
+
+const newCmSource = join(
+  await realpath(source),
+  '..',
+  '@mathjax',
+  'mathjax-newcm-font',
+  'svg',
+  'dynamic',
+);
+const newCmDynamicFiles = (
+  await readdir(newCmSource, { recursive: true, withFileTypes: true })
+)
+  .filter((entry) => entry.isFile())
+  .map((entry) => ({
+    from: join(entry.parentPath, entry.name),
+    to: join(
+      target,
+      'fonts',
+      'mathjax-newcm',
+      'svg',
+      'dynamic',
+      join(entry.parentPath, entry.name).slice(newCmSource.length + 1),
+    ),
+  }));
+
+const assets = [
+  ...files.map((asset) => ({
+    from: join(source, asset),
+    label: asset,
+    to: join(target, asset),
+  })),
+  ...sreMathmaps.map((asset) => ({
+    from: join(source, asset),
+    label: asset,
+    to: join(target, asset),
+  })),
+  ...newCmDynamicFiles.map((asset) => ({
+    ...asset,
+    label: asset.to.slice(target.length + 1),
+  })),
+];
+
+for (const { from, label, to } of assets) {
   if (check) {
     const [expected, actual] = await Promise.all([
       readFile(from),
       readFile(to).catch(() => null),
     ]);
     if (!actual || !expected.equals(actual)) {
-      throw new Error(`MathJax asset is missing or stale: ${asset}`);
+      throw new Error(`MathJax asset is missing or stale: ${label}`);
     }
     continue;
   }

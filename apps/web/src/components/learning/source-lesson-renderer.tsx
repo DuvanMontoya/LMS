@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Download, FileCode2, FileText } from 'lucide-react';
+import { Download, FileCode2, FileText } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -8,6 +8,7 @@ import remarkMath from 'remark-math';
 
 import { LatexText } from '@/components/content/latex-text';
 import { MathJaxFormula } from '@/components/content/mathjax-formula';
+import { TikzPreview } from '@/components/learning/tikz-preview';
 import { Button } from '@/components/ui/button';
 import type { AssetAccessDescriptor } from '@/lib/assets/api';
 import { formatBytes } from '@/lib/assets/labels';
@@ -78,7 +79,7 @@ function LatexLesson({ source }: Readonly<{ source: string }>) {
               block.level <= 2 ? 'h2' : block.level === 3 ? 'h3' : 'h4';
             return (
               <Heading className={classes} key={key}>
-                {block.text}
+                <LatexText value={block.text} />
               </Heading>
             );
           }
@@ -149,22 +150,11 @@ function LatexLesson({ source }: Readonly<{ source: string }>) {
             );
           if (block.type === 'visual')
             return (
-              <aside
-                className="my-7 flex gap-3 rounded-xl border border-amber-300/60 bg-amber-50 p-4 text-sm leading-6 text-amber-950"
+              <TikzPreview
+                caption={block.caption}
                 key={key}
-              >
-                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                <div>
-                  <p className="font-semibold">
-                    Gráfico definido por la fuente
-                  </p>
-                  <p>{block.caption}</p>
-                  <p className="mt-1 text-amber-800">
-                    Se conserva en el archivo original; esta vista web no
-                    ejecuta ni compila TikZ.
-                  </p>
-                </div>
-              </aside>
+                source={block.source}
+              />
             );
           return (
             <p className="text-pretty" key={key}>

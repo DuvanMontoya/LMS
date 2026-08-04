@@ -585,8 +585,11 @@ class AssessmentApiSecurityTests(AssessmentFixtureMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["id"], str(context["question_version"].id))
+        self.assertEqual(response.data[0]["question_id"], str(context["question"].id))
+        self.assertEqual(response.data[0]["bank_id"], str(context["bank"].id))
         self.assertEqual(response.data[0]["bank_name"], context["bank"].name)
         self.assertEqual(response.data[0]["code"], context["question"].code)
+        self.assertEqual(response.data[0]["usage_count"], 1)
 
     def test_feedback_modes_expose_none_score_only_or_full_after_grading(
         self,

@@ -10,7 +10,8 @@ import {
   PanelLeftOpen,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { CourseCurriculum } from '@/components/learning/course-curriculum';
 import {
@@ -199,6 +200,11 @@ export function LearningPlayerNavigation({
   next: LearningPlayerNavigationItem | null;
   previous: LearningPlayerNavigationItem | null;
 }>) {
+  const router = useRouter();
+  useEffect(() => {
+    if (previous) router.prefetch(previous.href);
+    if (next) router.prefetch(next.href);
+  }, [next, previous, router]);
   return (
     <nav aria-label={label} className="learning-player__navigation">
       <div className="learning-player__navigation-previous">

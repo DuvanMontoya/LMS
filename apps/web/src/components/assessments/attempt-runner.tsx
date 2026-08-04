@@ -1,6 +1,16 @@
 'use client';
 
-import { ArrowDown, ArrowUp, CheckCircle2, Save, Timer } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  CheckCircle2,
+  Flag,
+  PanelRightClose,
+  PanelRightOpen,
+  Save,
+  Send,
+  Timer,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
@@ -112,6 +122,15 @@ export function AttemptRunner({
     ),
   );
   const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [marked, setMarked] = useState<Record<string, boolean>>({});
+  const [navigatorCollapsed, setNavigatorCollapsed] = useState(false);
+  useEffect(() => {
+    const compactViewport = window.matchMedia('(max-width: 1023px)');
+    const synchronize = () => setNavigatorCollapsed(compactViewport.matches);
+    synchronize();
+    compactViewport.addEventListener('change', synchronize);
+    return () => compactViewport.removeEventListener('change', synchronize);
+  }, []);
   const [confirming, setConfirming] = useState(false);
   const save = useAssessmentMutation(
     ({ itemId, response }: { itemId: string; response: unknown }) =>
@@ -125,6 +144,9 @@ export function AttemptRunner({
   );
   const submitRef = useRef(submit);
   const active = attempt.items[activeIndex];
+  const answeredCount = attempt.items.filter(
+    (item) => saved[item.id] || item.response,
+  ).length;
   const resultHref =
     returnHref ??
     `/organizaciones/${slug}/evaluaciones/intentos/${attempt.id}/resultado`;
@@ -176,32 +198,99 @@ export function AttemptRunner({
   }
 
   return (
-    <div className="assessment-attempt-workspace">
+    <div
+      className="assessment-attempt-workspace"
+      data-navigator-collapsed={navigatorCollapsed}
+    >
+      {active ? (
+        <QuestionPanel
+          answer={answers[active.id]}
+          assets={attempt.assets ?? []}
+          attemptId={attempt.id}
+          index={activeIndex}
+          item={active}
+          key={active.id}
+          marked={Boolean(marked[active.id])}
+          onAnswer={(answer) => {
+            setAnswers((current) => ({ ...current, [active.id]: answer }));
+            setSaved((current) => ({ ...current, [active.id]: false }));
+          }}
+          onNext={() =>
+            setActiveIndex((current) =>
+              Math.min(attempt.items.length - 1, current + 1),
+            )
+          }
+          onPrevious={() =>
+            setActiveIndex((current) => Math.max(0, current - 1))
+          }
+          onSave={() =>
+            saveItem(active.id, active.public_snapshot as PublicQuestion)
+          }
+          onToggleMarked={() =>
+            setMarked((current) => ({
+              ...current,
+              [active.id]: !current[active.id],
+            }))
+          }
+          savePending={save.isPending}
+          saved={Boolean(saved[active.id] || active.response)}
+          slug={slug}
+          total={attempt.items.length}
+        />
+      ) : null}
       <aside className="assessment-attempt-sidebar">
+        <header>
+          <div>
+            <span>Navegador</span>
+            <strong>
+              {answeredCount} de {attempt.items.length} guardadas
+            </strong>
+          </div>
+          <Button
+            aria-label={
+              navigatorCollapsed
+                ? 'Expandir navegador de preguntas'
+                : 'Compactar navegador de preguntas'
+            }
+            onClick={() => setNavigatorCollapsed((current) => !current)}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            {navigatorCollapsed ? <PanelRightOpen /> : <PanelRightClose />}
+          </Button>
+        </header>
         <nav
           aria-label="Navegador de preguntas"
           className="assessment-attempt-navigator"
         >
-          <ol className="grid grid-cols-4 gap-2 lg:grid-cols-3">
+          <ol>
             {attempt.items.map((item, index) => (
               <li key={item.id}>
-                <Button
+                <button
                   aria-current={index === activeIndex ? 'step' : undefined}
-                  aria-label={`Pregunta ${index + 1}${saved[item.id] || item.response ? ', guardada' : ''}`}
-                  className="w-full"
+                  aria-label={`Pregunta ${index + 1}${saved[item.id] || item.response ? ', respondida' : ', pendiente'}${marked[item.id] ? ', marcada para revisar' : ''}`}
+                  data-current={index === activeIndex}
+                  data-marked={Boolean(marked[item.id])}
+                  data-status={
+                    saved[item.id] || item.response ? 'answered' : 'pending'
+                  }
                   onClick={() => setActiveIndex(index)}
-                  size="sm"
                   type="button"
-                  variant={index === activeIndex ? 'default' : 'outline'}
                 >
-                  {index + 1}
-                </Button>
+                  <span>{index + 1}</span>
+                  <strong>Pregunta {index + 1}</strong>
+                  {marked[item.id] ? <Flag /> : null}
+                </button>
               </li>
             ))}
           </ol>
         </nav>
         <Button
-          className="mt-5 w-full"
+          aria-label={
+            confirming ? 'Confirmar envío definitivo' : 'Enviar intento'
+          }
+          className="assessment-attempt-sidebar__submit"
           disabled={submit.isPending || save.isPending}
           onClick={async () => {
             if (!confirming) {
@@ -219,11 +308,14 @@ export function AttemptRunner({
           type="button"
           variant={confirming ? 'destructive' : 'outline'}
         >
-          {confirming ? 'Confirmar envío definitivo' : 'Enviar intento'}
+          <Send />
+          <span>
+            {confirming ? 'Confirmar envío definitivo' : 'Enviar intento'}
+          </span>
         </Button>
         {confirming ? (
           <Button
-            className="mt-2 w-full"
+            className="assessment-attempt-sidebar__continue"
             onClick={() => setConfirming(false)}
             type="button"
             variant="ghost"
@@ -235,35 +327,6 @@ export function AttemptRunner({
           <MutationError error={save.error ?? submit.error} />
         </div>
       </aside>
-      {active ? (
-        <QuestionPanel
-          answer={answers[active.id]}
-          assets={attempt.assets ?? []}
-          attemptId={attempt.id}
-          index={activeIndex}
-          item={active}
-          key={active.id}
-          onAnswer={(answer) => {
-            setAnswers((current) => ({ ...current, [active.id]: answer }));
-            setSaved((current) => ({ ...current, [active.id]: false }));
-          }}
-          onNext={() =>
-            setActiveIndex((current) =>
-              Math.min(attempt.items.length - 1, current + 1),
-            )
-          }
-          onPrevious={() =>
-            setActiveIndex((current) => Math.max(0, current - 1))
-          }
-          onSave={() =>
-            saveItem(active.id, active.public_snapshot as PublicQuestion)
-          }
-          savePending={save.isPending}
-          saved={Boolean(saved[active.id] || active.response)}
-          slug={slug}
-          total={attempt.items.length}
-        />
-      ) : null}
     </div>
   );
 }
@@ -274,10 +337,12 @@ function QuestionPanel({
   attemptId,
   index,
   item,
+  marked,
   onAnswer,
   onNext,
   onPrevious,
   onSave,
+  onToggleMarked,
   savePending,
   saved,
   slug,
@@ -288,10 +353,12 @@ function QuestionPanel({
   attemptId: string;
   index: number;
   item: AssessmentAttempt['items'][number];
+  marked: boolean;
   onAnswer: (answer: Answer) => void;
   onNext: () => void;
   onPrevious: () => void;
   onSave: () => Promise<void>;
+  onToggleMarked: () => void;
   savePending: boolean;
   saved: boolean;
   slug: string;
@@ -321,7 +388,16 @@ function QuestionPanel({
             {item.required ? 'Respuesta obligatoria' : 'Respuesta opcional'}
           </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="assessment-question-panel__status">
+          <Button
+            aria-pressed={marked}
+            onClick={onToggleMarked}
+            size="sm"
+            type="button"
+            variant={marked ? 'secondary' : 'ghost'}
+          >
+            <Flag /> {marked ? 'Marcada para revisar' : 'Marcar para revisar'}
+          </Button>
           <Badge variant="outline">{item.points} puntos</Badge>
           {saved ? (
             <Badge variant="secondary">

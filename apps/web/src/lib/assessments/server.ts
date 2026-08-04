@@ -363,12 +363,15 @@ async function approvedQuestionVersions(
     'No fue posible consultar las preguntas aprobadas.',
   );
   return rows.map((row) => ({
+    bankId: row.bank_id,
     bankName: row.bank_name,
     code: row.code,
     id: row.id,
     number: row.number,
     public: row.public,
+    questionId: row.question_id,
     type: row.type,
+    usageCount: row.usage_count,
   }));
 }
 
@@ -474,12 +477,13 @@ export async function getAssessmentDeliveries(slug: string) {
       ...organization,
       canManage,
       deliveries,
+      activityOptions: [],
       enrollments: [],
       releaseOptions: [],
       versions: [],
     };
   }
-  const [versions, enrollments] = await Promise.all([
+  const [versions, enrollments, courseGroupActivities] = await Promise.all([
     required(
       client.GET(
         '/api/v1/organizations/{slug}/assessments/approved-version-options/',
@@ -497,6 +501,19 @@ export async function getAssessmentDeliveries(slug: string) {
       }),
       'No fue posible consultar las matrículas.',
     ) as Promise<EnrollmentPage>,
+    required(
+      client.GET(
+        '/api/v1/organizations/{slug}/learning/course-group-activities/',
+        {
+          params: {
+            path: { slug },
+            query: { activity_type: 'assessment' },
+          },
+          cache: 'no-store',
+        },
+      ),
+      'No fue posible consultar las actividades evaluativas de los grupos.',
+    ) as Promise<components['schemas']['CourseGroupActivityRead'][]>,
   ]);
   const releaseById = new Map<
     string,
@@ -518,8 +535,23 @@ export async function getAssessmentDeliveries(slug: string) {
     }
   }
   const releaseOptions = [...releaseById.values()];
+  const releaseByCohortId = new Map(
+    enrollments.results
+      .filter(
+        (enrollment) => enrollment.cohort_id && enrollment.current_release_id,
+      )
+      .map((enrollment) => [
+        enrollment.cohort_id as string,
+        enrollment.current_release_id as string,
+      ]),
+  );
+  const activityOptions = courseGroupActivities.flatMap((activity) => {
+    const releaseId = releaseByCohortId.get(activity.course_group_id);
+    return releaseId ? [{ ...activity, releaseId }] : [];
+  });
   return {
     ...organization,
+    activityOptions,
     canManage,
     deliveries,
     enrollments: enrollments.results,

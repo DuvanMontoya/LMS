@@ -8,6 +8,7 @@ import {
   RotateCcw,
   Timer,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -64,6 +65,7 @@ function DeliveryCard({
   slug: string;
   stayOnHref?: string | undefined;
 }>) {
+  const router = useRouter();
   const start = useAssessmentMutation(() =>
     startAssessmentAttempt(slug, assignment.id),
   );
@@ -77,9 +79,11 @@ function DeliveryCard({
       <div className="assessment-learner-card__header">
         <div>
           <p className="assessment-rail-kicker">
-            {assignment.attempts_used
-              ? 'Actividad en curso'
-              : 'Nueva evaluación asignada'}
+            {assignment.in_progress_attempt_id
+              ? 'Intento en curso'
+              : assignment.attempts_used
+                ? 'Reintento disponible'
+                : 'Nueva evaluación asignada'}
           </p>
           <h2>{delivery.assessment_title}</h2>
           <p>{delivery.name}</p>
@@ -137,9 +141,9 @@ function DeliveryCard({
             try {
               const attempt = await start.mutateAsync(undefined);
               if (stayOnHref) {
-                window.location.assign(`${stayOnHref}?attempt=${attempt.id}`);
+                router.push(`${stayOnHref}?attempt=${attempt.id}`);
               } else {
-                window.location.assign(
+                router.push(
                   `/organizaciones/${slug}/evaluaciones/intentos/${attempt.id}`,
                 );
               }
@@ -152,7 +156,7 @@ function DeliveryCard({
         >
           {remaining
             ? assignment.attempts_used
-              ? 'Continuar'
+              ? 'Reintentar'
               : 'Comenzar'
             : assignment.in_progress_attempt_id
               ? 'Continuar'

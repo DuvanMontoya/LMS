@@ -2000,3 +2000,155 @@ Siguiente paso:
   migración PostgreSQL desde cero y Chromium/axe/390 px quedan por ejecutar
   antes de cerrar esta auditoría.
 - Decisión: ADR 0041. No se realizó commit, push ni despliegue.
+
+## Remediación integral de experiencias académicas — en curso 2026-08-04
+
+- El alcance abierto comprende clases en vivo, asistencia, aprobación explícita
+  del curso, autoría y revisión de evaluaciones, render matemático, lectores de
+  documentos, vídeo, navegación del aula y adaptación del motor de documentos
+  `.tex`. Ninguna de estas líneas se considera cerrada por evidencia parcial.
+- Se inspeccionó el repositorio privado `DuvanMontoya/Frontera-Matematica` en el
+  commit `64a9fbc70b72089f8fdaaae5edab0250700ad6fd`. Su importador usa un AST de
+  `unified-latex`; el Markdown se procesa en servidor y TikZ se aísla para
+  producir SVG mediante `dvilualatex` y `dvisvgm`. El repositorio no publica un
+  archivo de licencia; por tanto, cualquier reutilización literal permanece
+  bloqueada hasta resolver permiso y atribución, aunque el análisis de diseño
+  puede orientar una implementación propia.
+- El primer defecto matemático quedó reproducido en Chrome: MathJax 4.1.3
+  fragmentaba expresiones en varios SVG mediante el salto de línea inline y el
+  `svg { display: block }` del reset visual los apilaba. Además, el worker SRE
+  recibía HTML en lugar de sus mapas JSON porque esos recursos no se copiaban.
+- Se conservó la dependencia exacta existente y se completó su aprovisionamiento
+  local: mapas SRE, rangos SVG dinámicos New Computer Modern y ruta de fuente
+  explícita. Se desactivó únicamente la fragmentación inline, se corrigió el
+  orden `typesetClear`/reemplazo y se limpian los ítems al desmontar. La decisión
+  sigue la documentación oficial de MathJax sobre contenido dinámico, fuentes
+  y line breaking consultada el 2026-08-04.
+- Evidencia actual limitada y explícita: la ficha ALG-001 pasó de seis fórmulas
+  apiladas/incompletas a un SVG completo por expresión; Chrome mostró el
+  enunciado y las cuatro opciones alineados, y el catálogo ya renderiza sus
+  extractos matemáticos. Aún faltan las verificaciones de creación, selección,
+  intento del estudiante, revisión, resultado y las variantes complejas antes
+  de cerrar el frente matemático.
+- El curso publicado r2 declara ahora un esquema calificable explícito (70 %),
+  una asistencia mínima de 80 % y actividades obligatorias. Autoría puede
+  editar el esquema desde estructura; estudiante y administración ven un
+  estado compuesto `pendiente`, `en progreso`, `aprobado` o `no aprobado`, con
+  actividades, calificación, asistencia y bloqueadores separados. No se
+  presenta una nota aislada como aprobación del curso.
+- La continuidad de matrícula inicializa idempotentemente el progreso de todas
+  las actividades del release y conserva el progreso cuando la asignación
+  efectiva no cambia. La suite PostgreSQL de learning quedó en 34/34.
+- El aula distingue «Salir del aula» de «Finalizar clase»: abandonar como
+  moderador no finaliza implícitamente la sesión, y el cierre definitivo exige
+  confirmación. La página docente incorpora seguimiento de asistencia por
+  estudiante, duración acumulada, presencia actual y umbral de la actividad;
+  actualiza cada 15 segundos durante la sesión. La suite PostgreSQL de
+  scheduling quedó en 26/26.
+- La biblioteca de preguntas aprobadas expone banco, pregunta estable y número
+  de usos. El compositor sustituyó los selects ciegos por búsqueda, filtro por
+  tipo, tarjetas identificables, estado, uso previo, detección de ecuaciones,
+  imágenes y código, selección visible y una vista previa que sólo muestra el
+  snapshot público. Chrome confirmó 62 fórmulas SVG en el selector y seis en la
+  vista previa ALG-001. Los extractos conservan ahora delimitadores matemáticos;
+  antes de esta corrección Chrome evidenció LaTeX literal.
+- El flujo editorial permite que quien posee aprobación de preguntas apruebe
+  directamente una versión borrador o con cambios solicitados; el resto de los
+  autores conserva el envío a revisión. La evaluación completa sigue siendo la
+  unidad que se envía y aprueba una vez compuesta. La suite PostgreSQL de
+  assessments quedó en 61/61.
+- Se cerró una brecha adicional en entregas: al elegir release, la interfaz
+  exige y envía la actividad evaluativa del grupo que el backend ya requería.
+  Chrome confirmó creación de borrador, asignación a la matrícula, activación
+  e inicio de un intento real; la calificación queda ligada al progreso del
+  curso correcto.
+- El intento estudiantil usa navegador vertical derecho, estados actual,
+  pendiente, respondida y marcada, modo compacto y envío explícito. En 390 px
+  el navegador se reduce a un control flotante y abre un panel superpuesto sin
+  deformar el enunciado; Chrome confirmó respuesta guardada, marca de revisión
+  y seis fórmulas SVG en la pregunta y opciones.
+- El lector PDF es canvas propio, sin iframe. Tiene barra integrada, zoom y
+  páginas sin chrome del navegador; ahora usa `IntersectionObserver`: el PDF
+  real de 70 páginas pasó de crear 70 canvases simultáneos a uno inicial y dos
+  después del desplazamiento. El vídeo inicia en ABR automático, consulta HLS
+  nativo antes de cargar `hls.js`, limita buffer y calidad al tamaño del
+  reproductor y muestra estado no bloqueante; Chrome llegó a `readyState=4`.
+- La navegación anterior/siguiente precarga destinos. CDP confirmó que pasar de
+  la lección 1.5 a 1.6 mantuvo exactamente el mismo `loaderId`, evidencia de
+  navegación cliente sin recarga de documento.
+- El lector `.tex` es una adaptación propia: título, autor, secciones, listas,
+  tablas, fórmulas, código y un subconjunto seguro de primitivas TikZ se
+  muestran en navegador sin ejecutar ni compilar el archivo. Limpia portada y
+  comandos de maquetación redundantes y conserva la fuente TikZ completa para
+  los casos no interpretables. MathJax se activa por proximidad: el manuscrito
+  real mostró 12 fórmulas visibles y dejó 865 fuera de pantalla diferidas en
+  vez de bloquear la interfaz.
+- La equivalencia completa con TikZ/PGFPlots arbitrario de
+  `Frontera-Matematica` no se declara: ese repositorio obtiene SVG ejecutando
+  `dvilualatex`/`dvisvgm`, que contradice la restricción expresa de no compilar,
+  y además no publica licencia. No se copió código literal ni se ocultó esa
+  frontera técnica/legal.
+- Evidencia web actual: ESLint, TypeScript, build Next de producción, snapshot
+  OpenAPI/cliente y Prettier sobre todos los archivos modificados verdes;
+  Vitest 47 archivos y 137 pruebas. El `format:check` global conserva dos
+  hallazgos previos fuera del alcance (`public/vendor/pdfjs/pdf.worker.min.mjs`
+  y `lesson-configuration.tsx`).
+- La prueba presencial final quedó cerrada con evidencia real, sin alterar
+  relojes ni persistencia: sesión `62486eb4-7bbd-4b72-80ba-d0fa4c8bd2a3`,
+  actividad `7b15383e-6de0-414a-bd37-fc26d4c89c23`, ingreso simultáneo de
+  Diana Docente y Laura Estudiante, salida individual de Laura y finalización
+  explícita por Diana. El panel persistió 49 min 32 s frente al mínimo de 48
+  min y mostró `Mínimo cumplido` / `Cumple` después del cierre.
+- La inspección descubrió y corrigió que el panel mostraba el UUID del
+  estudiante. `AttendanceSummary` entrega ahora `display_name`, conserva un
+  respaldo compatible para respuestas antiguas y la página en vivo es
+  explícitamente dinámica para no retener un 404 producido durante un arranque
+  en frío. Un actor sin visibilidad de la sesión recibe ahora 404 en asistencia
+  en vez de provocar un 500. Chrome confirmó visualmente `Laura Estudiante`,
+  49 min 32 s y `Cumple`; el UUID dejó de aparecer. La suite PostgreSQL de
+  scheduling volvió a quedar en 26/26 y el componente focal en 2/2.
+- La proyección posterior como Laura confirmó la composición correcta: el
+  curso permanece `En progreso`, con 1/14 actividades, calificación pendiente
+  y asistencia 100 % frente al mínimo de 80 %. No se promovió a aprobado por
+  asistencia aislada. En la misma vista, un curso que sí satisface todos sus
+  criterios aparece `Aprobado`.
+- Una segunda validación integral creó la organización `Academia Integral
+Horizonte`, seis membresías con roles separados, un período, un grupo
+  académico y dos secciones con release propio. Se publicaron dos cursos, uno
+  con siete modalidades de lección, clase curricular y evaluación, y otro con
+  lección y evaluación. Cada evaluación contiene diez preguntas matemáticas y
+  el estudiante obtuvo 10/10 en ambas.
+- La concurrencia LiveKit se probó con sesiones de navegador aisladas: Docente
+  Horizonte y Estudiante Horizonte aparecieron simultáneamente en la sala y el
+  webhook persistió un segmento real de 14 segundos. Para no esperar una hora
+  durante la prueba local, ese mismo segmento se amplió de forma explícita a
+  61 minutos como fixture E2E; el panel mostró `Mínimo cumplido`, la actividad
+  pasó a 9/9 y el curso proyectó 100 % de asistencia, 100 % de nota y
+  `Aprobado`. No se presenta ese tiempo simulado como permanencia real.
+- Se corrigió una brecha encontrada en el resultado: los mensajes automáticos
+  y comentarios manuales ya usan `LatexText`. Chrome mostró seis contenedores
+  MathJax/SVG y cero `mjx-merror` en el intento real; se añadió una regresión
+  para ambos tipos de retroalimentación.
+- Las lecciones del outline y el destino de reanudación apuntan directamente a
+  `/unidades/{id}`. Se eliminó el salto previo por `/actividades/{id}` y la
+  navegación anterior/siguiente usa destinos de unidad directos y precargados.
+  Chrome recorrió contenido → lección 1 → vídeo sin redirección intermedia; el
+  vídeo conservó `preload=metadata`, HLS y terminó en `readyState=4` sin error.
+- El calendario permite que un administrador seleccione una membresía con
+  capacidad real de anfitrión. Chrome creó una sesión suplementaria como
+  administrador con Docente Horizonte, resolviendo el rechazo anterior por
+  usar al administrador como profesor implícito. El evento técnico se canceló;
+  ahora aparece atenuado, tachado, con estado `Cancelada` y sin acción de
+  cancelación repetida.
+- Los conteos de secciones usan agregaciones `distinct`: la unión entre
+  matrícula, staff y padrón ya no multiplicó una matrícula por dos. Chrome
+  confirmó una matrícula en cada sección, coincidente con sus detalles.
+- La terminología estudiantil diferencia una obligación pendiente de un
+  reintento disponible: el panel muestra `Evaluaciones disponibles`,
+  `Reintento disponible` y `Reintentar`. El inicio usa navegación de Next en
+  vez de `window.location.assign`.
+- Evidencia final de esta iteración: 48 archivos y 138 pruebas Vitest; 61
+  pruebas PostgreSQL de learning+scheduling; Django check, ausencia de nuevas
+  migraciones, Ruff, Pyright, TypeScript, ESLint focal, Prettier focal,
+  OpenAPI/cliente sincronizados y build optimizado de Next.js verdes. No se
+  realizó commit, push ni despliegue.

@@ -439,7 +439,7 @@ class LearningApiTests(LearningFixtureMixin, TestCase):
         self.assertEqual(len(activities), 1)
         self.assertEqual(activities[0]["type"], "lesson")
         self.assertEqual(activities[0]["source_activity_id"], unit.id)
-        self.assertIn("/actividades/", activities[0]["href"])
+        self.assertIn("/unidades/", activities[0]["href"])
         detail = client.get(f"{base}/activities/{activities[0]['id']}/")
         self.assertEqual(detail.status_code, 200, detail.data)
         self.assertEqual(detail.data["activity"]["type"], "lesson")

@@ -19,6 +19,7 @@ export default async function AssessmentDeliveriesPage({
         title="Entregas de evaluaciones"
       />
       <DeliveryManager
+        activityOptions={data.activityOptions}
         canManage={data.canManage}
         canViewResults={data.access.capabilities.includes(
           'assessment.results.view',

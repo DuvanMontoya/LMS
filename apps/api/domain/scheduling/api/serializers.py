@@ -106,6 +106,7 @@ class MaterializeCourseGroupLiveClassesResultSerializer(serializers.Serializer):
 class ParticipantOptionSerializer(serializers.Serializer):
     membership_id = serializers.UUIDField()
     display = serializers.CharField()
+    can_host = serializers.BooleanField()
 
 
 class CalendarRangeSerializer(serializers.Serializer):
@@ -292,6 +293,7 @@ class ParticipantPermissionSerializer(serializers.Serializer):
 
 class AttendanceSummarySerializer(serializers.Serializer):
     user_id = serializers.UUIDField(allow_null=True)
+    display_name = serializers.CharField(allow_blank=True)
     participant_identity = serializers.CharField()
     role = serializers.CharField()
     duration_seconds = serializers.IntegerField(allow_null=True)

@@ -5,7 +5,12 @@ export type LatexLessonBlock =
   | { latex: string; type: 'math' }
   | { text: string; type: 'paragraph' }
   | { rows: string[][]; type: 'table' }
-  | { caption: string; type: 'visual' };
+  | {
+      caption: string;
+      environment: 'axis' | 'tikzcd' | 'tikzpicture';
+      source: string;
+      type: 'visual';
+    };
 
 export type LatexLessonDocument = {
   author?: string;
@@ -57,6 +62,7 @@ const MATH_ENVIRONMENTS = new Set([
 const TABLE_ENVIRONMENTS = new Set(['longtable', 'tabular', 'tabularx']);
 const CODE_ENVIRONMENTS = new Set(['lstlisting', 'verbatim']);
 const VISUAL_ENVIRONMENTS = new Set(['axis', 'tikzcd', 'tikzpicture']);
+const IGNORED_ENVIRONMENTS = new Set(['titlepage']);
 
 function unescapedComment(line: string) {
   for (let index = 0; index < line.length; index += 1) {
@@ -89,7 +95,7 @@ function bracedValue(source: string, command: string) {
 }
 
 function readableText(value: string) {
-  return value
+  const normalized = value
     .replace(/\\(?:label|index)\{[^{}]*\}/g, '')
     .replace(/\\(?:cref|Cref|ref|eqref|autoref)\{([^{}]*)\}/g, 'referencia $1')
     .replace(/\\cite[a-zA-Z*]*\{([^{}]*)\}/g, '[$1]')
@@ -100,7 +106,16 @@ function readableText(value: string) {
       /\\(?:emph|textbf|textit|texttt|underline|mbox|mathrm|textrm|textsf)\{([^{}]*)\}/g,
       '$1',
     )
+    .replace(/\\bibitem(?:\[[^\]]*\])?\{[^{}]*\}/g, ' ')
+    .replace(/\\(?:vspace|hspace)\*?\{[^{}]*\}/g, ' ')
+    .replace(/\\fontsize\{[^{}]*\}\{[^{}]*\}/g, ' ')
+    .replace(/\\(?:color|pagecolor)\{[^{}]*\}/g, ' ')
+    .replace(
+      /\\(?:Large|LARGE|large|huge|Huge|small|footnotesize|scriptsize|tiny|normalsize|sffamily|rmfamily|ttfamily|bfseries|mdseries|itshape|upshape|selectfont|centering|raggedright|raggedleft|par|vfill|hfill|newblock)\b/g,
+      ' ',
+    )
     .replace(/\\(?:LaTeX|TeX)\b/g, 'LaTeX')
+    .replace(/\\\\(?:\[[^\]]*\])?/g, ' ')
     .replace(/\\\(/g, '$')
     .replace(/\\\)/g, '$')
     .replace(/\\\[/g, '$$')
@@ -112,6 +127,13 @@ function readableText(value: string) {
     .replace(/\\\\/g, ' ')
     .replace(/~/g, ' ')
     .replace(/\s+/g, ' ')
+    .trim();
+  return normalized
+    .split(/(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$)/g)
+    .map((segment, index) =>
+      index % 2 === 0 ? segment.replace(/[{}]/g, '') : segment,
+    )
+    .join('')
     .trim();
 }
 
@@ -147,6 +169,7 @@ export function parseLatexLesson(source: string): LatexLessonDocument {
   let mathEnvironment = '';
   let mathLines: string[] = [];
   let visualDepth = 0;
+  let visualEnvironment: 'axis' | 'tikzcd' | 'tikzpicture' = 'tikzpicture';
   let visualLines: string[] = [];
   let tableEnvironment = '';
   let tableLines: string[] = [];
@@ -154,6 +177,7 @@ export function parseLatexLesson(source: string): LatexLessonDocument {
   let codeLines: string[] = [];
   let codeCaption = '';
   let codeLanguage = '';
+  let ignoredEnvironment = '';
 
   function flushParagraph() {
     const text = readableText(paragraph.join(' '));
@@ -175,6 +199,18 @@ export function parseLatexLesson(source: string): LatexLessonDocument {
     const line = unescapedComment(rawLine).trim();
     const environmentStart = line.match(/^\\begin\{([^}]+)\}/)?.[1];
     const environmentEnd = line.match(/^\\end\{([^}]+)\}/)?.[1];
+
+    if (ignoredEnvironment) {
+      if (environmentEnd === ignoredEnvironment) ignoredEnvironment = '';
+      continue;
+    }
+
+    if (environmentStart && IGNORED_ENVIRONMENTS.has(environmentStart)) {
+      flushParagraph();
+      flushList();
+      ignoredEnvironment = environmentStart;
+      continue;
+    }
 
     if (codeEnvironment) {
       if (environmentEnd === codeEnvironment) {
@@ -215,7 +251,12 @@ export function parseLatexLesson(source: string): LatexLessonDocument {
             .match(/\\caption(?:\[[^\]]*\])?\{([^{}]*)\}/)?.[1] ??
             'Contenido gráfico definido en el archivo LaTeX.',
         );
-        blocks.push({ caption, type: 'visual' });
+        blocks.push({
+          caption,
+          environment: visualEnvironment,
+          source: visualLines.join('\n'),
+          type: 'visual',
+        });
         visualLines = [];
       }
       continue;
@@ -239,6 +280,7 @@ export function parseLatexLesson(source: string): LatexLessonDocument {
       flushParagraph();
       flushList();
       visualDepth = 1;
+      visualEnvironment = environmentStart as typeof visualEnvironment;
       visualLines = [line];
       continue;
     }
@@ -332,7 +374,7 @@ export function parseLatexLesson(source: string): LatexLessonDocument {
       continue;
     }
     if (
-      /^\\(?:end|begin|thispagestyle|hypersetup|addcontentsline|tableofcontents|maketitle|clearpage|newpage)\b/.test(
+      /^\\(?:end|begin|thispagestyle|hypersetup|addcontentsline|tableofcontents|maketitle|clearpage|newpage|pagenumbering|setcounter|addtocounter|phantomsection|frontmatter|mainmatter|backmatter|appendix|bibliographystyle|bibliography)\b/.test(
         line,
       )
     )

@@ -29,7 +29,8 @@ export default async function CalendarPage({
           required: activity.required,
         }))}
         participantOptions={data.participantOptions.map(
-          ({ membership_id: membershipId, display }) => ({
+          ({ membership_id: membershipId, can_host: canHost, display }) => ({
+            canHost,
             membershipId,
             display,
           }),

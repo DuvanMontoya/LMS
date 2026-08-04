@@ -35,6 +35,7 @@ import {
 } from '@/components/courses/assessment-activity-dialog';
 import { LiveClassActivityDialog } from '@/components/courses/live-class-activity-dialog';
 import { CompletionPolicyCard } from '@/components/courses/completion-policy-card';
+import { GradingSchemeCard } from '@/components/courses/grading-scheme-card';
 import type { CourseTopicOption } from '@/lib/courses/curriculum-topics';
 import type { components } from '@/lib/api/generated/platform';
 import {
@@ -198,6 +199,7 @@ export function StructureEditor({
   canManage,
   completionPolicy,
   courseSlug,
+  gradingScheme,
   liveClassBindings,
   objectives,
   outline,
@@ -209,6 +211,7 @@ export function StructureEditor({
   canManage: boolean;
   completionPolicy: components['schemas']['CourseCompletionPolicy'];
   courseSlug: string;
+  gradingScheme: readonly components['schemas']['GradeCategory'][];
   liveClassBindings: LiveClassBinding[];
   objectives: Objective[];
   outline: Outline;
@@ -240,6 +243,19 @@ export function StructureEditor({
   const archive = useSetStructureArchived(path);
   const liveClassBindingByActivityId = new Map(
     liveClassBindings.map((binding) => [binding.activity_id, binding]),
+  );
+  const assessmentActivities = modules.flatMap((module) =>
+    module.activities
+      .filter(
+        (activity) =>
+          activity.activity_type === 'assessment' &&
+          activity.status === 'active',
+      )
+      .map((activity) => ({
+        id: activity.id,
+        required: activity.required,
+        title: activity.title,
+      })),
   );
 
   function failed(cause: unknown) {
@@ -1190,18 +1206,33 @@ export function StructureEditor({
         </p>
       )}
       {canManage && editable ? (
-        <CompletionPolicyCard
-          courseSlug={courseSlug}
-          onConfirmed={() => {
-            setVersion((current) => current + 1);
-            setMessage('Política de finalización confirmada.');
-            router.refresh();
-          }}
-          policy={completionPolicy}
-          revisionId={outline.revision.id}
-          revisionVersion={version}
-          slug={slug}
-        />
+        <>
+          <GradingSchemeCard
+            activities={assessmentActivities}
+            courseSlug={courseSlug}
+            onSaved={(lockVersion) => {
+              setVersion(lockVersion);
+              setMessage('Esquema de calificación guardado.');
+              router.refresh();
+            }}
+            revisionId={outline.revision.id}
+            revisionVersion={version}
+            scheme={gradingScheme}
+            slug={slug}
+          />
+          <CompletionPolicyCard
+            courseSlug={courseSlug}
+            onConfirmed={() => {
+              setVersion((current) => current + 1);
+              setMessage('Política de finalización confirmada.');
+              router.refresh();
+            }}
+            policy={completionPolicy}
+            revisionId={outline.revision.id}
+            revisionVersion={version}
+            slug={slug}
+          />
+        </>
       ) : null}
     </section>
   );

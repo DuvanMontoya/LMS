@@ -8,6 +8,15 @@ type MathJaxApi = {
   typesetPromise: (elements: HTMLElement[]) => Promise<unknown>;
 };
 
+function isMathJaxApi(value: unknown): value is MathJaxApi {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    'typesetClear' in value &&
+    typeof value.typesetClear === 'function',
+  );
+}
+
 type PendingTypeset = {
   host: HTMLElement;
   reject: (reason: unknown) => void;
@@ -52,6 +61,10 @@ function loadMathJax(): Promise<MathJaxApi> {
         },
       },
       startup: { typeset: false },
+      output: {
+        fontPath: '/vendor/mathjax/fonts/%%FONT%%',
+        linebreaks: { inline: false },
+      },
       svg: { fontCache: 'local' },
       tex: {
         packages: ['base', 'ams'],
@@ -97,11 +110,11 @@ function queueTypeset(
             return;
           }
           const hosts = connected.map(({ host: item }) => item);
-          connected.forEach(({ host: item, source: text }) => {
-            item.textContent = text;
-          });
           try {
             mathJax.typesetClear(hosts);
+            connected.forEach(({ host: item, source: text }) => {
+              item.textContent = text;
+            });
             await mathJax.typesetPromise(hosts);
             batch.forEach(({ resolve: finish }) => finish());
           } catch (cause) {
@@ -117,10 +130,33 @@ export function MathJaxFormula({
   display = false,
   latex,
 }: Readonly<{ display?: boolean; latex: string }>) {
+  const containerRef = useRef<HTMLSpanElement>(null);
   const ref = useRef<HTMLSpanElement>(null);
   const [error, setError] = useState('');
+  const [nearViewport, setNearViewport] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      typeof window.IntersectionObserver === 'undefined',
+  );
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    if (typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setNearViewport(true);
+        observer.disconnect();
+      },
+      { rootMargin: '800px 0px' },
+    );
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!nearViewport) return;
     const host = ref.current;
     if (!host) return;
     let active = true;
@@ -161,17 +197,29 @@ export function MathJaxFormula({
     return () => {
       active = false;
       observer.disconnect();
+      if (isMathJaxApi(window.MathJax)) window.MathJax.typesetClear([host]);
     };
-  }, [display, latex]);
+  }, [display, latex, nearViewport]);
 
   return (
     <span
       aria-label={`Fórmula ${display ? 'en bloque' : 'en línea'}: ${latex}`}
       className={display ? 'block overflow-x-auto py-3 text-center' : ''}
       data-mathjax-safe="true"
+      ref={containerRef}
       role="math"
     >
-      <span aria-hidden="true" data-mathjax-visual="true" ref={ref} />
+      <span
+        aria-hidden="true"
+        className={nearViewport ? undefined : 'mathjax-formula__placeholder'}
+        data-mathjax-visual="true"
+        ref={ref}
+        style={
+          nearViewport
+            ? undefined
+            : { width: `${Math.min(18, Math.max(2, latex.length * 0.45))}ch` }
+        }
+      />
       {error ? <span className="text-red-700">{error}</span> : null}
     </span>
   );

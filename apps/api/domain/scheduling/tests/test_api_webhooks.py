@@ -64,6 +64,23 @@ def signed_webhook(payload: dict[str, object]) -> tuple[bytes, str]:
 
 @override_settings(**LIVEKIT_SETTINGS)
 class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
+    def test_participant_options_identify_eligible_live_class_hosts(self) -> None:
+        context = self.scheduling_context()
+        client = APIClient()
+        client.force_authenticate(context["owner"])
+
+        response = client.get(
+            f"/api/v1/organizations/{context['organization'].slug}/scheduling/participant-options/"
+        )
+
+        self.assertEqual(response.status_code, 200, response.data)
+        options = {str(option["membership_id"]): option for option in response.data}
+        host_membership = Membership.objects.get(
+            organization=context["organization"], user=context["host"]
+        )
+        self.assertTrue(options[str(host_membership.id)]["can_host"])
+        self.assertFalse(options[str(context["learner_membership"].id)]["can_host"])
+
     def test_live_activity_is_created_with_its_attendance_policy_atomically(
         self,
     ) -> None:
@@ -635,6 +652,23 @@ class SchedulingApiAndWebhookTests(SchedulingFixtureMixin, TestCase):
         segment = AttendanceSegment.objects.get()
         self.assertEqual(segment.duration_seconds, 75)
         self.assertIsNotNone(segment.left_event_id)
+        context["learner"].first_name = "Laura"
+        context["learner"].last_name = "Estudiante"
+        context["learner"].save(update_fields=("first_name", "last_name"))
+        attendance_client = APIClient()
+        attendance_client.force_authenticate(context["host"])
+        hidden_response = attendance_client.get(
+            f"/api/v1/organizations/{context['organization'].slug}/scheduling/live-sessions/{session.id}/attendance/"
+        )
+        self.assertEqual(hidden_response.status_code, 404)
+        attendance_client.force_authenticate(context["owner"])
+        attendance_response = attendance_client.get(
+            f"/api/v1/organizations/{context['organization'].slug}/scheduling/live-sessions/{session.id}/attendance/"
+        )
+        self.assertEqual(attendance_response.status_code, 200)
+        self.assertEqual(
+            attendance_response.data[0]["display_name"], "Laura Estudiante"
+        )
         self.assertEqual(ExternalRequirementCompletion.objects.count(), 1)
         progress = context["enrollment"].current_release_assignment.progress
         progress.refresh_from_db()

@@ -36,6 +36,7 @@ from domain.scheduling.exceptions import (
 )
 from domain.scheduling.livekit_gateway import LiveKitGateway
 from domain.scheduling.policies import LiveAccess
+from domain.scheduling.selectors import occurrence_payload
 from domain.scheduling.services import (
     cancel_occurrence,
     change_participant_permissions,
@@ -576,6 +577,10 @@ class SchedulingServiceTests(SchedulingFixtureMixin, TestCase):
             scope=RecurrenceScope.OCCURRENCE,
         )
         self.assertEqual(occurrence.live_session.status, LiveSessionStatus.CANCELLED)
+        payload = occurrence_payload(occurrence, context["owner"])
+        self.assertEqual(payload["extendedProps"]["occurrenceStatus"], "cancelled")
+        self.assertFalse(payload["extendedProps"]["canEdit"])
+        self.assertFalse(payload["extendedProps"]["canDelete"])
         with self.assertRaises(LiveSessionClosed):
             join_live_session(
                 actor=context["learner"],

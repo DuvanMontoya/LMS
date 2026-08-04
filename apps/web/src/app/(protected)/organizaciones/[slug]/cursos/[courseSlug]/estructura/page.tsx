@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { getApprovedAssessmentVersionOptions } from '@/lib/assessments/server';
 import {
   getCourseCompletionPolicy,
+  getCourseGradingScheme,
   getCourseWorkspace,
 } from '@/lib/courses/server';
 import { getLiveClassActivityBindings } from '@/lib/scheduling/server';
@@ -16,16 +17,21 @@ export default async function CourseStructurePage({
 }: Readonly<{ params: Promise<{ courseSlug: string; slug: string }> }>) {
   const { courseSlug, slug } = await params;
   const data = await getCourseWorkspace(slug, courseSlug);
-  const [assessmentVersions, completionPolicy, liveClassBindings] =
-    await Promise.all([
-      data.access.capabilities.includes('assessment.authoring.manage')
-        ? getApprovedAssessmentVersionOptions(slug)
-        : [],
-      getCourseCompletionPolicy(slug, courseSlug, data.outline.revision.id),
-      data.access.capabilities.includes('course.authoring.manage')
-        ? getLiveClassActivityBindings(slug, data.outline.revision.id)
-        : [],
-    ]);
+  const [
+    assessmentVersions,
+    completionPolicy,
+    gradingScheme,
+    liveClassBindings,
+  ] = await Promise.all([
+    data.access.capabilities.includes('assessment.authoring.manage')
+      ? getApprovedAssessmentVersionOptions(slug)
+      : [],
+    getCourseCompletionPolicy(slug, courseSlug, data.outline.revision.id),
+    getCourseGradingScheme(slug, courseSlug, data.outline.revision.id),
+    data.access.capabilities.includes('course.authoring.manage')
+      ? getLiveClassActivityBindings(slug, data.outline.revision.id)
+      : [],
+  ]);
   return (
     <main className="academic-page">
       <PageHeader
@@ -64,6 +70,7 @@ export default async function CourseStructurePage({
           )}
           courseSlug={courseSlug}
           completionPolicy={completionPolicy}
+          gradingScheme={gradingScheme}
           key={data.outline.revision.lock_version}
           liveClassBindings={liveClassBindings}
           objectives={data.unitObjectives}

@@ -2,8 +2,11 @@ import { Clock3, UserRound } from 'lucide-react';
 import { redirect } from 'next/navigation';
 
 import { LiveClassroom } from '@/components/scheduling/live-classroom';
+import { LiveAttendancePanel } from '@/components/scheduling/live-attendance-panel';
 import { PageHeader } from '@/components/platform/page-header';
 import { getLiveSession } from '@/lib/scheduling/server';
+
+export const dynamic = 'force-dynamic';
 
 export default async function LiveClassPage({
   params,
@@ -53,6 +56,14 @@ export default async function LiveClassPage({
         </div>
       </dl>
       <LiveClassroom detail={data.session} slug={slug} />
+      {data.session.canModerate ? (
+        <LiveAttendancePanel
+          sessionId={data.session.id}
+          sessionStatus={data.session.status}
+          slug={slug}
+          thresholdMinutes={data.session.attendanceThresholdMinutes}
+        />
+      ) : null}
     </main>
   );
 }

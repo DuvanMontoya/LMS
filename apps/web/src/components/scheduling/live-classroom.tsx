@@ -24,6 +24,7 @@ import {
 } from '@livekit/components-react';
 import {
   CalendarClock,
+  CircleStop,
   ChevronDown,
   DoorOpen,
   LayoutGrid,
@@ -109,6 +110,10 @@ export function LiveClassroom({
         <ConnectedClassroom
           connection={connection}
           slug={slug}
+          onLeave={() => {
+            setConnection(null);
+            router.refresh();
+          }}
           onEnd={
             detail.canModerate
               ? () => endLiveSession(slug, detail.id)
@@ -211,10 +216,12 @@ export function LiveClassroom({
 function ConnectedClassroom({
   connection,
   onEnd,
+  onLeave,
   slug,
 }: Readonly<{
   connection: LiveConnection;
   onEnd?: (() => Promise<unknown>) | undefined;
+  onLeave: () => void;
   slug: string;
 }>) {
   const room = useMemo(
@@ -442,9 +449,17 @@ function ConnectedClassroom({
           <span>Participantes</span>
         </button>
       ) : null}
-      <DisconnectButton onClick={() => onEnd && void onEnd()}>
+      {onEnd ? (
+        <EndClassDialog
+          onConfirm={async () => {
+            await onEnd();
+            onLeave();
+          }}
+        />
+      ) : null}
+      <DisconnectButton onClick={onLeave}>
         <DoorOpen />
-        <span>Salir</span>
+        <span>Salir del aula</span>
       </DisconnectButton>
     </div>
   );
@@ -549,6 +564,76 @@ function ConnectedClassroom({
         </section>
       </LayoutContextProvider>
     </RoomContext.Provider>
+  );
+}
+
+function EndClassDialog({
+  onConfirm,
+}: Readonly<{ onConfirm: () => Promise<void> }>) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function finish() {
+    setBusy(true);
+    setError('');
+    try {
+      await onConfirm();
+      setOpen(false);
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : 'No fue posible finalizar la clase.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog onOpenChange={setOpen} open={open}>
+      <DialogTrigger asChild>
+        <button title="Cerrar la sala para todas las personas" type="button">
+          <CircleStop />
+          <span>Finalizar clase</span>
+        </button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Finalizar la clase para todas las personas</DialogTitle>
+          <DialogDescription>
+            Esta acción cierra la sala y consolida la asistencia registrada. Si
+            sólo quieres retirarte, usa «Salir del aula».
+          </DialogDescription>
+        </DialogHeader>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>No fue posible finalizar</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        <DialogFooter>
+          <Button
+            disabled={busy}
+            onClick={() => setOpen(false)}
+            type="button"
+            variant="outline"
+          >
+            Mantener abierta
+          </Button>
+          <Button
+            disabled={busy}
+            onClick={() => void finish()}
+            type="button"
+            variant="destructive"
+          >
+            {busy ? <Loader2 className="animate-spin" /> : <CircleStop />}
+            Finalizar para todos
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

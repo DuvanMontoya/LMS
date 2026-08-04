@@ -21,6 +21,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -48,7 +49,11 @@ type CourseActivityOption = {
   label: string;
   required: boolean;
 };
-type ParticipantOption = { membershipId: string; display: string };
+type ParticipantOption = {
+  canHost: boolean;
+  membershipId: string;
+  display: string;
+};
 type RecurrenceScope = 'occurrence' | 'following' | 'series';
 type MoveInfo = EventDropInfo | EventResizeDoneInfo;
 
@@ -206,6 +211,11 @@ export function AcademicCalendar({
             canCreate && setCreateStart(info.date.toISOString())
           }
           eventClick={findEvent}
+          eventClass={(info) =>
+            info.event.extendedProps.occurrenceStatus === 'cancelled'
+              ? 'academic-calendar__event--cancelled'
+              : ''
+          }
           eventDrop={(info) =>
             info.event.extendedProps.recurring
               ? setPendingMove(info)
@@ -327,6 +337,9 @@ function EventDialog({
           </DialogDescription>
         </DialogHeader>
         <p>{props.description || 'Sin descripción adicional.'}</p>
+        <Badge className="w-fit" variant="outline">
+          {calendarEventStatusLabel(props.occurrenceStatus)}
+        </Badge>
         <p className="text-xs text-muted-foreground">
           {new Intl.DateTimeFormat('es-CO', {
             dateStyle: 'full',
@@ -394,6 +407,10 @@ function CreateEventDialog({
   timeZone: string;
 }>) {
   const [activityId, setActivityId] = useState(courseActivities[0]?.id ?? '');
+  const hostOptions = participantOptions.filter((option) => option.canHost);
+  const [hostMembershipId, setHostMembershipId] = useState(
+    hostOptions[0]?.membershipId ?? '',
+  );
   const [contributesToActivity, setContributesToActivity] = useState(true);
   const [submissionError, setSubmissionError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -415,6 +432,7 @@ function CreateEventDialog({
               course_group_activity_id: selectedActivity?.id ?? null,
               course_group_id: selectedActivity?.courseGroupId ?? null,
               course_slug: selectedActivity?.courseSlug ?? null,
+              host_membership_id: hostMembershipId,
               participant_membership_ids: selectedActivity
                 ? []
                 : data.getAll('participants').map(String),
@@ -474,6 +492,33 @@ function CreateEventDialog({
               ))}
             </select>
           </Label>
+          <Label>
+            Docente anfitrión
+            <select
+              className="academic-select"
+              name="host_membership"
+              required
+              value={hostMembershipId}
+              onChange={(event) => setHostMembershipId(event.target.value)}
+            >
+              {hostOptions.length ? null : (
+                <option value="">No hay docentes disponibles</option>
+              )}
+              {hostOptions.map((host) => (
+                <option key={host.membershipId} value={host.membershipId}>
+                  {host.display}
+                </option>
+              ))}
+            </select>
+          </Label>
+          {!hostOptions.length ? (
+            <Alert variant="destructive">
+              <AlertTitle>Falta un docente anfitrión</AlertTitle>
+              <AlertDescription>
+                Asigna una membresía docente activa antes de programar la clase.
+              </AlertDescription>
+            </Alert>
+          ) : null}
           {!activityId ? (
             <fieldset className="grid gap-2 rounded-lg border p-3">
               <legend className="px-1 text-sm font-medium">
@@ -553,7 +598,7 @@ function CreateEventDialog({
             <Input name="description" maxLength={2000} />
           </Label>
           <DialogFooter>
-            <Button disabled={submitting} type="submit">
+            <Button disabled={submitting || !hostMembershipId} type="submit">
               {submitting ? 'Creando…' : 'Crear evento'}
             </Button>
           </DialogFooter>
@@ -579,4 +624,9 @@ function nextVisibleStart() {
     date.setHours(8);
   }
   return date.toISOString();
+}
+
+function calendarEventStatusLabel(status: string) {
+  if (status === 'cancelled') return 'Cancelada';
+  return 'Programada';
 }

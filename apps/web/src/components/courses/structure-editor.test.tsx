@@ -115,6 +115,7 @@ describe('StructureEditor', () => {
           canManage={false}
           completionPolicy={completionPolicy}
           courseSlug="algebra"
+          gradingScheme={[]}
           liveClassBindings={[]}
           objectives={[]}
           outline={outline}
@@ -145,6 +146,7 @@ describe('StructureEditor', () => {
           canManage
           completionPolicy={completionPolicy}
           courseSlug="algebra"
+          gradingScheme={[]}
           liveClassBindings={[]}
           objectives={[]}
           outline={{

@@ -276,6 +276,18 @@ class LearningServiceTests(LearningFixtureMixin, TestCase):
             course_progress=synced_enrollment.current_release_assignment.progress
         )
         self.assertEqual(activity_progress.status, ActivityProgressStatus.AVAILABLE)
+        self.assertEqual(
+            ActivityProgress.objects.filter(
+                course_progress=manual_enrollment.current_release_assignment.progress,
+                group_activity__course_group=cohort,
+            ).count(),
+            1,
+        )
+        manual_enrollment.current_release_assignment.progress.refresh_from_db()
+        self.assertEqual(
+            manual_enrollment.current_release_assignment.progress.total_required_activities,
+            1,
+        )
         synced_progress = open_unit(
             actor=synced_user,
             enrollment=synced_enrollment,

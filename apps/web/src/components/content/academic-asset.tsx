@@ -130,8 +130,16 @@ export function AcademicAsset({
   const onMediaError = () => void refresh();
   if (!source)
     return <p role="alert">El recurso no tiene una variante entregable.</p>;
+  const integratedPdf =
+    kind === 'document' && source.mime_type === 'application/pdf';
   return (
-    <figure className="my-5 overflow-hidden rounded-lg border bg-card">
+    <figure
+      className={
+        integratedPdf
+          ? 'my-5 overflow-hidden rounded-xl bg-transparent'
+          : 'my-5 overflow-hidden rounded-lg border bg-card'
+      }
+    >
       {kind === 'image' ? (
         // Signed URLs intentionally bypass the Next image proxy.
         // eslint-disable-next-line @next/next/no-img-element
@@ -178,7 +186,7 @@ export function AcademicAsset({
           Tu navegador no puede reproducir este video.
         </video>
       ) : null}
-      {kind === 'document' && source.mime_type === 'application/pdf' ? (
+      {integratedPdf ? (
         <PdfDocumentReader
           key={source.url}
           onError={onMediaError}

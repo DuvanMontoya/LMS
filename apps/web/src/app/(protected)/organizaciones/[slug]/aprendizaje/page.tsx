@@ -7,6 +7,7 @@ import {
 import Link from 'next/link';
 
 import { LearnerDeliveryList } from '@/components/assessments/learner-deliveries';
+import { CourseApprovalStatus } from '@/components/learning/course-approval-status';
 import { LearningProgress } from '@/components/learning/learning-progress';
 import { PageHeader } from '@/components/platform/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -57,11 +58,11 @@ export default async function MyLearningPage({
         <dl>
           <LearningMetric label="Matrículas" value={data.enrollments.length} />
           <LearningMetric
-            label="Pendientes"
+            label="Evaluaciones disponibles"
             value={pendingAssessments.length}
           />
           <LearningMetric
-            label="Completadas"
+            label="Evaluaciones realizadas"
             value={completedAssessments.length}
           />
         </dl>
@@ -104,6 +105,10 @@ export default async function MyLearningPage({
                 <div className="learning-course-card__progress">
                   <LearningProgress progress={enrollment.progress} />
                 </div>
+                <CourseApprovalStatus
+                  accessState={enrollment.access_state}
+                  progress={enrollment.progress}
+                />
                 {available && enrollment.resume.href ? (
                   <Button
                     asChild
@@ -140,10 +145,10 @@ export default async function MyLearningPage({
         <header>
           <div>
             <p className="academic-kicker">Próximas acciones</p>
-            <h2>Evaluaciones pendientes</h2>
+            <h2>Evaluaciones disponibles</h2>
             <p>
-              Instrumentos vinculados a tu grupo y release; su resultado
-              alimenta el progreso y la calificación compuesta del curso.
+              Instrumentos nuevos, intentos en curso y reintentos todavía
+              habilitados para tu grupo y release.
             </p>
           </div>
           <span>{pendingAssessments.length}</span>

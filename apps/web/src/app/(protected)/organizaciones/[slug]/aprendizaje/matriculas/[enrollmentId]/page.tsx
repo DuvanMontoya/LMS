@@ -1,4 +1,5 @@
 import { EnrollmentActions } from '@/components/learning/learning-admin-actions';
+import { CourseApprovalStatus } from '@/components/learning/course-approval-status';
 import { LearningProgress } from '@/components/learning/learning-progress';
 import { PageHeader } from '@/components/platform/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -59,6 +60,10 @@ export default async function EnrollmentDetailPage({
         aria-label="Progreso de la matrícula"
       >
         <LearningProgress progress={data.progress} />
+        <CourseApprovalStatus
+          accessState={item.access_state}
+          progress={data.progress}
+        />
         <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
           <div>
             <dt className="text-muted-foreground">Inicio</dt>

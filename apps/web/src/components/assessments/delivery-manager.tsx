@@ -45,7 +45,17 @@ type ReleaseOption = {
   number: number;
 };
 
+type ActivityOption = {
+  course_group_name: string;
+  id: string;
+  module_position: number;
+  position: number;
+  releaseId: string;
+  title: string;
+};
+
 export function DeliveryManager({
+  activityOptions,
   canManage,
   canViewResults,
   deliveries,
@@ -54,6 +64,7 @@ export function DeliveryManager({
   slug,
   versions,
 }: Readonly<{
+  activityOptions: ActivityOption[];
   canManage: boolean;
   canViewResults: boolean;
   deliveries: AssessmentDeliveryPage;
@@ -68,11 +79,16 @@ export function DeliveryManager({
   const [opensAt, setOpensAt] = useState('');
   const [closesAt, setClosesAt] = useState('');
   const [releaseId, setReleaseId] = useState('');
+  const [activityId, setActivityId] = useState('');
+  const eligibleActivities = activityOptions.filter(
+    (activity) => activity.releaseId === releaseId,
+  );
   const create = useAssessmentMutation(() =>
     createAssessmentDelivery(slug, {
       assessment_version_id: versionId,
       closes_at: closesAt ? new Date(closesAt).toISOString() : null,
       course_release_id: releaseId || null,
+      course_group_activity_id: activityId || null,
       name,
       opens_at: opensAt ? new Date(opensAt).toISOString() : null,
     }),
@@ -157,7 +173,10 @@ export function DeliveryManager({
               <select
                 className="academic-control"
                 id="delivery-release"
-                onChange={(event) => setReleaseId(event.target.value)}
+                onChange={(event) => {
+                  setReleaseId(event.target.value);
+                  setActivityId('');
+                }}
                 value={releaseId}
               >
                 <option value="">Entrega institucional sin release</option>
@@ -167,6 +186,32 @@ export function DeliveryManager({
                   </option>
                 ))}
               </select>
+              {releaseId ? (
+                <>
+                  <Label htmlFor="delivery-activity">
+                    Actividad evaluativa del grupo
+                  </Label>
+                  <select
+                    className="academic-control"
+                    id="delivery-activity"
+                    onChange={(event) => setActivityId(event.target.value)}
+                    value={activityId}
+                  >
+                    <option value="">Selecciona la actividad curricular</option>
+                    {eligibleActivities.map((activity) => (
+                      <option key={activity.id} value={activity.id}>
+                        {activity.course_group_name} ·{' '}
+                        {activity.module_position}.{activity.position}{' '}
+                        {activity.title}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    Esta relación permite que la nota actualice el progreso y la
+                    aprobación del curso correcto.
+                  </p>
+                </>
+              ) : null}
               <Label htmlFor="delivery-opens">Apertura (opcional)</Label>
               <Input
                 id="delivery-opens"
@@ -183,13 +228,19 @@ export function DeliveryManager({
               />
               <Button
                 className="w-full"
-                disabled={!name.trim() || !versionId || create.isPending}
+                disabled={
+                  !name.trim() ||
+                  !versionId ||
+                  (Boolean(releaseId) && !activityId) ||
+                  create.isPending
+                }
                 onClick={async () => {
                   try {
                     await create.mutateAsync(undefined);
                     setName('');
                     setVersionId('');
                     setReleaseId('');
+                    setActivityId('');
                     setOpensAt('');
                     setClosesAt('');
                     router.refresh();

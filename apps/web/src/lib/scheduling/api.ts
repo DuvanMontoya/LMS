@@ -122,6 +122,15 @@ export function endLiveSession(slug: string, sessionId: string) {
   );
 }
 
+export function getLiveAttendance(slug: string, sessionId: string) {
+  return required(
+    platformBrowserClient.GET(
+      '/api/v1/organizations/{slug}/scheduling/live-sessions/{session_id}/attendance/',
+      { params: { path: { slug, session_id: sessionId } } },
+    ),
+  );
+}
+
 export function startLiveRecording(
   slug: string,
   sessionId: string,

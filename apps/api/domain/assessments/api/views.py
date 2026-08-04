@@ -5,7 +5,7 @@ from collections.abc import Callable
 from typing import Any
 from uuid import UUID
 
-from django.db.models import Prefetch, Q
+from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -719,6 +719,10 @@ class ApprovedQuestionVersionOptionsView(APIView):
                 question__status=LifecycleStatus.ACTIVE,
             )
             .select_related("question__bank")
+            .annotate(
+                usage_count=Count("assessment_items", distinct=True)
+                + Count("pool_candidates", distinct=True)
+            )
             .order_by("question__bank__name", "question__code", "number")
         )
         return ApiResponse(

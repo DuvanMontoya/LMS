@@ -21,6 +21,8 @@ type Readiness =
   operations['organizations_courses_revisions_readiness_retrieve']['responses'][200]['content']['application/json'];
 type CompletionPolicy =
   operations['organizations_courses_revisions_completion_policy_retrieve']['responses'][200]['content']['application/json'];
+type GradingScheme =
+  operations['organizations_courses_revisions_grading_scheme_list']['responses'][200]['content']['application/json'];
 type SubjectList =
   operations['organizations_catalog_subjects_list']['responses'][200]['content']['application/json'];
 type ObjectiveList =
@@ -129,6 +131,26 @@ export async function getCourseCompletionPolicy(
     ),
     'No fue posible consultar la política de finalización.',
   )) as CompletionPolicy;
+}
+
+export async function getCourseGradingScheme(
+  slug: string,
+  courseSlug: string,
+  revisionId: string,
+) {
+  const client = await createPlatformServerClient();
+  return (await required(
+    client.GET(
+      '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/grading-scheme/',
+      {
+        params: {
+          path: { course_slug: courseSlug, revision_id: revisionId, slug },
+        },
+        cache: 'no-store',
+      },
+    ),
+    'No fue posible consultar el esquema de calificación.',
+  )) as GradingScheme;
 }
 
 export async function getCourseWorkspace(slug: string, courseSlug: string) {

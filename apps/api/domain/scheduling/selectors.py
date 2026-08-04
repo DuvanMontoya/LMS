@@ -84,7 +84,9 @@ def visible_occurrences_in_range(
 
 def _availability(occurrence: AcademicEventOccurrence, actor: object) -> dict[str, Any]:
     session = getattr(occurrence, "live_session", None)
-    can_edit = can_edit_series(actor, occurrence.series)
+    can_edit = occurrence.status != OccurrenceStatus.CANCELLED and can_edit_series(
+        actor, occurrence.series
+    )
     if session is None:
         return {
             "sessionId": None,
@@ -342,8 +344,25 @@ def live_sessions_visible_to_actor(
 def attendance_summary(session: LiveSession) -> list[dict[str, Any]]:
     rows = (
         AttendanceSegment.objects.filter(session=session)
-        .values("user_id", "participant_identity", "role")
+        .values(
+            "user_id",
+            "user__email",
+            "user__first_name",
+            "user__last_name",
+            "participant_identity",
+            "role",
+        )
         .annotate(duration_seconds=Sum("duration_seconds"))
         .order_by("participant_identity")
     )
-    return list(rows)
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        full_name = " ".join(
+            part.strip()
+            for part in (row.pop("user__first_name"), row.pop("user__last_name"))
+            if part and part.strip()
+        )
+        email = row.pop("user__email") or ""
+        row["display_name"] = full_name or email
+        result.append(row)
+    return result

@@ -275,11 +275,7 @@ def resume_payload(enrollment: CourseEnrollment) -> dict[str, Any]:
             binding_snapshot__unit_id=str(unit_id),
         ).first()
     href = f"/organizaciones/{enrollment.organization.slug}/aprender/{enrollment.course.slug}"
-    href += (
-        f"/actividades/{activity_instance.id}"
-        if activity_instance
-        else f"/unidades/{unit_id}"
-    )
+    href += f"/unidades/{unit_id}"
     if node_id:
         href += f"#node-{node_id}"
     return {
@@ -370,9 +366,14 @@ def learning_outline(enrollment: CourseEnrollment) -> dict[str, Any]:
                 if activity["status"] == ActivityProgressStatus.LOCKED
                 else None
             )
-            activity["href"] = (
+            base = (
                 f"/organizaciones/{enrollment.organization.slug}/aprender/"
-                f"{enrollment.course.slug}/actividades/{activity['id']}"
+                f"{enrollment.course.slug}"
+            )
+            activity["href"] = (
+                f"{base}/unidades/{lesson_unit_id}"
+                if lesson_unit_id
+                else f"{base}/actividades/{activity['id']}"
             )
         for unit in module["units"]:
             unit_id = uuid.UUID(unit["id"])
@@ -491,27 +492,10 @@ def learning_unit(enrollment: CourseEnrollment, unit_id: uuid.UUID) -> dict[str,
         f"/organizaciones/{enrollment.organization.slug}/aprender/"
         f"{enrollment.course.slug}"
     )
-    activity_instance_ids = {
-        row.group_activity.source_activity_id: row.group_activity_id
-        for row in ActivityProgress.objects.filter(
-            course_progress=progress
-        ).select_related("group_activity")
-    }
     for direction in ("previous", "next"):
         target = navigation[direction]
         if isinstance(target, dict):
-            source_activity_id = uuid.UUID(target["id"])
-            if target.get("type") == "lesson":
-                target["href"] = f"{base}/unidades/{source_activity_id}"
-            else:
-                activity_instance_id = activity_instance_ids.get(source_activity_id)
-                target["source_activity_id"] = source_activity_id
-                target["id"] = activity_instance_id
-                target["href"] = (
-                    f"{base}/actividades/{activity_instance_id}"
-                    if activity_instance_id
-                    else None
-                )
+            target["href"] = f"{base}/unidades/{target['id']}"
     navigation["outline"] = base
     return {
         "course": {

@@ -88,7 +88,12 @@ Contenido con $R_p$.
       await screen.findByRole('heading', { name: 'Lección fuente' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Inicio' })).toBeInTheDocument();
-    expect(screen.getByText(/no ejecuta ni compila TikZ/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', {
+        name: 'Contenido gráfico definido en el archivo LaTeX.',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('1 trazos interpretados')).toBeInTheDocument();
   });
 
   it('rejects a source descriptor above the 10 MiB reading limit', async () => {

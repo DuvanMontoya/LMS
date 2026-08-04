@@ -69,7 +69,7 @@ describe('parseLatexLesson', () => {
     });
   });
 
-  it('replaces TikZ with a visible non-compilation notice', () => {
+  it('preserves TikZ source for safe browser-side vector interpretation', () => {
     const document = parseLatexLesson(String.raw`
       \begin{document}
       \begin{tikzpicture}
@@ -79,7 +79,30 @@ describe('parseLatexLesson', () => {
     `);
     expect(document.blocks).toContainEqual({
       caption: 'Contenido gráfico definido en el archivo LaTeX.',
+      environment: 'tikzpicture',
+      source: expect.stringContaining('\\draw (0,0) -- (1,1);'),
       type: 'visual',
+    });
+  });
+
+  it('omits a redundant title page and cleans bibliography layout commands', () => {
+    const document = parseLatexLesson(String.raw`
+      \title{Documento verificable}
+      \begin{document}
+      \begin{titlepage}
+      \vspace*{2cm}{\Large\bfseries Portada duplicada\par}
+      \end{titlepage}
+      \section{Referencias}
+      \bibitem{Fuente} A. Autora. \newblock Resultado con \(x^2\).
+      \end{document}
+    `);
+
+    expect(document.blocks).not.toContainEqual(
+      expect.objectContaining({ text: expect.stringContaining('Portada') }),
+    );
+    expect(document.blocks).toContainEqual({
+      text: 'A. Autora. Resultado con $x^2$.',
+      type: 'paragraph',
     });
   });
 });

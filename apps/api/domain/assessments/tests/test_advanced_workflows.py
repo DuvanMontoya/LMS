@@ -53,6 +53,28 @@ from .support import AssessmentFixtureMixin, question_definition
 
 
 class AdvancedAssessmentWorkflowTests(AssessmentFixtureMixin, TestCase):
+    def test_question_approver_can_create_a_version_without_redundant_review(self):
+        context = self.assessment_context(with_learning=True)
+        _, revision = create_question(
+            actor=context["owner"],
+            bank=context["bank"],
+            code="ALG-DIRECT-001",
+            question_type="single_choice",
+            definition=question_definition("single_choice"),
+        )
+
+        revision, version = transition_question_revision(
+            actor=context["owner"],
+            revision=revision,
+            expected_version=revision.lock_version,
+            to_status=AuthoringStatus.APPROVED,
+            note="Versión validada dentro del armado de la evaluación.",
+        )
+
+        self.assertEqual(revision.status, AuthoringStatus.APPROVED)
+        self.assertIsNotNone(version)
+        self.assertEqual(version.question_id, revision.question_id)
+
     def _question_version(self, context, *, code: str):
         _, revision = create_question(
             actor=context["owner"],

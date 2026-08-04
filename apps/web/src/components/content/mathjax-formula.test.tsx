@@ -49,6 +49,10 @@ describe('MathJaxFormula', () => {
     const configuration = JSON.stringify(window.MathJax);
     expect(configuration).toContain('"load":["ui/safe"]');
     expect(configuration).toContain('"packages":["base","ams"]');
+    expect(configuration).toContain(
+      '"fontPath":"/vendor/mathjax/fonts/%%FONT%%"',
+    );
+    expect(configuration).toContain('"linebreaks":{"inline":false}');
     expect(configuration).toContain('"javascript":false');
     expect(configuration).not.toContain('texhtml');
     expect(configuration).not.toContain('jsdelivr');

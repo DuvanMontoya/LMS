@@ -1312,13 +1312,18 @@ export interface components {
       expected_version: number;
     };
     ApprovedQuestionVersionOption: {
+      /** Format: uuid */
+      bank_id: string;
       bank_name: string;
       code: string;
       /** Format: uuid */
       id: string;
       number: number;
       public: unknown;
+      /** Format: uuid */
+      question_id: string;
       type: string;
+      usage_count: number;
     };
     Area: {
       description?: string;
@@ -1937,6 +1942,7 @@ export interface components {
       results: components['schemas']['AttemptResult'][];
     };
     AttendanceSummary: {
+      display_name: string;
       duration_seconds: number | null;
       participant_identity: string;
       role: string;
@@ -4489,6 +4495,7 @@ export interface components {
       results: components['schemas']['Membership'][];
     };
     ParticipantOption: {
+      can_host: boolean;
       display: string;
       /** Format: uuid */
       membership_id: string;

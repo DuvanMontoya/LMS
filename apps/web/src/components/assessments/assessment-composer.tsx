@@ -1,13 +1,17 @@
 'use client';
 
 import {
+  Check,
   CircleAlert,
+  Code2,
   FileCheck2,
+  ImageIcon,
   ListChecks,
   Save,
   Search,
   Settings2,
   ShieldCheck,
+  Sigma,
   Target,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -19,6 +23,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { MutationError } from '@/components/assessments/authoring-forms';
+import { QuestionPreviewDialog } from '@/components/assessments/question-preview-dialog';
+import { LatexText } from '@/components/content/latex-text';
 import {
   addAssessmentItem,
   createAssessmentPool,
@@ -63,8 +69,11 @@ type QuestionOption = Pick<
   QuestionVersion,
   'id' | 'number' | 'public' | 'type'
 > & {
+  bankId: string;
   bankName: string;
   code: string;
+  questionId: string;
+  usageCount: number;
 };
 
 export function AssessmentComposer({
@@ -193,6 +202,14 @@ export function AssessmentComposer({
     (count, section) => count + section.items.length,
     0,
   );
+  const usedQuestionVersionIds = new Set([
+    ...sections.flatMap((section) =>
+      section.items.map((item) => item.question_version_id),
+    ),
+    ...pools.flatMap((pool) =>
+      pool.candidates.map((candidate) => candidate.question_version_id),
+    ),
+  ]);
   const selectedPoolItemCount = pools.reduce(
     (count, pool) => count + pool.selection_count,
     0,
@@ -602,6 +619,7 @@ export function AssessmentComposer({
                       objectives={assessmentObjectives}
                       path={{ ...path, sectionId: section.id }}
                       questions={questions}
+                      usedQuestionVersionIds={usedQuestionVersionIds}
                     />
                   ) : null}
                 </li>
@@ -748,6 +766,7 @@ function AssessmentPoolComposer({
   questions: QuestionOption[];
 }>) {
   const router = useRouter();
+  const [creatingPool, setCreatingPool] = useState(false);
   const [title, setTitle] = useState('');
   const [points, setPoints] = useState('1.000');
   const [selectionCount, setSelectionCount] = useState(1);
@@ -798,9 +817,34 @@ function AssessmentPoolComposer({
             sin cambios.
           </p>
         ) : null}
-        {editable ? (
+        {editable && !creatingPool ? (
+          <Button
+            onClick={() => setCreatingPool(true)}
+            type="button"
+            variant="outline"
+          >
+            Crear pool aleatorio
+          </Button>
+        ) : null}
+        {editable && creatingPool ? (
           <div className="space-y-4 border-t pt-5">
-            <h3 className="font-semibold">Crear pool</h3>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold">Crear pool</h3>
+                <p className="text-sm text-muted-foreground">
+                  Configuración avanzada para seleccionar preguntas al azar en
+                  cada intento.
+                </p>
+              </div>
+              <Button
+                onClick={() => setCreatingPool(false)}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                Cancelar
+              </Button>
+            </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <label className="space-y-1.5 sm:col-span-3">
                 <span className="text-sm font-medium">Título</span>
@@ -840,6 +884,7 @@ function AssessmentPoolComposer({
               candidateIds={candidateIds}
               onChange={setCandidateIds}
               questions={questions}
+              slug={path.slug}
             />
             <Button
               disabled={
@@ -979,6 +1024,7 @@ function AssessmentPoolEditor({
             )}
             onChange={setCandidateIds}
             questions={questions}
+            slug={slug}
           />
           <div className="flex flex-wrap gap-2">
             <Button
@@ -1037,14 +1083,17 @@ function QuestionCandidatePicker({
   lockedIds = [],
   onChange,
   questions,
+  slug,
 }: Readonly<{
   candidateIds: string[];
   lockedIds?: string[];
   onChange: (ids: string[]) => void;
   questions: QuestionOption[];
+  slug: string;
 }>) {
   const [query, setQuery] = useState('');
   const [type, setType] = useState('all');
+  const [visibleLimit, setVisibleLimit] = useState(8);
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const types = useMemo(
     () => [...new Set(questions.map((question) => question.type))].sort(),
@@ -1061,6 +1110,7 @@ function QuestionCandidatePicker({
       }),
     [normalizedQuery, questions, type],
   );
+  const displayedQuestions = visibleQuestions.slice(0, visibleLimit);
   return (
     <fieldset className="assessment-candidate-picker">
       <legend>Preguntas candidatas</legend>
@@ -1069,7 +1119,10 @@ function QuestionCandidatePicker({
           <Search aria-hidden="true" />
           <Input
             aria-label="Buscar pregunta candidata"
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setVisibleLimit(8);
+            }}
             placeholder="Código, banco o contenido…"
             value={query}
           />
@@ -1077,7 +1130,10 @@ function QuestionCandidatePicker({
         <select
           aria-label="Filtrar por tipo de pregunta"
           className="academic-control"
-          onChange={(event) => setType(event.target.value)}
+          onChange={(event) => {
+            setType(event.target.value);
+            setVisibleLimit(8);
+          }}
           value={type}
         >
           <option value="all">Todos los tipos</option>
@@ -1090,43 +1146,146 @@ function QuestionCandidatePicker({
         <span>{candidateIds.length} seleccionadas</span>
       </div>
       <div className="assessment-candidate-picker__list">
-        {visibleQuestions.map((question) => {
+        {displayedQuestions.map((question) => {
           const checked = candidateIds.includes(question.id);
-          const excerpt = publicQuestionExcerpt(question.public);
           return (
-            <label data-selected={checked} key={question.id}>
-              <input
-                checked={checked}
-                disabled={lockedIds.includes(question.id)}
-                onChange={(event) =>
-                  onChange(
-                    event.target.checked
-                      ? [...candidateIds, question.id]
-                      : candidateIds.filter((id) => id !== question.id),
-                  )
-                }
-                type="checkbox"
-              />
-              <span className="min-w-0">
-                <strong>{question.code}</strong>
-                <span>
-                  {questionTypeLabel(question.type)} · {question.bankName} · v
-                  {question.number}
-                </span>
-                {excerpt ? <small>{excerpt}</small> : null}
-              </span>
-            </label>
+            <QuestionOptionCard
+              checked={checked}
+              disabled={lockedIds.includes(question.id)}
+              key={question.id}
+              mode="checkbox"
+              onChange={(nextChecked) =>
+                onChange(
+                  nextChecked
+                    ? [...candidateIds, question.id]
+                    : candidateIds.filter((id) => id !== question.id),
+                )
+              }
+              question={question}
+              slug={slug}
+            />
           );
         })}
         {!visibleQuestions.length ? (
           <p>No hay preguntas aprobadas que coincidan con el filtro.</p>
+        ) : null}
+        {displayedQuestions.length < visibleQuestions.length ? (
+          <Button
+            onClick={() => setVisibleLimit((current) => current + 8)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Mostrar más
+          </Button>
         ) : null}
       </div>
     </fieldset>
   );
 }
 
-function publicQuestionExcerpt(value: unknown) {
+function QuestionOptionCard({
+  checked,
+  disabled,
+  mode,
+  onChange,
+  question,
+  slug,
+}: Readonly<{
+  checked: boolean;
+  disabled: boolean;
+  mode: 'checkbox' | 'radio';
+  onChange: (checked: boolean) => void;
+  question: QuestionOption;
+  slug: string;
+}>) {
+  const excerpt = publicQuestionExcerpt(question.public);
+  const features = questionContentFeatures(question.public);
+  return (
+    <article
+      className="assessment-question-option"
+      data-disabled={disabled}
+      data-selected={checked}
+    >
+      <label>
+        <input
+          checked={checked}
+          disabled={disabled}
+          name={mode === 'radio' ? 'approved-question-version' : undefined}
+          onChange={(event) => onChange(event.target.checked)}
+          type={mode}
+        />
+        <span className="assessment-question-option__body">
+          <span className="assessment-question-option__topline">
+            <strong>{question.code}</strong>
+            <span>{questionTypeLabel(question.type)}</span>
+            <span>Aprobada</span>
+          </span>
+          <span className="assessment-question-option__excerpt">
+            <LatexText value={excerpt || 'Pregunta sin extracto disponible'} />
+          </span>
+          <span className="assessment-question-option__meta">
+            <span>{question.bankName}</span>
+            <span>Versión {question.number}</span>
+            <span>
+              {question.usageCount
+                ? `Usada ${question.usageCount} ${question.usageCount === 1 ? 'vez' : 'veces'}`
+                : 'Sin uso previo'}
+            </span>
+          </span>
+          <span className="assessment-question-option__features">
+            {features.hasMath ? (
+              <span title="Contiene ecuaciones">
+                <Sigma /> Ecuaciones
+              </span>
+            ) : null}
+            {features.hasImage ? (
+              <span title="Contiene imágenes">
+                <ImageIcon /> Imágenes
+              </span>
+            ) : null}
+            {features.hasCode ? (
+              <span title="Contiene código">
+                <Code2 /> Código
+              </span>
+            ) : null}
+            {!features.hasMath && !features.hasImage && !features.hasCode ? (
+              <span>Solo texto</span>
+            ) : null}
+            {disabled ? <span>Ya incluida en esta evaluación</span> : null}
+          </span>
+        </span>
+      </label>
+      <QuestionPreviewDialog
+        bankId={question.bankId}
+        code={question.code}
+        questionId={question.questionId}
+        slug={slug}
+      />
+    </article>
+  );
+}
+
+export function questionContentFeatures(value: unknown) {
+  const serialized = JSON.stringify(value).toLocaleLowerCase();
+  return {
+    hasCode:
+      serialized.includes('codeblock') ||
+      serialized.includes('code_block') ||
+      serialized.includes('"language"'),
+    hasImage:
+      serialized.includes('"type":"image"') ||
+      serialized.includes('assetversionid') ||
+      serialized.includes('asset_version_id'),
+    hasMath:
+      serialized.includes('math_inline') ||
+      serialized.includes('math_block') ||
+      serialized.includes('math_latex') ||
+      serialized.includes('"latex"'),
+  };
+}
+
+export function publicQuestionExcerpt(value: unknown) {
   const root =
     value && typeof value === 'object'
       ? (value as Record<string, unknown>)
@@ -1142,7 +1301,10 @@ function publicQuestionExcerpt(value: unknown) {
     if (typeof node.text === 'string') pieces.push(node.text);
     if (node.attrs && typeof node.attrs === 'object') {
       const attrs = node.attrs as Record<string, unknown>;
-      if (typeof attrs.latex === 'string') pieces.push(attrs.latex);
+      if (typeof attrs.latex === 'string') {
+        const delimiter = node.type === 'math_block' ? '$$' : '$';
+        pieces.push(`${delimiter}${attrs.latex}${delimiter}`);
+      }
       if (typeof attrs.altText === 'string') pieces.push(attrs.altText);
     }
     if (Array.isArray(node.content)) stack.push(...node.content.toReversed());
@@ -1183,6 +1345,7 @@ function AssessmentItemForm({
   objectives,
   path,
   questions,
+  usedQuestionVersionIds,
 }: Readonly<{
   lockVersion: number;
   objectives: LearningObjective[];
@@ -1193,15 +1356,19 @@ function AssessmentItemForm({
     slug: string;
   };
   questions: QuestionOption[];
+  usedQuestionVersionIds: ReadonlySet<string>;
 }>) {
   const router = useRouter();
   const bankNames = [
     ...new Set(questions.map((question) => question.bankName)),
   ].sort((left, right) => left.localeCompare(right, 'es'));
-  const [bankName, setBankName] = useState(
-    bankNames.length === 1 ? (bankNames[0] ?? '') : '',
-  );
+  const questionTypes = [
+    ...new Set(questions.map((question) => question.type)),
+  ].sort();
+  const [bankName, setBankName] = useState('all');
+  const [questionType, setQuestionType] = useState('all');
   const [questionQuery, setQuestionQuery] = useState('');
+  const [visibleLimit, setVisibleLimit] = useState(8);
   const [questionVersionId, setQuestionVersionId] = useState('');
   const [points, setPoints] = useState('1.000');
   const [objectiveIds, setObjectiveIds] = useState<string[]>([]);
@@ -1217,122 +1384,166 @@ function AssessmentItemForm({
   const normalizedQuestionQuery = questionQuery.trim().toLocaleLowerCase();
   const visibleQuestions = questions.filter(
     (question) =>
-      question.bankName === bankName &&
+      (bankName === 'all' || question.bankName === bankName) &&
+      (questionType === 'all' || question.type === questionType) &&
       (!normalizedQuestionQuery ||
-        question.code.toLocaleLowerCase().includes(normalizedQuestionQuery)),
+        `${question.code} ${question.bankName} ${questionTypeLabel(question.type)} ${publicQuestionExcerpt(question.public)}`
+          .toLocaleLowerCase()
+          .includes(normalizedQuestionQuery)),
   );
+  const displayedQuestions = visibleQuestions.slice(0, visibleLimit);
   return (
-    <div className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-[minmax(0,.75fr)_minmax(0,.75fr)_minmax(0,1.25fr)_7rem]">
-      <Label className="sr-only" htmlFor={`bank-${path.sectionId}`}>
-        Banco de preguntas
-      </Label>
-      <select
-        className="h-9 min-w-0 border bg-background px-3 text-sm"
-        id={`bank-${path.sectionId}`}
-        onChange={(event) => {
-          setBankName(event.target.value);
-          setQuestionVersionId('');
-        }}
-        value={bankName}
-      >
-        <option value="">Selecciona un banco</option>
-        {bankNames.map((name) => (
-          <option key={name} value={name}>
-            {name}
-          </option>
-        ))}
-      </select>
-      <Label className="sr-only" htmlFor={`question-search-${path.sectionId}`}>
-        Buscar pregunta por código
-      </Label>
-      <Input
-        id={`question-search-${path.sectionId}`}
-        onChange={(event) => setQuestionQuery(event.target.value)}
-        placeholder="Buscar código"
-        value={questionQuery}
-      />
-      <Label className="sr-only" htmlFor={`question-${path.sectionId}`}>
-        Pregunta aprobada
-      </Label>
-      <select
-        className="h-9 min-w-0 border bg-background px-3 text-sm"
-        id={`question-${path.sectionId}`}
-        onChange={(event) => setQuestionVersionId(event.target.value)}
-        value={questionVersionId}
-      >
-        <option value="">
-          {bankName
-            ? 'Selecciona una pregunta aprobada'
-            : 'Primero selecciona un banco'}
-        </option>
-        {visibleQuestions.map((question) => (
-          <option key={question.id} value={question.id}>
-            {question.code} · v{question.number}
-          </option>
-        ))}
-      </select>
-      <Label className="sr-only" htmlFor={`points-${path.sectionId}`}>
-        Puntos
-      </Label>
-      <Input
-        id={`points-${path.sectionId}`}
-        min="0.001"
-        onChange={(event) => setPoints(event.target.value)}
-        step="0.001"
-        type="number"
-        value={points}
-      />
-      <fieldset className="sm:col-span-4">
-        <legend className="text-xs font-semibold text-muted-foreground">
-          Objetivos del ítem
-        </legend>
-        <div className="mt-2 flex flex-wrap gap-3">
-          {objectives.map((objective) => (
-            <label
-              className="flex items-center gap-2 text-xs"
-              key={objective.id}
-            >
-              <input
-                checked={objectiveIds.includes(objective.id)}
-                onChange={(event) =>
-                  setObjectiveIds((current) =>
-                    event.target.checked
-                      ? [...current, objective.id]
-                      : current.filter((id) => id !== objective.id),
-                  )
-                }
-                type="checkbox"
-              />
-              {objective.code}
-            </label>
-          ))}
+    <section className="assessment-question-selector">
+      <header>
+        <div>
+          <p>Biblioteca aprobada</p>
+          <h4>Agregar pregunta fija</h4>
+          <span>
+            Identifica el contenido y previsualízalo antes de incorporarlo.
+          </span>
         </div>
-      </fieldset>
-      <Button
-        className="sm:col-start-4"
-        disabled={
-          !questionVersionId || !objectiveIds.length || mutation.isPending
-        }
-        onClick={async () => {
-          try {
-            await mutation.mutateAsync(undefined);
-            setQuestionVersionId('');
-            setPoints('1.000');
-            setObjectiveIds([]);
-            router.refresh();
-          } catch {
-            // React Query mantiene el error en el formulario.
-          }
-        }}
-        type="button"
-        variant="outline"
-      >
-        Añadir
-      </Button>
-      <div className="sm:col-span-4">
-        <MutationError error={mutation.error} />
+        <span>
+          {displayedQuestions.length} de {visibleQuestions.length} disponibles
+        </span>
+      </header>
+      <div className="assessment-question-selector__toolbar">
+        <label>
+          <Search aria-hidden="true" />
+          <Input
+            aria-label="Buscar pregunta aprobada"
+            id={`question-search-${path.sectionId}`}
+            onChange={(event) => {
+              setQuestionQuery(event.target.value);
+              setVisibleLimit(8);
+            }}
+            placeholder="Buscar por código, banco o contenido…"
+            value={questionQuery}
+          />
+        </label>
+        <select
+          aria-label="Filtrar por banco"
+          className="academic-control"
+          id={`bank-${path.sectionId}`}
+          onChange={(event) => {
+            setBankName(event.target.value);
+            setVisibleLimit(8);
+          }}
+          value={bankName}
+        >
+          <option value="all">Todos los bancos</option>
+          {bankNames.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Filtrar por tipo"
+          className="academic-control"
+          onChange={(event) => {
+            setQuestionType(event.target.value);
+            setVisibleLimit(8);
+          }}
+          value={questionType}
+        >
+          <option value="all">Todos los tipos</option>
+          {questionTypes.map((type) => (
+            <option key={type} value={type}>
+              {questionTypeLabel(type)}
+            </option>
+          ))}
+        </select>
       </div>
-    </div>
+      <div
+        aria-label="Preguntas aprobadas"
+        className="assessment-question-selector__list"
+        role="radiogroup"
+      >
+        {displayedQuestions.map((question) => (
+          <QuestionOptionCard
+            checked={questionVersionId === question.id}
+            disabled={usedQuestionVersionIds.has(question.id)}
+            key={question.id}
+            mode="radio"
+            onChange={() => setQuestionVersionId(question.id)}
+            question={question}
+            slug={path.slug}
+          />
+        ))}
+        {!visibleQuestions.length ? (
+          <p className="assessment-question-selector__empty">
+            No hay preguntas que coincidan con estos filtros.
+          </p>
+        ) : null}
+        {displayedQuestions.length < visibleQuestions.length ? (
+          <Button
+            onClick={() => setVisibleLimit((current) => current + 8)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Mostrar más
+          </Button>
+        ) : null}
+      </div>
+      <div className="assessment-question-selector__configuration">
+        <label>
+          <span>Puntos de la pregunta</span>
+          <Input
+            id={`points-${path.sectionId}`}
+            min="0.001"
+            onChange={(event) => setPoints(event.target.value)}
+            step="0.001"
+            type="number"
+            value={points}
+          />
+        </label>
+        <fieldset>
+          <legend>Objetivos que evidencia</legend>
+          <div>
+            {objectives.map((objective) => (
+              <label
+                data-selected={objectiveIds.includes(objective.id)}
+                key={objective.id}
+              >
+                <input
+                  checked={objectiveIds.includes(objective.id)}
+                  onChange={(event) =>
+                    setObjectiveIds((current) =>
+                      event.target.checked
+                        ? [...current, objective.id]
+                        : current.filter((id) => id !== objective.id),
+                    )
+                  }
+                  type="checkbox"
+                />
+                {objective.code}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <Button
+          disabled={
+            !questionVersionId || !objectiveIds.length || mutation.isPending
+          }
+          onClick={async () => {
+            try {
+              await mutation.mutateAsync(undefined);
+              setQuestionVersionId('');
+              setPoints('1.000');
+              setObjectiveIds([]);
+              router.refresh();
+            } catch {
+              // React Query mantiene el error en el formulario.
+            }
+          }}
+          type="button"
+        >
+          <Check data-icon="inline-start" /> Agregar seleccionada
+        </Button>
+      </div>
+      <MutationError error={mutation.error} />
+    </section>
   );
 }
 

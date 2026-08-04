@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { QuestionPreviewDialog } from '@/components/assessments/question-preview-dialog';
 import type { QuestionChoiceDraft } from '@/components/assessments/question-choice-editor';
+import { LatexText } from '@/components/content/latex-text';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -932,8 +933,17 @@ export function QuestionRevisionWorkflow({
           />
         </div>
         <div className="assessment-revision-workflow__actions">
-          {canSubmit &&
+          {canApprove &&
           ['draft', 'changes_requested'].includes(revision.status) ? (
+            <Button
+              disabled={transition.isPending}
+              onClick={() => void submitTransition('approve')}
+              type="button"
+            >
+              Aprobar versión para usar
+            </Button>
+          ) : canSubmit &&
+            ['draft', 'changes_requested'].includes(revision.status) ? (
             <Button
               disabled={transition.isPending}
               onClick={() => void submitTransition('submit-review')}
@@ -1159,7 +1169,11 @@ export function QuestionList({
                 <p className="assessment-question-list__code">
                   {question.code}
                 </p>
-                <h3>{excerpt || 'Pregunta sin enunciado disponible'}</h3>
+                <h3>
+                  <LatexText
+                    value={excerpt || 'Pregunta sin enunciado disponible'}
+                  />
+                </h3>
                 <div className="assessment-question-list__version">
                   <span>
                     {question.latest_version_number

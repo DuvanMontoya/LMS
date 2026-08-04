@@ -584,14 +584,31 @@
       },
       "ApprovedQuestionVersionOption": {
         "properties": {
+          "bank_id": { "format": "uuid", "readOnly": true, "type": "string" },
           "bank_name": { "readOnly": true, "type": "string" },
           "code": { "readOnly": true, "type": "string" },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
           "number": { "readOnly": true, "type": "integer" },
           "public": { "readOnly": true },
-          "type": { "readOnly": true, "type": "string" }
+          "question_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "type": { "readOnly": true, "type": "string" },
+          "usage_count": { "readOnly": true, "type": "integer" }
         },
-        "required": ["bank_name", "code", "id", "number", "public", "type"],
+        "required": [
+          "bank_id",
+          "bank_name",
+          "code",
+          "id",
+          "number",
+          "public",
+          "question_id",
+          "type",
+          "usage_count"
+        ],
         "type": "object"
       },
       "Area": {
@@ -1794,12 +1811,14 @@
       },
       "AttendanceSummary": {
         "properties": {
+          "display_name": { "type": "string" },
           "duration_seconds": { "nullable": true, "type": "integer" },
           "participant_identity": { "type": "string" },
           "role": { "type": "string" },
           "user_id": { "format": "uuid", "nullable": true, "type": "string" }
         },
         "required": [
+          "display_name",
           "duration_seconds",
           "participant_identity",
           "role",
@@ -7168,10 +7187,11 @@
       },
       "ParticipantOption": {
         "properties": {
+          "can_host": { "type": "boolean" },
           "display": { "type": "string" },
           "membership_id": { "format": "uuid", "type": "string" }
         },
-        "required": ["display", "membership_id"],
+        "required": ["can_host", "display", "membership_id"],
         "type": "object"
       },
       "ParticipantPermission": {
