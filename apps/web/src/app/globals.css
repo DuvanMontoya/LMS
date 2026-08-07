@@ -728,18 +728,15 @@
     @apply mt-1 text-sm text-muted-foreground;
   }
 
-  .learning-overview,
-  .library-overview {
+  .learning-overview {
     @apply mt-6 grid gap-5 rounded-xl border border-border bg-card p-5 shadow-[0_10px_32px_rgb(41_56_82_/_0.055)] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end sm:p-6;
   }
 
-  .learning-overview h2,
-  .library-overview h2 {
+  .learning-overview h2 {
     @apply mt-1 text-xl font-semibold tracking-[-0.025em];
   }
 
-  .learning-overview > div > p:last-child,
-  .library-overview > div > p:last-child {
+  .learning-overview > div > p:last-child {
     @apply mt-1 max-w-2xl text-sm leading-6 text-muted-foreground;
   }
 
@@ -763,13 +760,11 @@
     @apply mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
   }
 
-  .learning-course-card,
-  .library-course-card {
+  .learning-course-card {
     @apply flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card p-4 shadow-[0_10px_32px_rgb(41_56_82_/_0.055)] sm:p-5;
   }
 
-  .learning-course-card__icon,
-  .library-course-card__icon {
+  .learning-course-card__icon {
     @apply grid size-9 shrink-0 place-items-center rounded-lg border border-primary/15 bg-primary/8;
   }
 
@@ -2349,10 +2344,6 @@
     @apply mt-2 max-w-3xl text-sm leading-5 text-slate-600;
   }
 
-  .learning-player__topics {
-    @apply mt-3 flex flex-wrap gap-1.5;
-  }
-
   .learning-player__document {
     @apply px-5 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-9;
   }
@@ -2502,42 +2493,6 @@
     @apply p-0;
   }
 
-  .learning-player__objectives {
-    @apply mx-5 mb-6 overflow-hidden rounded-lg border border-slate-200 bg-slate-50/70 sm:mx-8 sm:mb-8 lg:mx-10;
-  }
-
-  .learning-player__objectives > summary {
-    @apply flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-slate-700 transition-colors hover:bg-slate-100;
-  }
-
-  .learning-player__objectives > summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .learning-player__objectives > summary > svg {
-    @apply size-4 shrink-0 text-blue-600;
-  }
-
-  .learning-player__objectives > summary > div {
-    @apply grid min-w-0;
-  }
-
-  .learning-player__objectives > summary strong {
-    @apply text-sm font-semibold;
-  }
-
-  .learning-player__objectives > summary small {
-    @apply text-xs text-slate-500;
-  }
-
-  .learning-player__objectives ul {
-    @apply grid gap-2 border-t border-slate-200 bg-white px-4 py-4 text-sm leading-6;
-  }
-
-  .learning-player__objectives li {
-    @apply border-l-2 border-blue-200 pl-3 text-slate-600;
-  }
-
   .learning-player__navigation {
     @apply mx-auto mt-5 grid w-full max-w-6xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 pb-3;
   }
@@ -2572,26 +2527,6 @@
 
   .learning-unit-control--navigation button {
     @apply whitespace-nowrap;
-  }
-
-  .library-overview > strong {
-    @apply flex items-baseline gap-2 text-3xl font-semibold text-primary;
-  }
-
-  .library-overview > strong span {
-    @apply text-xs font-semibold tracking-normal text-muted-foreground;
-  }
-
-  .library-course-grid {
-    @apply mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
-  }
-
-  .library-course-card__facts {
-    @apply mt-5 grid grid-cols-3 gap-2 rounded-lg border border-border bg-muted/20 p-3 text-xs;
-  }
-
-  .academic-link {
-    @apply font-medium text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
 
   .research-login {
@@ -2889,14 +2824,6 @@
     padding-block: 1rem;
     border-top: 1px solid rgb(37 47 56 / 17%);
     font-size: 0.65rem;
-  }
-
-  .academic-form-section {
-    @apply border-t border-border py-6 first:border-t-0 first:pt-0;
-  }
-
-  .academic-form-legend {
-    @apply mb-4 text-sm font-semibold tracking-[-0.01em] text-foreground;
   }
 
   .academic-field {
@@ -5954,10 +5881,6 @@
 
   .asset-media-document iframe {
     @apply h-[min(68vh,48rem)] w-full rounded-lg border bg-white;
-  }
-
-  .asset-media-document--text iframe {
-    @apply h-[min(52vh,34rem)];
   }
 
   .asset-media-document > a {
