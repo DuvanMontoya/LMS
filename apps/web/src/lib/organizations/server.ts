@@ -31,7 +31,16 @@ async function requirePayload<T>(
   request: Promise<{ response: Response; data?: T }>,
 ) {
   const { response, data } = await request;
-  if (response.status === 404) notFound();
+  if (
+    response.status === 400 ||
+    response.status === 401 ||
+    response.status === 403 ||
+    response.status === 404 ||
+    response.status === 409 ||
+    response.status === 422
+  ) {
+    notFound();
+  }
   if (!response.ok || !data) {
     throw new Error('No fue posible consultar el contexto institucional.');
   }

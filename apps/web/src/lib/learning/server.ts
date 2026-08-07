@@ -90,8 +90,10 @@ async function required<T>(
   const { data, response } = await request;
   if (
     response.status === 400 ||
+    response.status === 401 ||
     response.status === 403 ||
     response.status === 404 ||
+    response.status === 409 ||
     response.status === 422
   ) {
     notFound();

@@ -1,5 +1,17 @@
 # Project status
 
+## Entrega de unidades históricas — corregido localmente 2026-08-06
+
+- La ruta de aprendizaje devolvía `500` al abrir una unidad de un release v1–v3:
+  esas versiones son documentales y no almacenan `lesson_kind`, pero el adaptador
+  de lectura moderno lo exigía.
+- `domain.publishing.snapshots.release_unit()` normaliza ahora esas unidades a
+  `lesson_kind=document` antes de construir `delivery`; no modifica snapshots
+  append-only ni sus hashes.
+- La regresión fue reproducida en el entorno local con `KeyError: lesson_kind` y
+  quedó cubierta con una prueba de snapshot v3. Pasaron los servicios de
+  publishing (9/9) y la API de learning (13/13).
+
 ## Lecciones fuente, carga de contenidos y estructura — verificación local 2026-08-04
 
 - Los doce archivos de `Leciones de prueba` quedaron representados en la

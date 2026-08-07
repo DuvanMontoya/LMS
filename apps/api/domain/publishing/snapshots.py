@@ -696,6 +696,9 @@ def release_unit(snapshot: object, unit_id: str) -> dict[str, Any]:
         for unit in module["units"]:
             if unit["id"] == unit_id:
                 result = deep_json_copy(unit)
+                if snapshot["schema_version"] < 4:
+                    # Historic v1-v3 releases contain document lessons only.
+                    result["lesson_kind"] = LessonKind.DOCUMENT
                 if snapshot["schema_version"] < 6:
                     result["delivery"] = _legacy_unit_delivery(result)
                 result["module"] = {

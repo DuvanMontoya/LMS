@@ -27,11 +27,36 @@ from domain.publishing.services import (
     publish_approved_revision,
     withdraw_publication,
 )
+from domain.publishing.snapshots import release_unit
 
 from .support import PublishingFixtureMixin
 
 
 class PublicationServiceTests(PublishingFixtureMixin, TestCase):
+    def test_pre_v4_release_unit_restores_document_lesson_kind(self) -> None:
+        (
+            _owner,
+            _organization,
+            _revision,
+            _module,
+            unit,
+            _objective,
+            _topic,
+            _publication,
+            release,
+        ) = self.published_context()
+        legacy_snapshot = deepcopy(release.snapshot)
+        legacy_snapshot["schema_version"] = 3
+        for module in legacy_snapshot["modules"]:
+            for legacy_unit in module["units"]:
+                legacy_unit["content"] = legacy_unit.pop("delivery")["content"]
+                legacy_unit.pop("lesson_kind")
+
+        result = release_unit(legacy_snapshot, str(unit.id))
+
+        self.assertEqual(result["lesson_kind"], "document")
+        self.assertEqual(result["delivery"]["kind"], "document")
+
     def test_typed_file_delivery_is_snapshot_only_and_cloned_without_document(
         self,
     ) -> None:
