@@ -14490,6 +14490,7 @@ components:
           nullable: true
         href:
           type: string
+          nullable: true
       required:
       - availability_rules
       - binding
@@ -14710,6 +14711,14 @@ components:
           type: string
           format: uuid
           readOnly: true
+        question_id:
+          type: string
+          format: uuid
+          readOnly: true
+        bank_id:
+          type: string
+          format: uuid
+          readOnly: true
         number:
           type: integer
           readOnly: true
@@ -14724,13 +14733,19 @@ components:
         code:
           type: string
           readOnly: true
+        usage_count:
+          type: integer
+          readOnly: true
       required:
+      - bank_id
       - bank_name
       - code
       - id
       - number
       - public
+      - question_id
       - type
+      - usage_count
     Area:
       type: object
       properties:
@@ -16179,6 +16194,8 @@ components:
           type: string
           format: uuid
           nullable: true
+        display_name:
+          type: string
         participant_identity:
           type: string
         role:
@@ -16187,6 +16204,7 @@ components:
           type: integer
           nullable: true
       required:
+      - display_name
       - duration_seconds
       - participant_identity
       - role
@@ -17518,6 +17536,13 @@ components:
           type: string
           format: uuid
           readOnly: true
+        course_release_id:
+          type: string
+          format: uuid
+          readOnly: true
+        course_release_number:
+          type: integer
+          readOnly: true
         course_group_name:
           type: string
           readOnly: true
@@ -17559,6 +17584,8 @@ components:
       - activity_type
       - course_group_id
       - course_group_name
+      - course_release_id
+      - course_release_number
       - course_slug
       - course_title
       - id
@@ -22647,7 +22674,10 @@ components:
           format: uuid
         display:
           type: string
+        can_host:
+          type: boolean
       required:
+      - can_host
       - display
       - membership_id
     ParticipantPermission:

@@ -1,6 +1,6 @@
 # Repository structure
 
-Phase 3 adds only the local Compose infrastructure required for PostgreSQL and Redis. Application and production-infrastructure directories remain absent rather than empty.
+The repository is a pnpm/uv monorepo with a Django API, a Next.js web application and local Compose infrastructure. Production infrastructure remains external to the repository.
 
 ```text
 /
@@ -8,22 +8,17 @@ Phase 3 adds only the local Compose infrastructure required for PostgreSQL and R
 │   ├── api/                         # uv-managed Django project and uv.lock
 │   │   ├── config/                  # settings, ASGI/WSGI, root URLs, Celery wiring
 │   │   ├── domain/                  # bounded Django apps; no catch-all core app
-│   │   │   ├── identity/ catalog/ content/ learning/ assessments/
-│   │   ├── api/                     # version routing and transport composition only
+│   │   │   ├── */api/                # bounded-app transport modules
 │   │   ├── tests/                   # cross-module integration/API tests
-│   │   ├── templates/ mail/ locale/ fixtures/
+│   │   ├── templates/                # allauth, organization and notification mail
 │   │   ├── manage.py pyproject.toml uv.lock
 │   └── web/                         # pnpm-managed Next.js project
 │       ├── src/app/                 # App Router and route groups
-│       ├── src/features/            # domain UI modules
-│       ├── src/components/ui/       # visual primitives; no business policy
-│       ├── src/components/academic/ # semantic/math/editor renderers
-│       ├── src/lib/api/             # generated client and gateway
-│       ├── src/lib/validation/ src/hooks/ src/styles/
-│       ├── tests/ e2e/ mocks/ public/
+│       ├── src/components/          # feature components and UI primitives
+│       ├── src/hooks/ src/lib/      # hooks, gateways and generated clients
+│       ├── e2e/ public/             # browser suites and public assets
 │       ├── openapi/                  # generated allauth browser snapshot
 │       └── scripts/                  # deterministic generated-client script
-│       └── package.json pnpm-lock.yaml
 ├── infrastructure/                  # Local Compose policy and operations documentation
 │   ├── README.md
 │   └── local/.env.example            # Generated .env stays ignored
@@ -31,11 +26,11 @@ Phase 3 adds only the local Compose infrastructure required for PostgreSQL and R
 ├── compose.lock.yaml                 # Reviewed linux/amd64 image digests
 ├── docs/                            # architectural record and runbooks
 ├── scripts/                         # reviewed repo automation; never business logic
-├── tests/                           # black-box contract suites only, if later justified
+├── schemas/                         # shared semantic and publication contracts
 ├── .github/                         # CI, security and dependency-update workflows
-├── package.json pnpm-workspace.yaml # workspace orchestration only
-├── .tool-versions                   # exact Node, pnpm and Python declaration
-├── AGENTS.md README.md
+├── package.json pnpm-workspace.yaml pnpm-lock.yaml
+├── .node-version                    # exact Node declaration
+├── AGENTS.md README.md SECURITY.md
 ```
 
 ## Zone contracts
@@ -48,7 +43,7 @@ Phase 3 adds only the local Compose infrastructure required for PostgreSQL and R
 
 ### Frontend internal convention
 
-Route groups are `(public)`, `(auth)`, `(learner)`, `(teaching)`, `(authoring)`, and `(admin)`. Default components are Server Components. A `use client` boundary is the smallest interactive leaf (editor, form controller, browser-only accessibility affordance); client components receive serializable view data and call one feature gateway, never arbitrary URLs. Server requests forward the incoming cookie to same-origin Django; browser mutations use Django's CSRF contract. No token is copied into localStorage. API errors map centrally to a typed, accessible error model.
+Route groups are `(auth)` and `(protected)`. Default components are Server Components. A `use client` boundary is the smallest interactive leaf (editor, form controller, browser-only accessibility affordance); client components receive serializable view data and call one feature gateway, never arbitrary URLs. Server requests forward the incoming cookie to same-origin Django; browser mutations use Django's CSRF contract. No token is copied into localStorage. API errors map centrally to a typed, accessible error model.
 
 TanStack Query is reserved for client-owned, invalidatable remote state. React state remains local unless several distant clients require it. Forms pair a feature Zod schema with React Hook Form; backend remains authoritative. Tiptap documents use a validated semantic schema, MathLive is isolated to input widgets, and MathJax rendering is server-safe/lazy where necessary.
 # Estructura del repositorio
@@ -75,8 +70,9 @@ bootstrap y pruebas. El contrato fuente es
 `app/(protected)/organizaciones/[slug]/cursos/[courseSlug]/unidades/[unitId]/contenido`
 compone `components/content/`; adaptadores, schema copiado, tipos generados y
 validator viven en `src/lib/content/`. `scripts/generate-content-types.mjs` y
-`copy-mathjax-assets.mjs` generan artefactos verificables; los bundles en
-`public/vendor/` se ignoran y nunca se editan.
+`copy-mathjax-assets.mjs` generan artefactos verificables. MathJax y MathLive en
+`public/vendor/` son ignorados y regenerables; el worker de PDF.js se versiona
+porque el lector lo sirve desde esa ruta.
 
 `scripts/content.ps1` es el único runbook de la fase y los scripts raíz
 `content:*` delegan en él. `apps/web/e2e/content.spec.ts` reutiliza el runner
