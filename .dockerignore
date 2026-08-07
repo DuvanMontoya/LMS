@@ -11,6 +11,10 @@
 **/.venv
 **/__pycache__
 **/node_modules
+**/.local
+**/*.log
+**/*.pem
+**/*.key
 **/test-results
 artifacts
 coverage
