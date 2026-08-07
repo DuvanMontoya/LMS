@@ -1,5 +1,36 @@
 # Project status
 
+## Auditoría forense y limpieza — verificado localmente 2026-08-07
+
+- La auditoría se ejecutó primero en modo sólo lectura y después de la
+  aprobación humana se aplicaron siete lotes atómicos. Se retiraron 21
+  scaffolds Django vacíos, 18 exports/componentes web sin consumidores
+  internos, dos dependencias Tiptap sin imports, cuatro rutas E2E obsoletas de
+  `tsconfig.json`, 309 artefactos versionados de pruebas y el template web de
+  entorno quedó versionado sin incluir secretos reales.
+- Los commits locales de la limpieza son `d195b6c`, `2959589`, `a916148`,
+  `8016060`, `930472d` y `6cf0691`. No se modificaron migraciones, `.env`
+  reales, claves, middleware de tenant/JWT ni las rutas técnicas con
+  consumidores externos.
+- La evidencia final pasó `api:check`, `api:check:production`,
+  `api:database:check`, `api:migrations:check`, Ruff, formato Ruff, Pyright,
+  ESLint, TypeScript, Prettier y el build de Next. La suite Django pasó 385/385
+  con 77,81 % de cobertura; Vitest pasó 48/48 archivos y 139/139 pruebas.
+- Se eliminaron del entorno local los caches Python, `.next`, `test-results`,
+  `tsconfig.tsbuildinfo`, salida/cache de documentación, logs temporales y
+  `__pycache__`. Se conservaron `node_modules`, `.venv`, `.local` y los vendors
+  MathJax/MathLive porque son dependencias, estado local o assets usados.
+- La limpieza no resuelve la clave RSA privada versionada en
+  `docs/contabo-vmi3156908-debian-rsa`; requiere rotación y saneamiento externo
+  del historial. Tampoco resuelve todavía los riesgos de tenant desde body,
+  callback OAuth sin asociación explícita de sesión, worker de integraciones y
+  la dependencia directa `assessments -> content`.
+- Las auditorías de dependencias siguen encontrando `cryptography==49.0.0`
+  (`PYSEC-2026-3552`, corregir en 50.0.0), `fast-uri`, `brace-expansion` y
+  `postcss` transitivos. `vulture`, `deptry`, `knip`, `depcheck` y `ts-prune`
+  no están instalados en el repositorio; no se declaró un resultado cero para
+  esas herramientas.
+
 ## Entrega de unidades históricas — corregido localmente 2026-08-06
 
 - La ruta de aprendizaje devolvía `500` al abrir una unidad de un release v1–v3:
