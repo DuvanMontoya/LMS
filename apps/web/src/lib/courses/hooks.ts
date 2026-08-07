@@ -165,36 +165,6 @@ export function useCreateUnit(path: RevisionPath) {
   });
 }
 
-export function useCreateActivity(path: RevisionPath) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      body,
-      moduleId,
-    }: {
-      body: components['schemas']['CourseActivityCreate'];
-      moduleId: string;
-    }) =>
-      requireData(
-        platformBrowserClient.POST(
-          '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/modules/{module_id}/activities/',
-          {
-            body,
-            params: { path: { ...pathFor(path), module_id: moduleId } },
-          },
-        ),
-      ),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: courseKeys.outline(
-          path.slug,
-          path.courseSlug,
-          path.revisionId,
-        ),
-      }),
-  });
-}
-
 export function useMoveActivityToModule(path: RevisionPath) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -214,58 +184,6 @@ export function useMoveActivityToModule(path: RevisionPath) {
           },
         ),
       ),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: courseKeys.outline(
-          path.slug,
-          path.courseSlug,
-          path.revisionId,
-        ),
-      }),
-  });
-}
-
-export function useBindActivity(path: RevisionPath) {
-  const queryClient = useQueryClient();
-  type BindingInput =
-    | {
-        activityId: string;
-        body: components['schemas']['AssessmentActivityBindingInput'];
-        kind: 'assessment';
-      }
-    | {
-        activityId: string;
-        body: components['schemas']['LiveClassActivityBindingInput'];
-        kind: 'live_class';
-      };
-  type BindingResult =
-    | components['schemas']['AssessmentActivityBinding']
-    | components['schemas']['LiveClassActivityBinding'];
-  return useMutation<BindingResult, Error, BindingInput>({
-    mutationFn: (input) =>
-      input.kind === 'assessment'
-        ? requireData(
-            platformBrowserClient.POST(
-              '/api/v1/organizations/{slug}/assessments/course-activities/{activity_id}/binding/',
-              {
-                body: input.body,
-                params: {
-                  path: { activity_id: input.activityId, slug: path.slug },
-                },
-              },
-            ),
-          )
-        : requireData(
-            platformBrowserClient.POST(
-              '/api/v1/organizations/{slug}/scheduling/course-activities/{activity_id}/binding/',
-              {
-                body: input.body,
-                params: {
-                  path: { activity_id: input.activityId, slug: path.slug },
-                },
-              },
-            ),
-          ),
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: courseKeys.outline(
@@ -534,45 +452,6 @@ export function useReplaceCourseAlignment(path: RevisionPath) {
             platformBrowserClient.PUT(
               '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/learning-objectives/',
               { body, params: { path: pathFor(path) } },
-            ),
-          ),
-  });
-}
-
-export function useReplaceUnitAlignment(path: RevisionPath) {
-  return useMutation({
-    mutationFn: ({
-      body,
-      kind,
-      unitId,
-    }:
-      | {
-          body: components['schemas']['ReplaceTopics'];
-          kind: 'topics';
-          unitId: string;
-        }
-      | {
-          body: components['schemas']['ReplaceObjectives'];
-          kind: 'objectives';
-          unitId: string;
-        }) =>
-      kind === 'topics'
-        ? requireData(
-            platformBrowserClient.PUT(
-              '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/topics/',
-              {
-                body,
-                params: { path: { ...pathFor(path), unit_id: unitId } },
-              },
-            ),
-          )
-        : requireData(
-            platformBrowserClient.PUT(
-              '/api/v1/organizations/{slug}/courses/{course_slug}/revisions/{revision_id}/units/{unit_id}/learning-objectives/',
-              {
-                body,
-                params: { path: { ...pathFor(path), unit_id: unitId } },
-              },
             ),
           ),
   });

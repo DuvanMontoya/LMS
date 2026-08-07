@@ -88,13 +88,6 @@ function validationMessage(errors: readonly ErrorObject[]): string {
   );
 }
 
-export function assertContentDocument(
-  value: unknown,
-): asserts value is LMSUnitAcademicDocumentVersion2 {
-  const result = validateContentDocument(value);
-  if (!result.valid) throw new Error(result.message);
-}
-
 export function safeContentHref(value: unknown): value is string {
   if (typeof value !== 'string' || !value || value.length > 2048) return false;
   if (/[\u0000-\u001f\u007f\\]/.test(value) || value.startsWith('//'))

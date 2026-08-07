@@ -17,11 +17,3 @@ export async function getServerAuthSession(): Promise<ServerAuthSession> {
   }
   return data.data.user;
 }
-
-export async function requireServerAuthSession(): Promise<
-  components['schemas']['User']
-> {
-  const session = await getServerAuthSession();
-  if (!session) throw new Error('AUTHENTICATION_REQUIRED');
-  return session;
-}

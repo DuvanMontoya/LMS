@@ -71,17 +71,3 @@ export function validateReleaseSnapshot(value: unknown): ReleaseValidation {
   }
   return { valid: false, errors: validate.errors ?? [] };
 }
-
-export function assertReleaseSnapshot(
-  value: unknown,
-): asserts value is CourseReleaseSnapshot {
-  const result = validateReleaseSnapshot(value);
-  if (!result.valid) {
-    throw new Error(
-      `Invalid release snapshot: ${result.errors
-        .slice(0, 3)
-        .map((error) => `${error.instancePath || '/'} ${error.message ?? ''}`)
-        .join('; ')}`,
-    );
-  }
-}

@@ -22,22 +22,6 @@ async function requireData<T>(
   );
 }
 
-export function useAccessContext() {
-  return useQuery({
-    queryKey: accessKeys.context(),
-    queryFn: () =>
-      requireData(platformBrowserClient.GET('/api/v1/access/context/')),
-  });
-}
-
-export function useOrganizations() {
-  return useQuery({
-    queryKey: organizationKeys.all(),
-    queryFn: () =>
-      requireData(platformBrowserClient.GET('/api/v1/organizations/')),
-  });
-}
-
 export function useProvisionPlatformOrganization() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -116,18 +100,6 @@ export function useRevokePlatformBootstrapInvitation(slug: string) {
   });
 }
 
-export function useOrganization(slug: string) {
-  return useQuery({
-    queryKey: organizationKeys.detail(slug),
-    queryFn: () =>
-      requireData(
-        platformBrowserClient.GET('/api/v1/organizations/{slug}/', {
-          params: { path: { slug } },
-        }),
-      ),
-  });
-}
-
 export function useOrganizationMembers(
   slug: string,
   filters: {
@@ -187,32 +159,6 @@ export function useUpdateOrganization(slug: string) {
   });
 }
 
-export function useAddOrganizationMember(slug: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      email,
-      roles,
-    }: {
-      email: string;
-      roles: OrganizationRole[];
-    }) =>
-      requireData(
-        platformBrowserClient.POST(
-          '/api/v1/organizations/{slug}/memberships/',
-          {
-            params: { path: { slug } },
-            body: { email, roles },
-          },
-        ),
-      ),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: organizationKeys.membersRoot(slug),
-      }),
-  });
-}
-
 export function useCreateOrganizationInvitation(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -249,10 +195,6 @@ export function useCreateManagedAccount(slug: string) {
         queryKey: organizationKeys.invitations(slug),
       }),
   });
-}
-
-export function useOrganizationInvitations(slug: string) {
-  return useOrganizationInvitationsWithFilters(slug, {});
 }
 
 export function useOrganizationInvitationsWithFilters(
@@ -471,19 +413,6 @@ export function useConfirmBulkInvitations(slug: string) {
         queryKey: organizationKeys.invitations(slug),
       });
     },
-  });
-}
-
-export function useMembershipSettings(slug: string) {
-  return useQuery({
-    queryKey: organizationKeys.membershipSettings(slug),
-    queryFn: () =>
-      requireData(
-        platformBrowserClient.GET(
-          '/api/v1/organizations/{slug}/membership-settings/',
-          { params: { path: { slug } } },
-        ),
-      ),
   });
 }
 

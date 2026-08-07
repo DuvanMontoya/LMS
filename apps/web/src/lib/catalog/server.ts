@@ -2,12 +2,8 @@ import 'server-only';
 
 import { notFound } from 'next/navigation';
 
-import type { components } from '@/lib/api/generated/platform';
 import { createPlatformServerClient } from '@/lib/api/platform-server-client';
 import { getOrganizationForPage } from '@/lib/organizations/server';
-
-export type TeachingResponsibility =
-  components['schemas']['SubjectTeachingResponsibility'];
 
 export async function getTeachingResponsibilities(slug: string) {
   const organization = await getOrganizationForPage(slug);

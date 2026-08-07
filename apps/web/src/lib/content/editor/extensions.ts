@@ -378,20 +378,6 @@ export const contentEditorExtensions: Extensions = [
   }),
 ];
 
-export const emptyContentDocument = (): {
-  content: Array<Record<string, unknown>>;
-  type: 'doc';
-} => ({
-  content: [
-    {
-      attrs: { nodeId: crypto.randomUUID() },
-      content: [],
-      type: 'paragraph',
-    },
-  ],
-  type: 'doc',
-});
-
 export function findDuplicateNodeIds(document: unknown): string[] {
   const seen = new Set<string>();
   const duplicates = new Set<string>();

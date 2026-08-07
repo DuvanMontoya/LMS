@@ -248,14 +248,6 @@ export async function getQuestionBanks(slug: string) {
   return { ...organization, banks };
 }
 
-export async function getQuestionBankCreationContext(slug: string) {
-  const organization = await getOrganizationForPage(slug);
-  if (!organization.access.capabilities.includes('assessment.bank.manage')) {
-    notFound();
-  }
-  return organization;
-}
-
 export async function getQuestionBank(slug: string, bankId: string) {
   const organization = await getOrganizationForPage(slug);
   if (!organization.access.capabilities.includes('assessment.bank.view')) {

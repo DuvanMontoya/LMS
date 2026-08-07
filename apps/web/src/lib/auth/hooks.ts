@@ -1,9 +1,8 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
-  getBrowserAuthSession,
   login,
   logout,
   requestPasswordReset,
@@ -13,13 +12,6 @@ import {
   verifyEmail,
 } from './api';
 import { authKeys } from '@/lib/query/auth-keys';
-
-export function useAuthSession() {
-  return useQuery({
-    queryKey: authKeys.session(),
-    queryFn: getBrowserAuthSession,
-  });
-}
 
 export function useSignUp() {
   return useMutation({
