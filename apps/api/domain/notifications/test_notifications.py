@@ -15,7 +15,11 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from domain.events.models import DomainEvent
-from domain.organizations.services import create_organization_with_owner
+from domain.organizations.choices import RoleCode
+from domain.organizations.services import (
+    add_existing_member_with_roles,
+    create_organization_with_owner,
+)
 
 from .models import (
     EmailDelivery,
@@ -89,12 +93,28 @@ class NotificationTests(TestCase):
             email="notification-owner@example.test",
             password="StrongNotificationPassword!42",
         )
+        EmailAddress.objects.create(
+            user=self.user,
+            email=self.user.email,
+            primary=True,
+            verified=True,
+        )
         self.other = get_user_model().objects.create_user(
             email="notification-other@example.test",
             password="StrongNotificationPassword!42",
         )
+        governance_owner = get_user_model().objects.create_user(
+            email="notification-governance-owner@example.test",
+            password="StrongNotificationPassword!42",
+        )
         self.organization = create_organization_with_owner(
-            actor=self.user, name="Avisos", slug="avisos"
+            actor=governance_owner, name="Avisos", slug="avisos"
+        )
+        add_existing_member_with_roles(
+            actor=governance_owner,
+            organization=self.organization,
+            user=self.user,
+            roles={RoleCode.ADMINISTRATOR},
         )
         self.event = DomainEvent.objects.create(
             event_type="learning.enrollment.suspended.v1",
@@ -250,7 +270,7 @@ class NotificationTests(TestCase):
     def test_email_terminal_failure_and_operations_retry_api(self) -> None:
         delivery = EmailDelivery.objects.create(
             notification=self.notification,
-            recipient=self.user,
+            recipient=self.other,
             template_key=self.notification.template_key,
             recipient_email_hash="0" * 64,
         )

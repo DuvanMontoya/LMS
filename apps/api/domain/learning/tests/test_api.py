@@ -19,6 +19,7 @@ from domain.learning.choices import (
     AcademicGroupLevel,
     AcademicGroupRole,
     AcademicPeriodType,
+    ActivityProgressStatus,
     CohortStaffRole,
 )
 from domain.learning.exceptions import LearningPermissionDenied
@@ -28,7 +29,7 @@ from domain.learning.mediacms import (
     issue_mediacms_launch,
     lti_id_token,
 )
-from domain.learning.models import CourseGroupActivity
+from domain.learning.models import ActivityProgress, CourseGroupActivity
 from domain.learning.services import (
     create_academic_group,
     create_academic_period,
@@ -48,6 +49,87 @@ from .support import LearningFixtureMixin
 
 
 class LearningApiTests(LearningFixtureMixin, TestCase):
+    def test_my_learning_ignores_enrollment_without_a_current_release(self) -> None:
+        (
+            _owner,
+            learner,
+            organization,
+            _membership,
+            _revision,
+            _module,
+            _unit,
+            _publication,
+            _release,
+            enrollment,
+        ) = self.learning_context()
+        enrollment.current_release_assignment = None
+        enrollment.save(update_fields=["current_release_assignment"])
+
+        client = APIClient()
+        client.force_authenticate(learner)
+        response = client.get(f"/api/v1/organizations/{organization.slug}/learning/me/")
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data, [])
+
+    def test_locked_lesson_does_not_deliver_content_or_asset_descriptors(self) -> None:
+        (
+            owner,
+            _learner,
+            organization,
+            _membership,
+            revision,
+            _module,
+            unit,
+            _publication,
+            release,
+            _enrollment,
+        ) = self.learning_context()
+        cohort = create_cohort(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            release=release,
+            migration_review_required=True,
+            name="Cohorte con lección bloqueada",
+        )
+        learner = get_user_model().objects.create_user(
+            email="locked-lesson@example.test",
+            password="StrongLearningPassword!42",
+        )
+        membership = Membership.objects.create(
+            organization=organization,
+            user=learner,
+            status_changed_by=owner,
+            status_changed_at=timezone.now(),
+        )
+        enrollment = enroll_member(
+            actor=owner,
+            organization=organization,
+            course=revision.course,
+            membership=membership,
+            cohort=cohort,
+        )
+        activity = CourseGroupActivity.objects.get(
+            course_group=cohort, source_activity_id=unit.id
+        )
+        ActivityProgress.objects.filter(
+            course_progress=enrollment.current_release_assignment.progress,
+            group_activity=activity,
+        ).update(status=ActivityProgressStatus.LOCKED)
+
+        client = APIClient()
+        client.force_authenticate(learner)
+        response = client.get(
+            f"/api/v1/organizations/{organization.slug}/learning/me/"
+            f"enrollments/{enrollment.id}/units/{unit.id}/"
+        )
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["unit"]["status"], "locked")
+        self.assertEqual(response.data["delivery"], {"kind": "blocked"})
+        self.assertEqual(response.data["assets"], [])
+
     @patch(
         "domain.learning.mediacms._private_key",
         return_value=rsa.generate_private_key(public_exponent=65537, key_size=2048),

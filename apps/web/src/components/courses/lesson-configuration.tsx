@@ -358,10 +358,7 @@ export function LessonConfiguration({
 
   useEffect(() => {
     function receiveStoredMediaSelection(event: StorageEvent) {
-      if (
-        event.key !== 'lms-mediacms-picker-selection' ||
-        !event.newValue
-      )
+      if (event.key !== 'lms-mediacms-picker-selection' || !event.newValue)
         return;
       try {
         const data: unknown = JSON.parse(event.newValue);

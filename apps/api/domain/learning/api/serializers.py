@@ -162,6 +162,12 @@ class PaginatedAcademicPeriodSerializer(serializers.Serializer):
 
 class CourseGroupActivityReadSerializer(serializers.ModelSerializer):
     course_group_id = serializers.UUIDField(read_only=True)
+    course_release_id = serializers.UUIDField(
+        source="course_release.id", read_only=True
+    )
+    course_release_number = serializers.IntegerField(
+        source="course_release.number", read_only=True
+    )
     course_group_name = serializers.CharField(
         source="course_group.name", read_only=True
     )
@@ -178,6 +184,8 @@ class CourseGroupActivityReadSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "course_group_id",
+            "course_release_id",
+            "course_release_number",
             "course_group_name",
             "course_slug",
             "course_title",
@@ -547,7 +555,7 @@ class ActivityOutlineSerializer(serializers.Serializer):
     status = serializers.CharField()
     is_current = serializers.BooleanField()
     blocked_reason = serializers.CharField(allow_null=True)
-    href = serializers.CharField()
+    href = serializers.CharField(allow_null=True)
 
 
 class ModuleOutlineSerializer(serializers.Serializer):

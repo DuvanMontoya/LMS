@@ -370,7 +370,7 @@
           "blocked_reason": { "nullable": true, "type": "string" },
           "completion_policy": { "additionalProperties": {}, "type": "object" },
           "estimated_duration_minutes": { "nullable": true, "type": "integer" },
-          "href": { "type": "string" },
+          "href": { "nullable": true, "type": "string" },
           "id": { "format": "uuid", "type": "string" },
           "is_current": { "type": "boolean" },
           "position": { "type": "integer" },
@@ -2911,6 +2911,12 @@
             "type": "string"
           },
           "course_group_name": { "readOnly": true, "type": "string" },
+          "course_release_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "course_release_number": { "readOnly": true, "type": "integer" },
           "course_slug": { "readOnly": true, "type": "string" },
           "course_title": { "readOnly": true, "type": "string" },
           "id": { "format": "uuid", "readOnly": true, "type": "string" },
@@ -2930,6 +2936,8 @@
           "activity_type",
           "course_group_id",
           "course_group_name",
+          "course_release_id",
+          "course_release_number",
           "course_slug",
           "course_title",
           "id",

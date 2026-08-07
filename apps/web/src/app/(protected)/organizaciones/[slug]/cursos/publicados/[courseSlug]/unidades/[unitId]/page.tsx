@@ -1,9 +1,3 @@
-import PublishedUnitView from '../../../../../biblioteca/[courseSlug]/unidades/[unitId]/page';
+import { PublishedUnitView } from '@/components/publishing/published-unit-view';
 
-export default function PublishedUnitPage(
-  props: Readonly<{
-    params: Promise<{ courseSlug: string; slug: string; unitId: string }>;
-  }>,
-) {
-  return PublishedUnitView(props);
-}
+export default PublishedUnitView;

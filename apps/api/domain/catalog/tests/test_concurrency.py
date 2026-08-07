@@ -16,22 +16,49 @@ from domain.catalog.services import (
     create_subject,
     replace_subject_prerequisites,
 )
+from domain.organizations.choices import RoleCode
 from domain.organizations.models import Organization
-from domain.organizations.services import create_organization_with_owner
+from domain.organizations.services import (
+    add_existing_member_with_roles,
+    create_organization_with_owner,
+)
 
 
 class CatalogConcurrencyTests(TransactionTestCase):
     reset_sequences = True
 
-    def test_two_opposite_prerequisites_finish_with_at_most_one_edge(self) -> None:
+    def operational_context(self, *, email: str, name: str, slug: str):
+        governance_owner = get_user_model().objects.create_user(
+            email=f"governance-{email}", password="Password123!x"
+        )
+        EmailAddress.objects.create(
+            user=governance_owner,
+            email=governance_owner.email,
+            primary=True,
+            verified=True,
+        )
+        organization = create_organization_with_owner(
+            actor=governance_owner, name=name, slug=slug
+        )
         actor = get_user_model().objects.create_user(
-            email="owner@example.test", password="Password123!x"
+            email=email, password="Password123!x"
         )
         EmailAddress.objects.create(
             user=actor, email=actor.email, primary=True, verified=True
         )
-        organization = create_organization_with_owner(
-            actor=actor, name="Institución", slug="institucion"
+        add_existing_member_with_roles(
+            actor=governance_owner,
+            organization=organization,
+            user=actor,
+            roles={RoleCode.ADMINISTRATOR},
+        )
+        return actor, organization
+
+    def test_two_opposite_prerequisites_finish_with_at_most_one_edge(self) -> None:
+        actor, organization = self.operational_context(
+            email="catalog-owner@example.test",
+            name="Institución",
+            slug="institucion",
         )
         area = create_area(
             actor=actor,
@@ -106,14 +133,10 @@ class CatalogConcurrencyTests(TransactionTestCase):
     def test_concurrent_topic_writes_keep_the_materialized_path_consistent(
         self,
     ) -> None:
-        actor = get_user_model().objects.create_user(
-            email="tree-owner@example.test", password="Password123!x"
-        )
-        EmailAddress.objects.create(
-            user=actor, email=actor.email, primary=True, verified=True
-        )
-        organization = create_organization_with_owner(
-            actor=actor, name="Institución árbol", slug="institucion-arbol"
+        actor, organization = self.operational_context(
+            email="tree-owner@example.test",
+            name="Institución árbol",
+            slug="institucion-arbol",
         )
         area = create_area(
             actor=actor,

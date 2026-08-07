@@ -1018,8 +1018,10 @@ class MyUnitView(APIView):
         def payload() -> dict[str, Any]:
             access = require_learning_access(actor=request.user, enrollment=enrollment)
             result = learning_unit(enrollment, unit_id)
-            result["assets"] = learning_asset_descriptors(
-                access=access, unit_id=unit_id
+            result["assets"] = (
+                learning_asset_descriptors(access=access, unit_id=unit_id)
+                if result["unit"].get("status") != "locked"
+                else []
             )
             return result
 

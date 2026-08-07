@@ -4,6 +4,8 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from types import MappingProxyType
 
+from django.db.models import Prefetch
+
 from .choices import (
     ActivityType,
     CourseStatus,
@@ -11,7 +13,15 @@ from .choices import (
     StructureStatus,
     SubjectAlignmentType,
 )
-from .models import CourseCompletionPolicy, CourseRevision, MediaCMSVideoBinding
+from .models import (
+    CourseActivityAvailabilityRule,
+    CourseActivityLearningObjective,
+    CourseCompletionPolicy,
+    CourseRevision,
+    CourseUnitLearningObjective,
+    CourseUnitTopic,
+    MediaCMSVideoBinding,
+)
 
 type ReadinessIssue = dict[str, str]
 type ReadinessProvider = Callable[[CourseRevision], list[ReadinessIssue]]
@@ -112,12 +122,29 @@ def revision_readiness_issues(revision: CourseRevision) -> list[ReadinessIssue]:
     modules = list(
         revision.modules.filter(status=StructureStatus.ACTIVE)
         .prefetch_related(
-            "units__topic_alignments__topic",
-            "units__objective_alignments__learning_objective",
+            Prefetch(
+                "units__topic_alignments",
+                queryset=CourseUnitTopic.objects.select_related("topic"),
+            ),
+            Prefetch(
+                "units__objective_alignments",
+                queryset=CourseUnitLearningObjective.objects.select_related(
+                    "learning_objective"
+                ),
+            ),
             "units__mediacms_video_binding",
-            "activities__objective_alignments__learning_objective",
-            "activities__availability_rules__prerequisite_activity",
-            "activities__availability_rules__learning_objective",
+            Prefetch(
+                "activities__objective_alignments",
+                queryset=CourseActivityLearningObjective.objects.select_related(
+                    "learning_objective"
+                ),
+            ),
+            Prefetch(
+                "activities__availability_rules",
+                queryset=CourseActivityAvailabilityRule.objects.select_related(
+                    "prerequisite_activity", "learning_objective"
+                ),
+            ),
         )
         .order_by("position")
     )

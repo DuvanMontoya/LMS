@@ -534,21 +534,24 @@ export async function getAssessmentDeliveries(slug: string) {
       });
     }
   }
+  for (const activity of courseGroupActivities) {
+    if (
+      activity.course_release_id &&
+      !releaseById.has(activity.course_release_id)
+    ) {
+      releaseById.set(activity.course_release_id, {
+        courseSlug: activity.course_slug,
+        courseTitle: activity.course_title,
+        id: activity.course_release_id,
+        number: activity.course_release_number,
+      });
+    }
+  }
   const releaseOptions = [...releaseById.values()];
-  const releaseByCohortId = new Map(
-    enrollments.results
-      .filter(
-        (enrollment) => enrollment.cohort_id && enrollment.current_release_id,
-      )
-      .map((enrollment) => [
-        enrollment.cohort_id as string,
-        enrollment.current_release_id as string,
-      ]),
-  );
-  const activityOptions = courseGroupActivities.flatMap((activity) => {
-    const releaseId = releaseByCohortId.get(activity.course_group_id);
-    return releaseId ? [{ ...activity, releaseId }] : [];
-  });
+  const activityOptions = courseGroupActivities.map((activity) => ({
+    ...activity,
+    releaseId: activity.course_release_id,
+  }));
   return {
     ...organization,
     activityOptions,

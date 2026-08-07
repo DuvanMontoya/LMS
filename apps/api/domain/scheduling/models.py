@@ -522,6 +522,9 @@ class LiveSessionRecording(NoPhysicalDeleteModel):
             )
         ]
 
+    def __str__(self) -> str:
+        return f"{self.session_id}:{self.egress_id}:{self.status}"
+
 
 class LiveRecordingAcknowledgement(NoPhysicalDeleteModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

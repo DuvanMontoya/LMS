@@ -1,3 +1,5 @@
+import { LockKeyhole } from 'lucide-react';
+
 import { AcademicDocument } from '@/components/content/academic-document';
 import { AcademicAsset } from '@/components/content/academic-asset';
 import { LearningPositionTracker } from '@/components/learning/learning-position-tracker';
@@ -8,6 +10,7 @@ import {
   LearningPlayerShell,
 } from '@/components/learning/learning-player-shell';
 import { LearningUnitControls } from '@/components/learning/learning-unit-controls';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { parseAssetDescriptors } from '@/lib/assets/descriptors';
 import type { LMSUnitAcademicDocumentVersion2 } from '@/lib/content/generated/unit-document-v2';
 import {
@@ -81,6 +84,7 @@ export default async function LearningUnitPage({
     record(data.payload.unit) && typeof data.payload.unit.status === 'string'
       ? data.payload.unit.status
       : 'not_started';
+  const isBlocked = unitStatus === 'locked';
   const unitNumber = outlineData.outline.modules
     .flatMap((module) => module.units)
     .findIndex((unit) => unit.id === unitId);
@@ -112,53 +116,66 @@ export default async function LearningUnitPage({
         title={unit.title}
       >
         <article className="learning-player__lesson">
-          {isMediaCMSVideo ? (
-            <MediaCMSVideoPlayer
-              enrollmentId={enrollment.enrollment_id}
-              slug={slug}
-              unitId={unitId}
-            />
-          ) : null}
+          {isBlocked ? (
+            <Alert>
+              <LockKeyhole />
+              <AlertTitle>Lección bloqueada</AlertTitle>
+              <AlertDescription>
+                Debes cumplir las condiciones de disponibilidad antes de abrir
+                este contenido.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              {isMediaCMSVideo ? (
+                <MediaCMSVideoPlayer
+                  enrollmentId={enrollment.enrollment_id}
+                  slug={slug}
+                  unitId={unitId}
+                />
+              ) : null}
 
-          {isDocument && document ? (
-            <div className="learning-player__document">
-              <AcademicDocument
-                assets={assetDescriptors}
-                document={document as AcademicDocumentValue}
-                refreshContext={{
-                  enrollmentId: enrollment.enrollment_id,
-                  slug,
-                  unitId,
-                }}
-              />
-            </div>
-          ) : null}
+              {isDocument && document ? (
+                <div className="learning-player__document">
+                  <AcademicDocument
+                    assets={assetDescriptors}
+                    document={document as AcademicDocumentValue}
+                    refreshContext={{
+                      enrollmentId: enrollment.enrollment_id,
+                      slug,
+                      unitId,
+                    }}
+                  />
+                </div>
+              ) : null}
 
-          {assetDelivery && isSourceLesson ? (
-            <SourceLessonRenderer
-              descriptor={assetDelivery.descriptor}
-              lessonKind={lessonKind}
-              title={unit.title}
-            />
-          ) : null}
+              {assetDelivery && isSourceLesson ? (
+                <SourceLessonRenderer
+                  descriptor={assetDelivery.descriptor}
+                  lessonKind={lessonKind}
+                  title={unit.title}
+                />
+              ) : null}
 
-          {assetDelivery && !isSourceLesson ? (
-            <div className="learning-player__delivery-resource">
-              <AcademicAsset
-                attrs={{
-                  assetVersionId: assetDelivery.assetVersionId,
-                  label: unit.title,
-                }}
-                descriptor={assetDelivery.descriptor}
-                kind={lessonKind === 'audio' ? 'audio' : 'document'}
-                refreshContext={{
-                  enrollmentId: enrollment.enrollment_id,
-                  slug,
-                  unitId,
-                }}
-              />
-            </div>
-          ) : null}
+              {assetDelivery && !isSourceLesson ? (
+                <div className="learning-player__delivery-resource">
+                  <AcademicAsset
+                    attrs={{
+                      assetVersionId: assetDelivery.assetVersionId,
+                      label: unit.title,
+                    }}
+                    descriptor={assetDelivery.descriptor}
+                    kind={lessonKind === 'audio' ? 'audio' : 'document'}
+                    refreshContext={{
+                      enrollmentId: enrollment.enrollment_id,
+                      slug,
+                      unitId,
+                    }}
+                  />
+                </div>
+              ) : null}
+            </>
+          )}
         </article>
 
         <LearningPlayerNavigation

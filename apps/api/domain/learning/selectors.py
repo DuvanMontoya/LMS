@@ -13,6 +13,7 @@ from domain.organizations.models import Membership, Organization
 
 from .access import access_state
 from .choices import ActivityProgressStatus, EnrollmentStatus, ProgressStatus
+from .exceptions import LearningReleaseInvalid
 from .models import (
     AcademicGroup,
     ActivityProgress,
@@ -184,6 +185,7 @@ def my_active_enrollments(
             membership__user_id=actor_id,
         )
         .exclude(status=EnrollmentStatus.REVOKED)
+        .filter(current_release_assignment__isnull=False)
         .select_related(
             "organization",
             "membership__user",
@@ -294,7 +296,7 @@ def cohort_payload(enrollment: CourseEnrollment) -> dict[str, Any] | None:
 def my_learning_payload(enrollment: CourseEnrollment) -> dict[str, Any]:
     assignment = enrollment.current_release_assignment
     if assignment is None:
-        raise ValueError("Enrollment has no current assignment.")
+        raise LearningReleaseInvalid("Enrollment has no current assignment.")
     release = assignment.release
     return {
         "enrollment_id": enrollment.id,
@@ -316,7 +318,7 @@ def my_learning_payload(enrollment: CourseEnrollment) -> dict[str, Any]:
 def learning_outline(enrollment: CourseEnrollment) -> dict[str, Any]:
     assignment = enrollment.current_release_assignment
     if assignment is None:
-        raise ValueError("Enrollment has no current assignment.")
+        raise LearningReleaseInvalid("Enrollment has no current assignment.")
     progress = assignment.progress
     states = {
         row.unit_id: row.status
@@ -351,19 +353,27 @@ def learning_outline(enrollment: CourseEnrollment) -> dict[str, Any]:
             )
             activity["source_activity_id"] = source_activity_id
             activity["id"] = instance.id if instance else source_activity_id
-            activity["status"] = (
+            activity_status = (
                 row.status
                 if row
                 else states.get(lesson_unit_id, ProgressStatus.NOT_STARTED)
                 if lesson_unit_id
                 else ActivityProgressStatus.AVAILABLE
             )
+            has_deliverable_instance = lesson_unit_id is not None or (
+                instance is not None and row is not None
+            )
+            activity["status"] = (
+                activity_status if has_deliverable_instance else "unavailable"
+            )
             activity["is_current"] = activity["type"] == "lesson" and activity[
                 "binding"
             ].get("unit_id") == str(progress.last_unit_id)
             activity["blocked_reason"] = (
                 "Debes cumplir las condiciones de disponibilidad."
-                if activity["status"] == ActivityProgressStatus.LOCKED
+                if activity_status == ActivityProgressStatus.LOCKED
+                else "Esta actividad requiere una cohorte activa."
+                if not has_deliverable_instance
                 else None
             )
             base = (
@@ -374,6 +384,8 @@ def learning_outline(enrollment: CourseEnrollment) -> dict[str, Any]:
                 f"{base}/unidades/{lesson_unit_id}"
                 if lesson_unit_id
                 else f"{base}/actividades/{activity['id']}"
+                if has_deliverable_instance
+                else None
             )
         for unit in module["units"]:
             unit_id = uuid.UUID(unit["id"])
@@ -403,7 +415,7 @@ def learning_activity(
 ) -> dict[str, Any]:
     assignment = enrollment.current_release_assignment
     if assignment is None:
-        raise ValueError("Enrollment has no current assignment.")
+        raise LearningReleaseInvalid("Enrollment has no current assignment.")
     progress = assignment.progress
     cohort = enrollment.effective_cohort
     if cohort is None:
@@ -480,7 +492,7 @@ def learning_activity(
 def learning_unit(enrollment: CourseEnrollment, unit_id: uuid.UUID) -> dict[str, Any]:
     assignment = enrollment.current_release_assignment
     if assignment is None:
-        raise ValueError("Enrollment has no current assignment.")
+        raise LearningReleaseInvalid("Enrollment has no current assignment.")
     progress = assignment.progress
     unit = snapshot_unit(assignment.release, unit_id)
     navigation = snapshot_navigation(assignment.release, unit_id)
@@ -488,6 +500,19 @@ def learning_unit(enrollment: CourseEnrollment, unit_id: uuid.UUID) -> dict[str,
         course_progress=progress, unit_id=unit_id
     ).first()
     state = unit_progress.status if unit_progress else ProgressStatus.NOT_STARTED
+    lesson_activity_progress = (
+        ActivityProgress.objects.filter(
+            course_progress=progress,
+            group_activity__activity_type="lesson",
+            group_activity__binding_snapshot__unit_id=str(unit_id),
+        )
+        .only("status")
+        .first()
+    )
+    is_locked = (
+        lesson_activity_progress is not None
+        and lesson_activity_progress.status == ActivityProgressStatus.LOCKED
+    )
     base = (
         f"/organizaciones/{enrollment.organization.slug}/aprender/"
         f"{enrollment.course.slug}"
@@ -510,12 +535,12 @@ def learning_unit(enrollment: CourseEnrollment, unit_id: uuid.UUID) -> dict[str,
             "summary": unit["summary"],
             "lesson_kind": unit["lesson_kind"],
             "position": unit["position"],
-            "status": state,
+            "status": ActivityProgressStatus.LOCKED if is_locked else state,
         },
         "release_number": assignment.release.number,
         "topics": unit["topics"],
         "learning_objectives": unit["learning_objectives"],
-        "delivery": unit["delivery"],
+        "delivery": {"kind": "blocked"} if is_locked else unit["delivery"],
         "progress": progress_payload(progress),
         "navigation": navigation,
     }

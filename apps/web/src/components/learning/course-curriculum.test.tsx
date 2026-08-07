@@ -86,4 +86,36 @@ describe('CourseCurriculum player', () => {
     expect(details[0]).toHaveAttribute('name', 'test-course-modules');
     expect(screen.queryByText('45 min')).not.toBeInTheDocument();
   });
+
+  it('does not turn an unavailable activity into a broken link', () => {
+    const baseModule = modules[0];
+    const baseActivity = baseModule?.activities[0];
+    if (!baseModule || !baseActivity) throw new Error('Missing test activity.');
+    const unavailableActivity: Module['activities'][number] = {
+      ...baseActivity,
+      href: null,
+      id: 'unavailable-activity',
+      status: 'unavailable',
+      title: 'Evaluación sin cohorte',
+      type: 'assessment',
+    };
+    render(
+      <CourseCurriculum
+        modules={[
+          {
+            ...baseModule,
+            activities: [unavailableActivity],
+          },
+        ]}
+        variant="player"
+      />,
+    );
+
+    expect(
+      screen.queryByRole('link', { name: /evaluación sin cohorte/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Evaluación sin cohorte/).closest('[aria-disabled]'),
+    ).toHaveAttribute('aria-disabled', 'true');
+  });
 });

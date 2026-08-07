@@ -1,7 +1,3 @@
-import PublishedCourseView from '../../../biblioteca/[courseSlug]/page';
+import { PublishedCourseView } from '@/components/publishing/published-course-view';
 
-export default function PublishedCoursePage(
-  props: Readonly<{ params: Promise<{ courseSlug: string; slug: string }> }>,
-) {
-  return PublishedCourseView(props);
-}
+export default PublishedCourseView;

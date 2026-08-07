@@ -1224,7 +1224,7 @@ export interface components {
         [key: string]: unknown;
       };
       estimated_duration_minutes: number | null;
-      href: string;
+      href: string | null;
       /** Format: uuid */
       id: string;
       is_current: boolean;
@@ -2436,6 +2436,9 @@ export interface components {
       /** Format: uuid */
       course_group_id: string;
       course_group_name: string;
+      /** Format: uuid */
+      course_release_id: string;
+      course_release_number: number;
       course_slug: string;
       course_title: string;
       /** Format: uuid */

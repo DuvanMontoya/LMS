@@ -107,9 +107,16 @@ class CatalogServiceTests(TestCase):
         return user
 
     def curriculum(self):
-        actor = self.user("owner@example.test")
+        governance_owner = self.user("owner@example.test")
         organization = create_organization_with_owner(
-            actor=actor, name="Institución", slug="institucion"
+            actor=governance_owner, name="Institución", slug="institucion"
+        )
+        actor = self.user("catalog-administrator@example.test")
+        add_existing_member_with_roles(
+            actor=governance_owner,
+            organization=organization,
+            user=actor,
+            roles={RoleCode.ADMINISTRATOR},
         )
         area = create_area(
             actor=actor,

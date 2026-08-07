@@ -83,11 +83,7 @@ def snapshot_activity_navigation(
                 "position": index + 1,
                 "total": len(flattened),
                 "previous": flattened[index - 1] if index > 0 else None,
-                "next": (
-                    flattened[index + 1]
-                    if index + 1 < len(flattened)
-                    else None
-                ),
+                "next": (flattened[index + 1] if index + 1 < len(flattened) else None),
             }
     raise LearningUnitNotFound("La actividad no existe en el release asignado.")
 

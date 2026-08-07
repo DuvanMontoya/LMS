@@ -71,7 +71,8 @@ export function CourseCurriculum({
                 ? activity.id === currentActivityId ||
                   activity.source_activity_id === currentUnitId
                 : activity.is_current;
-              const blocked = activity.status === 'locked';
+              const unavailable = !activity.href;
+              const blocked = activity.status === 'locked' || unavailable;
               const accessibleTitle = `${module.position}.${activity.position} ${activity.title}`;
               const content = (
                 <>
@@ -116,27 +117,28 @@ export function CourseCurriculum({
                   ) : null}
                 </>
               );
-              const item = blocked ? (
-                <span
-                  aria-label={`${activityTypeLabel(activity.type)}: ${accessibleTitle}. ${activityStatusLabel(activity.status)}`}
-                  aria-disabled="true"
-                  data-current="false"
-                  data-status={activity.status}
-                >
-                  {content}
-                </span>
-              ) : (
-                <Link
-                  aria-current={current ? 'step' : undefined}
-                  aria-label={`${activityTypeLabel(activity.type)}: ${accessibleTitle}. ${activityStatusLabel(activity.status)}`}
-                  data-current={current ? 'true' : undefined}
-                  data-status={activity.status}
-                  href={activity.href}
-                  ref={current ? activeItemRef : undefined}
-                >
-                  {content}
-                </Link>
-              );
+              const item =
+                blocked || !activity.href ? (
+                  <span
+                    aria-label={`${activityTypeLabel(activity.type)}: ${accessibleTitle}. ${unavailable ? 'No disponible para esta matrícula' : activityStatusLabel(activity.status)}`}
+                    aria-disabled="true"
+                    data-current="false"
+                    data-status={activity.status}
+                  >
+                    {content}
+                  </span>
+                ) : (
+                  <Link
+                    aria-current={current ? 'step' : undefined}
+                    aria-label={`${activityTypeLabel(activity.type)}: ${accessibleTitle}. ${activityStatusLabel(activity.status)}`}
+                    data-current={current ? 'true' : undefined}
+                    data-status={activity.status}
+                    href={activity.href}
+                    ref={current ? activeItemRef : undefined}
+                  >
+                    {content}
+                  </Link>
+                );
               return (
                 <li key={activity.id}>
                   {variant === 'player' && compact ? (
@@ -237,6 +239,15 @@ function ActivityState({ status }: Readonly<{ status: string }>) {
       />
     );
   }
+  if (status === 'unavailable') {
+    return (
+      <LockKeyhole
+        aria-label="No disponible"
+        className="course-curriculum__state"
+        data-status="unavailable"
+      />
+    );
+  }
   if (status === 'in_progress') {
     return (
       <CircleDot
@@ -270,6 +281,7 @@ function activityTypeLabel(type: string) {
 function activityStatusLabel(status: string) {
   if (['completed', 'passed', 'waived'].includes(status)) return 'Completada';
   if (status === 'locked') return 'Bloqueada';
+  if (status === 'unavailable') return 'No disponible';
   if (status === 'in_progress') return 'En progreso';
   return 'No iniciada';
 }

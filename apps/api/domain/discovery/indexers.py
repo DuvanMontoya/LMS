@@ -95,7 +95,7 @@ def release_documents(release: CourseRelease) -> list[SearchDocumentDTO]:
     snapshot = release.snapshot
     course = snapshot.get("course", {}) if isinstance(snapshot, dict) else {}
     language = str(course.get("language_code") or release.language_code or "es")
-    base = f"/organizaciones/{release.course.organization.slug}/biblioteca/{release.course.slug}"
+    base = f"/organizaciones/{release.course.organization.slug}/aprender/{release.course.slug}"
     documents = [
         SearchDocumentDTO(
             source_type=SearchSourceType.COURSE_RELEASE,

@@ -88,14 +88,21 @@ async function required<T>(
   message: string,
 ): Promise<T> {
   const { data, response } = await request;
-  if (response.status === 403 || response.status === 404) notFound();
+  if (
+    response.status === 400 ||
+    response.status === 403 ||
+    response.status === 404 ||
+    response.status === 422
+  ) {
+    notFound();
+  }
   if (!response.ok || data === undefined) throw new Error(message);
   return data;
 }
 
 export async function getMyLearning(slug: string) {
   const organization = await getOrganizationForPage(slug);
-  if (!organization.access.capabilities.includes('assessment.attempt')) {
+  if (!organization.access.roles.includes('learner')) {
     notFound();
   }
   const client = await createPlatformServerClient();
@@ -221,7 +228,7 @@ export async function getOptionalEnrollmentForCourse(
   courseSlug: string,
 ) {
   const organization = await getOrganizationForPage(slug);
-  if (!organization.access.capabilities.includes('assessment.attempt')) {
+  if (!organization.access.roles.includes('learner')) {
     return null;
   }
 

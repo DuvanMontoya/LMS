@@ -2,12 +2,17 @@
 import uuid
 from unittest.mock import patch
 
+from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from domain.organizations.services import create_organization_with_owner
+from domain.organizations.choices import RoleCode
+from domain.organizations.services import (
+    add_existing_member_with_roles,
+    create_organization_with_owner,
+)
 
 from .indexers import SearchDocumentDTO
 from .models import (
@@ -37,6 +42,37 @@ class DiscoveryTests(TestCase):
         )
         self.organization = create_organization_with_owner(
             actor=self.owner, name="Búsqueda", slug="busqueda"
+        )
+        self.author = get_user_model().objects.create_user(
+            email="search-author@example.test", password="StrongSearchPassword!42"
+        )
+        EmailAddress.objects.create(
+            user=self.author,
+            email=self.author.email,
+            verified=True,
+            primary=True,
+        )
+        add_existing_member_with_roles(
+            actor=self.owner,
+            organization=self.organization,
+            user=self.author,
+            roles={RoleCode.AUTHOR},
+        )
+        self.administrator = get_user_model().objects.create_user(
+            email="search-administrator@example.test",
+            password="StrongSearchPassword!42",
+        )
+        EmailAddress.objects.create(
+            user=self.administrator,
+            email=self.administrator.email,
+            verified=True,
+            primary=True,
+        )
+        add_existing_member_with_roles(
+            actor=self.owner,
+            organization=self.organization,
+            user=self.administrator,
+            roles={RoleCode.ADMINISTRATOR},
         )
         self.generation = SearchGeneration.objects.create(
             organization=self.organization,
@@ -84,11 +120,11 @@ class DiscoveryTests(TestCase):
         self.assertTrue(document.is_active)
         self.assertEqual(document.indexed_at, indexed_at)
         result = search_authorized_documents(
-            actor=self.owner, organization=self.organization, query="algeba"
+            actor=self.author, organization=self.organization, query="algeba"
         )
         self.assertEqual(result.total, 1)
         suggestions = suggest_authorized_documents(
-            actor=self.owner, organization=self.organization, query="algebr linel"
+            actor=self.author, organization=self.organization, query="algebr linel"
         )
         self.assertEqual(suggestions[0]["title"], "Álgebra lineal")
 
@@ -109,7 +145,7 @@ class DiscoveryTests(TestCase):
     def test_search_and_index_operations_api(self) -> None:
         upsert_search_document(self.generation, self.document())
         client = APIClient()
-        client.force_authenticate(user=self.owner)
+        client.force_authenticate(user=self.author)
         base = f"/api/v1/organizations/{self.organization.slug}/search/"
         response = client.get(base, {"q": "álgebra"})
         self.assertEqual(response.status_code, 200)
@@ -121,15 +157,19 @@ class DiscoveryTests(TestCase):
         suggestions = client.get(f"{base}suggestions/", {"q": "algebr linel"})
         self.assertEqual(suggestions.status_code, 200)
         self.assertEqual(suggestions.data[0]["title"], "Álgebra lineal")
-        self.assertEqual(client.get("/api/v1/platform/search-index/").status_code, 200)
+        index_client = APIClient()
+        index_client.force_authenticate(user=self.administrator)
         self.assertEqual(
-            client.get("/api/v1/platform/search-index/jobs/").status_code, 200
+            index_client.get("/api/v1/platform/search-index/").status_code, 200
+        )
+        self.assertEqual(
+            index_client.get("/api/v1/platform/search-index/jobs/").status_code, 200
         )
         with patch(
             "domain.discovery.api.views.process_search_index_job.delay"
         ) as delay:
             with self.captureOnCommitCallbacks(execute=True):
-                rebuild = client.post(
+                rebuild = index_client.post(
                     "/api/v1/platform/search-index/rebuild/",
                     {"organization_slug": self.organization.slug},
                     format="json",
@@ -137,7 +177,7 @@ class DiscoveryTests(TestCase):
         self.assertEqual(rebuild.status_code, 202)
         delay.assert_called_once()
         self.assertEqual(
-            client.post(
+            index_client.post(
                 "/api/v1/platform/search-index/rebuild/",
                 {"organization_slug": self.organization.slug},
                 format="json",

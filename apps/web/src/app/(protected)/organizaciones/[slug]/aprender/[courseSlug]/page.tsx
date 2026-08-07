@@ -87,7 +87,8 @@ export default async function LearningOutlinePage({
     activities.find(
       (activity) =>
         !['completed', 'passed', 'waived'].includes(activity.status) &&
-        activity.status !== 'locked',
+        activity.status !== 'locked' &&
+        activity.href !== null,
     ) ??
     activities[0];
   const baseHref = `/organizaciones/${slug}/aprender/${courseSlug}`;
@@ -297,7 +298,7 @@ function CourseOverview({
             {nextActivity?.summary ||
               'Consulta la secuencia completa de lecciones, clases y evaluaciones.'}
           </p>
-          {nextActivity ? (
+          {nextActivity?.href ? (
             <Button asChild className="mt-5">
               <Link href={nextActivity.href}>
                 Abrir actividad

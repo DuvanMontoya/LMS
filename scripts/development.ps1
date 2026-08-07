@@ -18,6 +18,7 @@ $apiLog = Join-Path $runtimeDirectory 'api.log'
 $apiErrorLog = Join-Path $runtimeDirectory 'api.error.log'
 $webLog = Join-Path $runtimeDirectory 'web.log'
 $webErrorLog = Join-Path $runtimeDirectory 'web.error.log'
+$webDevelopmentDistDirectory = '.local/dev/next'
 $pythonExecutable = Join-Path $apiDirectory '.venv/Scripts/python.exe'
 $nextExecutable = Join-Path $webDirectory 'node_modules/next/dist/bin/next'
 $apiPort = 8010
@@ -56,6 +57,11 @@ function Import-LocalEnvironment {
     [Environment]::SetEnvironmentVariable(
         'STRUCTURED_LOG_PATH',
         (Join-Path $apiDirectory '.local/observability/lms.jsonl'),
+        'Process'
+    )
+    [Environment]::SetEnvironmentVariable(
+        'NEXT_DIST_DIR',
+        $webDevelopmentDistDirectory,
         'Process'
     )
 }
@@ -151,6 +157,42 @@ function Get-ListenerProcessIds([int]$Port) {
     )
 }
 
+function Get-WebRouteFingerprint {
+    $routeRoot = Join-Path $webDirectory 'src/app'
+    $relativePaths = @(
+        Get-ChildItem -LiteralPath $routeRoot -File -Recurse |
+            ForEach-Object {
+                $_.FullName.Substring($routeRoot.Length).Replace('\', '/')
+            } |
+            Sort-Object
+    )
+    $payload = [Text.Encoding]::UTF8.GetBytes($relativePaths -join "`n")
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    try {
+        $digest = $algorithm.ComputeHash($payload)
+    }
+    finally {
+        $algorithm.Dispose()
+    }
+    return -join ($digest | ForEach-Object { $_.ToString('x2') })
+}
+
+function Test-WebRouteFingerprint {
+    $state = Get-SavedState
+    if ($null -eq $state) {
+        return $false
+    }
+    $property = $state.PSObject.Properties['webRouteFingerprint']
+    if ($null -eq $property -or [string]::IsNullOrWhiteSpace([string]$property.Value)) {
+        return $false
+    }
+    $distProperty = $state.PSObject.Properties['webDevelopmentDistDirectory']
+    if ($null -eq $distProperty -or $distProperty.Value -ne $webDevelopmentDistDirectory) {
+        return $false
+    }
+    return $property.Value -eq (Get-WebRouteFingerprint)
+}
+
 function Test-RegisteredDevelopment {
     $state = Get-SavedState
     if ($null -eq $state) {
@@ -204,10 +246,14 @@ function Start-Development {
         (Test-Endpoint 'http://127.0.0.1:3000/') -and
         (Test-RegisteredDevelopment)
     ) {
-        Sync-LocalPlatformOperator
-        Write-Host 'El entorno de desarrollo ya está disponible.'
-        Write-Status
-        return
+        if (Test-WebRouteFingerprint) {
+            Sync-LocalPlatformOperator
+            Write-Host 'El entorno de desarrollo ya está disponible.'
+            Write-Status
+            return
+        }
+        Write-Host 'La estructura de rutas web cambió o no está registrada; se reiniciará Next.js.'
+        Stop-Development
     }
 
     $listeners = Get-NetTCPConnection -State Listen -LocalPort 3000, $apiPort -ErrorAction SilentlyContinue
@@ -250,10 +296,12 @@ function Start-Development {
     try {
         Wait-Endpoint "$apiLoopbackOrigin/health/live/" 'Django'
         Wait-Endpoint 'http://127.0.0.1:3000/' 'Next.js'
-        @{
+        @{ 
             apiPid = $apiProcess.Id
             webPid = $webProcess.Id
             startedAt = (Get-Date).ToString('o')
+            webDevelopmentDistDirectory = $webDevelopmentDistDirectory
+            webRouteFingerprint = Get-WebRouteFingerprint
         } | ConvertTo-Json | Set-Content -LiteralPath $stateFile -Encoding utf8NoBOM
         Write-Host 'Entorno persistente iniciado. No se detendrá al finalizar las pruebas.'
         Write-Status

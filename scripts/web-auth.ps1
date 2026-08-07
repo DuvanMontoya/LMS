@@ -387,6 +387,7 @@ switch ($Action) {
     'Smoke' { Invoke-ProductionProxySmoke }
     'E2E' { Invoke-E2E $Grep }
     'Dev' {
+        [Environment]::SetEnvironmentVariable('NEXT_DIST_DIR', '.local/dev/next', 'Process')
         & pnpm --dir $webDirectory run dev
         Assert-LastExitCode 'Next development server'
     }

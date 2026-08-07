@@ -46,6 +46,7 @@ type ReleaseOption = {
 };
 
 type ActivityOption = {
+  course_release_id: string;
   course_group_name: string;
   id: string;
   module_position: number;
@@ -160,8 +161,11 @@ export function DeliveryManager({
                 value={versionId}
               >
                 <option value="">Selecciona una versión aprobada</option>
-                {versions.map((version) => (
-                  <option key={version.id} value={version.id}>
+                {versions.map((version, index) => (
+                  <option
+                    key={version.id || `version-${index}`}
+                    value={version.id}
+                  >
                     {version.title} · v{version.number} ·{' '}
                     {version.maximum_score} pts
                   </option>
@@ -180,8 +184,11 @@ export function DeliveryManager({
                 value={releaseId}
               >
                 <option value="">Entrega institucional sin release</option>
-                {releaseOptions.map((release) => (
-                  <option key={release.id} value={release.id}>
+                {releaseOptions.map((release, index) => (
+                  <option
+                    key={release.id || `release-${index}`}
+                    value={release.id}
+                  >
                     {release.courseTitle} · release {release.number}
                   </option>
                 ))}
@@ -198,8 +205,11 @@ export function DeliveryManager({
                     value={activityId}
                   >
                     <option value="">Selecciona la actividad curricular</option>
-                    {eligibleActivities.map((activity) => (
-                      <option key={activity.id} value={activity.id}>
+                    {eligibleActivities.map((activity, index) => (
+                      <option
+                        key={activity.id || `activity-${index}`}
+                        value={activity.id}
+                      >
                         {activity.course_group_name} ·{' '}
                         {activity.module_position}.{activity.position}{' '}
                         {activity.title}
@@ -424,9 +434,13 @@ function AssignmentControl({
           value={assignmentId}
         >
           <option value="">Asignar a estudiante</option>
-          {available.map((enrollment) => (
+          {available.map((enrollment, index) => (
             <option
-              key={enrollment.current_release_assignment_id}
+              key={
+                enrollment.current_release_assignment_id
+                  ? `${enrollment.current_release_assignment_id}-${index}`
+                  : `enrollment-${index}`
+              }
               value={enrollment.current_release_assignment_id ?? ''}
             >
               {enrollment.student_email} · {enrollment.course_title} r
