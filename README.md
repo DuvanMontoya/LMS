@@ -839,7 +839,7 @@ pnpm storage:status
 pnpm media:build
 pnpm media:up
 pnpm media:status
-pnpm demo:organizations
+pnpm organizations:demo
 pnpm assets:demo
 pnpm assets:smoke
 pnpm assets:check

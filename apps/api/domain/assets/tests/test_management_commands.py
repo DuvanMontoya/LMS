@@ -81,7 +81,7 @@ class AssetManagementCommandTests(TestCase):
 
     @override_settings(DEBUG=True)
     def test_demo_command_iterates_catalog_and_requires_context(self) -> None:
-        with self.assertRaisesMessage(Exception, "pnpm demo:organizations"):
+        with self.assertRaisesMessage(Exception, "pnpm organizations:demo"):
             call_command("bootstrap_demo_assets")
 
         owner = get_user_model().objects.create_user(

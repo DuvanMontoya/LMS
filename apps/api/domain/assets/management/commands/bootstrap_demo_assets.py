@@ -207,7 +207,7 @@ class Command(BaseCommand):
         organization = Organization.objects.filter(slug="organizacion-demo").first()
         if organization is None:
             raise CommandError(
-                "Ejecuta primero pnpm demo:organizations para crear el contexto demo."
+                "Ejecuta primero pnpm organizations:demo para crear el contexto demo."
             )
         actor = self._find_upload_actor(organization)
         if actor is None:
