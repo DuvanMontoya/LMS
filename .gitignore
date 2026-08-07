@@ -37,6 +37,8 @@ Desktop.ini
 *.tmp
 *.log
 .DS_Store
+work/e2e-trace-managed/
+tmp/pdfs/
 # Generated, pinned math browser assets (recreated from node_modules).
 apps/web/public/vendor/mathjax/
 apps/web/public/vendor/mathlive/
